@@ -77,7 +77,7 @@ const { showConfirmDialog } = useDialog();
 const isContextMenuOpen = ref(false);
 
 const emit = defineEmits<{
-  (e: 'delete', sessionId: string): void
+  (e: 'deleted', sessionId: string): void
 }>();
 
 const currentSessionId = computed(() => {
@@ -109,7 +109,7 @@ const handleSessionMenuClick = (event: MouseEvent) => {
         cancelText: t('Cancel'),
         confirmType: 'danger',
         onConfirm: () => {
-          emit('delete', props.session.session_id);
+          emit('deleted', props.session.session_id);
           deleteSession(props.session.session_id).then(() => {
             showSuccessToast(t('Deleted successfully'));
           }).catch(() => {

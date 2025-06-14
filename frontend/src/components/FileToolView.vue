@@ -63,6 +63,7 @@ import "monaco-editor/esm/vs/basic-languages/markdown/markdown.contribution";
 const props = defineProps<{
   sessionId: string;
   toolContent: ToolContent;
+  live: boolean;
 }>();
 
 defineExpose({
@@ -73,7 +74,7 @@ defineExpose({
 
 const fileContent = ref("");
 const monacoContainer = ref<HTMLElement | null>(null);
-const refreshInterval = ref<number | null>(null);
+const cancelViewFile = ref<(() => void) | null>(null);
 
 const filePath = computed(() => {
   if (props.toolContent && props.toolContent.args.file) {
@@ -144,29 +145,37 @@ const initMonacoEditor = () => {
 };
 
 // Load file content
-const loadFileContent = () => {
+const loadFileContent = async () => {
+  if (!props.live) {
+    fileContent.value = props.toolContent.content?.content || "";
+    return;
+  }
   if (!filePath.value) return;
-  viewFile(props.sessionId, filePath.value)
-    .then((response) => {
-      if (fileContent.value !== response.content) {
-        fileContent.value = response.content;
-        if (editor) {
-          // Use editor model to directly update content, reducing re-rendering overhead
-          const model = editor.getModel();
-          if (model) {
-            model.setValue(fileContent.value);
-          } else {
-            editor.setValue(fileContent.value);
-          }
-          monaco.editor.setModelLanguage(editor.getModel()!, getLanguage(filePath.value));
-        }
+  if (cancelViewFile.value) {
+    cancelViewFile.value();
+    cancelViewFile.value = null;
+  }
+  cancelViewFile.value = await viewFile(props.sessionId, filePath.value, {
+    onMessage: (event) => {
+      if (event.event === "file") {
+        fileContent.value = event.data.content;
       }
-    })
-    .catch((error) => {
-      console.error("Failed to load file content:", error);
-      //showErrorToast(t("Failed to load file content"));
-    });
+    }
+  })
 };
+
+watch(fileContent, () => {
+  if (editor) {
+    // Use editor model to directly update content, reducing re-rendering overhead
+    const model = editor.getModel();
+    if (model) {
+      model.setValue(fileContent.value);
+    } else {
+      editor.setValue(fileContent.value);
+    }
+    monaco.editor.setModelLanguage(editor.getModel()!, getLanguage(filePath.value));
+  }
+});
 
 // Watch for filename changes to reload content
 watch(filePath, (newVal) => {
@@ -175,13 +184,14 @@ watch(filePath, (newVal) => {
   }
 });
 
+watch(() => props.toolContent.status, () => {
+  loadFileContent();
+});
+
 // Load content and set up refresh timer when component is mounted
 onMounted(() => {
   initMonacoEditor();
   loadFileContent();
-  refreshInterval.value = window.setInterval(() => {
-    loadFileContent();
-  }, 5000);
 });
 
 // Clean up editor and timer before component unmounts
@@ -193,9 +203,9 @@ onBeforeUnmount(() => {
 });
 
 onUnmounted(() => {
-  if (refreshInterval.value !== null) {
-    clearInterval(refreshInterval.value);
-    refreshInterval.value = null;
+  if (cancelViewFile.value) {
+    cancelViewFile.value();
+    cancelViewFile.value = null;
   }
 });
 </script>

@@ -101,7 +101,7 @@ async def lifespan(app: FastAPI):
         await get_redis().shutdown()
         await shutdown()
 
-app = FastAPI(title="Manus AI Agent", lifespan=lifespan, timeout_graceful_shutdown=5)
+app = FastAPI(title="Manus AI Agent", lifespan=lifespan)
 app.dependency_overrides[get_agent_service] = lambda: agent_service
 
 # Configure CORS

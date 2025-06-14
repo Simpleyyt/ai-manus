@@ -30,7 +30,7 @@
           </div>
           <div
             class="flex flex-col rounded-[12px] overflow-hidden bg-[var(--background-gray-main)] border border-[var(--border-dark)] dark:border-black/30 shadow-[0px_4px_32px_0px_rgba(0,0,0,0.04)] flex-1 min-h-0 mt-[16px]">
-            <component ref="toolView" v-if="toolInfo" :is="toolInfo.view" :sessionId="sessionId" :toolContent="toolContent" />
+            <component ref="toolView" v-if="toolInfo" :is="toolInfo.view" :live="live" :sessionId="sessionId" :toolContent="toolContent" />
             <div class="mt-auto flex w-full items-center gap-2 px-4 h-[44px] relative" v-if="!realTime">
               <button
                 class="h-10 px-3 border border-[var(--border-main)] flex items-center gap-1 bg-[var(--background-white-main)] hover:bg-[var(--background-gray-main)] shadow-[0px_5px_16px_0px_var(--shadow-S),0px_0px_1.25px_0px_var(--shadow-S)] rounded-full cursor-pointer absolute left-[50%] translate-x-[-50%]"
@@ -52,6 +52,7 @@ import type { ToolContent } from '../types/message';
 import { useToolInfo } from '../composables/useTool';
 
 const isShow = ref(false);
+const live = ref(false);
 const toolContent = ref<ToolContent>();
 const toolView = ref();
 const { toolInfo } = useToolInfo(toolContent);
@@ -66,12 +67,10 @@ defineProps<{
   size: number;
 }>();
 
-const show = (content: ToolContent) => {
+const show = (content: ToolContent, isLive: boolean = false) => {
   toolContent.value = content;
   isShow.value = true;
-  if (toolView.value && toolView.value.loadContent) {
-    toolView.value.loadContent();
-  }
+  live.value = isLive;
 }
 
 const hide = () => {

@@ -80,7 +80,7 @@ import SessionItem from './SessionItem.vue';
 import { usePanelState } from '../composables/usePanelState';
 import { computed, ref, onMounted, watch, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getSessions } from '../api/agent';
+import { getSessionsSSE, getSessions } from '../api/agent';
 import { ListSessionItem } from '../types/response';
 import { useI18n } from 'vue-i18n';
 
@@ -95,13 +95,30 @@ const isHomepage = computed(() => {
 })
 
 const sessions = ref<ListSessionItem[]>([])
-let updateTimer: number | null = null
+const cancelGetSessionsSSE = ref<(() => void) | null>(null)
+
+// Function to fetch sessions data
+const updateSessions = async () => {
+  try {
+    const response = await getSessions()
+    sessions.value = response.sessions
+  } catch (error) {
+    console.error('Failed to fetch sessions:', error)
+  }
+}
 
 // Function to fetch sessions data
 const fetchSessions = async () => {
   try {
-    const response = await getSessions()
-    sessions.value = response.sessions
+    if (cancelGetSessionsSSE.value) {
+      cancelGetSessionsSSE.value()
+      cancelGetSessionsSSE.value = null
+    }
+    cancelGetSessionsSSE.value = await getSessionsSSE({
+      onMessage: (event) => {
+        sessions.value = event.data.sessions
+      }
+    })
   } catch (error) {
     console.error('Failed to fetch sessions:', error)
   }
@@ -112,6 +129,7 @@ const handleNewTaskClick = () => {
 }
 
 const handleSessionDeleted = (sessionId: string) => {
+  console.log('handleSessionDeleted', sessionId)
   sessions.value = sessions.value.filter(session => session.session_id !== sessionId);
 }
 
@@ -126,21 +144,16 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 onMounted(async () => {
   // Initial fetch of sessions
-  await fetchSessions()
-
-  // Set up timer to update sessions every second
-  // TODO: use websocket to update sessions
-  updateTimer = setInterval(fetchSessions, 1000)
+  fetchSessions()
 
   // Add keyboard event listener
   window.addEventListener('keydown', handleKeydown)
 })
 
 onUnmounted(() => {
-  // Clear the update timer
-  if (updateTimer) {
-    clearInterval(updateTimer)
-    updateTimer = null
+  if (cancelGetSessionsSSE.value) {
+    cancelGetSessionsSSE.value()
+    cancelGetSessionsSSE.value = null
   }
 
   // Remove keyboard event listener
@@ -148,6 +161,6 @@ onUnmounted(() => {
 })
 
 watch(() => route.path, async () => {
-  await fetchSessions()
+  await updateSessions()
 })
 </script>

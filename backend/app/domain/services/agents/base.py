@@ -1,6 +1,7 @@
 import json
 import logging
 import asyncio
+import uuid
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional, AsyncGenerator
 from app.domain.external.llm import LLM
@@ -90,7 +91,7 @@ class BaseAgent(ABC):
                     continue
                 
                 function_name = tool_call["function"]["name"]
-                tool_call_id = tool_call["id"]
+                tool_call_id = tool_call["id"] or str(uuid.uuid4())
                 function_args = await self.json_parser.parse(tool_call["function"]["arguments"])
                 
                 tool = self.get_tool(function_name)
@@ -98,6 +99,7 @@ class BaseAgent(ABC):
                 # Generate event before tool call
                 yield ToolEvent(
                     status=ToolStatus.CALLING,
+                    tool_call_id=tool_call_id,
                     tool_name=tool.name,
                     function_name=function_name,
                     function_args=function_args
@@ -108,6 +110,7 @@ class BaseAgent(ABC):
                 # Generate event after tool call
                 yield ToolEvent(
                     status=ToolStatus.CALLED,
+                    tool_call_id=tool_call_id,
                     tool_name=tool.name,
                     function_name=function_name,
                     function_args=function_args,

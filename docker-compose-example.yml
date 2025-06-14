@@ -32,20 +32,20 @@ services:
       # Maximum tokens for LLM response
       - MAX_TOKENS=2000
       
-      # MongoDB connection URI (optional)
+      # MongoDB connection URI
       #- MONGODB_URI=mongodb://mongodb:27017
-      # MongoDB database name (optional)
+      # MongoDB database name
       #- MONGODB_DATABASE=manus
       # MongoDB username (optional)
       #- MONGODB_USERNAME=
       # MongoDB password (optional)
       #- MONGODB_PASSWORD=
       
-      # Redis server hostname (optional)
+      # Redis server hostname
       #- REDIS_HOST=redis
-      # Redis server port (optional)
+      # Redis server port
       #- REDIS_PORT=6379
-      # Redis database number (optional)
+      # Redis database number
       #- REDIS_DB=0
       # Redis password (optional)
       #- REDIS_PASSWORD=

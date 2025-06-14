@@ -15,6 +15,9 @@ from app.interfaces.schemas.event import SSEEventFactory
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+TOOL_POLL_INTERVAL = 5
+SESSION_POLL_INTERVAL = 10
+
 
 def get_agent_service() -> AgentService:
     # Placeholder for dependency injection
@@ -77,6 +80,30 @@ async def get_all_sessions(
     ]
     return APIResponse.success(ListSessionResponse(sessions=session_items))
 
+@router.post("/sessions")
+async def get_all_sessions(
+    agent_service: AgentService = Depends(get_agent_service)
+) -> EventSourceResponse:
+    async def event_generator() -> AsyncGenerator[ServerSentEvent, None]:
+        while True:
+            sessions = await agent_service.get_all_sessions()
+            session_items = [
+                ListSessionItem(
+                    session_id=session.id,
+                    title=session.title,
+                    status=session.status,
+                    unread_message_count=session.unread_message_count,
+                    latest_message=session.latest_message,
+                    latest_message_at=int(session.latest_message_at.timestamp()) if session.latest_message_at else None
+                ) for session in sessions
+            ]
+            yield ServerSentEvent(
+                event="sessions",
+                data=ListSessionResponse(sessions=session_items).model_dump_json()
+            )
+            await asyncio.sleep(SESSION_POLL_INTERVAL)
+    return EventSourceResponse(event_generator())
+
 @router.post("/sessions/{session_id}/chat")
 async def chat(
     session_id: str,
@@ -101,39 +128,60 @@ async def chat(
     return EventSourceResponse(event_generator()) 
 
 
-@router.post("/sessions/{session_id}/shell", response_model=APIResponse[ShellViewResponse])
+@router.post("/sessions/{session_id}/shell")
 async def view_shell(
     session_id: str,
     request: ShellViewRequest,
     agent_service: AgentService = Depends(get_agent_service)
-) -> APIResponse[ShellViewResponse]:
+) -> EventSourceResponse:
     """View shell session output
     
     If the agent does not exist or fails to get shell output, an appropriate exception will be thrown and handled by the global exception handler
+    
+    Args:
+        session_id: Session ID
+        request: Shell view request containing session ID
+        
+    Returns:
+        EventSourceResponse with shell output updates
     """
-    result = await agent_service.shell_view(session_id, request.session_id)
-    return APIResponse.success(result)
+    async def event_generator() -> AsyncGenerator[ServerSentEvent, None]:
+        while True:
+            result = await agent_service.shell_view(session_id, request.session_id)
+            yield ServerSentEvent(
+                event="shell",
+                data=result.model_dump_json()
+            )
+            await asyncio.sleep(TOOL_POLL_INTERVAL)
+    return EventSourceResponse(event_generator()) 
 
 
-@router.post("/sessions/{session_id}/file", response_model=APIResponse[FileViewResponse])
+@router.post("/sessions/{session_id}/file")
 async def view_file(
     session_id: str,
     request: FileViewRequest,
     agent_service: AgentService = Depends(get_agent_service)
-) -> APIResponse[FileViewResponse]:
+) -> EventSourceResponse:
     """View file content
     
     If the agent does not exist or fails to get file content, an appropriate exception will be thrown and handled by the global exception handler
     
     Args:
-        agent_id: Agent ID
-        file: File path
+        session_id: Session ID
+        request: File view request containing file path
         
     Returns:
-        APIResponse containing file content
+        EventSourceResponse with file content updates
     """
-    result = await agent_service.file_view(session_id, request.file)
-    return APIResponse.success(result)
+    async def event_generator() -> AsyncGenerator[ServerSentEvent, None]:
+        while True:
+            result = await agent_service.file_view(session_id, request.file)
+            yield ServerSentEvent(
+                event="file",
+                data=result.model_dump_json()
+            )
+            await asyncio.sleep(TOOL_POLL_INTERVAL)
+    return EventSourceResponse(event_generator()) 
 
 
 @router.websocket("/sessions/{session_id}/vnc")

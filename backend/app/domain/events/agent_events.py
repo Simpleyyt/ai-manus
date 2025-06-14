@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Dict, Any, Literal, Optional, Union
+from typing import Dict, Any, Literal, Optional, Union, List
 from datetime import datetime
 import time
 import uuid
@@ -45,10 +45,30 @@ class PlanEvent(BaseEvent):
     status: PlanStatus
     step: Optional[Step] = None
 
+class BrowserToolContent(BaseModel):
+    """Browser tool content"""
+    screenshot: str
+
+class SearchToolContent(BaseModel):
+    """Search tool content"""
+    results: List[Dict[str, Any]]
+
+class ShellToolContent(BaseModel):
+    """Shell tool content"""
+    console: Any
+
+class FileToolContent(BaseModel):
+    """File tool content"""
+    content: str
+
+ToolContent = Union[BrowserToolContent, SearchToolContent, ShellToolContent, FileToolContent]
+
 class ToolEvent(BaseEvent):
     """Tool related events"""
     type: Literal["tool"] = "tool"
+    tool_call_id: str
     tool_name: str
+    tool_content: Optional[ToolContent] = None
     function_name: str
     function_args: Dict[str, Any]
     status: ToolStatus

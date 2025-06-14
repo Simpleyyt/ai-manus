@@ -88,6 +88,8 @@ const createInitialState = () => ({
   title: t('New Chat'),
   plan: undefined as PlanEventData | undefined,
   lastNoMessageTool: undefined as ToolContent | undefined,
+  lastMessageTool: undefined as ToolContent | undefined,
+  lastTool: undefined as ToolContent | undefined,
   lastEventId: undefined as string | undefined,
   shouldAddPaddingClass: false,
   cancelCurrentChat: null as (() => void) | null,
@@ -108,6 +110,7 @@ const {
   title,
   plan,
   lastNoMessageTool,
+  lastTool,
   lastEventId,
   shouldAddPaddingClass,
   cancelCurrentChat
@@ -161,18 +164,23 @@ const handleToolEvent = (toolData: ToolEventData) => {
   let toolContent : ToolContent = {
     ...toolData
   }
-  if (lastStep?.status === 'running') {
-    lastStep.tools.push(toolContent);
+  if (lastTool.value && lastTool.value.tool_call_id === toolContent.tool_call_id) {
+    Object.assign(lastTool.value, toolContent);
   } else {
-    messages.value.push({
-      type: 'tool',
-      content: toolContent,
-    });
+    if (lastStep?.status === 'running') {
+      lastStep.tools.push(toolContent);
+    } else {
+      messages.value.push({
+        type: 'tool',
+        content: toolContent,
+      });
+    }
+    lastTool.value = toolContent;
   }
   if (toolContent.name !== 'message') {
     lastNoMessageTool.value = toolContent;
     if (realTime.value) {
-      toolPanel.value.show(toolContent);
+      toolPanel.value.show(toolContent, true);
     }
   }
 }
@@ -278,8 +286,11 @@ const chat = async (message: string = '') => {
           console.log('Chat opened');
           isLoading.value = true;
         },
-        onMessage: (event) => {
-          handleEvent(event);
+        onMessage: ({event, data}) => {
+          handleEvent({
+            event: event as AgentSSEEvent['event'],
+            data: data as AgentSSEEvent['data']
+          });
         },
         onClose: () => {
           console.log('Chat closed');
@@ -376,17 +387,34 @@ onUnmounted(() => {
   resizeObserver.value?.disconnect();
 })
 
+const isLastNoMessageTool = (tool: ToolContent) => {
+  return tool.tool_call_id === lastNoMessageTool.value?.tool_call_id;
+}
+
+const isLiveTool = (tool: ToolContent) => {
+  if (tool.status === 'calling') {
+    return true;
+  }
+  if (!isLastNoMessageTool(tool)) {
+    return false;
+  }
+  if (tool.timestamp > Date.now() - 5 * 60 * 1000) {
+    return true;
+  }
+  return false;
+}
+
 const handleToolClick = (tool: ToolContent) => {
   realTime.value = false;
   if (toolPanel.value && sessionId.value) {
-    toolPanel.value.show(tool);
+    toolPanel.value.show(tool, isLiveTool(tool));
   }
 }
 
 const jumpToRealTime = () => {
   realTime.value = true;
   if (lastNoMessageTool.value) {
-    toolPanel.value.show(lastNoMessageTool.value);
+    toolPanel.value.show(lastNoMessageTool.value, isLiveTool(lastNoMessageTool.value));
   }
 }
 

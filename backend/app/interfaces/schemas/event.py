@@ -24,11 +24,12 @@ class MessageEventData(BaseEventData):
     content: str
 
 class ToolEventData(BaseEventData):
+    tool_call_id: str
     name: str
     status: ToolStatus
     function: str
     args: Dict[str, Any]
-    result: Optional[Any] = None
+    content: Optional[Any] = None
 
 class StepEventData(BaseEventData):
     status: ExecutionStatus
@@ -97,11 +98,15 @@ class SSEEventFactory:
     
     @staticmethod
     def from_event(event: AgentEvent) -> Optional[AgentSSEEvent]:
+        base_event = BaseEventData(
+            event_id=event.id,
+            timestamp=int(event.timestamp.timestamp())
+        )
+        
         if isinstance(event, PlanEvent):
             return PlanSSEEvent(
                 data=PlanEventData(
-                    timestamp=int(event.timestamp.timestamp()),
-                    event_id=event.id,
+                    **base_event.model_dump(),
                     steps=[StepEventData(
                         status=step.status,
                         id=step.id, 
@@ -112,67 +117,45 @@ class SSEEventFactory:
         elif isinstance(event, MessageEvent):
             return MessageSSEEvent(
                 data=MessageEventData(
-                    event_id=event.id,
+                    **base_event.model_dump(),
                     content=event.message,
-                    role=event.role,
-                    timestamp=int(event.timestamp.timestamp())
+                    role=event.role
                 )
             )
         elif isinstance(event, TitleEvent):
             return TitleSSEEvent(
                 data=TitleEventData(
-                    event_id=event.id,
-                    title=event.title,
-                    timestamp=int(event.timestamp.timestamp())
+                    **base_event.model_dump(),
+                    title=event.title
                 )
             )
         elif isinstance(event, ToolEvent):
-            if event.status == ToolStatus.CALLING and event.tool_name in ["browser", "file", "shell", "message"]:
-                return ToolSSEEvent(
-                    data=ToolEventData(
-                        event_id=event.id,
-                        timestamp=int(event.timestamp.timestamp()),
-                        name=event.tool_name,
-                        status=event.status,
-                        function=event.function_name,
-                        args=event.function_args
-                    )
+            return ToolSSEEvent(
+                data=ToolEventData(
+                    **base_event.model_dump(),
+                    tool_call_id=event.tool_call_id,
+                    name=event.tool_name,
+                    function=event.function_name,
+                    args=event.function_args,
+                    status=event.status,
+                    content=event.tool_content
                 )
-            elif event.status == ToolStatus.CALLED and event.tool_name in ["search"]:
-                return ToolSSEEvent(
-                    id=event.id,
-                    data=ToolEventData(
-                        timestamp=int(event.timestamp.timestamp()),
-                        name=event.tool_name,
-                        function=event.function_name,
-                        args=event.function_args,
-                        status=event.status,
-                        result=event.function_result
-                    )
-                )
+            )
         elif isinstance(event, StepEvent):
             return StepSSEEvent(
-                id=event.id,
                 data=StepEventData(
-                    event_id=event.id,
-                    timestamp=int(event.timestamp.timestamp()),
+                    **base_event.model_dump(),
                     status=event.step.status,
                     id=event.step.id, 
                     description=event.step.description
                 )
             )
         elif isinstance(event, DoneEvent):
-            return DoneSSEEvent(
-                data=BaseEventData(
-                    event_id=event.id,
-                    timestamp=int(event.timestamp.timestamp())
-                )
-            )
+            return DoneSSEEvent(data=base_event)
         elif isinstance(event, ErrorEvent):
             return ErrorSSEEvent(
                 data=ErrorEventData(
-                    event_id=event.id,
-                    error=event.error,
-                    timestamp=int(event.timestamp.timestamp())
+                    **base_event.model_dump(),
+                    error=event.error
                 )
             )

@@ -14,10 +14,12 @@ export interface MessageContent extends BaseContent {
 }
 
 export interface ToolContent extends BaseContent {
+  tool_call_id: string;
   name: string;
   function: string;
   args: any;
-  result?: any;
+  content?: any;
+  status: "calling" | "called";
 }
 
 export interface StepContent extends BaseContent {

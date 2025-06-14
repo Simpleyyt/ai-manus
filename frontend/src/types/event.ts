@@ -9,9 +9,12 @@ export interface BaseEventData {
 }
 
 export interface ToolEventData extends BaseEventData {
+  tool_call_id: string;
   name: string;
+  status: "calling" | "called";
   function: string;
   args: {[key: string]: any};
+  content?: any;
 }
 
 export interface StepEventData extends BaseEventData {

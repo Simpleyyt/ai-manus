@@ -28,6 +28,7 @@ import RFB from '@novnc/novnc/lib/rfb';
 const props = defineProps<{
   sessionId: string;
   toolContent: ToolContent;
+  live: boolean;
 }>();
 
 const vncContainer = ref<HTMLDivElement | null>(null);

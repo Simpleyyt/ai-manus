@@ -38,6 +38,7 @@ def setup_logging():
     # Disable verbose logging for pymongo
     logging.getLogger("pymongo").setLevel(logging.WARNING)
     logging.getLogger("websockets").setLevel(logging.WARNING)
+    logging.getLogger("sse_starlette.sse").setLevel(logging.INFO)
     
     # Log initialization complete
     root_logger.info("Logging system initialized - Console and file logging active") 

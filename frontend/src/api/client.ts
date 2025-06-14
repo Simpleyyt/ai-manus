@@ -1,5 +1,6 @@
 // Backend API client configuration
 import axios, { AxiosError } from 'axios';
+import { fetchEventSource, EventSourceMessage } from '@microsoft/fetch-event-source';
 
 // API configuration
 export const API_CONFIG = {
@@ -98,3 +99,101 @@ apiClient.interceptors.response.use(
     return Promise.reject(apiError);
   }
 ); 
+
+export interface SSECallbacks<T = any> {
+  onOpen?: () => void;
+  onMessage?: (event: { event: string; data: T }) => void;
+  onClose?: () => void;
+  onError?: (error: Error) => void;
+}
+
+export interface SSEOptions {
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  body?: any;
+  headers?: Record<string, string>;
+}
+
+/**
+ * Generic SSE connection function
+ * @param endpoint - API endpoint (relative to BASE_URL)
+ * @param options - Request options
+ * @param callbacks - Event callbacks
+ * @returns Function to cancel the SSE connection
+ */
+export const createSSEConnection = async <T = any>(
+  endpoint: string,
+  options: SSEOptions = {},
+  callbacks: SSECallbacks<T> = {}
+): Promise<() => void> => {
+  const { onOpen, onMessage, onClose, onError } = callbacks;
+  const { method = 'GET', body, headers = {} } = options;
+  
+  // Create AbortController for cancellation
+  const abortController = new AbortController();
+  
+  try {
+    const apiUrl = `${BASE_URL}${endpoint}`;
+    
+    // Start the SSE connection
+    const ssePromise = fetchEventSource(apiUrl, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      openWhenHidden: true,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: abortController.signal,
+      async onopen() {
+        if (onOpen) {
+          onOpen();
+        }
+      },
+      onmessage(event: EventSourceMessage) {
+        if (event.event && event.event.trim() !== '') {
+          if (onMessage) {
+            onMessage({
+              event: event.event,
+              data: JSON.parse(event.data) as T
+            });
+          }
+        }
+      },
+      onclose() {
+        if (onClose) {
+          onClose();
+        }
+      },
+      onerror(err: any) {
+        console.error('EventSource error:', err);
+        if (onError) {
+          onError(err instanceof Error ? err : new Error(String(err)));
+        }
+        throw err;
+      },
+    });
+
+    // Handle the SSE promise in the background
+    ssePromise.catch((error) => {
+      // Only handle errors that are not due to abortion
+      if (!abortController.signal.aborted) {
+        console.error('SSE error:', error);
+        if (onError) {
+          onError(error instanceof Error ? error : new Error(String(error)));
+        }
+      }
+    });
+
+    // Return the cancel function immediately
+    return () => {
+      abortController.abort();
+    };
+  } catch (error) {
+    console.error('SSE setup error:', error);
+    if (onError) {
+      onError(error instanceof Error ? error : new Error(String(error)));
+    }
+    // Return a no-op cancel function
+    return () => {};
+  }
+}; 

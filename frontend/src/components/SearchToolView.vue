@@ -10,7 +10,7 @@
   <div class="flex-1 min-h-0 w-full overflow-y-auto">
     <div class="flex-1 min-h-0 max-w-[640] mx-auto">
       <div class="flex flex-col overflow-auto h-full px-4 py-3">
-        <div v-for="result in toolContent.result?.data?.results" class="py-3 pt-0 border-b border-[var(--border-light)]">
+        <div v-for="result in toolContent.content?.results" class="py-3 pt-0 border-b border-[var(--border-light)]">
           <a :href="result.link" target="_blank"
             class="block text-[var(--text-primary)] text-sm font-medium hover:underline line-clamp-2 cursor-pointer">
             {{ result.title }}
@@ -28,6 +28,7 @@ import { ToolContent } from '../types/message';
 defineProps<{
   sessionId: string;
   toolContent: ToolContent;
+  live: boolean;
 }>();
 
 </script>

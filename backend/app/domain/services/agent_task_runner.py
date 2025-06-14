@@ -1,7 +1,18 @@
 from typing import Optional, AsyncGenerator
 import asyncio
 import logging
-from app.domain.events.agent_events import BaseEvent, ErrorEvent, TitleEvent, MessageEvent, DoneEvent
+from app.domain.events.agent_events import (
+    BaseEvent,
+    ErrorEvent,
+    TitleEvent,
+    MessageEvent,
+    DoneEvent,
+    ToolEvent,
+    FileToolContent,
+    ShellToolContent,
+    SearchToolContent,
+    ToolStatus
+)
 from app.domain.services.flows.plan_act import PlanActFlow
 from app.domain.external.sandbox import Sandbox
 from app.domain.external.browser import Browser
@@ -52,6 +63,28 @@ class AgentTaskRunner(TaskRunner):
         event_id = await task.output_stream.put(event.model_dump_json())
         event.id = event_id
         await self._session_repository.add_event(self._session_id, event)
+    
+    async def _handle_tool_event(self, task: Task, event: ToolEvent) -> None:
+        """Handle tool event"""
+        if event.status == ToolStatus.CALLED:
+            if event.tool_name == "browser":
+                pass
+            elif event.tool_name == "search":
+                event.tool_content = SearchToolContent(results=event.function_result.data.get("results", []))
+            elif event.tool_name == "shell":
+                if "id" in event.function_args:
+                    shell_result = await self._sandbox.view_shell(event.function_args["id"])
+                    event.tool_content = ShellToolContent(console=shell_result.data.get("console", []))
+                else:
+                    event.tool_content = ShellToolContent(console="(No Console)")
+            elif event.tool_name == "file":
+                if "file" in event.function_args:
+                    file_read_result = await self._sandbox.file_read(event.function_args["file"])
+                    event.tool_content = FileToolContent(content=file_read_result.data.get("content", ""))
+                else:
+                    event.tool_content = FileToolContent(content="(No Content)")
+            else:
+                logger.warning(f"Agent {self._agent_id} received unknown tool event: {event.tool_name}")
 
     async def run(self, task: Task) -> None:
         """Process agent's message queue and run the agent's flow"""
@@ -67,6 +100,8 @@ class AgentTaskRunner(TaskRunner):
             await self._session_repository.update_status(self._session_id, SessionStatus.ACTIVE)
             
             async for event in self._run_flow(message):
+                if isinstance(event, ToolEvent):
+                    await self._handle_tool_event(task, event)
                 await self._put_and_add_event(task, event)
                 if isinstance(event, TitleEvent):
                     await self._session_repository.update_title(self._session_id, event.title)

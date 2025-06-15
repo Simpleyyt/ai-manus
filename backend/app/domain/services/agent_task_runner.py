@@ -8,6 +8,7 @@ from app.domain.events.agent_events import (
     MessageEvent,
     DoneEvent,
     ToolEvent,
+    WaitEvent,
     FileToolContent,
     ShellToolContent,
     SearchToolContent,
@@ -52,6 +53,8 @@ class AgentTaskRunner(TaskRunner):
         self._flow = PlanActFlow(
             self._agent_id,
             self._repository,
+            self._session_id,
+            self._session_repository,
             self._llm,
             self._sandbox,
             self._browser,
@@ -90,32 +93,38 @@ class AgentTaskRunner(TaskRunner):
         """Process agent's message queue and run the agent's flow"""
         try:
             logger.info(f"Agent {self._agent_id} message processing task started")
-            _, message = await task.input_stream.pop()
-            if message is None:
-                logger.warning(f"Agent {self._agent_id} received empty message")
-                return
+            while not await task.input_stream.is_empty():
+                _, message = await task.input_stream.pop()
+                if message is None:
+                    logger.warning(f"Agent {self._agent_id} received empty message")
+                    return
+                    
+                logger.info(f"Agent {self._agent_id} received new message: {message[:50]}...")
                 
-            logger.info(f"Agent {self._agent_id} received new message: {message[:50]}...")
+                async for event in self._run_flow(message):
+                    if isinstance(event, ToolEvent):
+                        # TODO: move to tool function
+                        await self._handle_tool_event(task, event)
+                    await self._put_and_add_event(task, event)
+                    if isinstance(event, TitleEvent):
+                        await self._session_repository.update_title(self._session_id, event.title)
+                    elif isinstance(event, MessageEvent):
+                        await self._session_repository.update_latest_message(self._session_id, event.message, event.timestamp)
+                        await self._session_repository.increment_unread_message_count(self._session_id)
+                    elif isinstance(event, WaitEvent):
+                        await self._session_repository.update_status(self._session_id, SessionStatus.WAITING)
+                        return
+                    if not await task.input_stream.is_empty():
+                        break
 
-            await self._session_repository.update_status(self._session_id, SessionStatus.ACTIVE)
-            
-            async for event in self._run_flow(message):
-                if isinstance(event, ToolEvent):
-                    await self._handle_tool_event(task, event)
-                await self._put_and_add_event(task, event)
-                if isinstance(event, TitleEvent):
-                    await self._session_repository.update_title(self._session_id, event.title)
-                if isinstance(event, MessageEvent):
-                    await self._session_repository.update_latest_message(self._session_id, event.message, event.timestamp)
-                    await self._session_repository.increment_unread_message_count(self._session_id)
-
+            await self._session_repository.update_status(self._session_id, SessionStatus.COMPLETED)
         except asyncio.CancelledError:
             logger.info(f"Agent {self._agent_id} task cancelled")
             await self._put_and_add_event(task, DoneEvent())
+            await self._session_repository.update_status(self._session_id, SessionStatus.COMPLETED)
         except Exception as e:
             logger.exception(f"Agent {self._agent_id} task encountered exception: {str(e)}")
             await self._put_and_add_event(task, ErrorEvent(error=f"Task error: {str(e)}"))
-        finally:
             await self._session_repository.update_status(self._session_id, SessionStatus.COMPLETED)
     
     async def _run_flow(self, message: str) -> AsyncGenerator[BaseEvent, None]:

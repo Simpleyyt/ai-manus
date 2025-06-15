@@ -9,7 +9,7 @@
             <img alt="Hello" class="w-full h-full object-cover" src="/chatting.svg">
           </div>
         </div>
-        <div v-if="session.status === SessionStatus.ACTIVE"
+        <div v-if="session.status === SessionStatus.RUNNING || session.status === SessionStatus.PENDING"
           class="absolute -start-[5px] -top-[3px] w-[calc(100%+8px)] h-[calc(100%+8px)]"
           style="transform: rotateY(180deg);">
           <SpinnigIcon />

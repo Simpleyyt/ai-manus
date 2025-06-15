@@ -3,12 +3,15 @@ from datetime import datetime, UTC
 from typing import List, Optional
 from enum import Enum
 import uuid
-from app.domain.events.agent_events import BaseEvent
+from app.domain.events.agent_events import BaseEvent, PlanEvent, AgentEvent
+from app.domain.models.plan import Plan
 
 
 class SessionStatus(str, Enum):
     """Session status enum"""
-    ACTIVE = "active"
+    PENDING = "pending"
+    RUNNING = "running"
+    WAITING = "waiting"
     COMPLETED = "completed"
 
 
@@ -24,5 +27,12 @@ class Session(BaseModel):
     latest_message_at: Optional[datetime] = Field(default_factory=lambda: datetime.now(UTC))
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    events: List[BaseEvent] = []
-    status: SessionStatus = SessionStatus.ACTIVE
+    events: List[AgentEvent] = []
+    status: SessionStatus = SessionStatus.PENDING
+
+    def get_last_plan(self) -> Optional[Plan]:
+        """Get the last plan from the events"""
+        for event in reversed(self.events):
+            if isinstance(event, PlanEvent):
+                return event.plan
+        return None

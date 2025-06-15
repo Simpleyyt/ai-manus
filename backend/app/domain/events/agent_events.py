@@ -95,6 +95,10 @@ class DoneEvent(BaseEvent):
     """Done event"""
     type: Literal["done"] = "done"
 
+class WaitEvent(BaseEvent):
+    """Wait event"""
+    type: Literal["wait"] = "wait"
+
 AgentEvent = Union[
     BaseEvent,
     ErrorEvent,
@@ -103,7 +107,8 @@ AgentEvent = Union[
     StepEvent,
     MessageEvent,
     DoneEvent,
-    TitleEvent
+    TitleEvent,
+    WaitEvent
 ]
 
 
@@ -129,6 +134,8 @@ class AgentEventFactory:
             return DoneEvent.model_validate_json(event_str)
         elif (event.type == "title"):
             return TitleEvent.model_validate_json(event_str)
+        elif (event.type == "wait"):
+            return WaitEvent.model_validate_json(event_str)
         else:
             return event
     

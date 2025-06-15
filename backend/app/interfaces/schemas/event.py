@@ -12,6 +12,7 @@ from app.domain.events.agent_events import (
     TitleEvent,
     ToolEvent,
     StepEvent,
+    WaitEvent,
 )
 
 
@@ -62,6 +63,10 @@ class DoneSSEEvent(BaseSSEEvent):
     event: Literal["done"] = "done"
     data: BaseEventData
 
+class WaitSSEEvent(BaseSSEEvent):
+    event: Literal["wait"] = "wait"
+    data: BaseEventData
+
 class ErrorSSEEvent(BaseSSEEvent):
     event: Literal["error"] = "error"
     data: ErrorEventData
@@ -86,7 +91,8 @@ AgentSSEEvent = Union[
     ToolSSEEvent,
     StepSSEEvent,
     DoneSSEEvent,
-    ErrorSSEEvent
+    ErrorSSEEvent,
+    WaitSSEEvent
 ]
 
 class SSEEventFactory:
@@ -159,3 +165,5 @@ class SSEEventFactory:
                     error=event.error
                 )
             )
+        elif isinstance(event, WaitEvent):
+            return WaitSSEEvent(data=base_event)

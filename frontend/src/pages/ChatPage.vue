@@ -238,6 +238,8 @@ const handleEvent = (event: AgentSSEEvent) => {
     handleStepEvent(event.data as StepEventData);
   } else if (event.event === 'done') {
     //isLoading.value = false;
+  } else if (event.event === 'wait') {
+    // TODO: handle wait event
   } else if (event.event === 'error') {
     handleErrorEvent(event.data as ErrorEventData);
   } else if (event.event === 'title') {

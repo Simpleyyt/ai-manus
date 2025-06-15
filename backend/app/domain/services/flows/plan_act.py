@@ -20,6 +20,8 @@ from app.domain.external.browser import Browser
 from app.domain.external.search import SearchEngine
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.utils.json_parser import JsonParser
+from app.domain.repositories.session_repository import SessionRepository
+from app.domain.models.session import SessionStatus
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +37,8 @@ class PlanActFlow(BaseFlow):
         self,
         agent_id: str,
         agent_repository: AgentRepository,
+        session_id: str,
+        session_repository: SessionRepository,
         llm: LLM,
         sandbox: Sandbox,
         browser: Browser,
@@ -43,6 +47,8 @@ class PlanActFlow(BaseFlow):
     ):
         self._agent_id = agent_id
         self._repository = agent_repository
+        self._session_id = session_id
+        self._session_repository = session_repository
         self.status = AgentStatus.IDLE
         self.plan = None
         # Create planner and execution agents
@@ -66,11 +72,27 @@ class PlanActFlow(BaseFlow):
         logger.debug(f"Created execution agent for Agent {self._agent_id}")
 
     async def run(self, message: str) -> AsyncGenerator[BaseEvent, None]:
-        if not self.is_done():
-            # interrupt the current flow
+
+        # TODO: move to task runner
+        session = await self._session_repository.find_by_id(self._session_id)
+        if not session:
+            raise ValueError(f"Session {self._session_id} not found")
+        
+        if session.status != SessionStatus.PENDING:
+            logger.debug(f"Session {self._session_id} is not in PENDING status, rolling back")
+            await self.executor.roll_back()
+            await self.planner.roll_back()
+        
+        if session.status == SessionStatus.RUNNING:
+            logger.debug(f"Session {self._session_id} is in RUNNING status")
             self.status = AgentStatus.PLANNING
-            self.planner.roll_back()
-            self.executor.roll_back()
+
+        if session.status == SessionStatus.WAITING:
+            logger.debug(f"Session {self._session_id} is in WAITING status")
+            self.status = AgentStatus.EXECUTING
+
+        await self._session_repository.update_status(self._session_id, SessionStatus.RUNNING)  
+        self.plan = session.get_last_plan()
 
         logger.info(f"Agent {self._agent_id} started processing message: {message[:50]}...")
         step = None
@@ -101,7 +123,7 @@ class PlanActFlow(BaseFlow):
                     continue
                 # Execute step
                 logger.info(f"Agent {self._agent_id} started executing step {step.id}: {step.description[:50]}...")
-                async for event in self.executor.execute_step(self.plan, step):
+                async for event in self.executor.execute_step(self.plan, step, message):
                     yield event
                 logger.info(f"Agent {self._agent_id} completed step {step.id}, state changed from {AgentStatus.EXECUTING} to {AgentStatus.UPDATING}")
                 self.status = AgentStatus.UPDATING

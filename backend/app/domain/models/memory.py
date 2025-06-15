@@ -55,15 +55,12 @@ class Memory(BaseModel):
         if latest_system:
             return [latest_system] + messages
         return messages
-
-    def roll_back(self) -> None:
-        """Roll back memory"""
-        if len(self.messages) > 1 and \
-                self.get_message_role(self.messages[-1]) == "tool" and \
-                self.get_message_role(self.messages[-2]) != "tool":
-            self.messages.pop()
-        elif len(self.messages) > 0 and self.get_message_role(self.messages[-1]) == "user":
-            self.messages.pop()
+    
+    def get_last_message(self) -> Optional[Dict[str, Any]]:
+        """Get the last message"""
+        if len(self.messages) > 0:  
+            return self.messages[-1]
+        return None
 
     @property
     def empty(self) -> bool:

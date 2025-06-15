@@ -78,7 +78,8 @@ class BaseAgent(ABC):
                     logger.exception(f"Tool execution failed, {function_name}, {arguments}")
                     break
         
-        raise ValueError(f"Tool execution failed, retried {self.max_retries} times: {last_error}")
+        #raise ValueError(f"Tool execution failed, retried {self.max_retries} times: {last_error}")
+        return ToolResult(success=False, error=last_error)
     
     async def execute(self, request: str) -> AsyncGenerator[BaseEvent, None]:
         message = await self.ask(request, self.format)
@@ -130,14 +131,17 @@ class BaseAgent(ABC):
         
         yield MessageEvent(message=message["content"])
     
-    async def _add_to_memory(self, messages: List[Dict[str, Any]]) -> None:
-        """Update memory and save to repository"""
+    async def _ensure_memory(self):
         if not self.memory:
             self.memory = await self._repository.get_memory(self._agent_id, self.name)
-            if self.memory.empty:
-                self.memory.add_message({
-                    "role": "system", "content": self.system_prompt,
-                })
+    
+    async def _add_to_memory(self, messages: List[Dict[str, Any]]) -> None:
+        """Update memory and save to repository"""
+        await self._ensure_memory()
+        if self.memory.empty:
+            self.memory.add_message({
+                "role": "system", "content": self.system_prompt,
+            })
         self.memory.add_messages(messages)
         await self._repository.save_memory(self._agent_id, self.name, self.memory)
 
@@ -163,5 +167,20 @@ class BaseAgent(ABC):
             }
         ], format)
     
-    def roll_back(self):
-        self.memory.roll_back()
+    async def roll_back(self):
+        await self._ensure_memory()
+        last_message = self.memory.get_last_message()
+        if not last_message:
+            return
+        if not last_message.get("tool_calls"):
+            return
+        tool_responses = []
+        for tool_call in last_message.get("tool_calls"):
+            tool_call_id = tool_call["id"] or str(uuid.uuid4())
+            tool_responses.append({
+                "role": "tool",
+                "tool_call_id": tool_call_id,
+                "content": ToolResult(success=True).model_dump_json()
+            })
+        await self._add_to_memory(tool_responses)
+        await self._repository.save_memory(self._agent_id, self.name, self.memory)

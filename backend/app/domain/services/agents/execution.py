@@ -14,6 +14,9 @@ from app.domain.events.agent_events import (
     ErrorEvent,
     MessageEvent,
     DoneEvent,
+    ToolEvent,
+    ToolStatus,
+    WaitEvent,
 )
 from app.domain.services.tools.shell import ShellTool
 from app.domain.services.tools.browser import BrowserTool
@@ -58,8 +61,8 @@ class ExecutionAgent(BaseAgent):
         if search_engine:
             self.tools.append(SearchTool(search_engine))
     
-    async def execute_step(self, plan: Plan, step: Step) -> AsyncGenerator[BaseEvent, None]:
-        message = EXECUTION_PROMPT.format(goal=plan.goal, step=step.description)
+    async def execute_step(self, plan: Plan, step: Step, message: str = "") -> AsyncGenerator[BaseEvent, None]:
+        message = EXECUTION_PROMPT.format(goal=plan.goal, step=step.description, message=message)
         step.status = ExecutionStatus.RUNNING
         yield StepEvent(status=StepStatus.STARTED, step=step)
         async for event in self.execute(message):
@@ -67,11 +70,17 @@ class ExecutionAgent(BaseAgent):
                 step.status = ExecutionStatus.FAILED
                 step.error = event.error
                 yield StepEvent(status=StepStatus.FAILED, step=step)
-            
-            if isinstance(event, MessageEvent):
+            elif isinstance(event, MessageEvent):
                 step.status = ExecutionStatus.COMPLETED
                 step.result = event.message
                 yield StepEvent(status=StepStatus.COMPLETED, step=step)
+            elif isinstance(event, ToolEvent):
+                if event.function_name == "message_ask_user":
+                    if event.status == ToolStatus.CALLING:
+                        yield MessageEvent(message=event.function_args["text"], role="assistant")
+                    elif event.status == ToolStatus.CALLED:
+                        yield WaitEvent()
+                        return
+                    continue
             yield event
         step.status = ExecutionStatus.COMPLETED
-

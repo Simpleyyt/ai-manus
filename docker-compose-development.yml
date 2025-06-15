@@ -88,8 +88,8 @@ services:
     volumes:
       - mongodb_data:/data/db
     restart: unless-stopped
-    #ports:
-    #  - "27017:27017"
+    ports:
+      - "27017:27017"
     networks:
       - manus-network
 

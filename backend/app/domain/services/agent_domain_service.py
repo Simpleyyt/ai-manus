@@ -6,7 +6,7 @@ from app.domain.models.session import Session, SessionStatus
 from app.domain.external.llm import LLM
 from app.domain.external.sandbox import Sandbox
 from app.domain.external.search import SearchEngine
-from app.domain.events.agent_events import BaseEvent, ErrorEvent, DoneEvent, PlanEvent, StepEvent, ToolEvent, MessageEvent, AgentEventFactory
+from app.domain.events.agent_events import BaseEvent, ErrorEvent, DoneEvent, PlanEvent, StepEvent, ToolEvent, MessageEvent, WaitEvent, AgentEventFactory
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.repositories.session_repository import SessionRepository
 from app.domain.services.agent_task_runner import AgentTaskRunner
@@ -122,11 +122,10 @@ class AgentDomainService:
             task = await self._get_task(session)
 
             if message:
-                if task:
-                    task.cancel()
-                task = await self._create_task(session)
-                if not task:
-                    raise RuntimeError("Failed to create task")
+                if session.status != SessionStatus.RUNNING:
+                    task = await self._create_task(session)
+                    if not task:
+                        raise RuntimeError("Failed to create task")
                 
                 await self._session_repository.update_latest_message(session_id, message, timestamp or datetime.now())
 
@@ -150,7 +149,7 @@ class AgentDomainService:
                 logger.debug(f"Got event from Session {session_id}'s event queue: {type(event).__name__}")
                 await self._session_repository.update_unread_message_count(session_id, 0)
                 yield event
-                if isinstance(event, (DoneEvent, ErrorEvent)):
+                if isinstance(event, (DoneEvent, ErrorEvent, WaitEvent)):
                     break
             
             logger.info(f"Session {session_id} completed")

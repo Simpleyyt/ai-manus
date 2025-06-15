@@ -16,7 +16,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 TOOL_POLL_INTERVAL = 5
-SESSION_POLL_INTERVAL = 10
+SESSION_POLL_INTERVAL = 5
 
 
 def get_agent_service() -> AgentService:
@@ -117,6 +117,7 @@ async def chat(
             timestamp=datetime.fromtimestamp(request.timestamp) if request.timestamp else None,
             event_id=request.event_id
         ):
+            logger.debug(f"Received event from chat: {event}")
             sse_event = SSEEventFactory.from_event(event)
             logger.debug(f"Received event: {sse_event}")
             if sse_event:

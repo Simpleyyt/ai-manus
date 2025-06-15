@@ -1,6 +1,6 @@
 export type AgentSSEEvent = {
-  event: 'tool' | 'step' | 'message' | 'error' | 'done' | 'title';
-  data: ToolEventData | StepEventData | MessageEventData | ErrorEventData | DoneEventData | TitleEventData;
+  event: 'tool' | 'step' | 'message' | 'error' | 'done' | 'title' | 'wait' | 'plan';
+  data: ToolEventData | StepEventData | MessageEventData | ErrorEventData | DoneEventData | TitleEventData | WaitEventData | PlanEventData;
 }
 
 export interface BaseEventData {
@@ -33,6 +33,9 @@ export interface ErrorEventData extends BaseEventData {
 }
 
 export interface DoneEventData extends BaseEventData {
+}
+
+export interface WaitEventData extends BaseEventData {
 }
 
 export interface TitleEventData extends BaseEventData {

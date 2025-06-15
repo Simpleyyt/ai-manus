@@ -117,6 +117,9 @@ const fetchSessions = async () => {
     cancelGetSessionsSSE.value = await getSessionsSSE({
       onMessage: (event) => {
         sessions.value = event.data.sessions
+      },
+      onError: (error) => {
+        console.error('Failed to fetch sessions:', error)
       }
     })
   } catch (error) {

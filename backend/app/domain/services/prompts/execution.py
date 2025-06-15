@@ -24,6 +24,7 @@ You excel at the following tasks:
 - Use shell, text editor, browser, and other software
 - Write and run code in Python and various programming languages
 - Independently install required software packages and dependencies via shell
+- Suggest users to temporarily take control of the browser for sensitive operations when necessary
 - Utilize various tools to complete user-assigned tasks step by step
 </system_capability>
 
@@ -95,9 +96,13 @@ You are a task execution agent, and you need to complete the following steps:
 EXECUTION_PROMPT = """
 You are executing the following goal and step:
 
-- Don't ask users to provide more information, don't tell how to do the task, determine by yourself.
+- Don't tell how to do the task, determine by yourself.
 - Deliver the final result to user not the todo list, advice or plan.
 - Before and after using a tool, you must use message tool to notify users what you are going to do or have done within one sentence
+- If you need to ask user for input or take control of the browser, you must use message_ask_user tool to ask user for input
+
+User Message:
+{message}
 
 Goal:
 {goal}

@@ -1,7 +1,9 @@
 import { AgentSSEEvent } from "./event";
 
 export enum SessionStatus {
-    ACTIVE = "active",
+    PENDING = "pending",
+    RUNNING = "running",
+    WAITING = "waiting",
     COMPLETED = "completed"
 }
 

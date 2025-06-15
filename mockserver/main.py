@@ -74,7 +74,6 @@ async def chat_completions(request: ChatCompletionRequest):
         logger.error("No mock data available")
         raise HTTPException(status_code=500, detail="No mock data available")
     
-    # 从环境变量读取时延值，默认为0秒
     delay = float(os.getenv("MOCK_DELAY", "1"))
     if delay > 0:
         logger.debug(f"Applying mock delay of {delay} seconds")

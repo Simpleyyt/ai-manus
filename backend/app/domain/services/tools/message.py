@@ -36,8 +36,47 @@ class MessageTool(BaseTool):
         """
             
         # Return success result, actual UI display logic implemented by caller
-        return ToolResult(
-            success=True,
-            data=text
-        )
+        return ToolResult(success=True)
     
+    @tool(
+        name="message_ask_user",
+        description="Ask user a question and wait for response. Use for requesting clarification, asking for confirmation, or gathering additional information.",
+        parameters={
+            "text": {
+                "type": "string",
+                "description": "Question text to present to user"
+            },
+            "attachments": {
+                "anyOf": [
+                    {"type": "string"},
+                    {"items": {"type": "string"}, "type": "array"}
+                ],
+                "description": "(Optional) List of question-related files or reference materials"
+            },
+            "suggest_user_takeover": {
+                "type": "string",
+                "enum": ["none", "browser"],
+                "description": "(Optional) Suggested operation for user takeover"
+            }
+        },
+        required=["text"]
+    )
+    async def message_ask_user(
+        self,
+        text: str,
+        attachments: Optional[Union[str, List[str]]] = None,
+        suggest_user_takeover: Optional[str] = None
+    ) -> ToolResult:
+        """Ask user a question and wait for response
+        
+        Args:
+            text: Question text to present to user
+            attachments: List of question-related files or reference materials
+            suggest_user_takeover: Suggested operation for user takeover
+            
+        Returns:
+            Question asking result with user response
+        """
+            
+        # Return success result, actual UI interaction logic implemented by caller
+        return ToolResult(success=True)

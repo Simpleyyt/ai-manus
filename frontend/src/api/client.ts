@@ -111,6 +111,10 @@ export interface SSEOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: any;
   headers?: Record<string, string>;
+  // Retry configuration
+  retryCount?: number; // Maximum retry attempts, default is 3
+  retryDelay?: number; // Retry delay in milliseconds, default is 1000
+  shouldRetry?: (error: Error) => boolean; // Function to determine if should retry on error, default always returns true
 }
 
 /**
@@ -126,74 +130,112 @@ export const createSSEConnection = async <T = any>(
   callbacks: SSECallbacks<T> = {}
 ): Promise<() => void> => {
   const { onOpen, onMessage, onClose, onError } = callbacks;
-  const { method = 'GET', body, headers = {} } = options;
+  const { 
+    method = 'GET', 
+    body, 
+    headers = {},
+    retryCount = 3,
+    retryDelay = 1000,
+    shouldRetry = () => true
+  } = options;
   
   // Create AbortController for cancellation
   const abortController = new AbortController();
+  let currentAttempt = 0;
   
-  try {
-    const apiUrl = `${BASE_URL}${endpoint}`;
-    
-    // Start the SSE connection
-    const ssePromise = fetchEventSource(apiUrl, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        ...headers,
-      },
-      openWhenHidden: true,
-      body: body ? JSON.stringify(body) : undefined,
-      signal: abortController.signal,
-      async onopen() {
-        if (onOpen) {
-          onOpen();
-        }
-      },
-      onmessage(event: EventSourceMessage) {
-        if (event.event && event.event.trim() !== '') {
-          if (onMessage) {
-            onMessage({
-              event: event.event,
-              data: JSON.parse(event.data) as T
-            });
+  const apiUrl = `${BASE_URL}${endpoint}`;
+  
+  // 创建重试函数
+  const createConnection = async (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      if (abortController.signal.aborted) {
+        reject(new Error('Connection aborted'));
+        return;
+      }
+
+      const ssePromise = fetchEventSource(apiUrl, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+        openWhenHidden: true,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: abortController.signal,
+        async onopen() {
+          currentAttempt = 0; // 连接成功，重置重试计数
+          if (onOpen) {
+            onOpen();
           }
-        }
-      },
-      onclose() {
-        if (onClose) {
-          onClose();
-        }
-      },
-      onerror(err: any) {
-        console.error('EventSource error:', err);
+        },
+        onmessage(event: EventSourceMessage) {
+          if (event.event && event.event.trim() !== '') {
+            if (onMessage) {
+              onMessage({
+                event: event.event,
+                data: JSON.parse(event.data) as T
+              });
+            }
+          }
+        },
+        onclose() {
+          if (onClose) {
+            onClose();
+          }
+        },
+        onerror(err: any) {
+          const error = err instanceof Error ? err : new Error(String(err));
+          console.error('EventSource error:', error);
+          reject(error);
+        },
+      });
+
+      ssePromise.catch(reject);
+    });
+  };
+
+  // 带重试的连接函数
+  const connectWithRetry = async (): Promise<void> => {
+    try {
+      await createConnection();
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      
+      // 检查是否被取消
+      if (abortController.signal.aborted) {
+        return;
+      }
+
+      // 检查是否应该重试
+      if (currentAttempt < retryCount && shouldRetry(err)) {
+        currentAttempt++;
+        console.log(`SSE connection failed, retrying (${currentAttempt}/${retryCount})...`);
+        
+        // 等待重试延迟
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        
+        // 递归重试
+        return connectWithRetry();
+      } else {
+        // 重试耗尽或不应该重试，触发错误回调
         if (onError) {
-          onError(err instanceof Error ? err : new Error(String(err)));
+          onError(err);
         }
         throw err;
-      },
-    });
-
-    // Handle the SSE promise in the background
-    ssePromise.catch((error) => {
-      // Only handle errors that are not due to abortion
-      if (!abortController.signal.aborted) {
-        console.error('SSE error:', error);
-        if (onError) {
-          onError(error instanceof Error ? error : new Error(String(error)));
-        }
       }
-    });
-
-    // Return the cancel function immediately
-    return () => {
-      abortController.abort();
-    };
-  } catch (error) {
-    console.error('SSE setup error:', error);
-    if (onError) {
-      onError(error instanceof Error ? error : new Error(String(error)));
     }
-    // Return a no-op cancel function
-    return () => {};
-  }
+  };
+
+  // 开始连接
+  connectWithRetry().catch((error) => {
+    // 只处理非取消错误
+    if (!abortController.signal.aborted) {
+      console.error('SSE connection failed after retries:', error);
+    }
+  });
+
+  // 返回取消函数
+  return () => {
+    abortController.abort();
+  };
 }; 

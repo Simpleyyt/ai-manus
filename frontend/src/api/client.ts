@@ -111,10 +111,6 @@ export interface SSEOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: any;
   headers?: Record<string, string>;
-  // Retry configuration
-  retryCount?: number; // Maximum retry attempts, default is 3
-  retryDelay?: number; // Retry delay in milliseconds, default is 1000
-  shouldRetry?: (error: Error) => boolean; // Function to determine if should retry on error, default always returns true
 }
 
 /**
@@ -133,19 +129,15 @@ export const createSSEConnection = async <T = any>(
   const { 
     method = 'GET', 
     body, 
-    headers = {},
-    retryCount = 3,
-    retryDelay = 1000,
-    shouldRetry = () => true
+    headers = {}
   } = options;
   
   // Create AbortController for cancellation
   const abortController = new AbortController();
-  let currentAttempt = 0;
   
   const apiUrl = `${BASE_URL}${endpoint}`;
   
-  // 创建重试函数
+  // 创建SSE连接
   const createConnection = async (): Promise<void> => {
     return new Promise((resolve, reject) => {
       if (abortController.signal.aborted) {
@@ -163,7 +155,6 @@ export const createSSEConnection = async <T = any>(
         body: body ? JSON.stringify(body) : undefined,
         signal: abortController.signal,
         async onopen() {
-          currentAttempt = 0; // 连接成功，重置重试计数
           if (onOpen) {
             onOpen();
           }
@@ -186,6 +177,9 @@ export const createSSEConnection = async <T = any>(
         onerror(err: any) {
           const error = err instanceof Error ? err : new Error(String(err));
           console.error('EventSource error:', error);
+          if (onError) {
+            onError(error);
+          }
           reject(error);
         },
       });
@@ -194,43 +188,11 @@ export const createSSEConnection = async <T = any>(
     });
   };
 
-  // 带重试的连接函数
-  const connectWithRetry = async (): Promise<void> => {
-    try {
-      await createConnection();
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      
-      // 检查是否被取消
-      if (abortController.signal.aborted) {
-        return;
-      }
-
-      // 检查是否应该重试
-      if (currentAttempt < retryCount && shouldRetry(err)) {
-        currentAttempt++;
-        console.log(`SSE connection failed, retrying (${currentAttempt}/${retryCount})...`);
-        
-        // 等待重试延迟
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
-        
-        // 递归重试
-        return connectWithRetry();
-      } else {
-        // 重试耗尽或不应该重试，触发错误回调
-        if (onError) {
-          onError(err);
-        }
-        throw err;
-      }
-    }
-  };
-
   // 开始连接
-  connectWithRetry().catch((error) => {
+  createConnection().catch((error) => {
     // 只处理非取消错误
     if (!abortController.signal.aborted) {
-      console.error('SSE connection failed after retries:', error);
+      console.error('SSE connection failed:', error);
     }
   });
 

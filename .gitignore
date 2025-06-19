@@ -118,3 +118,4 @@ coverage/
 .vite/
 docker-compose-test.yml
 *.code-workspace
+方案讨论.md

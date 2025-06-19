@@ -61,6 +61,14 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Install cybersecurity tools
+RUN apt-get update && apt-get install -y \
+    libegl1 \
+    nmap \
+    wireshark \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # Set default locale
 ENV LANG=zh_CN.UTF-8 \
     LANGUAGE=zh_CN:zh \
@@ -71,6 +79,7 @@ WORKDIR /app
 
 # Copy project files (copy dependency files first to leverage cache)
 COPY requirements.txt .
+COPY app/builtin-bin /usr/local/bin
 
 # Install Python dependencies
 RUN pip3 install --no-cache-dir -r requirements.txt

@@ -1,3 +1,6 @@
+from app.domain.models.exceptions import TokenLimitExceededError as DomainTokenLimitExceededError
+
+
 class AppException(RuntimeError):
     def __init__(
         self,
@@ -28,4 +31,11 @@ class ServerError(AppException):
 
 class UnauthorizedError(AppException):
     def __init__(self, msg: str = "Unauthorized"):
-        super().__init__(code=401, msg=msg, status_code=401) 
+        super().__init__(code=401, msg=msg, status_code=401)
+
+
+class TokenLimitExceededError(AppException, DomainTokenLimitExceededError):
+    """应用层Token限制异常，继承领域异常并添加HTTP状态码"""
+    def __init__(self, msg: str, current_tokens: int, max_tokens: int):
+        AppException.__init__(self, code=429, msg=msg, status_code=429)
+        DomainTokenLimitExceededError.__init__(self, msg, current_tokens, max_tokens) 

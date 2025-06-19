@@ -1,4 +1,5 @@
 from typing import AsyncGenerator, Optional
+import logging
 from app.domain.models.plan import Plan, Step, ExecutionStatus
 from app.domain.services.agents.base import BaseAgent
 from app.domain.external.llm import LLM
@@ -21,6 +22,9 @@ from app.domain.services.tools.search import SearchTool
 from app.domain.services.tools.file import FileTool
 from app.domain.services.tools.message import MessageTool
 from app.domain.utils.json_parser import JsonParser
+from app.domain.models.compression import AgentType
+
+logger = logging.getLogger(__name__)
 
 
 class ExecutionAgent(BaseAgent):
@@ -59,6 +63,11 @@ class ExecutionAgent(BaseAgent):
             self.tools.append(SearchTool(search_engine))
     
     async def execute_step(self, plan: Plan, step: Step) -> AsyncGenerator[BaseEvent, None]:
+        # 在执行步骤前检查是否需要进行记忆管理
+        if self.memory and self._memory_manager.should_compress_by_count(self.memory):
+            logger.info("Execution agent memory size threshold reached, performing automatic cleanup before step execution")
+            await self._memory_manager.auto_manage_memory(self.memory, AgentType.EXECUTION)
+        
         message = EXECUTION_PROMPT.format(goal=plan.goal, step=step.description)
         step.status = ExecutionStatus.RUNNING
         yield StepEvent(status=StepStatus.STARTED, step=step)

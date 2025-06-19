@@ -1,16 +1,15 @@
-from typing import AsyncGenerator, Dict, Any, Optional, Generator, List
+from typing import AsyncGenerator, Optional, List
 import logging
 from datetime import datetime
 from app.domain.models.session import Session
 from app.domain.repositories.session_repository import SessionRepository
 
-from app.interfaces.schemas.response import ShellViewResponse, FileViewResponse, GetSessionResponse
+from app.interfaces.schemas.response import ShellViewResponse, FileViewResponse
 from app.domain.models.agent import Agent
 from app.domain.services.agent_domain_service import AgentDomainService
 from app.domain.events.agent_events import AgentEvent
 from app.application.errors.exceptions import NotFoundError
 from typing import Type
-from app.domain.models.agent import Agent
 from app.domain.external.sandbox import Sandbox
 from app.domain.external.search import SearchEngine
 from app.domain.external.llm import LLM

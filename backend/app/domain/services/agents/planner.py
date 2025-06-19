@@ -5,7 +5,7 @@ from app.domain.models.plan import Plan, Step
 from app.domain.services.agents.base import BaseAgent
 from app.domain.models.memory import Memory
 from app.domain.external.llm import LLM
-from app.domain.services.prompts.planner import (
+from app.domain.services.prompts.planner_for_cybersecurity import (
     PLANNER_SYSTEM_PROMPT, 
     CREATE_PLAN_PROMPT, 
     UPDATE_PLAN_PROMPT

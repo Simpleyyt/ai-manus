@@ -147,7 +147,7 @@ class AgentTaskRunner(TaskRunner):
 
     async def destroy(self) -> None:
         """Destroy the task and release resources"""
-        logger.info(f"Starting to destroy agent task")
+        logger.info("Starting to destroy agent task")
         
         # Destroy sandbox environment
         if self._sandbox:

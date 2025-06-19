@@ -180,7 +180,7 @@ class BaseAgent(ABC):
             tool_responses.append({
                 "role": "tool",
                 "tool_call_id": tool_call_id,
-                "content": ToolResult(success=True).model_dump_json()
+                "content": ToolResult(success=False).model_dump_json()
             })
         await self._add_to_memory(tool_responses)
         await self._repository.save_memory(self._agent_id, self.name, self.memory)

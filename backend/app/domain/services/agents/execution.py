@@ -1,4 +1,5 @@
 from typing import AsyncGenerator, Optional
+from datetime import datetime
 from app.domain.models.plan import Plan, Step, ExecutionStatus
 from app.domain.services.agents.base import BaseAgent
 from app.domain.external.llm import LLM
@@ -6,7 +7,7 @@ from app.domain.external.sandbox import Sandbox
 from app.domain.external.browser import Browser
 from app.domain.external.search import SearchEngine
 from app.domain.repositories.agent_repository import AgentRepository
-from app.domain.services.prompts.execution import EXECUTION_SYSTEM_PROMPT, EXECUTION_PROMPT
+from app.domain.services.prompts.execution_for_cybersecurity import EXECUTION_SYSTEM_PROMPT, EXECUTION_PROMPT
 from app.domain.events.agent_events import (
     BaseEvent,
     StepEvent,
@@ -62,7 +63,9 @@ class ExecutionAgent(BaseAgent):
             self.tools.append(SearchTool(search_engine))
     
     async def execute_step(self, plan: Plan, step: Step, message: str = "") -> AsyncGenerator[BaseEvent, None]:
-        message = EXECUTION_PROMPT.format(goal=plan.goal, step=step.description, message=message)
+        message = EXECUTION_PROMPT.format(
+            goal=plan.goal, step=step.description, 
+            message=message, date=datetime.now().strftime("%Y-%m-%d"))
         step.status = ExecutionStatus.RUNNING
         yield StepEvent(status=StepStatus.STARTED, step=step)
         async for event in self.execute(message):

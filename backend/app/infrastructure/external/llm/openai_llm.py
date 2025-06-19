@@ -2,7 +2,7 @@ from typing import List, Dict, Any, Optional
 from openai import AsyncOpenAI
 from app.domain.external.llm import LLM
 from app.infrastructure.config import get_settings
-from app.domain.models.exceptions import TokenLimitExceededError
+from app.application.errors.exceptions import TokenLimitExceededError
 import logging
 import re
 

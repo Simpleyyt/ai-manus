@@ -38,4 +38,4 @@ class TokenLimitExceededError(AppException, DomainTokenLimitExceededError):
     """应用层Token限制异常，继承领域异常并添加HTTP状态码"""
     def __init__(self, msg: str, current_tokens: int, max_tokens: int):
         AppException.__init__(self, code=429, msg=msg, status_code=429)
-        DomainTokenLimitExceededError.__init__(self, msg, current_tokens, max_tokens) 
+        DomainTokenLimitExceededError.__init__(self, message=msg, current_tokens=current_tokens, max_tokens=max_tokens) 

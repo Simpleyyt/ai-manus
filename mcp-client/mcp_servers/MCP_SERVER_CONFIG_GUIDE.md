@@ -165,27 +165,8 @@
 }
 ```
 
-### 2. STDIO类型服务器 (Python模块)
 
-```json
-{
-  "zoomeye-mcp-server": {
-    "description": "ZoomEye search engine MCP server for asset discovery", 
-    "command": "python",
-    "args": ["-m", "mcp_server_zoomeye"],
-    "env": {
-      "ZOOMEYE_API_KEY": "${ZOOMEYE_API_KEY:-your_zoomeye_api_key}",
-      "PYTHONPATH": "/app"
-    },
-    "auto_connect": true,
-    "enabled": true
-  }
-}
-```
-
-```
-
-### 3. SSE类型服务器 (Server-Sent Events)
+### 2. SSE类型服务器 (Server-Sent Events)
 
 ```json
 {
@@ -205,41 +186,6 @@
 - 协议字段会根据URL自动检测（包含`/sse`时自动设为`"sse"`）
 - Token通常直接包含在URL中作为查询参数
 
-## 环境变量管理
-
-### 变量替换语法
-
-1. **简单替换**: `${VAR_NAME}`
-   - 如果环境变量存在，使用其值
-   - 如果不存在，保持原样
-
-2. **默认值语法**: `${VAR_NAME:-default_value}`
-   - 如果环境变量存在，使用其值
-   - 如果不存在，使用默认值
-
-### 推荐的环境变量
-
-建议在`.env`文件或Docker环境中设置以下变量：
-
-```bash
-# FOFA配置 - 网络空间资产搜索引擎
-FOFA_EMAIL=your_email@example.com
-FOFA_KEY=your_fofa_api_key
-
-# ZoomEye配置 - 网络空间搜索引擎
-ZOOMEYE_API_KEY=your_zoomeye_api_key
-
-# 高德地图配置 - 地理位置服务
-AMAP_API_KEY=your_amap_api_key
-
-# 安全代理配置 - 安全告警智能研判
-SEC_AGENT_TOKEN=your_security_agent_token
-
-# 其他常用配置
-PYTHONPATH=/app
-LOG_LEVEL=INFO
-MCP_TIMEOUT=30
-```
 
 > 💡 **安全提示**：
 > - 不要将API密钥提交到版本控制系统
@@ -300,7 +246,7 @@ MCP_TIMEOUT=30
 
 1. **查看日志**:
    ```bash
-   docker logs ai-manus-5-mcp-client-1
+   docker logs ai-manus-mcp-client-1
    ```
 
 2. **测试连接**:
@@ -354,16 +300,7 @@ MCP_TIMEOUT=30
 
 - [MCP协议官方文档](https://modelcontextprotocol.io)
 - [ai-manus项目文档](../README.md)
-- [MCP服务器开发指南](./MCP_SERVER_DEVELOPMENT.md)
 
-## 📞 技术支持
-
-如果在配置过程中遇到问题，可以：
-
-1. 📖 查看本文档的故障排除部分
-2. 🔍 检查应用日志文件
-3. 💬 在项目Issue中提交问题
-4. 📧 联系技术支持团队
 
 ---
 

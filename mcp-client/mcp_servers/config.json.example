@@ -1,0 +1,35 @@
+{
+  "preset_servers": {
+    "fofa-mcp-server": {
+      "description": "FOFA search engine MCP server for asset discovery (simple version)",
+      "command": "python3",
+      "args": [
+        "/app/mcp_servers/fofa_simple.py"
+      ],
+      "env": {
+        "FOFA_EMAIL": "your_email@email.com",
+        "FOFA_KEY": "your_key",
+        "PYTHONPATH": "/app"
+      },
+      "auto_connect": true,
+      "enabled": true
+    },
+   
+    "example-http-mcp-server": {
+      "description": "Example HTTP/SSE MCP server (disabled by default)",
+      "transport": "http",
+      "url": "http://localhost:8080",
+      "auto_connect": false,
+      "enabled": false
+    },
+  
+    "mcp_server_sec_agent": {
+      "description": "Example HTTP/SSE MCP server (disabled by default)",
+      "transport": "http",
+      "protocol": "sse",
+      "url": "http://localhost:8080/sse?token=your_token",
+      "auto_connect": true,
+      "enabled": true
+    }
+  }
+} 

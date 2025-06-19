@@ -41,13 +41,16 @@ class PlannerAgent(BaseAgent):
         agent_repository: AgentRepository,
         llm: LLM,
         json_parser: JsonParser,
+        available_execution_tools: Optional[List[Dict[str, Any]]] = None,
     ):
         super().__init__(
             agent_id=agent_id,
             agent_repository=agent_repository,
             llm=llm,
             json_parser=json_parser,
+            tools=[]  # 规划者不需要实际工具，但需要知道执行者有什么工具
         )
+        self.available_execution_tools = available_execution_tools or []
 
 
     async def create_plan(self, message: Optional[str] = None) -> AsyncGenerator[BaseEvent, None]:

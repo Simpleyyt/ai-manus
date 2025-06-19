@@ -105,6 +105,11 @@ class AgentTaskRunner(TaskRunner):
         """Destroy the task and release resources"""
         logger.info(f"Starting to destroy agent task")
         
+        # Clean up flow resources (including MCP connections)
+        if hasattr(self._flow, 'executor') and hasattr(self._flow.executor, 'cleanup'):
+            logger.debug(f"Cleaning up Agent {self._agent_id}'s executor resources")
+            await self._flow.executor.cleanup()
+        
         # Destroy sandbox environment
         if self._sandbox:
             logger.debug(f"Destroying Agent {self._agent_id}'s sandbox environment")

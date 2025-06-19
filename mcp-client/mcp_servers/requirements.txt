@@ -1,0 +1,19 @@
+# MCP Servers Dependencies
+# 这个文件定义了所有 MCP 服务器的 Python 依赖
+
+# MCP 核心库
+mcp>=1.0.0
+
+# HTTP 客户端 (FOFA API 调用)
+httpx>=0.25.0
+requests>=2.31.0
+
+# 异步支持
+asyncio
+
+# 其他常用库
+aiofiles>=23.0.0
+pydantic>=2.0.0
+
+# 
+# (如果有其他 MCP 服务器特定依赖，请在下面添加注释说明) 

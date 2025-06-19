@@ -212,11 +212,12 @@ Open your browser and visit <http://localhost:5173> to access Manus.
 
 ### Project Structure
 
-This project consists of three independent sub-projects:
+This project consists of four independent sub-projects:
 
 * `frontend`: manus frontend
 * `backend`: Manus backend
 * `sandbox`: Manus sandbox
+* `mcp_servers`: Model Context Protocol (MCP) servers
 
 ### Environment Setup
 

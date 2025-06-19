@@ -38,6 +38,9 @@ services:
       mongodb:
         condition: service_started
         required: true
+      mcp-client:
+        condition: service_started
+        required: true
     restart: unless-stopped
     networks:
       - manus-network
@@ -45,6 +48,22 @@ services:
       - .env
     environment:
       - SANDBOX_ADDRESS=sandbox # Use single container as sandbox
+      - MCP_CLIENT_URL=http://mcp-client:8001 # MCP Client service URL
+
+  mcp-client:
+    build:
+      context: ./mcp-client
+      dockerfile: Dockerfile
+    volumes:
+      - ./mcp-client/app:/app/app  # Mount only app source code (preserve site-packages)
+      - ./mcp-client/mcp_servers:/app/mcp_servers  # Mount MCP servers config directory
+    ports:
+      - "8001:8001"
+    restart: unless-stopped
+    networks:
+      - manus-network
+    environment:
+      - LOG_LEVEL=INFO
 
   sandbox:
     build:

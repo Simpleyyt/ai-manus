@@ -21,7 +21,6 @@ from app.interfaces.api.routes import get_agent_service
 from app.infrastructure.models.documents import AgentDocument, SessionDocument
 from app.infrastructure.utils.llm_json_parser import LLMJsonParser
 from beanie import init_beanie
-
 # Initialize logging system
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -54,6 +53,8 @@ def create_agent_service() -> AgentService:
 
 # Create agent service instance
 agent_service = create_agent_service()
+
+
 
 async def shutdown() -> None:
     """Cleanup function that will be called when the application is shutting down"""

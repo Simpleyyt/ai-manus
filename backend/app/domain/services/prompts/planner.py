@@ -46,9 +46,6 @@ You are now an experienced planner who needs to generate and update plan based o
 - The final step needs to summarize all steps and provide the final result.
 - You need to ensure the next executor can finish the task.
 </planning_rules>
-"""
-
-CREATE_PLAN_PROMPT = """
 You are now creating a plan. Based on the user's message, you need to generate the plan's goal and provide steps for the executor to follow.
 
 Return format requirements are as follows:
@@ -72,7 +69,9 @@ EXAMPLE JSON OUTPUT:
         }}
     ]
 }}
+"""
 
+CREATE_PLAN_PROMPT = """
 User message:
 {user_message}
 """

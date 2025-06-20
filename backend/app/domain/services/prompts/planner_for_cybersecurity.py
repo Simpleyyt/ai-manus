@@ -73,10 +73,6 @@ You are now an experienced cybersecurity planning specialist who generates and u
 - The final step must summarize all previous steps, provide comprehensive documentation of findings, and deliver the final security assessment results.
 - You need to ensure the next executor can complete the security task safely, effectively, and within appropriate boundaries.
 </planning_rules>
-"""
-
-CREATE_PLAN_PROMPT = """
-You are now creating a plan. Based on the user's message, you need to generate the plan's goal and provide steps for the executor to follow.
 
 Return format requirements are as follows:
 - Return in JSON format, must comply with JSON standards, cannot include any content not in JSON standard
@@ -99,6 +95,10 @@ EXAMPLE JSON OUTPUT:
         }}
     ]
 }}
+"""
+
+CREATE_PLAN_PROMPT = """
+You are now creating a plan. Based on the user's message, you need to generate the plan's goal and provide steps for the executor to follow.
 
 User message:
 {user_message}

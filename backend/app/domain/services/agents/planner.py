@@ -54,11 +54,39 @@ class PlannerAgent(BaseAgent):
         message = CREATE_PLAN_PROMPT.format(user_message=message) if message else None
         async for event in self.execute(message):
             if isinstance(event, MessageEvent):
-                logger.info(event.message)
-                parsed_response = await self.json_parser.parse(event.message)
-                steps = [Step(id=step["id"], description=step["description"]) for step in parsed_response["steps"]]
-                plan = Plan(id=f"plan_{len(steps)}", goal=parsed_response["goal"], title=parsed_response["title"], steps=steps, message=parsed_response["message"], todo=parsed_response.get("todo", ""))
-                yield PlanEvent(status=PlanStatus.CREATED, plan=plan)
+                logger.info(f"=== PlannerAgent received message: {event.message[:200]}... ===")
+                try:
+                    parsed_response = await self.json_parser.parse(event.message)
+                    logger.info(f"=== Parsed response keys: {list(parsed_response.keys()) if isinstance(parsed_response, dict) else 'Not a dict'} ===")
+                    
+                    # 检查必要的字段
+                    if not isinstance(parsed_response, dict):
+                        logger.error(f"=== Parsed response is not a dict: {type(parsed_response)} ===")
+                        yield ErrorEvent(error=f"LLM response parsing failed: expected dict, got {type(parsed_response)}")
+                        return
+                    
+                    required_fields = ["steps", "goal", "title", "message"]
+                    missing_fields = [field for field in required_fields if field not in parsed_response]
+                    
+                    if missing_fields:
+                        logger.error(f"=== Missing required fields: {missing_fields} ===")
+                        logger.error(f"=== Full parsed response: {parsed_response} ===")
+                        yield ErrorEvent(error=f"LLM response missing required fields: {missing_fields}")
+                        return
+                    
+                    if not isinstance(parsed_response["steps"], list):
+                        logger.error(f"=== Steps field is not a list: {type(parsed_response['steps'])} ===")
+                        yield ErrorEvent(error=f"LLM response 'steps' field is not a list: {type(parsed_response['steps'])}")
+                        return
+                    
+                    steps = [Step(id=step["id"], description=step["description"]) for step in parsed_response["steps"]]
+                    plan = Plan(id=f"plan_{len(steps)}", goal=parsed_response["goal"], title=parsed_response["title"], steps=steps, message=parsed_response["message"], todo=parsed_response.get("todo", ""))
+                    logger.info(f"=== Successfully created plan with {len(steps)} steps ===")
+                    yield PlanEvent(status=PlanStatus.CREATED, plan=plan)
+                except Exception as e:
+                    logger.error(f"=== Error processing planner response: {str(e)} ===")
+                    logger.error(f"=== Raw message content: {event.message} ===")
+                    yield ErrorEvent(error=f"Failed to process planner response: {str(e)}")
             else:
                 yield event
 

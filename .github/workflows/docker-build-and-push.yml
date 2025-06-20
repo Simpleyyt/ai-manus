@@ -3,18 +3,16 @@ name: Build and Push Docker Images to Docker Hub
 on:
   push:
     branches:
-      - main
-      - develop
+      - private-main
     tags:
-      - 'v*'
+      - "v*"
   pull_request:
     branches:
-      - main
-      - develop
+      - private-main
 
 env:
   REGISTRY: docker.io
-  IMAGE_REGISTRY: simpleyyt
+  IMAGE_REGISTRY: relaxcloud
 
 jobs:
   build-and-push:
@@ -22,7 +20,7 @@ jobs:
     strategy:
       matrix:
         component: [frontend, backend, sandbox]
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -42,7 +40,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_REGISTRY }}/manus-${{ matrix.component }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_REGISTRY }}/important-m-${{ matrix.component }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr

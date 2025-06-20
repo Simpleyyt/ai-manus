@@ -24,8 +24,11 @@ from app.domain.services.tools.browser import BrowserTool
 from app.domain.services.tools.search import SearchTool
 from app.domain.services.tools.file import FileTool
 from app.domain.services.tools.message import MessageTool
+from app.domain.services.tools.mcp import MCPTool
 from app.domain.utils.json_parser import JsonParser
 from app.domain.models.compression import AgentType
+
+logger = logging.getLogger(__name__)
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +51,9 @@ class ExecutionAgent(BaseAgent):
         json_parser: JsonParser,
         search_engine: Optional[SearchEngine] = None,
     ):
+        # Create MCP tool instance
+        self.mcp_tool = MCPTool()
+        
         super().__init__(
             agent_id=agent_id,
             agent_repository=agent_repository,
@@ -57,13 +63,29 @@ class ExecutionAgent(BaseAgent):
                 ShellTool(sandbox),
                 BrowserTool(browser),
                 FileTool(sandbox),
-                MessageTool()
+                MessageTool(),
+                self.mcp_tool
             ]
         )
         
         # Only add search tool when search_engine is not None
         if search_engine:
             self.tools.append(SearchTool(search_engine))
+    
+    async def initialize(self):
+        """Initialize the agent and all its tools"""
+        # Ensure MCP tool is initialized at agent startup
+        await self.mcp_tool._ensure_initialized()
+        logger.info("ExecutionAgent initialized successfully with MCP tools")
+    
+    async def get_available_tools_async(self):
+        """Override to ensure MCP tool is initialized before getting tools"""
+        # Ensure MCP tool is initialized
+        if hasattr(self.mcp_tool, '_ensure_initialized'):
+            await self.mcp_tool._ensure_initialized()
+        
+        # Call parent method to get all tools
+        return await super().get_available_tools_async()
     
     async def execute_step(self, plan: Plan, step: Step, message: str = "") -> AsyncGenerator[BaseEvent, None]:
         # 在执行步骤前检查是否需要进行记忆管理
@@ -99,3 +121,12 @@ class ExecutionAgent(BaseAgent):
                     continue
             yield event
         step.status = ExecutionStatus.COMPLETED
+    
+    async def cleanup(self):
+        """清理资源"""
+        for tool in self.tools:
+            if hasattr(tool, 'cleanup'):
+                try:
+                    await tool.cleanup()
+                except Exception as e:
+                    logger.error(f"清理工具 {tool.name} 失败: {e}")

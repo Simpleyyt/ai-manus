@@ -21,14 +21,16 @@ services:
   backend:
     image: ${IMAGE_REGISTRY:-simpleyyt}/manus-backend:${IMAGE_TAG:-latest}
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
       x-bake:
         platforms:
           - linux/amd64
           - linux/arm64
     depends_on:
       - sandbox
+      - mongodb
+      - redis
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro

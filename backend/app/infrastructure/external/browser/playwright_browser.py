@@ -6,6 +6,9 @@ from app.infrastructure.external.llm.openai_llm import OpenAILLM
 from app.infrastructure.config import get_settings
 from app.domain.models.tool_result import ToolResult
 import logging
+from app.application.errors.exceptions import TokenLimitExceededError
+from app.domain.services.memory_compression_service import MemoryCompressionService
+from app.infrastructure.utils.llm_json_parser import LLMJsonParser
 
 # Set up logger for this module
 logger = logging.getLogger(__name__)
@@ -215,18 +218,53 @@ class PlaywrightBrowser:
         # Convert to Markdown
         markdown_content = markdownify(visible_content)
 
+        # 初始最大内容长度限制（字符数）
         max_content_length = min(50000, len(markdown_content))
-        response = await self.llm.ask([{
-            "role": "system",
-            "content": "You are a professional web page information extraction assistant. Please extract all information from the current page content and convert it to Markdown format."
-        },
-        {
-            "role": "user",
-            "content": markdown_content[:max_content_length]
-        }
-        ])
-        
-        return response.get("content", "")
+
+        # MemoryCompressionService 用于解析 token 超限错误
+        _compress_service = MemoryCompressionService(self.llm, LLMJsonParser())
+
+        # 最多重试 3 次
+        for _ in range(3):
+            try:
+                response = await self.llm.ask([
+                    {
+                        "role": "system",
+                        "content": "You are a professional web page information extraction assistant. Please extract all information from the current page content and convert it to Markdown format."
+                    },
+                    {
+                        "role": "user",
+                        "content": markdown_content[:max_content_length]
+                    }
+                ])
+                # 成功拿到响应
+                return response.get("content", "")
+            except TokenLimitExceededError as e:
+                # 解析 token 超限信息，按比例缩减 max_content_length 后重试
+                token_info = _compress_service.parse_token_error(str(e))
+                if token_info:
+                    # 根据 token 使用比例动态调整，预留 10% 余量
+                    ratio = token_info.max_tokens / max(token_info.current_tokens, 1)
+                    max_content_length = int(max_content_length * ratio * 0.9)
+                    # 设置最小阈值，避免过度缩减导致内容过少
+                    max_content_length = max(1000, max_content_length)
+                    logger.warning(
+                        f"Token limit exceeded: current={token_info.current_tokens}, max={token_info.max_tokens}. "
+                        f"Retrying with max_content_length={max_content_length}."
+                    )
+                else:
+                    # 若解析失败，则简单缩减为原来的 70%
+                    max_content_length = int(max_content_length * 0.7)
+                    max_content_length = max(1000, max_content_length)
+                    logger.warning(
+                        f"Failed to parse token info, fallback to max_content_length={max_content_length}."
+                    )
+            except Exception:
+                # 其他异常直接抛出
+                raise
+
+        # 若多次重试仍失败，则抛出最后一次异常
+        raise RuntimeError("Failed to extract page content due to repeated token limit errors")
     
     async def view_page(self) -> ToolResult:
         """View visible elements within the current page's viewport and convert to Markdown format"""

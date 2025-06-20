@@ -6,6 +6,7 @@ EXECUTION_HISTORY_SUMMARY_PROMPT = """请为以下执行Agent的对话历史生�
 3. 遇到的问题和解决方案
 4. 关键的状态变化和进展
 5. 重要的文件、路径、数据等信息
+{task_context}
 
 对话历史：
 {content}
@@ -13,6 +14,7 @@ EXECUTION_HISTORY_SUMMARY_PROMPT = """请为以下执行Agent的对话历史生�
 请生成一个结构化的摘要，突出执行过程中的关键信息："""
 
 GENERAL_SUMMARY_PROMPT = """请为以下对话历史生成简洁摘要，保留关键信息：
+{task_context}
 
 对话历史：
 {content}

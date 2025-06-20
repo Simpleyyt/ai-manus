@@ -66,7 +66,11 @@ class ExecutionAgent(BaseAgent):
         # 在执行步骤前检查是否需要进行记忆管理
         if self.memory and self._memory_manager.should_compress_by_count(self.memory):
             logger.info("Execution agent memory size threshold reached, performing automatic cleanup before step execution")
-            await self._memory_manager.auto_manage_memory(self.memory, AgentType.EXECUTION)
+            compressed = await self._memory_manager.auto_manage_memory(self.memory, AgentType.EXECUTION)
+            # 🔧 修复：如果发生了压缩，立即保存
+            if compressed:
+                await self._repository.save_memory(self._agent_id, self.name, self.memory)
+                logger.info("Execution agent memory compressed and saved")
         
         message = EXECUTION_PROMPT.format(goal=plan.goal, step=step.description)
         step.status = ExecutionStatus.RUNNING

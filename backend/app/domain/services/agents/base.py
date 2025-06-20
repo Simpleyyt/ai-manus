@@ -18,9 +18,11 @@ from app.domain.events.agent_events import (
 )
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.utils.json_parser import JsonParser
-from app.domain.models.compression import AgentType
+from app.domain.models.compression import AgentType, TokenInfo
+from app.domain.models.exceptions import TokenLimitExceededError
 
 logger = logging.getLogger(__name__)
+
 class BaseAgent(ABC):
     """
     Base agent class, defining the basic behavior of the agent
@@ -55,6 +57,10 @@ class BaseAgent(ABC):
         
         # 确定agent类型
         self._agent_type = AgentType.PLANNER if self.name == "planner" else AgentType.EXECUTION
+        
+        # 跟踪是否正在处理分段内容
+        self._processing_segments = False
+        self._segment_context = None
     
     def get_available_tools(self) -> Optional[List[Dict[str, Any]]]:
         """Get all available tools list"""
@@ -89,9 +95,27 @@ class BaseAgent(ABC):
         raise ValueError(f"Tool execution failed, retried {self.max_retries} times: {last_error}")
     
     async def execute(self, request: str) -> AsyncGenerator[BaseEvent, None]:
+        """执行Agent任务"""
         # 执行前检查记忆是否需要整理（主动压缩）
         if self._agent_type == AgentType.EXECUTION:
-            await self._memory_manager.auto_manage_memory(self.memory, self._agent_type)
+            compressed = await self._memory_manager.auto_manage_memory(self.memory, self._agent_type)
+            # 如果发生了压缩，立即保存
+            if compressed:
+                await self._repository.save_memory(self._agent_id, self.name, self.memory)
+                logger.info(f"Memory compressed and saved before execution for {self.name} agent")
+        
+        # 如果请求超长，可能需要分段处理
+        request_tokens = self._compression_service._estimate_tokens(request)
+        max_model_tokens = self.llm.max_tokens
+        
+        # 如果请求本身就很长，先检查是否需要分段
+        if request_tokens > max_model_tokens * 0.5:  # 超过模型容量的50%
+            logger.info(f"Request is long ({request_tokens} tokens), may need segmentation")
+            # 标记可能需要分段处理
+            self._segment_context = {
+                "original_request": request,
+                "type": "user_input"
+            }
         
         message = await self.ask(request, self.format)
         for _ in range(self.max_iterations):
@@ -133,16 +157,14 @@ class BaseAgent(ABC):
                             max_tokens=4000  # 假设最大4000token
                         )
                         
-                        # 对于execution agent，使用专门的工具输出压缩
-                        if self._agent_type == AgentType.EXECUTION:
-                            compression_result = await self._compression_service.compress_tool_output_for_execution(
-                                tool_content, request, token_info  # request作为当前步骤描述
-                            )
-                        else:
-                            # 其他agent使用通用压缩
-                            compression_result = await self._compression_service.compress_tool_output(
-                                tool_content, function_name, token_info
-                            )
+                        # 使用改进的压缩方法
+                        compression_result = await self._compression_service.compress_for_immediate_use(
+                            content=tool_content,
+                            content_type="tool",
+                            context=request,  # 使用当前步骤作为上下文
+                            token_info=token_info,
+                            agent_type=self._agent_type
+                        )
                         
                         if compression_result.compressed_content:
                             tool_content = compression_result.compressed_content
@@ -197,7 +219,12 @@ class BaseAgent(ABC):
         await self._add_to_memory(messages)
 
         # 1. 首先检查消息数量，自动压缩
-        await self._memory_manager.auto_manage_memory(self.memory, self._agent_type)
+        compressed = await self._memory_manager.auto_manage_memory(self.memory, self._agent_type)
+        
+        # 如果发生了压缩，立即保存到数据库
+        if compressed:
+            await self._repository.save_memory(self._agent_id, self.name, self.memory)
+            logger.info(f"Memory compressed and saved for {self.name} agent")
 
         response_format = None
         if format:
@@ -213,15 +240,9 @@ class BaseAgent(ABC):
             await self._add_to_memory([message])
             return message
         except Exception as e:
-            logger.error(f"=== BaseAgent ask_with_messages caught exception ===: {type(e).__name__}: {str(e)}")
-            logger.error(f"=== Exception MRO ===: {[cls.__name__ for cls in type(e).__mro__]}")
+            logger.debug(f"=== BaseAgent ask_with_messages caught exception ===: {type(e).__name__}: {str(e)}")
             
             # 检查是否是Token限制错误
-            from app.domain.models.exceptions import TokenLimitExceededError
-            logger.error(f"=== Checking isinstance(e, TokenLimitExceededError) ===: {isinstance(e, TokenLimitExceededError)}")
-            logger.error(f"=== TokenLimitExceededError type ===: {TokenLimitExceededError}")
-            logger.error(f"=== Exception type ===: {type(e)}")
-            
             if isinstance(e, TokenLimitExceededError):
                 # 3. token错误时的专门处理
                 return await self._handle_token_limit_error(e, response_format)
@@ -231,10 +252,15 @@ class BaseAgent(ABC):
 
     async def _handle_token_limit_error(
         self, 
-        error: "TokenLimitExceededError", 
+        error: TokenLimitExceededError, 
         response_format: Optional[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        """处理token限制错误
+        """处理token限制错误 - 改进版
+        
+        处理流程：
+        1. 首先尝试清理消息列表（记忆管理）
+        2. 如果还超限，找最长消息进行压缩或分段处理
+        3. 如果是分段处理，启动分段提交流程
         
         Args:
             error: Token限制错误
@@ -243,186 +269,325 @@ class BaseAgent(ABC):
         Returns:
             LLM响应消息
         """
-        logger.warning(f"=== BaseAgent detected TokenLimitExceededError ===: Current: {error.current_tokens}, Max: {error.max_tokens}")
-        logger.warning("=== Starting compression process ===")
+        logger.warning(f"Token limit exceeded: Current: {error.current_tokens}, Max: {error.max_tokens}")
         
-        # 记录压缩前的消息状态
-        original_messages = self.memory.get_messages()
-        logger.warning(f"=== Original message count: {len(original_messages)} ===")
-        
-        # 检查system消息
-        system_msg = self.memory.get_latest_system_message()
-        if system_msg:
-            logger.warning(f"=== Current system message preview: {system_msg.get('content', '')[:100]}... ===")
-            logger.warning(f"=== Expected system prompt preview: {self.system_prompt[:100]}... ===")
-            logger.warning(f"=== System message matches: {system_msg.get('content', '') == self.system_prompt} ===")
-        else:
-            logger.warning("=== No system message found in memory! ===")
-        
-        # 估算原始消息总token数
-        original_total_tokens = sum(self._compression_service._estimate_tokens(str(msg)) for msg in original_messages)
-        logger.warning(f"=== Estimated original total tokens: {original_total_tokens} ===")
-        
-        # 使用压缩服务处理token超限
+        # 构造token信息
         from app.domain.models.compression import TokenInfo
         token_info = TokenInfo(
             current_tokens=error.current_tokens,
             max_tokens=error.max_tokens
         )
         
-        # 根据agent类型选择压缩策略
-        compression_result = await self._compression_service.compress_by_token_limit(
-            self.memory.get_messages(), 
-            token_info, 
-            self._agent_type, 
-            self.system_prompt
+        # 步骤1: 先尝试强制记忆清理
+        logger.info("Step 1: Attempting forced memory cleanup")
+        memory_compressed = await self._memory_manager.auto_manage_memory(
+            self.memory, self._agent_type, force=True
         )
         
-        logger.warning(f"=== Compression result: original_tokens={compression_result.original_token_count}, compressed_tokens={compression_result.compressed_token_count}, saved={compression_result.token_saved} ===")
-        
-        if compression_result.compressed_content:
-            logger.warning("=== Compression successful, updating memory ===")
+        if memory_compressed:
+            await self._repository.save_memory(self._agent_id, self.name, self.memory)
+            logger.info("Memory cleanup successful, retrying LLM call")
             
-            # 找到并替换用户输入
-            memory_messages = self.memory.get_messages().copy()
-            user_message_replaced = False
-            
-            # 检查copy后的system消息
-            for i, msg in enumerate(memory_messages):
-                if msg.get("role") == "system":
-                    logger.warning(f"=== Found system message at index {i}, content preview: {msg.get('content', '')[:100]}... ===")
-                    break
-            
-            for i in reversed(range(len(memory_messages))):
-                if memory_messages[i].get("role") == "user":
-                    logger.warning(f"=== Replacing user message at index {i} ===")
-                    logger.warning(f"=== Original content length: {len(memory_messages[i]['content'])} chars ===")
-                    logger.warning(f"=== Compressed content length: {len(compression_result.compressed_content)} chars ===")
-                    
-                    memory_messages[i]["content"] = compression_result.compressed_content
-                    user_message_replaced = True
-                    break
-            
-            if user_message_replaced:
-                # 再次检查system消息
-                for i, msg in enumerate(memory_messages):
-                    if msg.get("role") == "system":
-                        logger.warning(f"=== After replacement, system message at index {i}, content preview: {msg.get('content', '')[:100]}... ===")
-                        break
-                
-                # 计算压缩后的总token数
-                compressed_total_tokens = sum(self._compression_service._estimate_tokens(str(msg)) for msg in memory_messages)
-                logger.warning(f"=== Estimated compressed total tokens: {compressed_total_tokens} ===")
-                
-                # 如果压缩后仍然太大，尝试记忆清理
-                if compressed_total_tokens > token_info.max_tokens * 0.8:  # 如果还超过80%，进行记忆清理
-                    logger.warning("=== Compressed content still too large, attempting memory cleanup ===")
-                    
-                    # 临时更新memory以便进行记忆管理
-                    self.memory.clear_messages()
-                    self.memory.add_messages(memory_messages)
-                    
-                    # 检查memory更新后的system消息
-                    updated_system_msg = self.memory.get_latest_system_message()
-                    if updated_system_msg:
-                        logger.warning(f"=== After memory update, system message preview: {updated_system_msg.get('content', '')[:100]}... ===")
-                    
-                    # 强制进行记忆管理
-                    memory_compressed = await self._memory_manager.auto_manage_memory(self.memory, self._agent_type, force=True)
-                    if memory_compressed:
-                        memory_messages = self.memory.get_messages()
-                        final_total_tokens = sum(self._compression_service._estimate_tokens(str(msg)) for msg in memory_messages)
-                        logger.warning(f"=== After memory cleanup, estimated total tokens: {final_total_tokens} ===")
-                        
-                        # 检查记忆管理后的system消息
-                        final_system_msg = self.memory.get_latest_system_message()
-                        if final_system_msg:
-                            logger.warning(f"=== After memory management, system message preview: {final_system_msg.get('content', '')[:100]}... ===")
-                
-                # 重新尝试调用
-                try:
-                    logger.warning("=== Retrying LLM call with compressed content ===")
-                    message = await self.llm.ask(memory_messages, 
-                                                 tools=self.get_available_tools(), 
-                                                 response_format=response_format)
-                    if message.get("tool_calls"):
-                        message["tool_calls"] = message["tool_calls"][:1]
-                    
-                    logger.warning("=== LLM call successful after compression ===")
-                    
-                    # 更新实际的memory
-                    self.memory.clear_messages()
-                    self.memory.add_messages(memory_messages)
-                    await self._add_to_memory([message])
-                    
-                    return message
-                except Exception as retry_error:
-                    logger.error(f"=== LLM call failed even after compression: {str(retry_error)} ===")
-                    
-                    # 如果还是失败，尝试更激进的压缩
-                    if isinstance(retry_error, TokenLimitExceededError):
-                        logger.warning("=== Attempting more aggressive compression ===")
-                        
-                        # 只保留system消息和最后一条压缩后的用户消息
-                        system_msg = self.memory.get_latest_system_message()
-                        last_user_msg = None
-                        
-                        for msg in reversed(memory_messages):
-                            if msg.get("role") == "user":
-                                last_user_msg = msg
-                                break
-                        
-                        if system_msg and last_user_msg:
-                            minimal_messages = [system_msg, last_user_msg]
-                            logger.warning(f"=== Trying with minimal messages: {len(minimal_messages)} ===")
-                            logger.warning(f"=== Minimal system message preview: {system_msg.get('content', '')[:100]}... ===")
-                            
-                            try:
-                                message = await self.llm.ask(minimal_messages, 
-                                                             tools=self.get_available_tools(), 
-                                                             response_format=response_format)
-                                if message.get("tool_calls"):
-                                    message["tool_calls"] = message["tool_calls"][:1]
-                                
-                                # 更新memory为最小版本
-                                self.memory.clear_messages()
-                                self.memory.add_messages(minimal_messages)
-                                await self._add_to_memory([message])
-                                
-                                logger.warning("=== Success with minimal messages ===")
-                                return message
-                            except Exception as final_error:
-                                logger.error(f"=== Even minimal messages failed: {str(final_error)} ===")
-                    
-                    # 重新抛出重试错误
-                    raise retry_error
-            else:
-                logger.warning("=== No user message found to replace ===")
-        else:
-            logger.warning("=== Compression returned empty content ===")
-        
-        # 如果压缩失败，尝试记忆管理
-        logger.warning("=== Attempting memory management as fallback ===")
-        compressed = await self._memory_manager.auto_manage_memory(self.memory, self._agent_type)
-        if compressed:
-            logger.warning("=== Memory management successful, retrying LLM call ===")
             try:
-                # 重新尝试调用
-                message = await self.llm.ask(self.memory.get_messages(), 
-                                             tools=self.get_available_tools(), 
-                                             response_format=response_format)
+                # 重试调用
+                message = await self.llm.ask(
+                    self.memory.get_messages(), 
+                    tools=self.get_available_tools(), 
+                    response_format=response_format
+                )
                 if message.get("tool_calls"):
                     message["tool_calls"] = message["tool_calls"][:1]
                 await self._add_to_memory([message])
-                logger.warning("=== LLM call successful after memory management ===")
                 return message
-            except Exception as memory_retry_error:
-                logger.error(f"=== LLM call failed even after memory management: {str(memory_retry_error)} ===")
+            except TokenLimitExceededError as retry_error:
+                logger.warning("Still exceeds token limit after memory cleanup")
+                # 更新token信息
+                token_info = TokenInfo(
+                    current_tokens=retry_error.current_tokens,
+                    max_tokens=retry_error.max_tokens
+                )
         
-        # 如果所有压缩策略都失败，重新抛出异常
-        logger.error("=== All compression strategies failed ===")
-        raise error
-
+        # 步骤2: 找到最长的消息进行处理
+        logger.info("Step 2: Finding longest message for compression")
+        longest_msg_info = await self._memory_manager.find_and_compress_longest_message(
+            self.memory, token_info.max_tokens
+        )
+        
+        if not longest_msg_info:
+            logger.error("No suitable message found for compression")
+            raise error
+        
+        msg_index, msg_type = longest_msg_info
+        messages = self.memory.get_messages()
+        longest_msg = messages[msg_index]
+        
+        logger.info(f"Found longest message: type={msg_type}, index={msg_index}, " 
+                   f"content_length={len(longest_msg.get('content', ''))}")
+        
+        # 步骤3: 根据消息类型决定处理策略
+        content = longest_msg.get("content", "")
+        content_tokens = self._compression_service._estimate_tokens(content)
+        
+        # 判断是否需要分段处理
+        if content_tokens > token_info.max_tokens * 0.7:  # 超过最大容量的70%
+            logger.info("Content is too long, initiating segmented processing")
+            # 启动分段处理流程
+            return await self._handle_segmented_processing(
+                msg_index, msg_type, content, token_info, response_format
+            )
+        else:
+            # 直接压缩
+            logger.info("Content can be compressed directly")
+            return await self._compress_and_retry(
+                msg_index, msg_type, content, token_info, response_format
+            )
+    
+    async def _compress_and_retry(
+        self,
+        msg_index: int,
+        msg_type: str,
+        content: str,
+        token_info: TokenInfo,
+        response_format: Optional[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """压缩消息并重试
+        
+        Args:
+            msg_index: 消息索引
+            msg_type: 消息类型
+            content: 消息内容
+            token_info: Token信息
+            response_format: 响应格式
+            
+        Returns:
+            LLM响应
+        """
+        # 获取任务上下文
+        context = "未知任务"
+        if msg_type == "user":
+            context = "用户输入"
+        elif msg_type == "tool":
+            # 尝试从前一条消息获取上下文
+            messages = self.memory.get_messages()
+            if msg_index > 0:
+                prev_msg = messages[msg_index - 1]
+                if prev_msg.get("role") == "assistant":
+                    context = prev_msg.get("content", "工具执行")[:100]
+        
+        # 压缩内容
+        compression_result = await self._compression_service.compress_for_immediate_use(
+            content=content,
+            content_type=msg_type,
+            context=context,
+            token_info=token_info,
+            agent_type=self._agent_type
+        )
+        
+        if not compression_result.compressed_content:
+            logger.error("Compression failed")
+            raise RuntimeError("Failed to compress content")
+        
+        # 替换原消息
+        messages = self.memory.get_messages()
+        messages[msg_index]["content"] = compression_result.compressed_content
+        
+        # 更新记忆
+        self.memory.clear_messages()
+        self.memory.add_messages(messages)
+        await self._repository.save_memory(self._agent_id, self.name, self.memory)
+        
+        logger.info(f"Message compressed: {compression_result.original_token_count} -> "
+                   f"{compression_result.compressed_token_count} tokens")
+        
+        # 重试调用
+        try:
+            message = await self.llm.ask(
+                self.memory.get_messages(), 
+                tools=self.get_available_tools(), 
+                response_format=response_format
+            )
+            if message.get("tool_calls"):
+                message["tool_calls"] = message["tool_calls"][:1]
+            await self._add_to_memory([message])
+            return message
+        except Exception as e:
+            logger.error(f"Retry failed after compression: {str(e)}")
+            raise
+    
+    async def _handle_segmented_processing(
+        self,
+        msg_index: int,
+        msg_type: str,
+        content: str,
+        token_info: TokenInfo,
+        response_format: Optional[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """处理需要分段的超长内容
+        
+        这是实现用户需求的核心功能：
+        - 将超长内容分段
+        - 每段包含历史摘要
+        - 分次提交给LLM
+        
+        Args:
+            msg_index: 消息索引
+            msg_type: 消息类型
+            content: 消息内容
+            token_info: Token信息
+            response_format: 响应格式
+            
+        Returns:
+            最终的LLM响应
+        """
+        logger.info("Starting segmented processing for long content")
+        
+        # 获取任务上下文
+        context = self._get_task_context(msg_index, msg_type)
+        
+        # 标记正在处理分段
+        self._processing_segments = True
+        
+        # 保存原始消息
+        messages = self.memory.get_messages()
+        original_msg = messages[msg_index].copy()
+        
+        # 初始化分段处理
+        segment_generator = self._compression_service.process_long_content_in_segments(
+            content=content,
+            content_type=msg_type,
+            context=context,
+            max_tokens=token_info.max_tokens
+        )
+        
+        final_response = None
+        accumulated_responses = []
+        
+        # 处理每个分段
+        async for segment_result in segment_generator:
+            if segment_result["type"] == "segment":
+                # 构造当前段的消息
+                segment_content = segment_result["content"]
+                
+                # 如果有历史摘要，添加到内容前面
+                if segment_content["has_history"]:
+                    formatted_content = (
+                        f"[历史摘要]:\n{segment_content['history_summary']}\n\n"
+                        f"[当前内容 - 第{segment_content['segment_index']}/{segment_content['total_segments']}段]:\n"
+                        f"{segment_content['content']}"
+                    )
+                else:
+                    formatted_content = (
+                        f"[内容 - 第{segment_content['segment_index']}/{segment_content['total_segments']}段]:\n"
+                        f"{segment_content['content']}"
+                    )
+                
+                # 替换消息内容
+                messages[msg_index]["content"] = formatted_content
+                
+                # 更新记忆并调用LLM
+                self.memory.clear_messages()
+                self.memory.add_messages(messages)
+                
+                try:
+                    logger.info(f"Processing segment {segment_result['index'] + 1}/{segment_result['total']}")
+                    
+                    response = await self.llm.ask(
+                        self.memory.get_messages(), 
+                        tools=self.get_available_tools(), 
+                        response_format=response_format
+                    )
+                    
+                    # 收集响应
+                    accumulated_responses.append(response)
+                    final_response = response
+                    
+                    # 对于非最后一段，添加助手响应到记忆中
+                    if segment_result['index'] < segment_result['total'] - 1:
+                        self.memory.add_message({
+                            "role": "assistant",
+                            "content": f"已处理第{segment_result['index'] + 1}段内容。"
+                        })
+                    
+                except Exception as e:
+                    logger.error(f"Failed to process segment {segment_result['index'] + 1}: {str(e)}")
+                    # 恢复原始消息
+                    messages[msg_index] = original_msg
+                    self.memory.clear_messages()
+                    self.memory.add_messages(messages)
+                    self._processing_segments = False
+                    raise
+            
+            elif segment_result["type"] == "final_summary":
+                # 处理完成，使用最终摘要替换原始消息
+                final_summary = segment_result["summary"]
+                messages[msg_index]["content"] = f"[内容摘要]:\n{final_summary}"
+                self.memory.clear_messages()
+                self.memory.add_messages(messages)
+                await self._repository.save_memory(self._agent_id, self.name, self.memory)
+                logger.info("Segmented processing completed")
+        
+        self._processing_segments = False
+        
+        if not final_response:
+            raise RuntimeError("No response generated from segmented processing")
+        
+        # 如果需要，可以合并所有响应
+        if len(accumulated_responses) > 1 and response_format and response_format.get("type") == "json_object":
+            # 对于JSON响应，可能需要合并多个响应
+            final_response = self._merge_json_responses(accumulated_responses)
+        
+        # 处理工具调用
+        if final_response.get("tool_calls"):
+            final_response["tool_calls"] = final_response["tool_calls"][:1]
+        
+        await self._add_to_memory([final_response])
+        return final_response
+    
+    def _get_task_context(self, msg_index: int, msg_type: str) -> str:
+        """获取任务上下文
+        
+        Args:
+            msg_index: 消息索引
+            msg_type: 消息类型
+            
+        Returns:
+            任务上下文描述
+        """
+        messages = self.memory.get_messages()
+        
+        # 对于用户消息，查找任务需求
+        if msg_type == "user":
+            # 尝试从第一条用户消息获取任务
+            for msg in messages:
+                if msg.get("role") == "user":
+                    content = msg.get("content", "")
+                    if len(content) > 50:  # 假设任务描述至少50字符
+                        return content[:200]  # 返回前200字符作为上下文
+            return "用户输入"
+        
+        # 对于工具输出，从前面的助手消息获取上下文
+        elif msg_type == "tool" and msg_index > 0:
+            prev_msg = messages[msg_index - 1]
+            if prev_msg.get("role") == "assistant":
+                return prev_msg.get("content", "工具执行")[:200]
+        
+        return "执行任务"
+    
+    def _merge_json_responses(self, responses: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """合并多个JSON响应
+        
+        对于分段处理的JSON响应，可能需要合并结果
+        
+        Args:
+            responses: 响应列表
+            
+        Returns:
+            合并后的响应
+        """
+        # 简单实现：返回最后一个响应
+        # 根据具体需求，可以实现更复杂的合并逻辑
+        return responses[-1]
+    
     async def ask(self, request: str, format: Optional[str] = None) -> Dict[str, Any]:
         return await self.ask_with_messages([
             {

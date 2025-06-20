@@ -55,6 +55,19 @@ class BaseAgent(ABC):
             available_tools.extend(tool.get_tools())
         return available_tools
     
+    async def get_available_tools_async(self) -> Optional[List[Dict[str, Any]]]:
+        """Get all available tools list (async version for MCP tools)"""
+        available_tools = []
+        for tool in self.tools:
+            if hasattr(tool, 'get_tools_async'):
+                # 支持异步工具获取的工具（如 MCP 工具）
+                tools = await tool.get_tools_async()
+                available_tools.extend(tools)
+            else:
+                # 普通同步工具
+                available_tools.extend(tool.get_tools())
+        return available_tools
+    
     def get_tool(self, function_name: str) -> BaseTool:
         """Get specified tool"""
         for tool in self.tools:
@@ -152,8 +165,10 @@ class BaseAgent(ABC):
         if format:
             response_format = {"type": format}
 
+        # 使用异步工具获取方法
+        tools = await self.get_available_tools_async()
         message = await self.llm.ask(self.memory.get_messages(), 
-                                     tools=self.get_available_tools(), 
+                                     tools=tools, 
                                      response_format=response_format)
         if message.get("tool_calls"):
             message["tool_calls"] = message["tool_calls"][:1]

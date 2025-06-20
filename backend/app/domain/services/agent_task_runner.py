@@ -86,6 +86,9 @@ class AgentTaskRunner(TaskRunner):
                     event.tool_content = FileToolContent(content=file_read_result.data.get("content", ""))
                 else:
                     event.tool_content = FileToolContent(content="(No Content)")
+            elif event.tool_name == "mcp":
+                # MCP 工具事件处理 - 不需要特殊处理，结果已经在 function_result 中
+                pass
             else:
                 logger.warning(f"Agent {self._agent_id} received unknown tool event: {event.tool_name}")
 
@@ -148,6 +151,14 @@ class AgentTaskRunner(TaskRunner):
     async def destroy(self) -> None:
         """Destroy the task and release resources"""
         logger.info(f"Starting to destroy agent task")
+        
+        # Cleanup flow resources (including MCP tools)
+        if self._flow and hasattr(self._flow, 'cleanup'):
+            try:
+                await self._flow.cleanup()
+                logger.debug(f"Agent {self._agent_id} flow resources cleaned up")
+            except Exception as e:
+                logger.error(f"Agent {self._agent_id} flow cleanup failed: {e}")
         
         # Destroy sandbox environment
         if self._sandbox:

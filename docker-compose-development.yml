@@ -21,11 +21,12 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     command: ["./dev.sh"]  # Start in reload mode
     volumes:
       - ./backend:/app  # Mount source code directory
+      - ./mcp_servers:/app/mcp_servers  # Mount MCP servers directory
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /app/__pycache__  # Avoid overwriting cache files
       - /app/.venv  # Avoid overwriting virtual environment
@@ -36,6 +37,9 @@ services:
         condition: service_started
         required: false
       mongodb:
+        condition: service_started
+        required: true
+      redis:
         condition: service_started
         required: true
     restart: unless-stopped

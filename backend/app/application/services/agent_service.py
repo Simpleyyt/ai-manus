@@ -14,9 +14,11 @@ from app.domain.models.agent import Agent
 from app.domain.external.sandbox import Sandbox
 from app.domain.external.search import SearchEngine
 from app.domain.external.llm import LLM
+from app.domain.external.file import FileStorage
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.external.task import Task
 from app.domain.utils.json_parser import JsonParser
+from app.application.services.file_service import FileService
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -30,11 +32,13 @@ class AgentService:
         sandbox_cls: Type[Sandbox],
         task_cls: Type[Task],
         json_parser: JsonParser,
+        file_storage: FileStorage,
         search_engine: Optional[SearchEngine] = None
     ):
         logger.info("Initializing AgentService")
         self._agent_repository = agent_repository
         self._session_repository = session_repository
+        self._file_storage = file_storage
         self._agent_domain_service = AgentDomainService(
             self._agent_repository,
             self._session_repository,
@@ -42,6 +46,7 @@ class AgentService:
             sandbox_cls,
             task_cls,
             json_parser,
+            file_storage,
             search_engine,
         )
         self._llm = llm

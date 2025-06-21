@@ -589,6 +589,29 @@ class PlaywrightBrowser:
             await self.page.evaluate("window.scrollBy(0, window.innerHeight)")
         return ToolResult(success=True)
     
+    async def screenshot(
+        self,
+        full_page: Optional[bool] = False
+    ) -> bytes:
+        """Take a screenshot of the current page
+        
+        Args:
+            full_page: Whether to capture the full page or just the viewport
+            
+        Returns:
+            bytes: PNG screenshot data
+        """
+        await self._ensure_page()
+        
+        # Configure screenshot options
+        screenshot_options = {
+            "full_page": full_page,
+            "type": "png"
+        }
+        
+        # Return bytes data directly
+        return await self.page.screenshot(**screenshot_options)
+    
     async def console_exec(self, javascript: str) -> ToolResult:
         """Execute JavaScript code"""
         await self._ensure_page()

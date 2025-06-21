@@ -34,3 +34,10 @@ class FileFindResult(BaseModel):
     """File find result"""
     path: str = Field(..., description="Path of the search directory")
     files: List[str] = Field([], description="List of found files")
+
+
+class FileUploadResult(BaseModel):
+    """File upload result"""
+    file_path: str = Field(..., description="Path of the uploaded file")
+    file_size: int = Field(..., description="Size of the uploaded file in bytes")
+    success: bool = Field(..., description="Whether upload was successful")

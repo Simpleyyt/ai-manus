@@ -15,10 +15,13 @@ from app.infrastructure.external.search.google_search import GoogleSearchEngine
 from app.infrastructure.external.search.baidu_search import BaiduSearchEngine
 from app.infrastructure.external.llm.openai_llm import OpenAILLM
 from app.infrastructure.external.sandbox.docker_sandbox import DockerSandbox
+from app.infrastructure.external.file.gridfsfile import GridFSFileStorage
 from app.infrastructure.repositories.mongo_agent_repository import MongoAgentRepository
 from app.infrastructure.repositories.mongo_session_repository import MongoSessionRepository
 from app.infrastructure.external.task.redis_task import RedisStreamTask
 from app.interfaces.api.routes import get_agent_service
+from app.interfaces.api.file_routes import get_file_service
+from app.application.services.file_service import FileService
 from app.infrastructure.models.documents import AgentDocument, SessionDocument
 from app.infrastructure.utils.llm_json_parser import LLMJsonParser
 from beanie import init_beanie
@@ -29,6 +32,8 @@ logger = logging.getLogger(__name__)
 
 # Load configuration
 settings = get_settings()
+
+file_storage=GridFSFileStorage(mongodb=get_mongodb())
 
 
 def create_agent_service() -> AgentService:
@@ -58,6 +63,7 @@ def create_agent_service() -> AgentService:
         sandbox_cls=DockerSandbox,
         task_cls=RedisStreamTask,
         json_parser=LLMJsonParser(),
+        file_storage=file_storage,
         search_engine=search_engine,
     )
 
@@ -112,6 +118,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Manus AI Agent", lifespan=lifespan)
 app.dependency_overrides[get_agent_service] = lambda: agent_service
+
+# Create file service instance
+file_service = FileService(file_storage=file_storage)
+app.dependency_overrides[get_file_service] = lambda: file_service
 
 # Configure CORS
 app.add_middleware(

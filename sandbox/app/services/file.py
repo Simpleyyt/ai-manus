@@ -6,10 +6,12 @@ import re
 import glob
 import asyncio
 import subprocess
-from typing import Optional
+import mimetypes
+from typing import Optional, BinaryIO
+from fastapi import UploadFile
 from app.models.file import (
     FileReadResult, FileWriteResult, FileReplaceResult,
-    FileSearchResult, FileFindResult
+    FileSearchResult, FileFindResult, FileUploadResult
 )
 from app.core.exceptions import AppException, ResourceNotFoundException, BadRequestException
 
@@ -247,6 +249,59 @@ class FileService:
             path=path,
             files=files
         )
+
+    async def upload_file(self, path: str, file_stream: UploadFile) -> FileUploadResult:
+        """
+        Upload file using streaming for large files
+        
+        Args:
+            path: Target file path to save uploaded file
+            file_stream: File stream from FastAPI UploadFile
+        """
+        try:
+            chunk_size = 8192  # 8KB chunks
+            total_size = 0
+            
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            
+            # Stream write directly to target file
+            def write_stream_direct():
+                nonlocal total_size
+                with open(path, 'wb') as f:
+                    while True:
+                        chunk = file_stream.file.read(chunk_size)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                        total_size += len(chunk)
+            
+            await asyncio.to_thread(write_stream_direct)
+            
+            return FileUploadResult(
+                file_path=path,
+                file_size=total_size,
+                success=True
+            )
+        except Exception as e:
+            raise AppException(message=f"Failed to upload file: {str(e)}")
+
+    def ensure_file(self, path: str) -> None:
+        """
+        Ensure file exists
+        
+        Args:
+            path: Path of the file to check
+        """
+        try:
+            # Check if file exists
+            if not os.path.exists(path):
+                raise ResourceNotFoundException(f"File does not exist: {path}")
+                    
+        except Exception as e:
+            if isinstance(e, (BadRequestException, ResourceNotFoundException)):
+                raise e
+            raise AppException(message=f"Failed to ensure file: {str(e)}")
 
 
 # Service instance

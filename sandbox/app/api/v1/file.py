@@ -1,7 +1,8 @@
 """
 File operation API interfaces
 """
-from fastapi import APIRouter
+from fastapi import APIRouter, UploadFile, File, Form
+from fastapi.responses import FileResponse
 from app.schemas.file import (
     FileReadRequest, FileWriteRequest, FileReplaceRequest,
     FileSearchRequest, FileFindRequest
@@ -103,4 +104,43 @@ async def find_files(request: FileFindRequest):
         success=True,
         message=f"Search completed, found {len(result.files)} files",
         data=result.model_dump()
+    )
+
+@router.post("/upload")
+async def upload_file(
+    file: UploadFile = File(...),
+    path: str = Form(None)
+):
+    """
+    Upload file using streaming
+    """
+    if not path:
+        path = f"/tmp/{file.filename}"
+    
+    result = await file_service.upload_file(
+        path=path,
+        file_stream=file
+    )
+    
+    return Response(
+        success=True,
+        message="File uploaded successfully",
+        data=result.model_dump()
+    )
+
+@router.get("/download")
+async def download_file(path: str):
+    """
+    Download file using FileResponse
+    """
+    # Check if file exists (this will raise appropriate exception if not found)
+    file_service.ensure_file(path)
+    
+    # Determine filename from path
+    filename = path.split('/')[-1]
+    
+    return FileResponse(
+        path=path,
+        filename=filename,
+        media_type='application/octet-stream'
     )

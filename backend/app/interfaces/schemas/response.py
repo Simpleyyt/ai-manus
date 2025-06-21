@@ -1,4 +1,4 @@
-from typing import Any, Generic, Optional, TypeVar, List
+from typing import Any, Generic, Optional, TypeVar, List, Dict
 from datetime import datetime
 from pydantic import BaseModel
 from app.interfaces.schemas.event import AgentSSEEvent
@@ -53,3 +53,19 @@ class ShellViewResponse(BaseModel):
 class FileViewResponse(BaseModel):
     content: str
     file: str
+
+class FileUploadResponse(BaseModel):
+    file_id: str
+    filename: str
+    size: int
+    upload_date: str
+    message: str
+
+
+class FileInfoResponse(BaseModel):
+    file_id: str
+    filename: str
+    content_type: Optional[str]
+    size: int
+    upload_date: str
+    metadata: Optional[Dict[str, Any]]

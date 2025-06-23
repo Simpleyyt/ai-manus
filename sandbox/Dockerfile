@@ -64,6 +64,7 @@ RUN apt-get update && apt-get install -y \
 # Install cybersecurity tools
 RUN apt-get update && apt-get install -y \
     libegl1 \
+    whois \
     nmap \
     wireshark \
     && apt-get clean \

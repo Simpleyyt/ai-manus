@@ -12,6 +12,7 @@ from app.domain.events.agent_events import (
     FileToolContent,
     ShellToolContent,
     SearchToolContent,
+    McpToolContent,
     ToolStatus
 )
 from app.domain.services.flows.plan_act import PlanActFlow
@@ -87,8 +88,26 @@ class AgentTaskRunner(TaskRunner):
                 else:
                     event.tool_content = FileToolContent(content="(No Content)")
             elif event.tool_name == "mcp":
-                # MCP 工具事件处理 - 不需要特殊处理，结果已经在 function_result 中
-                pass
+                logger.debug(f"Processing MCP tool event: function_result={event.function_result}")
+                if event.function_result:
+                    if hasattr(event.function_result, 'data') and event.function_result.data:
+                        logger.debug(f"MCP tool result data: {event.function_result.data}")
+                        event.tool_content = McpToolContent(result=event.function_result.data)
+                    elif hasattr(event.function_result, 'success') and event.function_result.success:
+                        logger.debug(f"MCP tool result (success, no data): {event.function_result}")
+                        result_data = event.function_result.model_dump() if hasattr(event.function_result, 'model_dump') else str(event.function_result)
+                        event.tool_content = McpToolContent(result=result_data)
+                    else:
+                        logger.debug(f"MCP tool result (fallback): {event.function_result}")
+                        event.tool_content = McpToolContent(result=str(event.function_result))
+                else:
+                    logger.warning("MCP tool: No function_result found")
+                    event.tool_content = McpToolContent(result="No result available")
+                
+                logger.debug(f"MCP tool_content set to: {event.tool_content}")
+                if event.tool_content:
+                    logger.debug(f"MCP tool_content.result: {event.tool_content.result}")
+                    logger.debug(f"MCP tool_content dict: {event.tool_content.model_dump()}")
             else:
                 logger.warning(f"Agent {self._agent_id} received unknown tool event: {event.tool_name}")
 

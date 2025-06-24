@@ -27,7 +27,7 @@ export default {
   'Manus is using': 'Manus is using',
   'Jump to live': 'Jump to live',
   'Failed to load file content': 'Failed to load file content',
-  'Give Manus a task to work on...': 'Give Manus a task to work on...',
+  'Give Manus a task to work on...': 'Give important-agent a task to work on...',
   // Shell tools
   'Executing command': 'Executing command',
   'Viewing command output': 'Viewing command output',

@@ -27,7 +27,7 @@ export default {
   'Manus is using': 'Manus 正在使用',
   'Jump to live': '跳到实时',
   'Failed to load file content': '加载文件内容失败',
-  'Give Manus a task to work on...': '给 Manus 一个任务...',
+  'Give Manus a task to work on...': '给 关基智能体 一个任务...',
   // Shell tools
   'Executing command': '正在执行命令',
   'Viewing command output': '正在查看命令输出',

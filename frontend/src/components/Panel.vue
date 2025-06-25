@@ -16,7 +16,6 @@
           </div>
         </div>
         <div v-if="isHomepage" class="flex">
-          <Bot :size="30" />
           <ManusLogoTextIcon />
         </div>
       </div>
@@ -74,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { PanelRight, Plus, Command, Bot, MessageSquareDashed } from 'lucide-vue-next';
+import { PanelRight, Plus, Command, MessageSquareDashed } from 'lucide-vue-next';
 import ManusLogoTextIcon from './icons/ManusLogoTextIcon.vue';
 import SessionItem from './SessionItem.vue';
 import { usePanelState } from '../composables/usePanelState';

@@ -16,9 +16,8 @@
   </div>
   <div v-else-if="message.type === 'assistant'" class="flex flex-col gap-2 w-full group mt-3">
     <div class="flex items-center justify-between h-7 group">
-      <div class="flex items-center gap-[3px]">
-        <Bot :size="24" class="w-6 h-6" />
-        <ManusTextIcon />
+      <div class="flex items-center">
+        <ManusLogoTextIcon />
       </div>
       <div class="flex items-center gap-[2px] invisible group-hover:visible">
         <div class="float-right transition text-[12px] text-[var(--text-tertiary)] invisible group-hover:visible">
@@ -73,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import ManusTextIcon from './icons/ManusTextIcon.vue';
+import ManusLogoTextIcon from './icons/ManusLogoTextIcon.vue';
 import { Message, MessageContent } from '../types/message';
 import ToolUse from './ToolUse.vue';
 import { marked } from 'marked';
@@ -82,7 +81,6 @@ import { CopyIcon, CheckIcon } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import { ToolContent, StepContent } from '../types/message';
 import { useRelativeTime } from '../composables/useTime';
-import { Bot } from 'lucide-vue-next';
 
 const props = defineProps<{
   message: Message;

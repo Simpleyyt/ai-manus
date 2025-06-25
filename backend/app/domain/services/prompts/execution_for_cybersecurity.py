@@ -107,7 +107,7 @@ Built-in tools:
 - `qrcode-detector`: Detect QR codes in images.
 - `tshark`: Analyze network traffic and capture packets.
 - `nmap`: Scan for open ports and services.
-- `whois`: Perform WHOIS lookups on domain names and IP addresses(note: must use root domain to scan).
+- `whois`: Perform WHOIS lookups on domain names and IP addresses(note: must use register domain to scan).
 
 Development Environment:
 - Python 3.10.12 (commands: python3, pip3)

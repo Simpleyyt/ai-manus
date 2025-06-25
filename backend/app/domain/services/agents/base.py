@@ -309,9 +309,10 @@ class BaseAgent(ABC):
             
             try:
                 # 重试调用
+                tools = await self.get_available_tools_async()
                 message = await self.llm.ask(
                     self.memory.get_messages(), 
-                    tools=self.get_available_tools(), 
+                    tools=tools, 
                     response_format=response_format
                 )
                 if message.get("tool_calls"):
@@ -420,9 +421,10 @@ class BaseAgent(ABC):
         
         # 重试调用
         try:
+            tools=self.get_available_tools(), 
             message = await self.llm.ask(
                 self.memory.get_messages(), 
-                tools=self.get_available_tools(), 
+                tools = tools,
                 response_format=response_format
             )
             if message.get("tool_calls"):
@@ -510,9 +512,10 @@ class BaseAgent(ABC):
                 try:
                     logger.info(f"Processing segment {segment_result['index'] + 1}/{segment_result['total']}")
                     
+                    tools = await self.get_available_tools_async()
                     response = await self.llm.ask(
                         self.memory.get_messages(), 
-                        tools=self.get_available_tools(), 
+                        tools=tools, 
                         response_format=response_format
                     )
                     

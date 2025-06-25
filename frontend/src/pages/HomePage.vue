@@ -4,7 +4,6 @@
       class="flex flex-col h-full flex-1 min-w-0 mx-auto w-full sm:min-w-[390px] px-5 justify-center items-start gap-2 relative max-w-full sm:max-w-full">
       <div class="absolute top-4 start-5">
         <div class="flex">
-          <Bot :size="30"/>
           <ManusLogoTextIcon />
         </div>
       </div>
@@ -41,7 +40,6 @@ import { useI18n } from 'vue-i18n';
 import ChatBox from '../components/ChatBox.vue';
 import { createSession } from '../api/agent';
 import { showErrorToast } from '../utils/toast';
-import { Bot } from 'lucide-vue-next';
 import ManusLogoTextIcon from '../components/icons/ManusLogoTextIcon.vue';
 
 const { t } = useI18n();

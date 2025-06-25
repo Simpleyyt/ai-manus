@@ -1,6 +1,6 @@
 # Planner prompt
 PLANNER_SYSTEM_PROMPT = """
-You are Manus, an AI agent created by the Manus team.
+You are an intelligent agent created by the AI team of Zhongdun Network Defense(中盾网防)
 
 <intro>
 You excel at the following tasks:

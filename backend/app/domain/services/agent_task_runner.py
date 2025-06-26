@@ -13,9 +13,10 @@ from app.domain.events.agent_events import (
     ShellToolContent,
     SearchToolContent,
     BrowserToolContent,
-    ToolStatus,
     AgentEventFactory,
-    AgentEvent
+    AgentEvent,
+    McpToolContent,
+    ToolStatus
 )
 from app.domain.services.flows.plan_act import PlanActFlow
 from app.domain.external.sandbox import Sandbox
@@ -167,6 +168,27 @@ class AgentTaskRunner(TaskRunner):
                         await self._sync_file_to_storage(file_path)
                     else:
                         event.tool_content = FileToolContent(content="(No Content)")
+
+                elif event.tool_name == "mcp":
+                    logger.debug(f"Processing MCP tool event: function_result={event.function_result}")
+                    if event.function_result:
+                        if hasattr(event.function_result, 'data') and event.function_result.data:
+                            logger.debug(f"MCP tool result data: {event.function_result.data}")
+                            event.tool_content = McpToolContent(result=event.function_result.data)
+                        elif hasattr(event.function_result, 'success') and event.function_result.success:
+                            logger.debug(f"MCP tool result (success, no data): {event.function_result}")
+                            result_data = event.function_result.model_dump() if hasattr(event.function_result, 'model_dump') else str(event.function_result)
+                            event.tool_content = McpToolContent(result=result_data)
+                        else:
+                            logger.debug(f"MCP tool result (fallback): {event.function_result}")
+                            event.tool_content = McpToolContent(result=str(event.function_result))
+                    else:
+                        logger.warning("MCP tool: No function_result found")
+                        event.tool_content = McpToolContent(result="No result available")
+                    logger.debug(f"MCP tool_content set to: {event.tool_content}")
+                    if event.tool_content:
+                        logger.debug(f"MCP tool_content.result: {event.tool_content.result}")
+                        logger.debug(f"MCP tool_content dict: {event.tool_content.model_dump()}")
                 else:
                     logger.warning(f"Agent {self._agent_id} received unknown tool event: {event.tool_name}")
         except Exception as e:
@@ -237,7 +259,15 @@ class AgentTaskRunner(TaskRunner):
 
     async def destroy(self) -> None:
         """Destroy the task and release resources"""
-        logger.info(f"Starting to destroy agent task")
+        logger.info("Starting to destroy agent task")
+        
+        # Cleanup flow resources (including MCP tools)
+        if self._flow and hasattr(self._flow, 'cleanup'):
+            try:
+                await self._flow.cleanup()
+                logger.debug(f"Agent {self._agent_id} flow resources cleaned up")
+            except Exception as e:
+                logger.error(f"Agent {self._agent_id} flow cleanup failed: {e}")
         
         # Destroy sandbox environment
         if self._sandbox:

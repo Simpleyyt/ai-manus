@@ -1,6 +1,5 @@
 import logging
 from app.domain.services.flows.base import BaseFlow
-from app.domain.models.agent import Agent
 from typing import AsyncGenerator, Optional, List
 from enum import Enum
 from app.domain.events.agent_events import (
@@ -18,7 +17,6 @@ from app.domain.external.llm import LLM
 from app.domain.external.sandbox import Sandbox
 from app.domain.external.browser import Browser
 from app.domain.external.search import SearchEngine
-from app.domain.external.file import FileStorage
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.utils.json_parser import JsonParser
 from app.domain.repositories.session_repository import SessionRepository
@@ -72,8 +70,17 @@ class PlanActFlow(BaseFlow):
             search_engine=search_engine,
         )
         logger.debug(f"Created execution agent for Agent {self._agent_id}")
+        
+        # Initialize executor to ensure MCP tools are loaded
+        self._executor_initialized = False
 
     async def run(self, message: str, attachments: List[str] = []) -> AsyncGenerator[BaseEvent, None]:
+        
+        # Ensure executor is initialized before processing
+        if not self._executor_initialized:
+            await self.executor.initialize()
+            self._executor_initialized = True
+            logger.debug(f"Initialized execution agent for Agent {self._agent_id}")
 
         # TODO: move to task runner
         session = await self._session_repository.find_by_id(self._session_id)
@@ -130,8 +137,15 @@ class PlanActFlow(BaseFlow):
                 logger.info(f"Agent {self._agent_id} started executing step {step.id}: {step.description[:50]}...")
                 async for event in self.executor.execute_step(self.plan, step, message, attachments):
                     yield event
-                logger.info(f"Agent {self._agent_id} completed step {step.id}, state changed from {AgentStatus.EXECUTING} to {AgentStatus.UPDATING}")
-                self.status = AgentStatus.UPDATING
+                
+                # Check if there are more steps after completing current step
+                next_step = self.plan.get_next_step()
+                if not next_step:
+                    logger.info(f"Agent {self._agent_id} completed last step {step.id}, state changed from {AgentStatus.EXECUTING} to {AgentStatus.COMPLETED}")
+                    self.status = AgentStatus.COMPLETED
+                else:
+                    logger.info(f"Agent {self._agent_id} completed step {step.id}, state changed from {AgentStatus.EXECUTING} to {AgentStatus.UPDATING}")
+                    self.status = AgentStatus.UPDATING
             elif self.status == AgentStatus.UPDATING:
                 # Update plan
                 logger.info(f"Agent {self._agent_id} started updating plan")
@@ -158,3 +172,13 @@ class PlanActFlow(BaseFlow):
     
     def is_done(self) -> bool:
         return self.status == AgentStatus.IDLE
+    
+    async def cleanup(self):
+        """清理资源"""
+        try:
+            if self.executor and hasattr(self.executor, 'cleanup'):
+                await self.executor.cleanup()
+            if self.planner and hasattr(self.planner, 'cleanup'):
+                await self.planner.cleanup()
+        except Exception as e:
+            logger.error(f"清理 PlanActFlow 资源失败: {e}")

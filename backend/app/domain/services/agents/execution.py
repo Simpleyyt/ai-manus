@@ -1,4 +1,6 @@
 from typing import AsyncGenerator, Optional, List
+from datetime import datetime
+import logging
 from app.domain.models.plan import Plan, Step, ExecutionStatus
 from app.domain.models.file import FileInfo
 from app.domain.services.agents.base import BaseAgent
@@ -6,16 +8,14 @@ from app.domain.external.llm import LLM
 from app.domain.external.sandbox import Sandbox
 from app.domain.external.browser import Browser
 from app.domain.external.search import SearchEngine
-from app.domain.external.file import FileStorage
 from app.domain.repositories.agent_repository import AgentRepository
-from app.domain.services.prompts.execution import EXECUTION_SYSTEM_PROMPT, EXECUTION_PROMPT, CONCLUSION_PROMPT
+from app.domain.services.prompts.execution_for_cybersecurity import EXECUTION_SYSTEM_PROMPT, EXECUTION_PROMPT, CONCLUSION_PROMPT
 from app.domain.events.agent_events import (
     BaseEvent,
     StepEvent,
     StepStatus,
     ErrorEvent,
     MessageEvent,
-    DoneEvent,
     ToolEvent,
     ToolStatus,
     WaitEvent,
@@ -25,8 +25,10 @@ from app.domain.services.tools.browser import BrowserTool
 from app.domain.services.tools.search import SearchTool
 from app.domain.services.tools.file import FileTool
 from app.domain.services.tools.message import MessageTool
+from app.domain.services.tools.mcp import MCPTool
 from app.domain.utils.json_parser import JsonParser
-import logging
+from app.domain.models.compression import AgentType
+
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +51,9 @@ class ExecutionAgent(BaseAgent):
         json_parser: JsonParser,
         search_engine: Optional[SearchEngine] = None,
     ):
+        # Create MCP tool instance
+        self.mcp_tool = MCPTool()
+        
         super().__init__(
             agent_id=agent_id,
             agent_repository=agent_repository,
@@ -58,7 +63,8 @@ class ExecutionAgent(BaseAgent):
                 ShellTool(sandbox),
                 BrowserTool(browser),
                 FileTool(sandbox),
-                MessageTool()
+                MessageTool(),
+                self.mcp_tool
             ]
         )
         
@@ -66,8 +72,34 @@ class ExecutionAgent(BaseAgent):
         if search_engine:
             self.tools.append(SearchTool(search_engine))
     
+    async def initialize(self):
+        """Initialize the agent and all its tools"""
+        # Ensure MCP tool is initialized at agent startup
+        await self.mcp_tool._ensure_initialized()
+        logger.info("ExecutionAgent initialized successfully with MCP tools")
+    
+    async def get_available_tools_async(self):
+        """Override to ensure MCP tool is initialized before getting tools"""
+        # Ensure MCP tool is initialized
+        if hasattr(self.mcp_tool, '_ensure_initialized'):
+            await self.mcp_tool._ensure_initialized()
+        
+        # Call parent method to get all tools
+        return await super().get_available_tools_async()
+    
     async def execute_step(self, plan: Plan, step: Step, message: str = "", attachments: List[str] = []) -> AsyncGenerator[BaseEvent, None]:
-        message = EXECUTION_PROMPT.format(goal=plan.goal, step=step.description, message=message, attachments=attachments)
+        # 在执行步骤前检查是否需要进行记忆管理
+        if self.memory and self._memory_manager.should_compress_by_count(self.memory):
+            logger.info("Execution agent memory size threshold reached, performing automatic cleanup before step execution")
+            compressed = await self._memory_manager.auto_manage_memory(self.memory, AgentType.EXECUTION)
+            # 🔧 修复：如果发生了压缩，立即保存
+            if compressed:
+                await self._repository.save_memory(self._agent_id, self.name, self.memory)
+                logger.info("Execution agent memory compressed and saved")
+        
+        message = EXECUTION_PROMPT.format(goal=plan.goal, step=step.description,
+                        message=message, date=datetime.now().strftime("%Y-%m-%d"), attachments=attachments)
+
         step.status = ExecutionStatus.RUNNING
         yield StepEvent(status=StepStatus.STARTED, step=step)
         async for event in self.execute(message):
@@ -100,3 +132,12 @@ class ExecutionAgent(BaseAgent):
                 yield MessageEvent(message=parsed_response.get("message", ""), attachments=attachments)
                 continue
             yield event
+    
+    async def cleanup(self):
+        """清理资源"""
+        for tool in self.tools:
+            if hasattr(tool, 'cleanup'):
+                try:
+                    await tool.cleanup()
+                except Exception as e:
+                    logger.error(f"清理工具 {tool.name} 失败: {e}")

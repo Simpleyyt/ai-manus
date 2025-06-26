@@ -27,7 +27,7 @@ export default {
   'Manus is using': '关基智能体正在使用中',
   'Jump to live': 'Jump to live',
   'Failed to load file content': 'Failed to load file content',
-  'Give Manus a task to work on...': 'Give 智能体 a task to work on...',
+  'Give Manus a task to work on...': 'Give important-agent a task to work on...',
   // Shell tools
   'Executing command': 'Executing command',
   'Viewing command output': 'Viewing command output',

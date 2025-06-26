@@ -1,4 +1,6 @@
-export type MessageType = "user" | "assistant" | "tool" | "step";
+import type { FileInfo } from '../api/file';
+
+export type MessageType = "user" | "assistant" | "tool" | "step" | "attachments";
 
 export interface Message {
   type: MessageType;
@@ -27,4 +29,9 @@ export interface StepContent extends BaseContent {
   description: string;
   status: 'pending' | 'running' | 'completed' | 'failed';
   tools: ToolContent[];
+}
+
+export interface AttachmentsContent extends BaseContent {
+  role: "user" | "assistant";
+  attachments: FileInfo[];
 }

@@ -50,8 +50,8 @@ class PlannerAgent(BaseAgent):
         )
 
 
-    async def create_plan(self, message: Optional[str] = None) -> AsyncGenerator[BaseEvent, None]:
-        message = CREATE_PLAN_PROMPT.format(user_message=message) if message else None
+    async def create_plan(self, message: Optional[str] = None, attachments: List[str] = []) -> AsyncGenerator[BaseEvent, None]:
+        message = CREATE_PLAN_PROMPT.format(user_message=message, attachments=attachments) if message else None
         async for event in self.execute(message):
             if isinstance(event, MessageEvent):
                 logger.info(event.message)
@@ -66,6 +66,7 @@ class PlannerAgent(BaseAgent):
         message = UPDATE_PLAN_PROMPT.format(plan=plan.model_dump_json(include={"steps"}), goal=plan.goal)
         async for event in self.execute(message):
             if isinstance(event, MessageEvent):
+                logger.debug(f"Planner agent update plan: {event.message}")
                 parsed_response = await self.json_parser.parse(event.message)
                 new_steps = [Step(id=step["id"], description=step["description"]) for step in parsed_response["steps"]]
                 

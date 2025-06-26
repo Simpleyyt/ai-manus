@@ -4,6 +4,7 @@ from beanie import Document
 from app.domain.models.memory import Memory
 from app.domain.events.agent_events import AgentEvent
 from app.domain.models.session import SessionStatus
+from app.domain.models.file import FileInfo
 
 class AgentDocument(Document):
     """MongoDB document for Agent"""
@@ -36,7 +37,7 @@ class SessionDocument(Document):
     updated_at: datetime = datetime.now(timezone.utc)
     events: List[AgentEvent]
     status: SessionStatus
-
+    files: List[FileInfo] = []
     class Settings:
         name = "sessions"
         indexes = [

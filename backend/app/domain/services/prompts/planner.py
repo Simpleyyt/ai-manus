@@ -75,6 +75,9 @@ EXAMPLE JSON OUTPUT:
 
 User message:
 {user_message}
+
+Attachments:
+{attachments}
 """
 
 UPDATE_PLAN_PROMPT = """
@@ -83,6 +86,8 @@ You are updating the plan, you need to update the plan based on the step executi
 - Don't change the description if the change is small
 - Only re-plan the following uncompleted steps, don't change the completed steps
 - Output the step id start with the id of first uncompleted step, re-plan the following steps
+- Delete the step if it is completed or not necessary
+- Carefully read the step result to determine if it is successful, if not, change the following steps
 
 Input:·
 - plan: the plan steps with json to update
@@ -97,4 +102,15 @@ Goal:
 
 Plan:
 {plan}
+
+
+EXAMPLE JSON OUTPUT:
+{{
+    "steps": [
+        {{
+            "id": "1",
+            "description": "Step 1 description"
+        }}
+    ]
+}}
 """

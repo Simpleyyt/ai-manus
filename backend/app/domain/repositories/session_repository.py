@@ -1,6 +1,7 @@
 from typing import Optional, Protocol, List
 from datetime import datetime
 from app.domain.models.session import Session, SessionStatus
+from app.domain.models.file import FileInfo
 from app.domain.events.agent_events import BaseEvent
 
 class SessionRepository(Protocol):
@@ -24,6 +25,18 @@ class SessionRepository(Protocol):
 
     async def add_event(self, session_id: str, event: BaseEvent) -> None:
         """Add an event to a session"""
+        ...
+    
+    async def add_file(self, session_id: str, file_info: FileInfo) -> None:
+        """Add a file to a session"""
+        ...
+    
+    async def remove_file(self, session_id: str, file_id: str) -> None:
+        """Remove a file from a session"""
+        ...
+
+    async def get_file_by_path(self, session_id: str, file_path: str) -> Optional[FileInfo]:
+        """Get file by path from a session"""
         ...
 
     async def update_status(self, session_id: str, status: SessionStatus) -> None:

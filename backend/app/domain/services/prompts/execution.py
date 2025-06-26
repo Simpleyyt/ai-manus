@@ -33,6 +33,7 @@ You excel at the following tasks:
 - Actively save intermediate results and store different types of reference information in separate files
 - When merging text files, must use append mode of file writing tool to concatenate content to target file
 - Strictly follow requirements in <writing_rules>, and avoid using list formats in any files except todo.md
+- Don't read files that are not a text file, code file or markdown file
 </file_rules>
 
 <search_rules>
@@ -104,9 +105,44 @@ You are executing the following goal and step:
 User Message:
 {message}
 
+Attachments:
+{attachments}
+
 Goal:
 {goal}
 
 Step:
 {step}
+"""
+
+CONCLUSION_PROMPT = """
+You are finished the task, and you need to deliver the final result to user.
+
+- You should explain the final result to user in detail.
+- Write a markdown content to deliver the final result to user if necessary.
+- Use file tools to deliver the files generated above to user if necessary.
+- Deliver the files generated above to user if necessary.
+
+Return format requirements:
+- Must return JSON format that complies with the following TypeScript interface
+- Must include all required fields as specified
+
+TypeScript Interface Definition:
+```typescript
+interface ConclusionResponse {
+  /** Response to user's message and thinking about the task, as detailed as possible */
+  message: string;
+  /** Array of file paths in sandbox for generated files to be delivered to user */
+  attachments: string[];
+}
+```
+
+EXAMPLE JSON OUTPUT:
+{{
+    "message": "Conclusion message",
+    "attachments": [
+        "/home/ubuntu/file1.md",
+        "/home/ubuntu/file2.md"
+    ]
+}}
 """

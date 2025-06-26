@@ -16,3 +16,5 @@ pymongo>=4.6.1
 beanie>=1.25.0
 async-lru>=2.0.0
 redis>=5.0.1
+beautifulsoup4>=4.12.0
+python-multipart

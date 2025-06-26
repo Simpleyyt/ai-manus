@@ -33,7 +33,17 @@
             height: 100%;
           "
         >
-          <div ref="monacoContainer" style="width: 100%; height: 100%"></div>
+          <MonacoEditor
+            :value="fileContent"
+            :filename="fileName"
+            :read-only="true"
+            theme="vs"
+            :line-numbers="'off'"
+            :word-wrap="'on'"
+            :minimap="false"
+            :scroll-beyond-last-line="false"
+            :automatic-layout="true"
+          />
         </section>
       </div>
     </div>
@@ -41,22 +51,12 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed, watch, onBeforeUnmount, onUnmounted } from "vue";
+import { onMounted, ref, computed, watch, onUnmounted } from "vue";
 import { ToolContent } from "../types/message";
 import { viewFile } from "../api/agent";
-import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
+import MonacoEditor from "./MonacoEditor.vue";
 //import { showErrorToast } from "../utils/toast";
 //import { useI18n } from "vue-i18n";
-
-import "monaco-editor/esm/vs/language/json/monaco.contribution";
-import "monaco-editor/esm/vs/basic-languages/javascript/javascript.contribution";
-import "monaco-editor/esm/vs/basic-languages/typescript/typescript.contribution";
-import "monaco-editor/esm/vs/basic-languages/html/html.contribution";
-import "monaco-editor/esm/vs/basic-languages/css/css.contribution";
-import "monaco-editor/esm/vs/basic-languages/python/python.contribution";
-import "monaco-editor/esm/vs/basic-languages/java/java.contribution";
-import "monaco-editor/esm/vs/basic-languages/go/go.contribution";
-import "monaco-editor/esm/vs/basic-languages/markdown/markdown.contribution";
 
 //const { t } = useI18n();
 
@@ -73,7 +73,6 @@ defineExpose({
 });
 
 const fileContent = ref("");
-const monacoContainer = ref<HTMLElement | null>(null);
 const cancelViewFile = ref<(() => void) | null>(null);
 
 const filePath = computed(() => {
@@ -90,71 +89,16 @@ const fileName = computed(() => {
   return "";
 });
 
-let editor: monaco.editor.IStandaloneCodeEditor | null = null;
-
-// Infer language based on filename
-const getLanguage = (filename: string): string => {
-  const extension = filename.split(".").pop()?.toLowerCase() || "";
-  const languageMap: Record<string, string> = {
-    js: "javascript",
-    ts: "typescript",
-    html: "html",
-    css: "css",
-    json: "json",
-    py: "python",
-    java: "java",
-    c: "c",
-    cpp: "cpp",
-    go: "go",
-    md: "markdown",
-    txt: "plaintext",
-    vue: "html",
-    jsx: "javascript",
-    tsx: "typescript",
-  };
-
-  return languageMap[extension] || "plaintext";
-};
-
-// Initialize Monaco editor
-const initMonacoEditor = () => {
-  if (monacoContainer.value) {
-    // If editor already exists, return
-    if (editor) {
-      return;
-    }
-
-    const language = getLanguage(filePath.value);
-
-    editor = monaco.editor.create(monacoContainer.value, {
-      value: "",
-      language,
-      theme: "vs",
-      readOnly: true,
-      minimap: { enabled: false },
-      scrollBeyondLastLine: false,
-      automaticLayout: true,
-      lineNumbers: "off",
-      wordWrap: "on",
-      scrollbar: {
-        vertical: "auto",
-        horizontal: "auto",
-      },
-    });
-  }
-};
-
 // Load file content
 const loadFileContent = async () => {
+  if (cancelViewFile.value) {
+    cancelViewFile.value();
+  }
   if (!props.live) {
     fileContent.value = props.toolContent.content?.content || "";
     return;
   }
   if (!filePath.value) return;
-  if (cancelViewFile.value) {
-    cancelViewFile.value();
-    cancelViewFile.value = null;
-  }
   cancelViewFile.value = await viewFile(props.sessionId, filePath.value, {
     onMessage: (event) => {
       if (event.event === "file") {
@@ -164,19 +108,6 @@ const loadFileContent = async () => {
   })
 };
 
-watch(fileContent, () => {
-  if (editor) {
-    // Use editor model to directly update content, reducing re-rendering overhead
-    const model = editor.getModel();
-    if (model) {
-      model.setValue(fileContent.value);
-    } else {
-      editor.setValue(fileContent.value);
-    }
-    monaco.editor.setModelLanguage(editor.getModel()!, getLanguage(filePath.value));
-  }
-});
-
 // Watch for filename changes to reload content
 watch(filePath, (newVal) => {
   if (newVal) {
@@ -184,22 +115,13 @@ watch(filePath, (newVal) => {
   }
 });
 
-watch(() => props.toolContent.status, () => {
+watch(() => props.toolContent.timestamp, () => {
   loadFileContent();
 });
 
-// Load content and set up refresh timer when component is mounted
+// Load content when component is mounted
 onMounted(() => {
-  initMonacoEditor();
   loadFileContent();
-});
-
-// Clean up editor and timer before component unmounts
-onBeforeUnmount(() => {
-  if (editor) {
-    editor.dispose();
-    editor = null;
-  }
 });
 
 onUnmounted(() => {

@@ -37,13 +37,12 @@ https://github.com/user-attachments/assets/37060a09-c647-4bcb-920c-959f7fa73ebe
  * Tools: Supports Terminal, Browser, File, Web Search, and messaging tools with real-time viewing and takeover capabilities.
  * Sandbox: Each task is allocated a separate sandbox that runs in a local Docker environment.
  * Task Sessions: Session history is managed through MongoDB/Redis, supporting background tasks.
- * Conversations: Supports stopping and interrupting.
+ * Conversations: Supports stopping and interrupting, file upload and download.
  * Multilingual: Supports both Chinese and English.
 
 ## Development Roadmap
 
- * Tools: Support for historical browser screenshot viewing, Deploy & Expose, and external MCP tool integration.
- * Conversations: Support for file upload and download.
+ * Tools: Support for Deploy & Expose, and external MCP tool integration.
  * Sandbox: Support for mobile and Windows computer access.
  * Deployment: Support for K8s and Docker Swarm multi-cluster deployment.
  * Authentication: User login and authentication.
@@ -156,9 +155,11 @@ services:
       # No proxy hosts for sandbox (optional)
       #- SANDBOX_NO_PROXY=
       
-      # Google Search API key for web search capability (optional)
+      # Search engine configuration (options: baidu, google)
+      - SEARCH_PROVIDER=baidu
+      # Google Search API key for web search capability (only needed when SEARCH_PROVIDER=google)
       #- GOOGLE_SEARCH_API_KEY=
-      # Google Custom Search Engine ID (optional)
+      # Google Custom Search Engine ID (only needed when SEARCH_PROVIDER=google)
       #- GOOGLE_SEARCH_ENGINE_ID=
       
       # Application log level
@@ -263,7 +264,10 @@ SANDBOX_NETWORK=manus-network
 #SANDBOX_HTTP_PROXY=
 #SANDBOX_NO_PROXY=
 
-# Optional: Google search configuration
+# Search engine configuration
+# Options: baidu, google
+SEARCH_PROVIDER=baidu
+# Optional: Google search configuration (only needed when SEARCH_PROVIDER=google)
 #GOOGLE_SEARCH_API_KEY=
 #GOOGLE_SEARCH_ENGINE_ID=
 

@@ -1,12 +1,14 @@
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator, Optional, List
 from app.domain.models.plan import Plan, Step, ExecutionStatus
+from app.domain.models.file import FileInfo
 from app.domain.services.agents.base import BaseAgent
 from app.domain.external.llm import LLM
 from app.domain.external.sandbox import Sandbox
 from app.domain.external.browser import Browser
 from app.domain.external.search import SearchEngine
+from app.domain.external.file import FileStorage
 from app.domain.repositories.agent_repository import AgentRepository
-from app.domain.services.prompts.execution import EXECUTION_SYSTEM_PROMPT, EXECUTION_PROMPT
+from app.domain.services.prompts.execution import EXECUTION_SYSTEM_PROMPT, EXECUTION_PROMPT, CONCLUSION_PROMPT
 from app.domain.events.agent_events import (
     BaseEvent,
     StepEvent,
@@ -24,6 +26,9 @@ from app.domain.services.tools.search import SearchTool
 from app.domain.services.tools.file import FileTool
 from app.domain.services.tools.message import MessageTool
 from app.domain.utils.json_parser import JsonParser
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ExecutionAgent(BaseAgent):
@@ -61,8 +66,8 @@ class ExecutionAgent(BaseAgent):
         if search_engine:
             self.tools.append(SearchTool(search_engine))
     
-    async def execute_step(self, plan: Plan, step: Step, message: str = "") -> AsyncGenerator[BaseEvent, None]:
-        message = EXECUTION_PROMPT.format(goal=plan.goal, step=step.description, message=message)
+    async def execute_step(self, plan: Plan, step: Step, message: str = "", attachments: List[str] = []) -> AsyncGenerator[BaseEvent, None]:
+        message = EXECUTION_PROMPT.format(goal=plan.goal, step=step.description, message=message, attachments=attachments)
         step.status = ExecutionStatus.RUNNING
         yield StepEvent(status=StepStatus.STARTED, step=step)
         async for event in self.execute(message):
@@ -77,10 +82,21 @@ class ExecutionAgent(BaseAgent):
             elif isinstance(event, ToolEvent):
                 if event.function_name == "message_ask_user":
                     if event.status == ToolStatus.CALLING:
-                        yield MessageEvent(message=event.function_args["text"], role="assistant")
+                        yield MessageEvent(message=event.function_args.get("text", ""))
                     elif event.status == ToolStatus.CALLED:
                         yield WaitEvent()
                         return
                     continue
             yield event
         step.status = ExecutionStatus.COMPLETED
+
+    async def conclusion(self) -> AsyncGenerator[BaseEvent, None]:
+        message = CONCLUSION_PROMPT
+        async for event in self.execute(message, format="json_object"):
+            if isinstance(event, MessageEvent):
+                logger.debug(f"Execution agent conclusion: {event.message}")
+                parsed_response = await self.json_parser.parse(event.message)
+                attachments = [FileInfo(file_path=file_path) for file_path in parsed_response.get("attachments", [])]
+                yield MessageEvent(message=parsed_response.get("message", ""), attachments=attachments)
+                continue
+            yield event

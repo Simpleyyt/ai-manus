@@ -1,10 +1,11 @@
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, BinaryIO
 import uuid
 import httpx
 import docker
 import socket
 import logging
 import asyncio
+import io
 from async_lru import alru_cache
 from app.infrastructure.config import get_settings
 from app.domain.models.tool_result import ToolResult
@@ -329,6 +330,47 @@ class DockerSandbox(Sandbox):
             }
         )
         return ToolResult(**response.json())
+
+    async def file_upload(self, file_data: BinaryIO, path: str, filename: str = None) -> ToolResult:
+        """Upload file to sandbox
+        
+        Args:
+            file_data: File content as binary stream
+            path: Target file path in sandbox
+            filename: Original filename (optional)
+            
+        Returns:
+            Upload operation result
+        """
+        # Prepare form data for upload
+        files = {"file": (filename or "upload", file_data, "application/octet-stream")}
+        data = {"path": path}
+        
+        response = await self.client.post(
+            f"{self.base_url}/api/v1/file/upload",
+            files=files,
+            data=data
+        )
+        return ToolResult(**response.json())
+
+    async def file_download(self, path: str) -> BinaryIO:
+        """Download file from sandbox
+        
+        Args:
+            path: File path in sandbox
+            
+        Returns:
+            File content as binary stream
+        """
+        response = await self.client.get(
+            f"{self.base_url}/api/v1/file/download",
+            params={"path": path}
+        )
+        response.raise_for_status()
+        
+        # Return the response content as a BinaryIO stream
+        # TODO: change to real stream
+        return io.BytesIO(response.content)
     
     @staticmethod
     @alru_cache(maxsize=128, typed=True)

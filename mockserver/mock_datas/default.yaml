@@ -28,7 +28,21 @@
                 {
                     "text": "test message tools."
                 }
-
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: info_search_web
+              arguments: |
+                {
+                    "query": "latest AI developments 2024",
+                    "date_range": "past_month"
+                }
+      finish_reason: stop
 - choices:
     - index: 0
       message:
@@ -54,6 +68,40 @@
         tool_calls:
           - type: function
             function:
+              name: file_write
+              arguments: |
+                {
+                    "file": "/home/ubuntu/example.md",
+                    "content": "## Header\n\nThis is a test\n\n### Subheader",
+                    "append": false,
+                    "leading_newline": true,
+                    "trailing_newline": true
+                }
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: file_write
+              arguments: |
+                {
+                    "file": "/home/ubuntu/example.py",
+                    "content": "print('Hello, World!')",
+                    "append": false,
+                    "leading_newline": true,
+                    "trailing_newline": true
+                }
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
               name: shell_exec
               arguments: |
                 {
@@ -61,7 +109,21 @@
                     "exec_dir": "/home/ubuntu",
                     "command": "ls -a"
                 }
-
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: shell_exec
+              arguments: |
+                {
+                    "id": "shell-1",
+                    "exec_dir": "/home/ubuntu",
+                    "command": "sudo apt update"
+                }
 - choices:
     - index: 0
       message:
@@ -85,7 +147,6 @@
 
 - id: chatcmpl
   object: chat.completion
-  model: gpt-4o
   choices:
     - index: 0
       message:
@@ -95,3 +156,17 @@
             "steps": []
           }
       finish_reason: stop
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: |
+          {
+            "message": "This is a test",
+            "attachments": [
+              "/home/ubuntu/example.txt",
+              "/home/ubuntu/example.md",
+              "/home/ubuntu/example.py"
+            ]
+          }

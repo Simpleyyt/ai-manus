@@ -13,7 +13,7 @@
           <div
             class="inline-flex items-center h-full rounded-full text-[14px] text-[var(--text-secondary)] max-w-[100%]">
             <div class="max-w-[100%] text-ellipsis overflow-hidden whitespace-nowrap text-[13px]"
-              title="{{ toolInfo.function }}{{  toolInfo.functionArg }}">
+              :title="`${toolInfo.function}${toolInfo.functionArg}`">
               <div class="flex items-center">
                 {{ toolInfo.function
                 }}<span

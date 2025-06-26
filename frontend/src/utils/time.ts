@@ -4,6 +4,26 @@ import { useI18n } from 'vue-i18n';
  * Time related utility functions
  */
 
+
+/**
+ * Convert ISO 8601 datetime string to timestamp number
+ * @param isoString ISO 8601 datetime string (e.g., "2025-06-22T04:42:11.842000")
+ * @returns Timestamp number in seconds
+ */
+export const parseISODateTime = (isoString: string): number => {
+  try {
+    const date = new Date(isoString);
+    
+    if (isNaN(date.getTime())) {
+      throw new Error('Invalid ISO datetime string');
+    }
+    
+    return Math.floor(date.getTime() / 1000);
+  } catch (error) {
+    throw new Error(`Failed to parse ISO datetime string: ${isoString}`);
+  }
+};
+
 /**
  * Convert timestamp to relative time (e.g., minutes ago, hours ago, days ago)
  * @param timestamp Timestamp (seconds)

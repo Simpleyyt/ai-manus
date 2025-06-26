@@ -1,18 +1,22 @@
 <template>
   <SimpleBar ref="simpleBarRef" @scroll="handleScroll">
-    <div
-      ref="chatContainerRef"
+    <div ref="chatContainerRef"
       class="relative flex flex-col h-full flex-1 min-w-0 mx-auto w-full max-w-full sm:max-w-[768px] sm:min-w-[390px] px-5">
-      <div
-        ref="observerRef"
+      <div ref="observerRef"
         class="sticky top-0 z-10 bg-[var(--background-gray-main)] flex-shrink-0 flex flex-row items-center justify-between pt-4 pb-1">
         <div class="flex w-full flex-col gap-[4px]">
           <div
             :class="['text-[var(--text-primary)] text-lg font-medium w-full flex flex-row items-center justify-between flex-1 min-w-0 gap-2', { 'ps-7': shouldAddPaddingClass }]">
-            <div class="flex flex-row items-center gap-2 flex-1 min-w-0">
+            <div class="flex flex-row items-center gap-[6px] flex-1 min-w-0">
               <span class="whitespace-nowrap text-ellipsis overflow-hidden">
                 {{ title }}
               </span>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <button @click="handleFileListShow"
+                class="p-[5px] flex items-center justify-center hover:bg-[var(--fill-tsp-white-dark)] rounded-lg cursor-pointer">
+                <FileSearch class="text-[var(--icon-secondary)]" :size="18" />
+              </button>
             </div>
           </div>
           <div class="w-full flex justify-between items-center">
@@ -25,8 +29,8 @@
           @toolClick="handleToolClick" />
 
         <!-- Loading indicator -->
-        <div v-if="isLoading" class="flex items-center gap-1 text-[var(--text-tertiary)] text-sm"><span>{{ $t('Thinking') }}</span><span
-            class="flex gap-1 relative top-[4px]"><span
+        <div v-if="isLoading" class="flex items-center gap-1 text-[var(--text-tertiary)] text-sm"><span>{{
+          $t('Thinking') }}</span><span class="flex gap-1 relative top-[4px]"><span
               class="w-[3px] h-[3px] rounded animate-bounce-dot bg-[var(--icon-tertiary)]"
               style="animation-delay: 0ms;"></span><span
               class="w-[3px] h-[3px] rounded animate-bounce-dot bg-[var(--icon-tertiary)]"
@@ -43,10 +47,12 @@
           </button>
           <PlanPanel :plan="plan" />
         </template>
-        <ChatBox v-model="inputMessage" :rows="1" @submit="chat(inputMessage)" :isRunning="isLoading" @stop="handleStop" />
+        <ChatBox v-model="inputMessage" :rows="1" @submit="handleSubmit" :isRunning="isLoading"
+          @stop="handleStop" :attachments="attachments" />
       </div>
     </div>
-    <ToolPanel ref="toolPanel" :size="toolPanelSize" :sessionId="sessionId" :realTime="realTime" @jumpToRealTime="jumpToRealTime" />
+    <RightPanel ref="rightPanel" :size="toolPanelSize" :sessionId="sessionId" :realTime="realTime"
+      @jumpToRealTime="jumpToRealTime" />
   </SimpleBar>
 </template>
 
@@ -58,20 +64,23 @@ import { useI18n } from 'vue-i18n';
 import ChatBox from '../components/ChatBox.vue';
 import ChatMessage from '../components/ChatMessage.vue';
 import * as agentApi from '../api/agent';
-import { Message, MessageContent, ToolContent, StepContent } from '../types/message';
-import { 
-  StepEventData, 
-  ToolEventData, 
-  MessageEventData, 
-  ErrorEventData, 
-  TitleEventData, 
-  PlanEventData, 
-  AgentSSEEvent 
+import { Message, MessageContent, ToolContent, StepContent, AttachmentsContent } from '../types/message';
+import {
+  StepEventData,
+  ToolEventData,
+  MessageEventData,
+  ErrorEventData,
+  TitleEventData,
+  PlanEventData,
+  AgentSSEEvent,
 } from '../types/event';
-import ToolPanel from '../components/ToolPanel.vue';
+import RightPanel from '../components/RightPanel.vue';
 import PlanPanel from '../components/PlanPanel.vue';
-import { ArrowDown } from 'lucide-vue-next';
+import { ArrowDown, FileSearch } from 'lucide-vue-next';
 import { showErrorToast } from '../utils/toast';
+import { eventBus } from '../utils/eventBus';
+import { EVENT_SESSION_FILE_LIST_SHOW } from '../constants/event';
+import type { FileInfo } from '../api/file';
 
 const router = useRouter();
 const { t } = useI18n();
@@ -93,6 +102,7 @@ const createInitialState = () => ({
   lastEventId: undefined as string | undefined,
   shouldAddPaddingClass: false,
   cancelCurrentChat: null as (() => void) | null,
+  attachments: [] as FileInfo[]
 });
 
 // Create reactive state
@@ -101,7 +111,7 @@ const state = reactive(createInitialState());
 // Destructure refs from reactive state
 const {
   inputMessage,
-  isLoading, 
+  isLoading,
   sessionId,
   messages,
   toolPanelSize,
@@ -113,11 +123,12 @@ const {
   lastTool,
   lastEventId,
   shouldAddPaddingClass,
-  cancelCurrentChat
+  cancelCurrentChat,
+  attachments
 } = toRefs(state);
 
 // Non-state refs that don't need reset
-const toolPanel = ref();
+const rightPanel = ref();
 const simpleBarRef = ref<InstanceType<typeof SimpleBar>>();
 const observerRef = ref<HTMLDivElement>();
 const resizeObserver = ref<ResizeObserver>();
@@ -129,7 +140,7 @@ const resetState = () => {
   if (cancelCurrentChat.value) {
     cancelCurrentChat.value();
   }
-  
+
   // Reset reactive state to initial values
   Object.assign(state, createInitialState());
 };
@@ -156,12 +167,21 @@ const handleMessageEvent = (messageData: MessageEventData) => {
       ...messageData
     } as MessageContent,
   });
+
+  if (messageData.attachments?.length > 0) {
+    messages.value.push({
+      type: 'attachments',
+      content: {
+        ...messageData
+      } as AttachmentsContent,
+    });
+  }
 }
 
 // Handle tool event
 const handleToolEvent = (toolData: ToolEventData) => {
   const lastStep = getLastStep();
-  let toolContent : ToolContent = {
+  let toolContent: ToolContent = {
     ...toolData
   }
   if (lastTool.value && lastTool.value.tool_call_id === toolContent.tool_call_id) {
@@ -180,7 +200,7 @@ const handleToolEvent = (toolData: ToolEventData) => {
   if (toolContent.name !== 'message') {
     lastNoMessageTool.value = toolContent;
     if (realTime.value) {
-      toolPanel.value.show(toolContent, true);
+      rightPanel.value?.showTool(toolContent, true);
     }
   }
 }
@@ -249,7 +269,11 @@ const handleEvent = (event: AgentSSEEvent) => {
   lastEventId.value = event.data.event_id;
 }
 
-const chat = async (message: string = '') => {
+const handleSubmit = () => {
+  chat(inputMessage.value, attachments.value);
+}
+
+const chat = async (message: string = '', files: FileInfo[] = []) => {
   if (!sessionId.value) return;
 
   // Cancel any existing chat connection before starting a new one
@@ -259,13 +283,23 @@ const chat = async (message: string = '') => {
   }
 
   if (message.trim()) {
-  // Add user message to conversation list
-  messages.value.push({
-    type: 'user',
-    content: {
-      content: message,
+    // Add user message to conversation list
+    messages.value.push({
+      type: 'user',
+      content: {
+        content: message,
         timestamp: Math.floor(Date.now() / 1000)
       } as MessageContent,
+    });
+  }
+
+  if (files.length > 0) {
+    messages.value.push({
+      type: 'attachments',
+      content: {
+        role: 'user',
+        attachments: files
+      } as AttachmentsContent,
     });
   }
 
@@ -282,12 +316,13 @@ const chat = async (message: string = '') => {
       sessionId.value,
       message,
       lastEventId.value,
+      files.map((file: FileInfo) => file.file_id),
       {
         onOpen: () => {
           console.log('Chat opened');
           isLoading.value = true;
         },
-        onMessage: ({event, data}) => {
+        onMessage: ({ event, data }) => {
           handleEvent({
             event: event as AgentSSEEvent['event'],
             data: data as AgentSSEEvent['data']
@@ -343,8 +378,8 @@ const checkElementPosition = () => {
 };
 
 onBeforeRouteUpdate((to, _, next) => {
-  if (toolPanel.value) {
-    toolPanel.value.hide();
+  if (rightPanel.value) {
+    rightPanel.value?.hide();
   }
   resetState();
   if (to.params.sessionId) {
@@ -363,9 +398,10 @@ onMounted(() => {
     sessionId.value = String(routeParams.sessionId) as string;
     // Get initial message from history.state
     const message = history.state?.message;
+    const files: FileInfo[] = history.state?.files;
     history.replaceState({}, document.title);
     if (message) {
-      chat(message);
+      chat(message, files);
     } else {
       restoreSession();
     }
@@ -380,11 +416,15 @@ onMounted(() => {
     checkElementPosition();
     resizeObserver.value?.observe(observerRef.value as Element);
     resizeObserver.value?.observe(document.body as Element);
-    resizeObserver.value?.observe(toolPanel.value.$el as Element);
+    resizeObserver.value?.observe(rightPanel.value.$el as Element);
   });
 });
 
 onUnmounted(() => {
+  if (cancelCurrentChat.value) {
+    cancelCurrentChat.value();
+    cancelCurrentChat.value = null;
+  }
   resizeObserver.value?.disconnect();
 })
 
@@ -407,15 +447,15 @@ const isLiveTool = (tool: ToolContent) => {
 
 const handleToolClick = (tool: ToolContent) => {
   realTime.value = false;
-  if (toolPanel.value && sessionId.value) {
-    toolPanel.value.show(tool, isLiveTool(tool));
+  if (rightPanel.value && sessionId.value) {
+    rightPanel.value.showTool(tool, isLiveTool(tool));
   }
 }
 
 const jumpToRealTime = () => {
   realTime.value = true;
   if (lastNoMessageTool.value) {
-    toolPanel.value.show(lastNoMessageTool.value, isLiveTool(lastNoMessageTool.value));
+    rightPanel.value?.showTool(lastNoMessageTool.value, isLiveTool(lastNoMessageTool.value));
   }
 }
 
@@ -432,6 +472,10 @@ const handleStop = () => {
   if (sessionId.value) {
     agentApi.stopSession(sessionId.value);
   }
+}
+
+const handleFileListShow = () => {
+  eventBus.emit(EVENT_SESSION_FILE_LIST_SHOW);
 }
 </script>
 

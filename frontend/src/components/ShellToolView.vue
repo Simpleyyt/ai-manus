@@ -62,6 +62,10 @@ const updateShellContent = (console: any) => {
 
 // Function to load Shell session content
 const loadShellContent = async () => {
+  if (cancelViewShell.value) {
+    cancelViewShell.value();
+  }
+
   if (!props.live) {
     updateShellContent(props.toolContent.content?.console);
     return;
@@ -77,14 +81,11 @@ const loadShellContent = async () => {
   })
 };
 
-// Watch for sessionId changes to reload content
-watch(shellSessionId, (newVal) => {
-  if (newVal) {
-    loadShellContent();
-  }
+watch(shellSessionId, () => {
+  loadShellContent();
 });
 
-watch(() => props.toolContent.status, () => {
+watch(() => props.toolContent.timestamp, () => {
   loadShellContent();
 });
 

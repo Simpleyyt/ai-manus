@@ -81,8 +81,9 @@ class BaseAgent(ABC):
         #raise ValueError(f"Tool execution failed, retried {self.max_retries} times: {last_error}")
         return ToolResult(success=False, error=last_error)
     
-    async def execute(self, request: str) -> AsyncGenerator[BaseEvent, None]:
-        message = await self.ask(request, self.format)
+    async def execute(self, request: str, format: Optional[str] = None) -> AsyncGenerator[BaseEvent, None]:
+        format = format or self.format
+        message = await self.ask(request, format)
         for _ in range(self.max_iterations):
             if not message.get("tool_calls"):
                 break

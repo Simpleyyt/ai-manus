@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Any, Union, Literal, Dict, Optional, List
 import time
 from app.domain.models.plan import ExecutionStatus
+from app.domain.models.file import FileInfo
 from app.domain.events.agent_events import ToolStatus
 from app.domain.events.agent_events import (
     AgentEvent,
@@ -23,6 +24,7 @@ class BaseEventData(BaseModel):
 class MessageEventData(BaseEventData):
     role: Literal["user", "assistant"]
     content: str
+    attachments: Optional[List[FileInfo]] = None
 
 class ToolEventData(BaseEventData):
     tool_call_id: str
@@ -92,7 +94,7 @@ AgentSSEEvent = Union[
     StepSSEEvent,
     DoneSSEEvent,
     ErrorSSEEvent,
-    WaitSSEEvent
+    WaitSSEEvent,
 ]
 
 class SSEEventFactory:
@@ -125,7 +127,8 @@ class SSEEventFactory:
                 data=MessageEventData(
                     **base_event.model_dump(),
                     content=event.message,
-                    role=event.role
+                    role=event.role,
+                    attachments=event.attachments
                 )
             )
         elif isinstance(event, TitleEvent):

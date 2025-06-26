@@ -1,4 +1,4 @@
-from typing import Any, Optional, Protocol
+from typing import Any, Optional, Protocol, BinaryIO
 from app.domain.models.tool_result import ToolResult
 from app.domain.external.browser import Browser
 from app.domain.external.llm import LLM
@@ -208,6 +208,38 @@ class Sandbox(Protocol):
             
         Returns:
             Found file list
+        """
+        ...
+    
+    async def file_upload(
+        self,
+        file_data: BinaryIO,
+        path: str,
+        filename: str = None
+    ) -> ToolResult:
+        """Upload file to sandbox
+        
+        Args:
+            file_data: File content as binary stream
+            path: Target file path in sandbox
+            filename: Original filename (optional)
+            
+        Returns:
+            Upload operation result
+        """
+        ...
+    
+    async def file_download(
+        self,
+        path: str
+    ) -> BinaryIO:
+        """Download file from sandbox
+        
+        Args:
+            path: File path in sandbox
+            
+        Returns:
+            File content as binary stream
         """
         ...
     

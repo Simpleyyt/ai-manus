@@ -20,6 +20,7 @@
     "framer-motion": "^10.12.16",
     "lucide-vue-next": "^0.511.0",
     "marked": "^15.0.8",
+    "mitt": "^3.0.1",
     "monaco-editor": "^0.52.2",
     "tailwind-merge": "^1.13.1",
     "vue": "^3.3.4",

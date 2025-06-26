@@ -5,6 +5,7 @@ from enum import Enum
 import uuid
 from app.domain.events.agent_events import BaseEvent, PlanEvent, AgentEvent
 from app.domain.models.plan import Plan
+from app.domain.models.file import FileInfo
 
 
 class SessionStatus(str, Enum):
@@ -28,6 +29,7 @@ class Session(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     events: List[AgentEvent] = []
+    files: List[FileInfo] = []
     status: SessionStatus = SessionStatus.PENDING
 
     def get_last_plan(self) -> Optional[Plan]:

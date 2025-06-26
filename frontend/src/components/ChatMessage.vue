@@ -35,20 +35,20 @@
       data-event-id="HNtP7XOMUOhPemItd2EkK2">
       <div class="flex flex-row gap-2 justify-center items-center truncate">
         <div v-if="stepContent.status !== 'completed'"
-         class="w-4 h-4 flex-shrink-0 flex items-center justify-center border border-[var(--border-dark)] rounded-[15px]"></div>
+          class="w-4 h-4 flex-shrink-0 flex items-center justify-center border border-[var(--border-dark)] rounded-[15px]">
+        </div>
         <div v-else
           class="w-4 h-4 flex-shrink-0 flex items-center justify-center border-[var(--border-dark)] rounded-[15px] bg-[var(--text-disable)] dark:bg-[var(--fill-tsp-white-dark)] border-0">
-          <CheckIcon class="text-[var(--icon-white)] dark:text-[var(--icon-white-tsp)]" :size="10"/>
+          <CheckIcon class="text-[var(--icon-white)] dark:text-[var(--icon-white-tsp)]" :size="10" />
         </div>
         <div class="truncate font-medium markdown-content"
           v-html="stepContent.description ? renderMarkdown(stepContent.description) : ''">
         </div>
         <span class="flex-shrink-0 flex" @click="isExpanded = !isExpanded;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-            stroke-linejoin="round"
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
             class="lucide lucide-chevron-down transition-transform duration-300 w-4 h-4"
-            :class="{'rotate-180': isExpanded}">
+            :class="{ 'rotate-180': isExpanded }">
             <path d="m6 9 6 6 6-6"></path>
           </svg>
         </span>
@@ -64,26 +64,34 @@
       </div>
       <div
         class="flex flex-col gap-3 flex-1 min-w-0 overflow-hidden pt-2 transition-[max-height,opacity] duration-150 ease-in-out"
-        :class="{'max-h-[100000px] opacity-100': isExpanded, 'max-h-0 opacity-0': !isExpanded}">
+        :class="{ 'max-h-[100000px] opacity-100': isExpanded, 'max-h-0 opacity-0': !isExpanded }">
         <ToolUse v-for="(tool, index) in stepContent.tools" :key="index" :tool="tool" @click="handleToolClick(tool)" />
       </div>
     </div>
   </div>
+  <AttachmentsMessage v-else-if="message.type === 'attachments'" :content="attachmentsContent"/>
 </template>
 
 <script setup lang="ts">
 import ManusLogoTextIcon from './icons/ManusLogoTextIcon.vue';
-import { Message, MessageContent } from '../types/message';
+import { Message, MessageContent} from '../types/message';
 import ToolUse from './ToolUse.vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { CopyIcon, CheckIcon } from 'lucide-vue-next';
+import { CheckIcon } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import { ToolContent, StepContent } from '../types/message';
 import { useRelativeTime } from '../composables/useTime';
 
+
+import type { AttachmentsContent } from '../types/message';
+import { Bot } from 'lucide-vue-next';
+import AttachmentsMessage from './AttachmentsMessage.vue';
+
+
 const props = defineProps<{
   message: Message;
+  sessionId?: string;
 }>();
 
 const emit = defineEmits<{
@@ -98,6 +106,7 @@ const handleToolClick = (tool: ToolContent) => {
 const stepContent = computed(() => props.message.content as StepContent);
 const messageContent = computed(() => props.message.content as MessageContent);
 const toolContent = computed(() => props.message.content as ToolContent);
+const attachmentsContent = computed(() => props.message.content as AttachmentsContent);
 
 // Control content expand/collapse state
 const isExpanded = ref(true);
@@ -114,9 +123,10 @@ const renderMarkdown = (text: string) => {
 
 <style>
 .duration-300 {
-    animation-duration: .3s;
+  animation-duration: .3s;
 }
+
 .duration-300 {
-    transition-duration: .3s;
+  transition-duration: .3s;
 }
 </style>

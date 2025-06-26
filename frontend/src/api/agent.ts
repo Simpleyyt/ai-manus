@@ -2,6 +2,7 @@
 import { apiClient, BASE_URL, ApiResponse, createSSEConnection, SSECallbacks } from './client';
 import { AgentSSEEvent } from '../types/event';
 import { CreateSessionResponse, GetSessionResponse, ShellViewResponse, FileViewResponse, ListSessionResponse } from '../types/response';
+import type { FileInfo } from './file';
 
 /**
  * Create Session
@@ -54,6 +55,7 @@ export const chatWithSession = async (
   sessionId: string, 
   message: string = '',
   eventId?: string,
+  attachments?: string[],
   callbacks?: SSECallbacks<AgentSSEEvent['data']>
 ): Promise<() => void> => {
   return createSSEConnection<AgentSSEEvent['data']>(
@@ -63,7 +65,8 @@ export const chatWithSession = async (
       body: { 
         message, 
         timestamp: Math.floor(Date.now() / 1000), 
-        event_id: eventId 
+        event_id: eventId,
+        attachments
       }
     },
     callbacks
@@ -102,4 +105,9 @@ export async function viewFile(sessionId: string, file: string, callbacks?: SSEC
     },
     callbacks
   );
+}
+
+export async function getSessionFiles(sessionId: string): Promise<FileInfo[]> {
+  const response = await apiClient.get<ApiResponse<FileInfo[]>>(`/sessions/${sessionId}/files`);
+  return response.data.data;
 }

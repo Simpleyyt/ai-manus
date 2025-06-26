@@ -1,10 +1,12 @@
 from pydantic import BaseModel, Field
-from typing import Dict, Any, Literal, Optional, Union, List
+from typing import Dict, Any, Literal, Optional, Union, List, get_args
 from datetime import datetime
 import time
 import uuid
 from enum import Enum
 from app.domain.models.plan import Plan, Step
+from app.domain.models.file import FileInfo
+import json
 
 
 class PlanStatus(str, Enum):
@@ -90,6 +92,7 @@ class MessageEvent(BaseEvent):
     type: Literal["message"] = "message"
     role: Literal["user", "assistant"] = "assistant"
     message: str
+    attachments: Optional[List[FileInfo]] = None
 
 class DoneEvent(BaseEvent):
     """Done event"""
@@ -108,36 +111,50 @@ AgentEvent = Union[
     MessageEvent,
     DoneEvent,
     TitleEvent,
-    WaitEvent
+    WaitEvent,
 ]
 
 
 class AgentEventFactory:
     """Factory class for JSON conversion and AgentEvent manipulation"""
     
+    _EVENT_TYPES: Dict[str, type] = None
+    
+    @classmethod
+    def _build_event_types(cls) -> Dict[str, type]:
+        """Build event type mapping from AgentEvent Union types"""
+        if cls._EVENT_TYPES is None:
+            cls._EVENT_TYPES = {}
+            # Get all types from AgentEvent Union
+            union_types = get_args(AgentEvent)
+            
+            for event_type in union_types:
+                # Skip BaseEvent as it's the fallback
+                if event_type == BaseEvent:
+                    continue
+                
+                # Get the literal type value from the class
+                if hasattr(event_type, 'model_fields') and 'type' in event_type.model_fields:
+                    field_info = event_type.model_fields['type']
+                    if hasattr(field_info, 'default'):
+                        type_value = field_info.default
+                        cls._EVENT_TYPES[type_value] = event_type
+        
+        return cls._EVENT_TYPES
+    
     @staticmethod
     def from_json(event_str: str) -> AgentEvent:
         """Create an AgentEvent from JSON string"""
-        event = BaseEvent.model_validate_json(event_str)
+        # Build event types mapping if not done yet
+        event_types = AgentEventFactory._build_event_types()
         
-        if (event.type == "plan"):
-            return PlanEvent.model_validate_json(event_str)
-        elif (event.type == "step"): 
-            return StepEvent.model_validate_json(event_str)
-        elif (event.type == "tool"):
-            return ToolEvent.model_validate_json(event_str)
-        elif (event.type == "message"):
-            return MessageEvent.model_validate_json(event_str)
-        elif (event.type == "error"):
-            return ErrorEvent.model_validate_json(event_str)
-        elif (event.type == "done"):
-            return DoneEvent.model_validate_json(event_str)
-        elif (event.type == "title"):
-            return TitleEvent.model_validate_json(event_str)
-        elif (event.type == "wait"):
-            return WaitEvent.model_validate_json(event_str)
-        else:
-            return event
+        # Parse JSON to get the event type
+        event_dict = json.loads(event_str)
+        event_type = event_dict.get("type")
+        
+        # Get the appropriate class and parse
+        event_class = event_types.get(event_type, BaseEvent)
+        return event_class.model_validate_json(event_str)
     
     @staticmethod
     def to_json(event: AgentEvent) -> str:

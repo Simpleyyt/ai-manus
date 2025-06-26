@@ -73,5 +73,29 @@ export default {
   'Deleted successfully': 'Deleted successfully',
   'Failed to delete session': 'Failed to delete session',
   'Exit Takeover': 'Exit Takeover',
-  'Take Over': 'Take Over'
+  'Take Over': 'Take Over',
+  // Session File List
+  'All Files in This Task': 'All Files in This Task',
+  'No Content': 'No Content',
+  // File Preview
+  'This format cannot be previewed': 'This format cannot be previewed',
+  'Please download the file to view its content': 'Please download the file to view its content',
+  'Download': 'Download',
+  'View all files in this task': 'View all files in this task',
+  // File Upload
+  'Upload failed': 'Upload failed',
+  'Uploading...': 'Uploading...',
+  // File Types
+  'Text': 'Text',
+  'Markdown': 'Markdown',
+  'Code': 'Code',
+  'Image': 'Image',
+  'PDF': 'PDF',
+  'Word': 'Word',
+  'Excel': 'Excel',
+  'PowerPoint': 'PowerPoint',
+  'Document': 'Document',
+  'Video': 'Video',
+  'Audio': 'Audio',
+  'Archive': 'Archive'
 } 

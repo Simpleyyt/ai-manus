@@ -69,9 +69,11 @@ services:
       # No proxy hosts for sandbox (optional)
       #- SANDBOX_NO_PROXY=
       
-      # Google Search API key for web search capability (optional)
+      # Search engine configuration (options: baidu, google)
+      - SEARCH_PROVIDER=baidu
+      # Google Search API key for web search capability (only needed when SEARCH_PROVIDER=google)
       #- GOOGLE_SEARCH_API_KEY=
-      # Google Custom Search Engine ID (optional)
+      # Google Custom Search Engine ID (only needed when SEARCH_PROVIDER=google)
       #- GOOGLE_SEARCH_ENGINE_ID=
       
       # Application log level

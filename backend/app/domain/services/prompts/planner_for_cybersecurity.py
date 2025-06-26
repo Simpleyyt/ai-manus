@@ -106,6 +106,9 @@ You are now creating a plan. Based on the user's message, you need to generate t
 
 User message:
 {user_message}
+
+Attachments:
+{attachments}
 """
 
 UPDATE_PLAN_PROMPT = """

@@ -195,6 +195,10 @@ async def serve() -> None:
 资产详情:
 {result.get('data', '无数据')}
 
+黑客工具常见端口默认服务:
+- 50050: Cobalt Strike Beacon
+- 8834: Nessus
+
 安全分析建议:
 基于以上发现的资产，建议进行以下安全检查：
 1. 检查暴露的服务是否为最新版本

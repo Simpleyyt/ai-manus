@@ -134,8 +134,15 @@ class PlanActFlow(BaseFlow):
                 logger.info(f"Agent {self._agent_id} started executing step {step.id}: {step.description[:50]}...")
                 async for event in self.executor.execute_step(self.plan, step, message):
                     yield event
-                logger.info(f"Agent {self._agent_id} completed step {step.id}, state changed from {AgentStatus.EXECUTING} to {AgentStatus.UPDATING}")
-                self.status = AgentStatus.UPDATING
+                
+                # Check if there are more steps after completing current step
+                next_step = self.plan.get_next_step()
+                if not next_step:
+                    logger.info(f"Agent {self._agent_id} completed last step {step.id}, state changed from {AgentStatus.EXECUTING} to {AgentStatus.COMPLETED}")
+                    self.status = AgentStatus.COMPLETED
+                else:
+                    logger.info(f"Agent {self._agent_id} completed step {step.id}, state changed from {AgentStatus.EXECUTING} to {AgentStatus.UPDATING}")
+                    self.status = AgentStatus.UPDATING
             elif self.status == AgentStatus.UPDATING:
                 # Update plan
                 logger.info(f"Agent {self._agent_id} started updating plan")

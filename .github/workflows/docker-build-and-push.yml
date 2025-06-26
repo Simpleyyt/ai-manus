@@ -48,6 +48,8 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
             type=raw,value=latest,enable={{is_default_branch}}
+            type=match,pattern=v(.+),group=1,enable=${{ !contains(github.ref_name, '-') }}
+            type=match,pattern=v(.+),group=1,enable=${{ contains(github.ref_name, 'dev') || contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5

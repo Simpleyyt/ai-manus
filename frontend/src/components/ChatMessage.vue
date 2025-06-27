@@ -26,8 +26,13 @@
       </div>
     </div>
     <div
-      class="max-w-none p-0 m-0 prose prose-sm sm:prose-base dark:prose-invert [&_pre:not(.shiki)]:!bg-[var(--fill-tsp-white-light)] [&_pre:not(.shiki)]:text-[var(--text-primary)] text-base text-[var(--text-primary)]"
-      v-html="renderMarkdown(messageContent.content)"></div>
+      class="max-w-none p-0 m-0 prose prose-sm sm:prose-base dark:prose-invert [&_pre:not(.shiki)]:!bg-[var(--fill-tsp-white-light)] [&_pre:not(.shiki)]:text-[var(--text-primary)] text-base text-[var(--text-primary)]">
+      <!-- 处理think标签 -->
+      <template v-for="(part, index) in processedContent" :key="index">
+        <ThinkTag v-if="part.type === 'think'" :content="part.content" />
+        <div v-else v-html="renderMarkdown(part.content)"></div>
+      </template>
+    </div>
   </div>
   <ToolUse v-else-if="message.type === 'tool'" :tool="toolContent" @click="handleToolClick(toolContent)" />
   <div v-else-if="message.type === 'step'" class="flex flex-col">
@@ -76,6 +81,7 @@
 import ManusLogoTextIcon from './icons/ManusLogoTextIcon.vue';
 import { Message, MessageContent} from '../types/message';
 import ToolUse from './ToolUse.vue';
+import ThinkTag from './ThinkTag.vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { CheckIcon } from 'lucide-vue-next';
@@ -112,6 +118,47 @@ const attachmentsContent = computed(() => props.message.content as AttachmentsCo
 const isExpanded = ref(true);
 
 const { relativeTime } = useRelativeTime();
+
+// 处理内容，分离think标签和普通内容
+const processedContent = computed(() => {
+  if (props.message.type !== 'assistant') return [];
+  
+  const content = messageContent.value.content;
+  if (typeof content !== 'string') return [];
+  
+  const parts: Array<{ type: 'text' | 'think', content: string }> = [];
+  const thinkRegex = /<think>([\s\S]*?)<\/think>/g;
+  let lastIndex = 0;
+  let match;
+  
+  while ((match = thinkRegex.exec(content)) !== null) {
+    // 添加think标签之前的内容
+    if (match.index > lastIndex) {
+      parts.push({
+        type: 'text',
+        content: content.slice(lastIndex, match.index)
+      });
+    }
+    
+    // 添加think标签内容
+    parts.push({
+      type: 'think',
+      content: match[1].trim()
+    });
+    
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // 添加剩余内容
+  if (lastIndex < content.length) {
+    parts.push({
+      type: 'text',
+      content: content.slice(lastIndex)
+    });
+  }
+  
+  return parts;
+});
 
 // Render Markdown to HTML and sanitize
 const renderMarkdown = (text: string) => {

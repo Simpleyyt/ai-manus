@@ -7,7 +7,7 @@
             @error="handleImageError"
             class="logo-image"
         />
-        <span class="text-[var(--text-primary)] font-medium text-base">关基智能体</span>
+        <span class="text-[var(--text-primary)] font-medium text-base">关基安全智能体</span>
     </div>
 </template>
 
@@ -25,7 +25,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const logoSrc = computed(() => {
-    return new URL('../../assets/images/logo.jpg', import.meta.url).href
+    return new URL('../../assets/images/logo.png', import.meta.url).href
 })
 
 const imgStyle = computed(() => {

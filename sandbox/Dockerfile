@@ -78,6 +78,7 @@ RUN apt-get update && apt-get install -y \
     whois \
     nmap \
     wireshark \
+    tshark \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

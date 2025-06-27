@@ -198,6 +198,7 @@ class AgentTaskRunner(TaskRunner):
         """Process agent's message queue and run the agent's flow"""
         try:
             logger.info(f"Agent {self._agent_id} message processing task started")
+            await self._sandbox.ensure_sandbox()
             while not await task.input_stream.is_empty():
                 event = await self._pop_event(task)
                 message = ""

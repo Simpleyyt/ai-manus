@@ -5,6 +5,10 @@ from app.domain.external.llm import LLM
 
 class Sandbox(Protocol):
     """Sandbox service gateway interface"""
+
+    async def ensure_sandbox(self) -> None:
+        """Ensure sandbox is ready"""
+        ...
     
     async def exec_command(
         self,

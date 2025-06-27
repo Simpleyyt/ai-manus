@@ -124,6 +124,58 @@ class DockerSandbox(Sandbox):
         except Exception as e:
             raise Exception(f"Failed to create Docker sandbox: {str(e)}")
 
+    async def ensure_sandbox(self) -> None:
+        """Ensure sandbox is ready by checking that all services are RUNNING"""
+        max_retries = 30  # Maximum number of retries
+        retry_interval = 2  # Seconds between retries
+        
+        for attempt in range(max_retries):
+            try:
+                response = await self.client.get(f"{self.base_url}/api/v1/supervisor/status")
+                response.raise_for_status()
+                
+                # Parse response as ToolResult
+                tool_result = ToolResult(**response.json())
+                
+                if not tool_result.success:
+                    logger.warning(f"Supervisor status check failed: {tool_result.message}")
+                    await asyncio.sleep(retry_interval)
+                    continue
+                
+                services = tool_result.data or []
+                if not services:
+                    logger.warning("No services found in supervisor status")
+                    await asyncio.sleep(retry_interval)
+                    continue
+                
+                # Check if all services are RUNNING
+                all_running = True
+                non_running_services = []
+                
+                for service in services:
+                    service_name = service.get("name", "unknown")
+                    state_name = service.get("statename", "")
+                    
+                    if state_name != "RUNNING":
+                        all_running = False
+                        non_running_services.append(f"{service_name}({state_name})")
+                
+                if all_running:
+                    logger.info(f"All {len(services)} services are RUNNING - sandbox is ready")
+                    return  # Success - all services are running
+                else:
+                    logger.info(f"Waiting for services to start... Non-running: {', '.join(non_running_services)} (attempt {attempt + 1}/{max_retries})")
+                    await asyncio.sleep(retry_interval)
+                    
+            except Exception as e:
+                logger.warning(f"Failed to check supervisor status (attempt {attempt + 1}/{max_retries}): {str(e)}")
+                await asyncio.sleep(retry_interval)
+        
+        # If we reach here, we've exhausted all retries
+        error_message = f"Sandbox services failed to start after {max_retries} attempts ({max_retries * retry_interval} seconds)"
+        logger.error(error_message)
+        raise Exception(error_message)
+
     async def exec_command(self, session_id: str, exec_dir: str, command: str) -> ToolResult:
         response = await self.client.post(
             f"{self.base_url}/api/v1/shell/exec",

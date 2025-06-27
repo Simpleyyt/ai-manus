@@ -235,7 +235,7 @@ class ShellService:
         try:
             # Asynchronously wait for process to complete
             if seconds is None:
-                seconds = 15
+                seconds = 60
             await asyncio.wait_for(process.wait(), timeout=seconds)
             
             logger.info(f"Process completed with return code: {process.returncode}")

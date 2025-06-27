@@ -47,9 +47,19 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            type=raw,value=latest,enable={{is_default_branch}}
             type=match,pattern=v(.+),group=1,enable=${{ !contains(github.ref_name, '-') }}
             type=match,pattern=v(.+),group=1,enable=${{ contains(github.ref_name, 'dev') || contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Debug metadata output
+        run: |
+          echo "Generated tags: ${{ steps.meta.outputs.tags }}"
+          echo "Generated labels: ${{ steps.meta.outputs.labels }}"
+          echo "Event name: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Ref name: ${{ github.ref_name }
+          echo "Is default branch: ${{ github.event_name != 'pull_request' && github.ref_name == 'private-main' }}"
+          echo "Matrix component: ${{ matrix.component }}"
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5

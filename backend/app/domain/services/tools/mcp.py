@@ -8,10 +8,12 @@ from pathlib import Path
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.sse import sse_client
+from mcp.client.streamable_http import streamablehttp_client
 from mcp.types import Tool as MCPTool
 
 from app.domain.services.tools.base import BaseTool, tool
 from app.domain.models.tool_result import ToolResult
+from app.domain.external.mcp_config import MCPConfigProvider
 
 logger = logging.getLogger(__name__)
 
@@ -19,38 +21,28 @@ logger = logging.getLogger(__name__)
 class MCPClientManager:
     """MCP 客户端管理器"""
     
-    def __init__(self):
+    def __init__(self, config_provider: Optional[MCPConfigProvider] = None):
         self._clients: Dict[str, ClientSession] = {}
         self._exit_stack = AsyncExitStack()
         self._server_configs: Dict[str, Dict[str, Any]] = {}
         self._tools_cache: Dict[str, List[MCPTool]] = {}
         self._initialized = False
+        self._config_provider = config_provider
     
-    async def initialize(self, config_path: Optional[str] = None):
+    async def initialize(self):
         """初始化 MCP 客户端管理器"""
         if self._initialized:
             return
-            
-        if not config_path:
-            # Try multiple possible paths for config file
-            possible_paths = [
-                os.path.join(os.path.dirname(__file__), "../../../../../mcp_servers/config.json"),  # 本地开发环境
-                "/app/mcp_servers/config.json",  # Docker环境
-                os.path.join("/app", "mcp_servers", "config.json"),  # Docker环境备选
-            ]
-            
-            config_path = None
-            for path in possible_paths:
-                if os.path.exists(path):
-                    config_path = path
-                    break
-            
-            if not config_path:
-                config_path = possible_paths[0]  # 默认使用第一个路径
         
         try:
-            # 加载配置
-            await self._load_config(config_path)
+            # 从配置提供者加载配置
+            if self._config_provider:
+                self._server_configs = await self._config_provider.get_servers_config()
+                logger.info(f"mcp server configs: {self._server_configs}")
+                logger.info(f"从配置提供者加载了 {len(self._server_configs)} 个 MCP 服务器配置")
+            else:
+                logger.warning("未提供配置提供者，MCP管理器将以空配置运行")
+                self._server_configs = {}
             
             # 连接到所有启用的服务器
             await self._connect_servers()
@@ -61,24 +53,7 @@ class MCPClientManager:
         except Exception as e:
             logger.error(f"MCP 客户端管理器初始化失败: {e}")
             raise
-    
-    async def _load_config(self, config_path: str):
-        """加载 MCP 服务器配置"""
-        try:
-            config_file = Path(config_path)
-            if not config_file.exists():
-                logger.warning(f"MCP 配置文件不存在: {config_path}")
-                return
-                
-            with open(config_file, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-            
-            self._server_configs = config.get('mcp_servers', {})
-            logger.info(f"加载了 {len(self._server_configs)} 个 MCP 服务器配置")
-            
-        except Exception as e:
-            logger.error(f"加载 MCP 配置失败: {e}")
-            raise
+
     
     async def _connect_servers(self):
         """连接到所有启用的 MCP 服务器"""
@@ -103,8 +78,10 @@ class MCPClientManager:
             
             if transport_type == 'stdio':
                 await self._connect_stdio_server(server_name, config)
-            elif transport_type == 'http':
+            elif transport_type == 'http' or transport_type == 'sse':
                 await self._connect_http_server(server_name, config)
+            elif transport_type == 'streamable-http':
+                await self._connect_streamable_http_server(server_name, config)
             else:
                 logger.error(f"不支持的传输类型: {transport_type}")
                 
@@ -121,26 +98,15 @@ class MCPClientManager:
         if not command:
             raise ValueError(f"服务器 {server_name} 缺少 command 配置")
         
-        # 处理相对路径参数，转换为绝对路径
-        processed_args = []
-        for arg in args:
-            if isinstance(arg, str) and arg.startswith('../'):
-                # 将相对路径转换为基于工作目录的绝对路径
-                processed_args.append(os.path.join('/app', arg[3:]))
-            elif isinstance(arg, str) and not os.path.isabs(arg) and '/' in arg:
-                # 处理其他相对路径情况
-                processed_args.append(os.path.join('/app', arg))
-            else:
-                processed_args.append(arg)
-        
         # 准备环境变量
+        import os
         server_env = os.environ.copy()
         server_env.update(env)
         
-        # 创建服务器参数
+        # 创建服务器参数（路径处理已在配置提供者中完成）
         server_params = StdioServerParameters(
             command=command,
-            args=processed_args,
+            args=args,
             env=server_env
         )
         
@@ -202,6 +168,67 @@ class MCPClientManager:
             
         except Exception as e:
             logger.error(f"连接到 HTTP MCP 服务器 {server_name} 失败: {e}")
+            raise
+    
+    async def _connect_streamable_http_server(self, server_name: str, config: Dict[str, Any]):
+        """连接到 streamable-http MCP 服务器
+        
+        配置选项：
+        - url: 服务器 URL (必需)
+        - headers: 自定义 HTTP 头 (可选)
+        - auth: 认证配置 (可选)
+        """
+        url = config.get('url')
+        if not url:
+            raise ValueError(f"服务器 {server_name} 缺少 url 配置")
+        
+        # 获取可选配置
+        headers = config.get('headers', {})
+        auth = config.get('auth')
+        
+        try:
+            # 准备连接参数
+            client_params = {"url": url}
+            
+            # 添加自定义 headers
+            if headers:
+                client_params["headers"] = headers
+            
+            # 添加认证（如果配置了）
+            if auth:
+                # 可以在这里实现 OAuth 或其他认证机制
+                # 参考文档中的 OAuthClientProvider 示例
+                client_params["auth"] = auth
+            
+            # 建立 streamable-http 连接
+            streamable_transport = await self._exit_stack.enter_async_context(
+                streamablehttp_client(**client_params)
+            )
+            
+            # 解包返回的流和可选的第三个参数
+            if len(streamable_transport) == 3:
+                read_stream, write_stream, _ = streamable_transport
+            else:
+                read_stream, write_stream = streamable_transport
+            
+            # 创建 MCP 会话
+            session = await self._exit_stack.enter_async_context(
+                ClientSession(read_stream, write_stream)
+            )
+            
+            # 初始化会话
+            await session.initialize()
+            
+            # 缓存客户端
+            self._clients[server_name] = session
+            
+            # 获取并缓存工具列表
+            await self._cache_server_tools(server_name, session)
+            
+            logger.info(f"成功连接到 streamable-http MCP 服务器: {server_name} ({url})")
+            
+        except Exception as e:
+            logger.error(f"连接到 streamable-http MCP 服务器 {server_name} 失败: {e}")
             raise
     
     async def _cache_server_tools(self, server_name: str, session: ClientSession):
@@ -304,15 +331,27 @@ class MCPClientManager:
         for server_name, config in self._server_configs.items():
             tools_count = len(self._tools_cache.get(server_name, []))
             connected = server_name in self._clients
+            transport = config.get('transport', 'stdio')
             
-            servers_info[server_name] = {
-                "description": config.get('description', ''),
-                "transport": config.get('transport', 'stdio'),
+            # 添加传输协议特定信息
+            transport_info = {
+                "transport": transport,
                 "enabled": config.get('enabled', True),
                 "auto_connect": config.get('auto_connect', True),
                 "connected": connected,
-                "tools_count": tools_count
+                "tools_count": tools_count,
+                "description": config.get('description', '')
             }
+            
+            # 为不同传输类型添加额外信息
+            if transport in ['http', 'sse', 'streamable-http']:
+                transport_info["url"] = config.get('url', 'Not configured')
+            
+            if transport == 'streamable-http':
+                transport_info["supports_bidirectional"] = True
+                transport_info["low_latency"] = True
+            
+            servers_info[server_name] = transport_info
         
         return servers_info
     
@@ -334,9 +373,9 @@ class MCPTool(BaseTool):
     
     name = "mcp"
     
-    def __init__(self):
+    def __init__(self, config_provider: Optional[MCPConfigProvider] = None):
         super().__init__()
-        self.manager = MCPClientManager()
+        self.manager = MCPClientManager(config_provider)
         self._initialized = False
     
     async def _ensure_initialized(self):

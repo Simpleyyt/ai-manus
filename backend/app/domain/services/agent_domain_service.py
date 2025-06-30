@@ -12,6 +12,7 @@ from app.domain.repositories.session_repository import SessionRepository
 from app.domain.services.agent_task_runner import AgentTaskRunner
 from app.domain.external.task import Task
 from app.domain.utils.json_parser import JsonParser
+from app.domain.external.mcp_config import MCPConfigProvider
 from typing import Type
 from app.domain.external.file import FileStorage
 from app.domain.models.file import FileInfo
@@ -34,6 +35,7 @@ class AgentDomainService:
         json_parser: JsonParser,
         file_storage: FileStorage,
         search_engine: Optional[SearchEngine] = None,
+        mcp_config_provider: Optional[MCPConfigProvider] = None
     ):
         self._repository = agent_repository
         self._session_repository =session_repository
@@ -43,6 +45,7 @@ class AgentDomainService:
         self._task_cls = task_cls
         self._json_parser = json_parser
         self._file_storage = file_storage
+        self._mcp_config_provider = mcp_config_provider
         logger.info("AgentDomainService initialization completed")
             
     async def shutdown(self) -> None:
@@ -79,6 +82,7 @@ class AgentDomainService:
             session_repository=self._session_repository,
             json_parser=self._json_parser,
             agent_repository=self._repository,
+            mcp_config_provider=self._mcp_config_provider,
         )
 
         task = self._task_cls.create(task_runner)

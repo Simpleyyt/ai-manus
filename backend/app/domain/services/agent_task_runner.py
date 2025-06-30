@@ -24,6 +24,7 @@ from app.domain.external.browser import Browser
 from app.domain.external.search import SearchEngine
 from app.domain.external.llm import LLM
 from app.domain.external.file import FileStorage
+from app.domain.external.mcp_config import MCPConfigProvider
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.external.task import TaskRunner, Task
 from app.domain.repositories.session_repository import SessionRepository
@@ -47,6 +48,7 @@ class AgentTaskRunner(TaskRunner):
         json_parser: JsonParser,
         file_storage: FileStorage,
         search_engine: Optional[SearchEngine] = None,
+        mcp_config_provider: Optional[MCPConfigProvider] = None,
     ):
         self._session_id = session_id
         self._agent_id = agent_id
@@ -58,6 +60,7 @@ class AgentTaskRunner(TaskRunner):
         self._session_repository = session_repository
         self._json_parser = json_parser
         self._file_storage = file_storage
+        self._mcp_config_provider = mcp_config_provider
         self._flow = PlanActFlow(
             self._agent_id,
             self._repository,
@@ -68,6 +71,7 @@ class AgentTaskRunner(TaskRunner):
             self._browser,
             self._json_parser,
             self._search_engine,
+            self._mcp_config_provider,
         )
 
     async def _put_and_add_event(self, task: Task, event: AgentEvent) -> None:
@@ -261,6 +265,14 @@ class AgentTaskRunner(TaskRunner):
     async def destroy(self) -> None:
         """Destroy the task and release resources"""
         logger.info("Starting to destroy agent task")
+        
+        # Cleanup flow resources (including MCP tools)
+        if self._flow and hasattr(self._flow, 'cleanup'):
+            try:
+                await self._flow.cleanup()
+                logger.debug(f"Agent {self._agent_id} flow resources cleaned up")
+            except Exception as e:
+                logger.error(f"Agent {self._agent_id} flow cleanup failed: {e}")
         
         # Cleanup flow resources (including MCP tools)
         if self._flow and hasattr(self._flow, 'cleanup'):

@@ -17,6 +17,7 @@ from app.domain.external.llm import LLM
 from app.domain.external.sandbox import Sandbox
 from app.domain.external.browser import Browser
 from app.domain.external.search import SearchEngine
+from app.domain.external.mcp_config import MCPConfigProvider
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.utils.json_parser import JsonParser
 from app.domain.repositories.session_repository import SessionRepository
@@ -44,6 +45,7 @@ class PlanActFlow(BaseFlow):
         browser: Browser,
         json_parser: JsonParser,
         search_engine: Optional[SearchEngine] = None,
+        mcp_config_provider: Optional[MCPConfigProvider] = None,
     ):
         self._agent_id = agent_id
         self._repository = agent_repository
@@ -68,6 +70,7 @@ class PlanActFlow(BaseFlow):
             browser=browser,
             json_parser=json_parser,
             search_engine=search_engine,
+            mcp_config_provider=mcp_config_provider,
         )
         logger.debug(f"Created execution agent for Agent {self._agent_id}")
         

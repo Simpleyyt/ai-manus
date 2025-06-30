@@ -3,13 +3,13 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: build-stage  # Use build stage image instead of production image
-    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]  # Start in development mode and listen on all network interfaces
+      target: build-stage # Use build stage image instead of production image
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"] # Start in development mode and listen on all network interfaces
     volumes:
-      - ./frontend:/app  # Mount source code directory
-      - /app/node_modules  # Avoid overwriting container's node_modules
+      - ./frontend:/app # Mount source code directory
+      - /app/node_modules # Avoid overwriting container's node_modules
     ports:
-      - "5173:5173"  # Vite default development port
+      - "5173:5173" # Vite default development port
     environment:
       - NODE_ENV=development
       - VITE_API_URL=http://127.0.0.1:8000
@@ -21,19 +21,19 @@ services:
 
   backend:
     build:
-      context: .
-      dockerfile: backend/Dockerfile
-    command: ["./dev.sh"]  # Start in reload mode
+      context: ./backend
+      dockerfile: Dockerfile
+    command: ["./dev.sh"] # Start in reload mode
     volumes:
-      - ./backend:/app  # Mount source code directory
-      - ./mcp_servers:/app/mcp_servers  # Mount MCP servers directory
+      - ./backend:/app # Mount source code directory
+      #- ./mcp.json:/app/mcp.json # Mount MCP servers directory
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /app/__pycache__  # Avoid overwriting cache files
-      - /app/.venv  # Avoid overwriting virtual environment
+      - /app/__pycache__ # Avoid overwriting cache files
+      - /app/.venv # Avoid overwriting virtual environment
     ports:
       - "8000:8000"
     depends_on:
-      sandbox: 
+      sandbox:
         condition: service_started
         required: false
       mongodb:
@@ -56,10 +56,10 @@ services:
       dockerfile: Dockerfile
     hostname: sandbox
     volumes:
-      - ./sandbox:/app  # Mount source code directory
+      - ./sandbox:/app # Mount source code directory
       - ./sandbox/supervisord.conf:/etc/supervisor/conf.d/app.conf
-      - /app/__pycache__  # Avoid overwriting cache files
-      - /app/.venv  # Avoid overwriting virtual environment
+      - /app/__pycache__ # Avoid overwriting cache files
+      - /app/.venv # Avoid overwriting virtual environment
     ports:
       #- "9222:9222"
       - "5902:5900"
@@ -77,9 +77,9 @@ services:
       context: ./mockserver
       dockerfile: Dockerfile
     volumes:
-      - ./mockserver:/app  # Mount source code directory
-      - /app/__pycache__  # Avoid overwriting cache files
-      - /app/.venv  # Avoid overwriting virtual environment
+      - ./mockserver:/app # Mount source code directory
+      - /app/__pycache__ # Avoid overwriting cache files
+      - /app/.venv # Avoid overwriting virtual environment
     restart: unless-stopped
     environment:
       - MOCK_DATA_FILE=default.yaml

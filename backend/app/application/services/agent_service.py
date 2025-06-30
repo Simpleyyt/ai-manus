@@ -17,8 +17,8 @@ from app.domain.external.file import FileStorage
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.external.task import Task
 from app.domain.utils.json_parser import JsonParser
-from app.application.services.file_service import FileService
 from app.domain.models.file import FileInfo
+from app.domain.external.mcp_config import MCPConfigProvider
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -33,7 +33,8 @@ class AgentService:
         task_cls: Type[Task],
         json_parser: JsonParser,
         file_storage: FileStorage,
-        search_engine: Optional[SearchEngine] = None
+        search_engine: Optional[SearchEngine] = None,
+        mcp_config_provider: Optional[MCPConfigProvider] = None
     ):
         logger.info("Initializing AgentService")
         self._agent_repository = agent_repository
@@ -48,6 +49,7 @@ class AgentService:
             json_parser,
             file_storage,
             search_engine,
+            mcp_config_provider,
         )
         self._llm = llm
         self._search_engine = search_engine

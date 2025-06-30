@@ -29,6 +29,7 @@ from app.domain.services.tools.mcp import MCPTool
 from app.domain.utils.json_parser import JsonParser
 from app.domain.models.compression import AgentType
 
+from app.domain.external.mcp_config import MCPConfigProvider
 
 logger = logging.getLogger(__name__)
 
@@ -50,9 +51,10 @@ class ExecutionAgent(BaseAgent):
         browser: Browser,
         json_parser: JsonParser,
         search_engine: Optional[SearchEngine] = None,
+        mcp_config_provider: Optional[MCPConfigProvider] = None,
     ):
-        # Create MCP tool instance
-        self.mcp_tool = MCPTool()
+        # Create MCP tool instance with config provider
+        self.mcp_tool = MCPTool(mcp_config_provider)
         
         super().__init__(
             agent_id=agent_id,

@@ -1,6 +1,6 @@
 services:
   frontend:
-    image: ${IMAGE_REGISTRY:-simpleyyt}/manus-frontend:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:-docker.aityp.com}/manus-frontend:${IMAGE_TAG:-latest}
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -19,7 +19,7 @@ services:
       - BACKEND_URL=http://backend:8000
 
   backend:
-    image: ${IMAGE_REGISTRY:-simpleyyt}/manus-backend:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:-docker.aityp.com}/manus-backend:${IMAGE_TAG:-latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -38,7 +38,7 @@ services:
       - .env
 
   sandbox:
-    image: ${IMAGE_REGISTRY:-simpleyyt}/manus-sandbox:${IMAGE_TAG:-latest}
+    image: ${IMAGE_REGISTRY:-docker.aityp.com}/manus-sandbox:${IMAGE_TAG:-latest}
     build:
       context: ./sandbox
       dockerfile: Dockerfile
@@ -52,7 +52,7 @@ services:
       - manus-network
 
   mongodb:
-    image: mongo:7.0
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/mongo:7.0
     volumes:
       - mongodb_data:/data/db
     restart: unless-stopped
@@ -62,7 +62,7 @@ services:
       - manus-network
 
   redis:
-    image: redis:7.0
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/redis:7.0.0
     restart: unless-stopped
     networks:
       - manus-network

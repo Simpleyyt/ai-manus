@@ -9,7 +9,7 @@ services:
       - ./frontend:/app  # Mount source code directory
       - /app/node_modules  # Avoid overwriting container's node_modules
     ports:
-      - "5173:5173"  # Vite default development port
+      - "5174:5173"  # Vite default development port
     environment:
       - NODE_ENV=development
       - VITE_API_URL=http://127.0.0.1:8000
@@ -60,7 +60,7 @@ services:
       #- "9222:9222"
       - "5902:5900"
       #- "5901:5901"
-      - "8080:8080"
+      - "8081:8081"
     environment:
       - UVI_ARGS="--reload"
       - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
@@ -84,7 +84,7 @@ services:
       - manus-network
 
   mongodb:
-    image: mongo:7.0
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/library/mongo:7.0
     volumes:
       - mongodb_data:/data/db
     restart: unless-stopped
@@ -94,7 +94,7 @@ services:
       - manus-network
 
   redis:
-    image: redis:7.0
+    image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/redis:7.0.0
     restart: unless-stopped
     networks:
       - manus-network

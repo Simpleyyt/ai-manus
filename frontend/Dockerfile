@@ -1,5 +1,5 @@
 # Use Node.js as base image
-FROM node:18-alpine as build-stage
+FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/node:18-alpine as build-stage
 
 # Set working directory
 WORKDIR /app
@@ -17,7 +17,7 @@ COPY . .
 RUN npm run build
 
 # Use nginx as production environment image
-FROM nginx:stable-alpine as production-stage
+FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/nginx:stable-alpine as production-stage
 
 # Copy built files to nginx
 COPY --from=build-stage /app/dist /usr/share/nginx/html

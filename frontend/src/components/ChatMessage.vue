@@ -18,7 +18,7 @@
     <div class="flex items-center justify-between h-7 group">
       <div class="flex items-center gap-[3px]">
         <Bot :size="24" class="w-6 h-6" />
-        <ManusTextIcon />
+        <BoteAgentTextIcon />
       </div>
       <div class="flex items-center gap-[2px] invisible group-hover:visible">
         <div class="float-right transition text-[12px] text-[var(--text-tertiary)] invisible group-hover:visible">
@@ -74,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import ManusTextIcon from './icons/ManusTextIcon.vue';
+import BoteAgentTextIcon from './icons/BoteAgentTextIcon.vue';
 import { Message, MessageContent, AttachmentsContent } from '../types/message';
 import ToolUse from './ToolUse.vue';
 import { marked } from 'marked';

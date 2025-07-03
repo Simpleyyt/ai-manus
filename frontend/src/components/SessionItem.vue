@@ -6,7 +6,7 @@
       <div class="relative">
         <div class="h-8 w-8 rounded-full flex items-center justify-center relative bg-[var(--fill-tsp-white-dark)]">
           <div class="relative h-4 w-4 object-cover brightness-0 opacity-75 dark:opacity-100 dark:brightness-100">
-            <img alt="Hello" class="w-full h-full object-cover" src="/chatting.svg">
+            <img alt="Hello" class="w-full h-full object-cover" src="/chatting.png">
           </div>
         </div>
         <div v-if="session.status === SessionStatus.RUNNING || session.status === SessionStatus.PENDING"

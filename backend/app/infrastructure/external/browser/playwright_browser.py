@@ -6,6 +6,7 @@ from app.infrastructure.external.llm.openai_llm import OpenAILLM
 from app.infrastructure.config import get_settings
 from app.domain.models.tool_result import ToolResult
 import logging
+import re  
 
 # Set up logger for this module
 logger = logging.getLogger(__name__)
@@ -210,10 +211,12 @@ class PlaywrightBrowser:
             // Build HTML containing these visible elements
             return '<div>' + visibleElements.join('') + '</div>';
         }""")
-
-        
+        #去除掉base64的图片
+        visible_content = re.sub(r'data:image/png;base64,[^"\'> ]*', '', visible_content)
         # Convert to Markdown
         markdown_content = markdownify(visible_content)
+        print("markdown_content*******************************")
+        print(markdown_content)
 
         max_content_length = min(50000, len(markdown_content))
         response = await self.llm.ask([{

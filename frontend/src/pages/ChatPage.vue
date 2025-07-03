@@ -153,7 +153,10 @@ watch(messages, async () => {
   }
 }, { deep: true });
 
-
+// Watch title changes and update document title
+watch(title, (newTitle) => {
+  document.title = newTitle || 'BoteAgent';
+});
 
 const getLastStep = (): StepContent | undefined => {
   return messages.value.filter(message => message.type === 'step').pop()?.content as StepContent;
@@ -256,7 +259,7 @@ const handleEvent = (event: AgentSSEEvent) => {
   } else if (event.event === 'step') {
     handleStepEvent(event.data as StepEventData);
   } else if (event.event === 'done') {
-    //isLoading.value = false;
+    isLoading.value = false;
   } else if (event.event === 'wait') {
     // TODO: handle wait event
   } else if (event.event === 'error') {
@@ -392,6 +395,9 @@ onBeforeRouteUpdate((to, _, next) => {
 
 // Initialize active conversation
 onMounted(() => {
+  // Set initial document title
+  document.title = 'BoteAgent';
+  
   const routeParams = router.currentRoute.value.params;
   if (routeParams.sessionId) {
     // If sessionId is included in URL, use it directly

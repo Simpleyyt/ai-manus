@@ -5,7 +5,7 @@
       <div class="absolute top-4 start-5">
         <div class="flex">
           <Bot :size="30"/>
-          <ManusLogoTextIcon />
+          <BoteAgentLogoTextIcon />
         </div>
       </div>
       <div class="w-full max-w-full sm:max-w-[768px] sm:min-w-[390px] mx-auto mt-[180px] mb-auto">
@@ -42,7 +42,7 @@ import ChatBox from '../components/ChatBox.vue';
 import { createSession } from '../api/agent';
 import { showErrorToast } from '../utils/toast';
 import { Bot } from 'lucide-vue-next';
-import ManusLogoTextIcon from '../components/icons/ManusLogoTextIcon.vue';
+import BoteAgentLogoTextIcon from '../components/icons/BoteAgentLogoTextIcon.vue';
 import type { FileInfo } from '../api/file';
 
 const { t } = useI18n();

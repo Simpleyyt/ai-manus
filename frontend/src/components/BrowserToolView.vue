@@ -6,22 +6,41 @@
         {{ toolContent?.args?.url || 'Browser' }}
       </div>
     </div>
+    <div class="flex items-center gap-2">
+      <button
+        class="px-2 py-1 text-xs rounded transition-colors bg-[var(--text-brand)] text-white"
+        disabled
+        title="仅支持 Crawl4AI 快速模式">
+        快速
+      </button>
+    </div>
   </div>
   <div class="flex-1 min-h-0 w-full overflow-y-auto">
     <div class="px-0 py-0 flex flex-col relative h-full">
-      <div class="w-full h-full object-cover flex items-center justify-center bg-[var(--fill-white)] relative">
-        <div class="w-full h-full">
-          <div v-if="props.live" ref="vncContainer"
-            style="display: flex; width: 100%; height: 100%; overflow: auto; background: rgb(40, 40, 40);">
+      <div class="w-full h-full bg-[var(--fill-white)] relative">
+        <div class="w-full h-full overflow-auto p-4">
+          <div v-if="toolContent?.content?.content" 
+               class="prose prose-sm max-w-none"
+               v-html="renderedMarkdown">
           </div>
-          <img v-else alt="Image Preview" class="cursor-pointer w-full" referrerpolicy="no-referrer" :src="getFileDownloadUrl(toolContent?.content?.screenshot)">
+          <div v-else class="flex items-center justify-center h-full text-[var(--text-tertiary)]">
+            暂无内容
+          </div>
         </div>
-        <button
-          @click="takeOver"
-          class="absolute right-[10px] bottom-[10px] z-10 min-w-10 h-10 flex items-center justify-center rounded-full bg-[var(--background-white-main)] text-[var(--text-primary)] border border-[var(--border-main)] shadow-[0px_5px_16px_0px_var(--shadow-S),0px_0px_1.25px_0px_var(--shadow-S)] backdrop-blur-3xl cursor-pointer hover:bg-[var(--text-brand)] hover:px-4 hover:text-[var(--text-white)] group transition-width duration-300">
-          <TakeOverIcon />
-          <span
-            class="text-sm max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-300 group-hover:max-w-[200px] group-hover:opacity-100 group-hover:ml-1 group-hover:text-[var(--text-white)]">{{ t('Take Over') }}</span></button>
+        <div v-if="interactiveElements.length > 0" 
+             class="absolute bottom-4 left-4 right-4 bg-[var(--background-white-main)] border border-[var(--border-main)] rounded-lg p-3 max-h-32 overflow-y-auto">
+          <div class="text-xs font-medium text-[var(--text-secondary)] mb-2">可交互元素:</div>
+          <div class="flex flex-wrap gap-1">
+            <button
+              v-for="element in interactiveElements"
+              :key="element.index"
+              @click="clickElement(element.index)"
+              class="px-2 py-1 text-xs bg-[var(--fill-tsp-gray-main)] hover:bg-[var(--fill-tsp-white-dark)] rounded transition-colors"
+              :title="`${element.tag}: ${element.text}`">
+              {{ element.index }}: {{ element.text.substring(0, 20) }}{{ element.text.length > 20 ? '...' : '' }}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -29,13 +48,10 @@
 
 <script setup lang="ts">
 import { ToolContent } from '../types/message';
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { getVNCUrl } from '../api/agent';
-import { getFileDownloadUrl } from '../api/file';
-// @ts-ignore
-import RFB from '@novnc/novnc/lib/rfb';
-import TakeOverIcon from './icons/TakeOverIcon.vue';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 const props = defineProps<{
   sessionId: string;
@@ -44,72 +60,102 @@ const props = defineProps<{
 }>();
 
 const { t } = useI18n();
-const vncContainer = ref<HTMLDivElement | null>(null);
-let rfb: RFB | null = null;
 
-const initVNCConnection = () => {
-  if (!vncContainer.value) return;
+const toolContent = props.toolContent;
 
-  if (rfb) {
-    rfb.disconnect();
-    rfb = null;
+const renderedMarkdown = computed(() => {
+  if (toolContent.content?.content) {
+    const rawMarkdown = toolContent.content.content;
+    const html = marked(rawMarkdown);
+    return DOMPurify.sanitize(html);
   }
-
-  const sessionId = props.sessionId;
-  const wsUrl = getVNCUrl(sessionId);
-
-  // Create NoVNC connection
-  rfb = new RFB(vncContainer.value, wsUrl, {
-    credentials: { password: '' },
-    shared: true,
-    repeaterID: '',
-    wsProtocols: ['binary'],
-    // Scaling options
-    scaleViewport: true,  // Automatically scale to fit container
-    //resizeSession: true   // Request server to adjust resolution
-  });
-
-  // Explicitly set viewOnly property
-  rfb.viewOnly = true;
-  rfb.scaleViewport = true;
-  //rfb.resizeSession = true;
-
-  rfb.addEventListener('connect', () => {
-    console.log('VNC connection successful');
-  });
-
-  rfb.addEventListener('disconnect', (e: any) => {
-    console.log('VNC connection disconnected', e);
-  });
-
-  rfb.addEventListener('credentialsrequired', () => {
-    console.log('VNC credentials required');
-  });
-};
-
-onMounted(() => {
-  initVNCConnection();
+  return '';
 });
 
-watch(vncContainer, () => {
-  if (vncContainer.value) {
-    initVNCConnection();
+const interactiveElements = computed(() => {
+  if (toolContent.content?.interactive_elements) {
+    return toolContent.content.interactive_elements;
   }
+  return [];
 });
 
-onBeforeUnmount(() => {
-  if (rfb) {
-    rfb.disconnect();
-    rfb = null;
-  }
-});
-
-const takeOver = () => {
-  window.dispatchEvent(new CustomEvent('takeover', {
-    detail: {
-      sessionId: props.sessionId,
-      active: true
-    }
-  }));
+const clickElement = (index: number) => {
+  // 可根据需要实现交互逻辑
+  console.log(`Clicked element ${index}`);
 };
 </script>
+
+<style scoped>
+.prose {
+  color: var(--text-primary);
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.prose p {
+  margin-bottom: 1em;
+  line-height: 1.6;
+}
+
+.prose a {
+  color: var(--text-brand);
+  text-decoration: underline;
+}
+
+.prose a:hover {
+  text-decoration: none;
+}
+
+.prose ul, .prose ol {
+  margin-left: 1.5em;
+  margin-bottom: 1em;
+}
+
+.prose li {
+  margin-bottom: 0.25em;
+}
+
+.prose code {
+  background-color: var(--fill-tsp-gray-main);
+  padding: 0.125em 0.25em;
+  border-radius: 0.25em;
+  font-size: 0.875em;
+}
+
+.prose pre {
+  background-color: var(--fill-tsp-gray-main);
+  padding: 1em;
+  border-radius: 0.5em;
+  overflow-x: auto;
+  margin-bottom: 1em;
+}
+
+.prose blockquote {
+  border-left: 4px solid var(--border-main);
+  padding-left: 1em;
+  margin-left: 0;
+  color: var(--text-secondary);
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1em;
+}
+
+.prose th, .prose td {
+  border: 1px solid var(--border-main);
+  padding: 0.5em;
+  text-align: left;
+}
+
+.prose th {
+  background-color: var(--fill-tsp-gray-main);
+  font-weight: 600;
+}
+</style>

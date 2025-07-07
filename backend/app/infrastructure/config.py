@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     google_search_api_key: str | None = None
     google_search_engine_id: str | None = None
     
+    # Crawl4AI configuration
+    use_crawl4ai: bool = True  # 默认启用Crawl4AI
+    crawl4ai_timeout: int = 30  # 超时时间（秒）
+    crawl4ai_max_retries: int = 3  # 重试次数
+    browser_mode: str = "crawl4ai"  # "crawl4ai" 或 "browser" - 默认使用Crawl4AI快速模式
+    
     # Logging configuration
     log_level: str = "INFO"
     

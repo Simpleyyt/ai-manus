@@ -18,3 +18,4 @@ async-lru>=2.0.0
 redis>=5.0.1
 beautifulsoup4>=4.12.0
 python-multipart
+crawl4ai>=0.6.3

@@ -149,7 +149,15 @@ class AgentTaskRunner(TaskRunner):
         try:
             if event.status == ToolStatus.CALLED:
                 if event.tool_name == "browser":
-                    event.tool_content = BrowserToolContent(screenshot=await self._get_browser_screenshot())
+                    # 从 function_result 中获取浏览器返回的数据
+                    content = event.function_result.data.get("content", "") if event.function_result and event.function_result.data else ""
+                    interactive_elements = event.function_result.data.get("interactive_elements", []) if event.function_result and event.function_result.data else []
+                    screenshot = await self._get_browser_screenshot()
+                    event.tool_content = BrowserToolContent(
+                        content=content,
+                        interactive_elements=interactive_elements,
+                        screenshot=screenshot
+                    )
                 elif event.tool_name == "search":
                     event.tool_content = SearchToolContent(results=event.function_result.data.get("results", []))
                 elif event.tool_name == "shell":

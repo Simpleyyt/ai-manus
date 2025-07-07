@@ -2,9 +2,11 @@ from typing import Optional
 from app.domain.external.browser import Browser
 from app.domain.services.tools.base import tool, BaseTool
 from app.domain.models.tool_result import ToolResult
+from app.infrastructure.external.browser.crawl4ai_browser import Crawl4AIBrowser
+from app.infrastructure.config import get_settings
 
 class BrowserTool(BaseTool):
-    """Browser tool class, providing browser interaction functions"""
+    """Browser tool class, providing browser interaction functions with Crawl4AI support"""
 
     name: str = "browser"
     
@@ -16,10 +18,19 @@ class BrowserTool(BaseTool):
         """
         super().__init__()
         self.browser = browser
+        self.crawl4ai_browser = Crawl4AIBrowser()
+        self.settings = get_settings()
+        
+    def _get_active_browser(self):
+        """Get the active browser based on configuration"""
+        if self.settings.browser_mode == "crawl4ai":
+            return self.crawl4ai_browser
+        else:
+            return self.browser
     
     @tool(
         name="browser_view",
-        description="View content of the current browser page. Use for checking the latest state of previously opened pages.",
+        description="View content of the current browser page using fast Crawl4AI extraction or traditional browser.",
         parameters={},
         required=[]
     )
@@ -29,11 +40,12 @@ class BrowserTool(BaseTool):
         Returns:
             Browser page content
         """
-        return await self.browser.view_page()
+        active_browser = self._get_active_browser()
+        return await active_browser.view_page()
     
     @tool(
         name="browser_navigate",
-        description="Navigate browser to specified URL. Use when accessing new pages is needed.",
+        description="Navigate browser to specified URL using fast Crawl4AI extraction or traditional browser.",
         parameters={
             "url": {
                 "type": "string",
@@ -51,11 +63,12 @@ class BrowserTool(BaseTool):
         Returns:
             Navigation result
         """
-        return await self.browser.navigate(url)
+        active_browser = self._get_active_browser()
+        return await active_browser.navigate(url)
     
     @tool(
         name="browser_restart",
-        description="Restart browser and navigate to specified URL. Use when browser state needs to be reset.",
+        description="Restart browser and navigate to specified URL using fast Crawl4AI extraction or traditional browser.",
         parameters={
             "url": {
                 "type": "string",
@@ -73,11 +86,12 @@ class BrowserTool(BaseTool):
         Returns:
             Restart result
         """
-        return await self.browser.restart(url)
+        active_browser = self._get_active_browser()
+        return await active_browser.restart(url)
     
     @tool(
         name="browser_click",
-        description="Click on elements in the current browser page. Use when clicking page elements is needed.",
+        description="Click on elements in the current browser page using fast Crawl4AI extraction or traditional browser.",
         parameters={
             "index": {
                 "type": "integer",
@@ -110,11 +124,12 @@ class BrowserTool(BaseTool):
         Returns:
             Click result
         """
-        return await self.browser.click(index, coordinate_x, coordinate_y)
+        active_browser = self._get_active_browser()
+        return await active_browser.click(index, coordinate_x, coordinate_y)
     
     @tool(
         name="browser_input",
-        description="Overwrite text in editable elements on the current browser page. Use when filling content in input fields.",
+        description="Overwrite text in editable elements on the current browser page using fast Crawl4AI extraction or traditional browser.",
         parameters={
             "index": {
                 "type": "integer",
@@ -159,11 +174,12 @@ class BrowserTool(BaseTool):
         Returns:
             Input result
         """
-        return await self.browser.input(text, press_enter, index, coordinate_x, coordinate_y)
+        active_browser = self._get_active_browser()
+        return await active_browser.input(text, press_enter, index, coordinate_x, coordinate_y)
     
     @tool(
         name="browser_move_mouse",
-        description="Move cursor to specified position on the current browser page. Use when simulating user mouse movement.",
+        description="Move cursor to specified position on the current browser page using fast Crawl4AI extraction or traditional browser.",
         parameters={
             "coordinate_x": {
                 "type": "number",
@@ -190,11 +206,12 @@ class BrowserTool(BaseTool):
         Returns:
             Move result
         """
-        return await self.browser.move_mouse(coordinate_x, coordinate_y)
+        active_browser = self._get_active_browser()
+        return await active_browser.move_mouse(coordinate_x, coordinate_y)
     
     @tool(
         name="browser_press_key",
-        description="Simulate key press in the current browser page. Use when specific keyboard operations are needed.",
+        description="Simulate key press in the current browser page using fast Crawl4AI extraction or traditional browser.",
         parameters={
             "key": {
                 "type": "string",
@@ -215,11 +232,12 @@ class BrowserTool(BaseTool):
         Returns:
             Key press result
         """
-        return await self.browser.press_key(key)
+        active_browser = self._get_active_browser()
+        return await active_browser.press_key(key)
     
     @tool(
         name="browser_select_option",
-        description="Select specified option from dropdown list element in the current browser page. Use when selecting dropdown menu options.",
+        description="Select specified option from dropdown list element in the current browser page using fast Crawl4AI extraction or traditional browser.",
         parameters={
             "index": {
                 "type": "integer",
@@ -246,11 +264,12 @@ class BrowserTool(BaseTool):
         Returns:
             Selection result
         """
-        return await self.browser.select_option(index, option)
+        active_browser = self._get_active_browser()
+        return await active_browser.select_option(index, option)
     
     @tool(
         name="browser_scroll_up",
-        description="Scroll up the current browser page. Use when viewing content above or returning to page top.",
+        description="Scroll up the current browser page using fast Crawl4AI extraction or traditional browser.",
         parameters={
             "to_top": {
                 "type": "boolean",
@@ -271,11 +290,12 @@ class BrowserTool(BaseTool):
         Returns:
             Scroll result
         """
-        return await self.browser.scroll_up(to_top)
+        active_browser = self._get_active_browser()
+        return await active_browser.scroll_up(to_top)
     
     @tool(
         name="browser_scroll_down",
-        description="Scroll down the current browser page. Use when viewing content below or jumping to page bottom.",
+        description="Scroll down the current browser page using fast Crawl4AI extraction or traditional browser.",
         parameters={
             "to_bottom": {
                 "type": "boolean",
@@ -296,11 +316,12 @@ class BrowserTool(BaseTool):
         Returns:
             Scroll result
         """
-        return await self.browser.scroll_down(to_bottom)
+        active_browser = self._get_active_browser()
+        return await active_browser.scroll_down(to_bottom)
     
     @tool(
         name="browser_console_exec",
-        description="Execute JavaScript code in browser console. Use when custom scripts need to be executed.",
+        description="Execute JavaScript code in browser console using fast Crawl4AI extraction or traditional browser.",
         parameters={
             "javascript": {
                 "type": "string",
@@ -321,11 +342,12 @@ class BrowserTool(BaseTool):
         Returns:
             Execution result
         """
-        return await self.browser.console_exec(javascript)
+        active_browser = self._get_active_browser()
+        return await active_browser.console_exec(javascript)
     
     @tool(
         name="browser_console_view",
-        description="View browser console output. Use when checking JavaScript logs or debugging page errors.",
+        description="View browser console output using fast Crawl4AI extraction or traditional browser.",
         parameters={
             "max_lines": {
                 "type": "integer",
@@ -346,4 +368,5 @@ class BrowserTool(BaseTool):
         Returns:
             Console output
         """
-        return await self.browser.console_view(max_lines) 
+        active_browser = self._get_active_browser()
+        return await active_browser.console_view(max_lines) 

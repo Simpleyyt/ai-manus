@@ -40,19 +40,19 @@ export default {
   'Replacing file content': '正在替换文件内容',
   'Searching file content': '正在搜索文件内容',
   'Finding file': '正在查找文件',
-  // Browser tools
-  'Viewing webpage': '正在查看网页',
-  'Navigating to webpage': '正在导航到网页',
-  'Restarting browser': '正在重启浏览器',
-  'Clicking element': '正在点击元素',
-  'Entering text': '正在输入文本',
-  'Moving mouse': '正在移动鼠标',
-  'Pressing key': '正在按键',
-  'Selecting option': '正在选择选项',
-  'Scrolling up': '正在向上滚动',
-  'Scrolling down': '正在向下滚动',
-  'Executing JS code': '正在执行JS代码',
-  'Viewing console output': '正在查看控制台输出',
+  // Browser tools (with Crawl4AI support)
+  'Viewing webpage (Fast Crawl4AI)': '正在查看网页 (快速Crawl4AI)',
+  'Navigating to webpage (Fast Crawl4AI)': '正在导航到网页 (快速Crawl4AI)',
+  'Restarting browser (Fast Crawl4AI)': '正在重启浏览器 (快速Crawl4AI)',
+  'Clicking element (Fast Crawl4AI)': '正在点击元素 (快速Crawl4AI)',
+  'Entering text (Fast Crawl4AI)': '正在输入文本 (快速Crawl4AI)',
+  'Moving mouse (Fast Crawl4AI)': '正在移动鼠标 (快速Crawl4AI)',
+  'Pressing key (Fast Crawl4AI)': '正在按键 (快速Crawl4AI)',
+  'Selecting option (Fast Crawl4AI)': '正在选择选项 (快速Crawl4AI)',
+  'Scrolling up (Fast Crawl4AI)': '正在向上滚动 (快速Crawl4AI)',
+  'Scrolling down (Fast Crawl4AI)': '正在向下滚动 (快速Crawl4AI)',
+  'Executing JS code (Fast Crawl4AI)': '正在执行JS代码 (快速Crawl4AI)',
+  'Viewing console output (Fast Crawl4AI)': '正在查看控制台输出 (快速Crawl4AI)',
   // Search tools
   'Searching web': '正在搜索网络',
   // Message tools
@@ -61,7 +61,7 @@ export default {
   // Tool names
   'Terminal': '终端',
   'File': '文件',
-  'Browser': '浏览器',
+  'Browser (Fast Crawl4AI)': '浏览器 (快速Crawl4AI)',
   'Information': '信息',
   'Message': '消息',
   // Dialog

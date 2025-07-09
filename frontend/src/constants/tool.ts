@@ -17,18 +17,18 @@ export const TOOL_FUNCTION_MAP: {[key: string]: string} = {
   "file_find_by_name": "Finding file",
   
   // Browser tools (with Crawl4AI support)
-  "browser_view": "Viewing webpage (Fast Crawl4AI)",
-  "browser_navigate": "Navigating to webpage (Fast Crawl4AI)",
-  "browser_restart": "Restarting browser (Fast Crawl4AI)",
-  "browser_click": "Clicking element (Fast Crawl4AI)",
-  "browser_input": "Entering text (Fast Crawl4AI)",
-  "browser_move_mouse": "Moving mouse (Fast Crawl4AI)",
-  "browser_press_key": "Pressing key (Fast Crawl4AI)",
-  "browser_select_option": "Selecting option (Fast Crawl4AI)",
-  "browser_scroll_up": "Scrolling up (Fast Crawl4AI)",
-  "browser_scroll_down": "Scrolling down (Fast Crawl4AI)",
-  "browser_console_exec": "Executing JS code (Fast Crawl4AI)",
-  "browser_console_view": "Viewing console output (Fast Crawl4AI)",
+  "browser_view": "Viewing webpage",
+  "browser_navigate": "Navigating to webpage",
+  "browser_restart": "Restarting browser",
+  "browser_click": "Clicking element",
+  "browser_input": "Entering text",
+  "browser_move_mouse": "Moving mouse",
+  "browser_press_key": "Pressing key",
+  "browser_select_option": "Selecting option",
+  "browser_scroll_up": "Scrolling up",
+  "browser_scroll_down": "Scrolling down",
+  "browser_console_exec": "Executing JS code",
+  "browser_console_view": "Viewing console output",
   
   // Search tools
   "info_search_web": "Searching web",
@@ -75,7 +75,7 @@ export const TOOL_FUNCTION_ARG_MAP: {[key: string]: string} = {
 export const TOOL_NAME_MAP: {[key: string]: string} = {
   "shell": "Terminal",
   "file": "File",
-  "browser": "Browser (Fast Crawl4AI)",
+  "browser": "Browser",
   "info": "Information",
   "message": "Message"
 };

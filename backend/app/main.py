@@ -13,6 +13,7 @@ from app.infrastructure.storage.mongodb import get_mongodb
 from app.infrastructure.storage.redis import get_redis
 from app.infrastructure.external.search.google_search import GoogleSearchEngine
 from app.infrastructure.external.search.baidu_search import BaiduSearchEngine
+from app.infrastructure.external.search.bing_search import BingSearchEngine
 from app.infrastructure.external.llm.openai_llm import OpenAILLM
 from app.infrastructure.external.sandbox.docker_sandbox import DockerSandbox
 from app.infrastructure.external.file.gridfsfile import GridFSFileStorage
@@ -53,8 +54,11 @@ def create_agent_service() -> AgentService:
     elif settings.search_provider == "baidu":
         logger.info("Initializing Baidu Search Engine")
         search_engine = BaiduSearchEngine()
+    elif settings.search_provider == "bing":
+        logger.info("Initializing Bing Search Engine")
+        search_engine = BingSearchEngine()
     else:
-        logger.warning(f"Unknown search provider: {settings.search_provider}")
+        logger.info("No primary search engine configured, will use fallback engines")
 
     return AgentService(
         llm=OpenAILLM(),

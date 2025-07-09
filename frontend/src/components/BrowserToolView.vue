@@ -31,7 +31,7 @@
              class="absolute bottom-4 left-4 right-4 bg-[var(--background-white-main)] border border-[var(--border-main)] rounded-lg p-3 max-h-32 overflow-y-auto">
           <div class="text-xs font-medium text-[var(--text-secondary)] mb-2">可交互元素:</div>
           <div class="flex flex-wrap gap-1">
-            <button
+        <button
               v-for="element in interactiveElements"
               :key="element.index"
               @click="clickElement(element.index)"

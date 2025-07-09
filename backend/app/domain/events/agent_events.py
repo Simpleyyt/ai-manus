@@ -51,7 +51,6 @@ class BrowserToolContent(BaseModel):
     """Browser tool content"""
     content: str = ""
     interactive_elements: List[Dict[str, Any]] = []
-    screenshot: str
 
 class SearchToolContent(BaseModel):
     """Search tool content"""

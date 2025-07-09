@@ -30,7 +30,7 @@ class BrowserTool(BaseTool):
     
     @tool(
         name="browser_view",
-        description="View content of the current browser page using fast Crawl4AI extraction or traditional browser.",
+        description="View content of the current browser page usirawl4AI extraction or traditional browser.",
         parameters={},
         required=[]
     )

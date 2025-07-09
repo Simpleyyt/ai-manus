@@ -55,37 +55,58 @@ class AgentDomainService:
         """Create a new agent task"""
         sandbox = None
         sandbox_id = session.sandbox_id
-        if sandbox_id:
-            sandbox = await self._sandbox_cls.get(sandbox_id)
-        if not sandbox:
-            sandbox = await self._sandbox_cls.create()
-            session.sandbox_id = sandbox.id
-            await self._session_repository.save(session)
-        browser = await sandbox.get_browser()
-        if not browser:
-            logger.error(f"Failed to get browser for Sandbox {sandbox_id}")
-            raise RuntimeError(f"Failed to get browser for Sandbox {sandbox_id}")
         
-        await self._session_repository.save(session)
+        try:
+            if sandbox_id:
+                sandbox = await self._sandbox_cls.get(sandbox_id)
+        except Exception as e:
+            logger.warning(f"Failed to get existing sandbox {sandbox_id}: {str(e)}")
+            sandbox = None
+            session.sandbox_id = None  # Reset sandbox ID since it's invalid
+            
+        if not sandbox:
+            try:
+                sandbox = await self._sandbox_cls.create()
+                session.sandbox_id = sandbox.id
+                await self._session_repository.save(session)
+            except Exception as e:
+                logger.error(f"Failed to create new sandbox: {str(e)}")
+                raise RuntimeError("无法创建沙盒环境，请稍后重试")
+                
+        try:
+            browser = await sandbox.get_browser()
+            if not browser:
+                logger.error(f"Failed to get browser for Sandbox {sandbox_id}")
+                raise RuntimeError("无法初始化浏览器，请稍后重试")
+            
+            await self._session_repository.save(session)
 
-        task_runner = AgentTaskRunner(
-            session_id=session.id,
-            agent_id=session.agent_id,
-            llm=self._llm,
-            sandbox=sandbox,
-            browser=browser,
-            file_storage=self._file_storage,
-            search_engine=self._search_engine,
-            session_repository=self._session_repository,
-            json_parser=self._json_parser,
-            agent_repository=self._repository,
-        )
+            task_runner = AgentTaskRunner(
+                session_id=session.id,
+                agent_id=session.agent_id,
+                llm=self._llm,
+                sandbox=sandbox,
+                browser=browser,
+                file_storage=self._file_storage,
+                search_engine=self._search_engine,
+                session_repository=self._session_repository,
+                json_parser=self._json_parser,
+                agent_repository=self._repository,
+            )
 
-        task = self._task_cls.create(task_runner)
-        session.task_id = task.id
-        await self._session_repository.save(session)
+            task = self._task_cls.create(task_runner)
+            session.task_id = task.id
+            await self._session_repository.save(session)
 
-        return task
+            return task
+        except Exception as e:
+            logger.error(f"Error creating task: {str(e)}")
+            if sandbox:
+                try:
+                    await sandbox.destroy()
+                except Exception as destroy_error:
+                    logger.error(f"Error destroying sandbox after task creation failure: {str(destroy_error)}")
+            raise RuntimeError("创建任务失败，请重试")
         
     async def _get_task(self, session: Session) -> Optional[Task]:
         """Get a task for the given session"""

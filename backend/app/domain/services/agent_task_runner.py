@@ -83,11 +83,6 @@ class AgentTaskRunner(TaskRunner):
         event.id = event_id
         return event
     
-    async def _get_browser_screenshot(self) -> str:
-        screenshot = await self._browser.screenshot()
-        result = await self._file_storage.upload_file(screenshot, "screenshot.png")
-        return result.file_id
-
     async def _sync_file_to_storage(self, file_path: str) -> Optional[FileInfo]:
         """Upload or update file and return FileInfo"""
         try:
@@ -141,7 +136,6 @@ class AgentTaskRunner(TaskRunner):
             event.attachments = attachments
         except Exception as e:
             logger.exception(f"Agent {self._agent_id} failed to sync attachments to event: {e}")
-    
 
     # TODO: refactor this function
     async def _gen_tool_content(self, event: ToolEvent):
@@ -152,11 +146,10 @@ class AgentTaskRunner(TaskRunner):
                     # 从 function_result 中获取浏览器返回的数据
                     content = event.function_result.data.get("content", "") if event.function_result and event.function_result.data else ""
                     interactive_elements = event.function_result.data.get("interactive_elements", []) if event.function_result and event.function_result.data else []
-                    screenshot = await self._get_browser_screenshot()
+                    
                     event.tool_content = BrowserToolContent(
                         content=content,
-                        interactive_elements=interactive_elements,
-                        screenshot=screenshot
+                        interactive_elements=interactive_elements
                     )
                 elif event.tool_name == "search":
                     event.tool_content = SearchToolContent(results=event.function_result.data.get("results", []))
@@ -179,7 +172,7 @@ class AgentTaskRunner(TaskRunner):
                     logger.warning(f"Agent {self._agent_id} received unknown tool event: {event.tool_name}")
         except Exception as e:
             logger.exception(f"Agent {self._agent_id} failed to generate tool content: {e}")
-
+    
     async def run(self, task: Task) -> None:
         """Process agent's message queue and run the agent's flow"""
         try:

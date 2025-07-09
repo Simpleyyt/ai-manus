@@ -10,7 +10,6 @@ import os
 from urllib.parse import urljoin, urlparse
 
 logger = logging.getLogger(__name__)
-
 class Crawl4AIBrowser:
     """Pure HTTP based browser implementation for fast content extraction"""
     
@@ -31,6 +30,7 @@ class Crawl4AIBrowser:
         }
         self.retry_count = 0
         self.max_retries = 3
+        self.visited_urls = set()  # Track visited URLs
         
     async def _get_session(self):
         """Get or create aiohttp session"""
@@ -47,10 +47,24 @@ class Crawl4AIBrowser:
         if not self.current_url:
             return ToolResult(success=False, message="No URL provided")
             
+        # Check if URL has been visited
+        if self.current_url in self.visited_urls:
+            return ToolResult(
+                success=False,
+                message=f"URL already visited: {self.current_url}",
+                data={
+                    "is_visited": True,
+                    "need_switch_engine": True
+                }
+            )
+            
         try:
             logger.info(f"HTTP Browser: Viewing page {self.current_url}")
             
             session = await self._get_session()
+            
+            # Add URL to visited set before making request
+            self.visited_urls.add(self.current_url)
             
             # 发送HTTP请求获取页面内容
             async with session.get(self.current_url) as response:
@@ -73,7 +87,11 @@ class Crawl4AIBrowser:
                         logger.warning(f"Detected anti-bot verification page for {self.current_url}")
                         return ToolResult(
                             success=False, 
-                            message=f"遇到反爬虫验证码，请稍后重试或更换数据源。当前页面: {self.current_url}"
+                            message=f"遇到反爬虫验证码，需要切换搜索引擎。当前页面: {self.current_url}",
+                            data={
+                                "is_anti_bot": True,
+                                "need_switch_engine": True
+                            }
                         )
                     
                     content = await self._extract_content_from_html(html_content, self.current_url)
@@ -126,7 +144,7 @@ class Crawl4AIBrowser:
             soup = BeautifulSoup(html_content, 'html.parser')
             
             # 移除脚本和样式标签
-            for script in soup(["script", "style", "nav", "footer", "header"]):
+            for script in soup(["script", "style", "nav", "footer", "header", "iframe", "noscript", "aside"]):
                 script.decompose()
             
             # 获取页面标题
@@ -135,34 +153,56 @@ class Crawl4AIBrowser:
             
             # 获取主要内容
             content_parts = []
+            total_length = 0
+            max_length = 6000  # 限制总字符数（约2000 tokens）
             
             # 添加标题
             if title_text:
                 content_parts.append(f"# {title_text}\n")
+                total_length += len(title_text) + 3
             
             # 提取段落和标题
             for element in soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div']):
+                if total_length >= max_length:
+                    content_parts.append("\n...(content truncated due to length limit)...")
+                    break
+                    
                 text = element.get_text().strip()
                 if text and len(text) > 10:  # 过滤太短的文本
                     tag_name = element.name
                     if tag_name.startswith('h'):
                         level = int(tag_name[1])
-                        content_parts.append(f"{'#' * level} {text}\n")
+                        header_text = f"{'#' * level} {text}\n"
+                        if total_length + len(header_text) <= max_length:
+                            content_parts.append(header_text)
+                            total_length += len(header_text)
                     else:
-                        content_parts.append(f"{text}\n\n")
+                        para_text = f"{text}\n\n"
+                        if total_length + len(para_text) <= max_length:
+                            content_parts.append(para_text)
+                            total_length += len(para_text)
             
-            # 提取链接
-            links = soup.find_all('a', href=True)
-            if links:
-                content_parts.append("\n## 链接\n")
-                for i, link in enumerate(links[:10]):  # 限制链接数量
-                    href = link.get('href')
-                    text = link.get_text().strip()
-                    if text and href:
-                        # 处理相对URL
-                        if not href.startswith('http'):
-                            href = urljoin(base_url, href)
-                        content_parts.append(f"{i+1}. [{text}]({href})\n")
+            # 提取链接（如果还有空间）
+            if total_length < max_length:
+                links = soup.find_all('a', href=True)
+                if links:
+                    content_parts.append("\n## 相关链接\n")
+                    total_length += 15
+                    
+                    for i, link in enumerate(links[:5]):  # 限制链接数量为5个
+                        if total_length >= max_length:
+                            break
+                            
+                        href = link.get('href')
+                        text = link.get_text().strip()
+                        if text and href:
+                            # 处理相对URL
+                            if not href.startswith('http'):
+                                href = urljoin(base_url, href)
+                            link_text = f"{i+1}. [{text}]({href})\n"
+                            if total_length + len(link_text) <= max_length:
+                                content_parts.append(link_text)
+                                total_length += len(link_text)
             
             return '\n'.join(content_parts)
             
@@ -176,43 +216,43 @@ class Crawl4AIBrowser:
             soup = BeautifulSoup(html_content, 'html.parser')
             elements = []
             index = 0
+            max_elements = 30  # 限制最大元素数量
             
             # 提取链接
             for link in soup.find_all('a', href=True):
+                if index >= max_elements:
+                    break
+                    
                 href = link.get('href')
                 text = link.get_text().strip()
-                if text and href:
+                if text and href and len(text) <= 100:  # 限制文本长度
                     if not href.startswith('http'):
                         href = urljoin(base_url, href)
                     elements.append({
                         'index': index,
                         'tag': 'a',
-                        'text': text,
+                        'text': text[:100],  # 截断过长的文本
                         'href': href
                     })
                     index += 1
             
             # 提取按钮
             for button in soup.find_all(['button', 'input']):
+                if index >= max_elements:
+                    break
+                    
                 if button.name == 'button':
                     text = button.get_text().strip()
-                    if text:
-                        elements.append({
-                            'index': index,
-                            'tag': 'button',
-                            'text': text
-                        })
-                        index += 1
-                elif button.name == 'input':
-                    input_type = button.get('type', 'text')
-                    placeholder = button.get('placeholder', '')
-                    value = button.get('value', '')
-                    text = placeholder or value or f"Input ({input_type})"
+                elif button.get('type') in ['submit', 'button']:
+                    text = button.get('value', '').strip()
+                else:
+                    continue
+                    
+                if text:
                     elements.append({
                         'index': index,
-                        'tag': 'input',
-                        'text': text,
-                        'type': input_type
+                        'tag': button.name,
+                        'text': text[:100]  # 截断过长的文本
                     })
                     index += 1
             
@@ -264,7 +304,7 @@ class Crawl4AIBrowser:
     async def input(self, text: str, press_enter: bool, index: Optional[int] = None, coordinate_x: Optional[float] = None, coordinate_y: Optional[float] = None) -> ToolResult:
         """Simulate text input (not fully supported in HTTP mode)"""
         return ToolResult(success=True, message=f"Input '{text}' simulated (HTTP mode)")
-    
+
     async def move_mouse(self, coordinate_x: float, coordinate_y: float) -> ToolResult:
         """Move mouse (not applicable in HTTP mode)"""
         return ToolResult(success=True, message="Mouse movement simulated (HTTP mode)")

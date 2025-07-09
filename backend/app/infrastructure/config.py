@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     # Model configuration
     model_name: str = "deepseek-chat"
     temperature: float = 0.7
-    max_tokens: int = 2000
+    max_tokens: int = 8000  # 增加 token 限制
     
     # MongoDB configuration
     mongodb_uri: str = "mongodb://mongodb:27017"
@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     sandbox_no_proxy: str | None = None
     
     # Search engine configuration
-    search_provider: str | None = None  # "google", "baidu"
+    search_provider: str | None = None  # "google", "baidu", "bing"
     google_search_api_key: str | None = None
     google_search_engine_id: str | None = None
     

@@ -13,7 +13,7 @@ class Agent(BaseModel):
     memories: Dict[str, Memory] = Field(default_factory=dict)
     model_name: str = Field(default="")
     temperature: float = Field(default=0.7)
-    max_tokens: int = Field(default=2000)
+    max_tokens: int = Field(default=4000)
     
     # Context related fields
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))  # Creation timestamp

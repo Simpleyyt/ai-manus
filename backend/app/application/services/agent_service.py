@@ -224,6 +224,7 @@ class AgentService:
         
         return FileViewResponse(content=f"(Failed to read file content: {err})", file=path)
 
+
     async def get_session_files(self, session_id: str) -> List[FileInfo]:
         session = await self._session_repository.find_by_id(session_id)
         if not session:

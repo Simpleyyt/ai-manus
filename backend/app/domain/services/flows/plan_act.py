@@ -23,6 +23,12 @@ from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.utils.json_parser import JsonParser
 from app.domain.repositories.session_repository import SessionRepository
 from app.domain.models.session import SessionStatus
+from app.domain.services.tools.mcp import MCPTool
+from app.domain.services.tools.shell import ShellTool
+from app.domain.services.tools.browser import BrowserTool
+from app.domain.services.tools.file import FileTool
+from app.domain.services.tools.message import MessageTool
+from app.domain.services.tools.search import SearchTool
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +51,7 @@ class PlanActFlow(BaseFlow):
         sandbox: Sandbox,
         browser: Browser,
         json_parser: JsonParser,
+        mcp_tool: MCPTool,
         search_engine: Optional[SearchEngine] = None,
     ):
         self._agent_id = agent_id
@@ -53,23 +60,35 @@ class PlanActFlow(BaseFlow):
         self._session_repository = session_repository
         self.status = AgentStatus.IDLE
         self.plan = None
+
+        tools = [
+            ShellTool(sandbox),
+            BrowserTool(browser),
+            FileTool(sandbox),
+            MessageTool(),
+            mcp_tool
+        ]
+        
+        # Only add search tool when search_engine is not None
+        if search_engine:
+            tools.append(SearchTool(search_engine))
+
         # Create planner and execution agents
         self.planner = PlannerAgent(
             agent_id=self._agent_id,
             agent_repository=self._repository,
             llm=llm,
+            tools=tools,
             json_parser=json_parser,
         )
         logger.debug(f"Created planner agent for Agent {self._agent_id}")
-        
+            
         self.executor = ExecutionAgent(
             agent_id=self._agent_id,
             agent_repository=self._repository,
             llm=llm,
-            sandbox=sandbox,
-            browser=browser,
+            tools=tools,
             json_parser=json_parser,
-            search_engine=search_engine,
         )
         logger.debug(f"Created execution agent for Agent {self._agent_id}")
 

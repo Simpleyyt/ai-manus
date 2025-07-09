@@ -19,6 +19,7 @@ from app.domain.events.agent_events import (
     DoneEvent,
 )
 from app.domain.external.sandbox import Sandbox
+from app.domain.services.tools.base import BaseTool
 from app.domain.services.tools.file import FileTool
 from app.domain.services.tools.shell import ShellTool
 from app.domain.repositories.agent_repository import AgentRepository
@@ -34,12 +35,14 @@ class PlannerAgent(BaseAgent):
     name: str = "planner"
     system_prompt: str = PLANNER_SYSTEM_PROMPT
     format: Optional[str] = "json_object"
+    tool_choice: Optional[str] = "none"
 
     def __init__(
         self,
         agent_id: str,
         agent_repository: AgentRepository,
         llm: LLM,
+        tools: List[BaseTool],
         json_parser: JsonParser,
     ):
         super().__init__(
@@ -47,6 +50,7 @@ class PlannerAgent(BaseAgent):
             agent_repository=agent_repository,
             llm=llm,
             json_parser=json_parser,
+            tools=tools,
         )
 
 

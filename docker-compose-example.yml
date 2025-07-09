@@ -18,6 +18,7 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      #- ./mcp.json:/etc/mcp.json # Mount MCP servers directory
     networks:
       - manus-network
     environment:
@@ -31,7 +32,7 @@ services:
       - TEMPERATURE=0.7
       # Maximum tokens for LLM response
       - MAX_TOKENS=2000
-      
+
       # MongoDB connection URI
       #- MONGODB_URI=mongodb://mongodb:27017
       # MongoDB database name
@@ -40,7 +41,7 @@ services:
       #- MONGODB_USERNAME=
       # MongoDB password (optional)
       #- MONGODB_PASSWORD=
-      
+
       # Redis server hostname
       #- REDIS_HOST=redis
       # Redis server port
@@ -49,7 +50,7 @@ services:
       #- REDIS_DB=0
       # Redis password (optional)
       #- REDIS_PASSWORD=
-      
+
       # Sandbox server address (optional)
       #- SANDBOX_ADDRESS=
       # Docker image used for the sandbox
@@ -75,7 +76,10 @@ services:
       #- GOOGLE_SEARCH_API_KEY=
       # Google Custom Search Engine ID (only needed when SEARCH_PROVIDER=google)
       #- GOOGLE_SEARCH_ENGINE_ID=
-      
+
+      # MCP configuration file path
+      #- MCP_CONFIG_PATH=/etc/mcp.json
+
       # Application log level
       - LOG_LEVEL=INFO
 

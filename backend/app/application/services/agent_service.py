@@ -20,6 +20,7 @@ from app.domain.external.task import Task
 from app.domain.utils.json_parser import JsonParser
 from app.application.services.file_service import FileService
 from app.domain.models.file import FileInfo
+from app.domain.repositories.mcp_repository import MCPRepository
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -34,7 +35,8 @@ class AgentService:
         task_cls: Type[Task],
         json_parser: JsonParser,
         file_storage: FileStorage,
-        search_engine: Optional[SearchEngine] = None
+        mcp_repository: MCPRepository,
+        search_engine: Optional[SearchEngine] = None,
     ):
         logger.info("Initializing AgentService")
         self._agent_repository = agent_repository
@@ -48,6 +50,7 @@ class AgentService:
             task_cls,
             json_parser,
             file_storage,
+            mcp_repository,
             search_engine,
         )
         self._llm = llm

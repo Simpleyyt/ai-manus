@@ -32,6 +32,7 @@ class BaseAgent(ABC):
     max_iterations: int = 100
     max_retries: int = 3
     retry_interval: float = 1.0
+    tool_choice: Optional[str] = None
 
     def __init__(
         self,
@@ -155,7 +156,8 @@ class BaseAgent(ABC):
 
         message = await self.llm.ask(self.memory.get_messages(), 
                                      tools=self.get_available_tools(), 
-                                     response_format=response_format)
+                                     response_format=response_format,
+                                     tool_choice=self.tool_choice)
         if message.get("tool_calls"):
             message["tool_calls"] = message["tool_calls"][:1]
         await self._add_to_memory([message])

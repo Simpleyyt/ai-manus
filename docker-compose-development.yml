@@ -26,16 +26,20 @@ services:
     command: ["./dev.sh"]  # Start in reload mode
     volumes:
       - ./backend:/app  # Mount source code directory
+      #- ./mcp.json:/etc/mcp.json # Mount MCP servers directory
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /app/__pycache__  # Avoid overwriting cache files
       - /app/.venv  # Avoid overwriting virtual environment
     ports:
       - "8000:8000"
     depends_on:
-      sandbox: 
+      sandbox:
         condition: service_started
         required: false
       mongodb:
+        condition: service_started
+        required: true
+      redis:
         condition: service_started
         required: true
     restart: unless-stopped

@@ -34,7 +34,7 @@ https://github.com/user-attachments/assets/5cb2240b-0984-4db0-8818-a24f81624b04
 ## 主要特性
 
  * 部署：最小只需要一个 LLM 服务即可完成部署，不需要依赖其它外部服务。
- * 工具：支持 Terminal、Browser、File、Web Search、消息工具，并支持实查看和接管。
+ * 工具：支持 Terminal、Browser、File、Web Search、消息工具，并支持实查看和接管，支持外部 MCP 工具集成。
  * 沙盒：每个 Task 会分配单独的一个沙盒，沙盒在本地 Dock 环境里面运行。
  * 任务会话：通过 Mongo/Redis 对会话历史进行管理，支持后台任务。
  * 对话：支持停止与打断，支持文件上传与下载。
@@ -42,7 +42,7 @@ https://github.com/user-attachments/assets/5cb2240b-0984-4db0-8818-a24f81624b04
 
 ## 开发计划
 
- * 工具：支持 Deploy & Expose，支持外部 MCP 工具集成。
+ * 工具：支持 Deploy & Expose。
  * 沙盒：支持手机与 Windows 电脑接入。
  * 部署：支持 K8s 和 Dock Swarm 多集群部署。
  * 认证：用户登录与认证。
@@ -65,6 +65,7 @@ https://github.com/user-attachments/assets/5cb2240b-0984-4db0-8818-a24f81624b04
 
 推荐使用Docker Compose进行部署：
 
+<!-- docker-compose-example.yml -->
 ```yaml
 services:
   frontend:
@@ -86,6 +87,7 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      #- ./mcp.json:/etc/mcp.json # Mount MCP servers directory
     networks:
       - manus-network
     environment:
@@ -99,25 +101,25 @@ services:
       - TEMPERATURE=0.7
       # Maximum tokens for LLM response
       - MAX_TOKENS=2000
-      
-      # MongoDB connection URI (optional)
+
+      # MongoDB connection URI
       #- MONGODB_URI=mongodb://mongodb:27017
-      # MongoDB database name (optional)
+      # MongoDB database name
       #- MONGODB_DATABASE=manus
       # MongoDB username (optional)
       #- MONGODB_USERNAME=
       # MongoDB password (optional)
       #- MONGODB_PASSWORD=
-      
-      # Redis server hostname (optional)
+
+      # Redis server hostname
       #- REDIS_HOST=redis
-      # Redis server port (optional)
+      # Redis server port
       #- REDIS_PORT=6379
-      # Redis database number (optional)
+      # Redis database number
       #- REDIS_DB=0
       # Redis password (optional)
       #- REDIS_PASSWORD=
-      
+
       # Sandbox server address (optional)
       #- SANDBOX_ADDRESS=
       # Docker image used for the sandbox
@@ -143,7 +145,10 @@ services:
       #- GOOGLE_SEARCH_API_KEY=
       # Google Custom Search Engine ID (only needed when SEARCH_PROVIDER=google)
       #- GOOGLE_SEARCH_ENGINE_ID=
-      
+
+      # MCP configuration file path
+      #- MCP_CONFIG_PATH=/etc/mcp.json
+
       # Application log level
       - LOG_LEVEL=INFO
 
@@ -179,6 +184,7 @@ networks:
     name: manus-network
     driver: bridge
 ```
+<!-- /docker-compose-example.yml -->
 
 保存成`docker-compose.yml`文件，并运行
 
@@ -233,7 +239,9 @@ cp .env.example .env
 ```
 
 3. 修改配置文件：
-```
+
+<!-- .env.example -->
+```env
 # Model provider configuration
 API_KEY=
 API_BASE=http://mockserver:8090/v1
@@ -256,6 +264,7 @@ MAX_TOKENS=2000
 #REDIS_PASSWORD=
 
 # Sandbox configuration
+#SANDBOX_ADDRESS=
 SANDBOX_IMAGE=simpleyyt/manus-sandbox
 SANDBOX_NAME_PREFIX=sandbox
 SANDBOX_TTL_MINUTES=30
@@ -272,9 +281,13 @@ SEARCH_PROVIDER=baidu
 #GOOGLE_SEARCH_API_KEY=
 #GOOGLE_SEARCH_ENGINE_ID=
 
+# MCP configuration
+#MCP_CONFIG_PATH=/etc/mcp.json
+
 # Log configuration
 LOG_LEVEL=INFO
 ```
+<!-- /.env.example -->
 
 ### 开发调试
 

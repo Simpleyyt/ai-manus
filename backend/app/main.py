@@ -19,6 +19,7 @@ from app.infrastructure.external.sandbox.docker_sandbox import DockerSandbox
 from app.infrastructure.external.file.gridfsfile import GridFSFileStorage
 from app.infrastructure.repositories.mongo_agent_repository import MongoAgentRepository
 from app.infrastructure.repositories.mongo_session_repository import MongoSessionRepository
+from app.infrastructure.repositories.file_mcp_repository import FileMCPRepository
 from app.infrastructure.external.task.redis_task import RedisStreamTask
 from app.interfaces.api.routes import get_agent_service
 from app.interfaces.api.file_routes import get_file_service
@@ -69,6 +70,7 @@ def create_agent_service() -> AgentService:
         json_parser=LLMJsonParser(),
         file_storage=file_storage,
         search_engine=search_engine,
+        mcp_repository=FileMCPRepository(),
     )
 
 # Create agent service instance

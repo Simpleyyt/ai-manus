@@ -3,5 +3,6 @@
  * [📅 Development Roadmap](/en/roadmap.md)
  * Features
    * [✨ Demo Scenarios](/en/demo.md)
+   * [🔧 MCP Configuration](/en/mcp.md)
  * Development Guide
    * [⚙️ System Architecture](/en/architecture.md) 

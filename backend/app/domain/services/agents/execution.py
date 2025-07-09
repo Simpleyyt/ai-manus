@@ -20,6 +20,7 @@ from app.domain.events.agent_events import (
     ToolStatus,
     WaitEvent,
 )
+from app.domain.services.tools.base import BaseTool
 from app.domain.services.tools.shell import ShellTool
 from app.domain.services.tools.browser import BrowserTool
 from app.domain.services.tools.search import SearchTool
@@ -44,27 +45,16 @@ class ExecutionAgent(BaseAgent):
         agent_id: str,
         agent_repository: AgentRepository,
         llm: LLM,
-        sandbox: Sandbox,
-        browser: Browser,
+        tools: List[BaseTool],
         json_parser: JsonParser,
-        search_engine: Optional[SearchEngine] = None,
     ):
         super().__init__(
             agent_id=agent_id,
             agent_repository=agent_repository,
             llm=llm,
             json_parser=json_parser,
-            tools=[
-                ShellTool(sandbox),
-                BrowserTool(browser),
-                FileTool(sandbox),
-                MessageTool()
-            ]
+            tools=tools
         )
-        
-        # Only add search tool when search_engine is not None
-        if search_engine:
-            self.tools.append(SearchTool(search_engine))
     
     async def execute_step(self, plan: Plan, step: Step, message: str = "", attachments: List[str] = []) -> AsyncGenerator[BaseEvent, None]:
         message = EXECUTION_PROMPT.format(goal=plan.goal, step=step.description, message=message, attachments=attachments)

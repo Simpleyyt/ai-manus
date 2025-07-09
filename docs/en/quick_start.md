@@ -29,6 +29,7 @@ Install Docker Engine according to official requirements: https://docs.docker.co
 
 Deploy using Docker Compose, you need to modify the `API_BASE` and `API_KEY` environment variables:
 
+<!-- docker-compose-example.yml -->
 ```yaml
 services:
   frontend:
@@ -50,6 +51,7 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      #- ./mcp.json:/etc/mcp.json # Mount MCP servers directory
     networks:
       - manus-network
     environment:
@@ -63,25 +65,25 @@ services:
       - TEMPERATURE=0.7
       # Maximum tokens for LLM response
       - MAX_TOKENS=2000
-      
-      # MongoDB connection URI (optional)
+
+      # MongoDB connection URI
       #- MONGODB_URI=mongodb://mongodb:27017
-      # MongoDB database name (optional)
+      # MongoDB database name
       #- MONGODB_DATABASE=manus
       # MongoDB username (optional)
       #- MONGODB_USERNAME=
       # MongoDB password (optional)
       #- MONGODB_PASSWORD=
-      
-      # Redis server hostname (optional)
+
+      # Redis server hostname
       #- REDIS_HOST=redis
-      # Redis server port (optional)
+      # Redis server port
       #- REDIS_PORT=6379
-      # Redis database number (optional)
+      # Redis database number
       #- REDIS_DB=0
       # Redis password (optional)
       #- REDIS_PASSWORD=
-      
+
       # Sandbox server address (optional)
       #- SANDBOX_ADDRESS=
       # Docker image used for the sandbox
@@ -107,7 +109,10 @@ services:
       #- GOOGLE_SEARCH_API_KEY=
       # Google Custom Search Engine ID (only needed when SEARCH_PROVIDER=google)
       #- GOOGLE_SEARCH_ENGINE_ID=
-      
+
+      # MCP configuration file path
+      #- MCP_CONFIG_PATH=/etc/mcp.json
+
       # Application log level
       - LOG_LEVEL=INFO
 
@@ -143,6 +148,7 @@ networks:
     name: manus-network
     driver: bridge
 ```
+<!-- /docker-compose-example.yml -->
 
 Save as `docker-compose.yml` file and run:
 

@@ -64,7 +64,11 @@ class FileToolContent(BaseModel):
     """File tool content"""
     content: str
 
-ToolContent = Union[BrowserToolContent, SearchToolContent, ShellToolContent, FileToolContent]
+class McpToolContent(BaseModel):
+    """MCP tool content"""
+    result: Any
+
+ToolContent = Union[BrowserToolContent, SearchToolContent, ShellToolContent, FileToolContent, McpToolContent]
 
 class ToolEvent(BaseEvent):
     """Tool related events"""

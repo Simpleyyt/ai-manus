@@ -1,0 +1,43 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/tmp"
+      ],
+      "transport": "stdio",
+      "enabled": true,
+      "description": "Access to local filesystem"
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "transport": "stdio",
+      "enabled": true,
+      "description": "GitHub API integration",
+      "env": {
+        "GITHUB_TOKEN": "your-github-token"
+      }
+    },
+    "example-http": {
+      "url": "http://localhost:8080/mcp",
+      "transport": "sse",
+      "enabled": true,
+      "description": "Example HTTP MCP server",
+      "headers": {
+        "Authorization": "Bearer your-token"
+      }
+    },
+    "example-streamable": {
+      "url": "http://localhost:9090/mcp",
+      "transport": "streamable-http",
+      "enabled": true,
+      "description": "Example streamable HTTP MCP server"
+    }
+  }
+} 

@@ -77,7 +77,8 @@ export const TOOL_NAME_MAP: {[key: string]: string} = {
   "file": "File",
   "browser": "Browser",
   "info": "Information",
-  "message": "Message"
+  "message": "Message",
+  "mcp": "MCP Tool"
 };
 
 import SearchIcon from '../components/icons/SearchIcon.vue';
@@ -93,13 +94,15 @@ export const TOOL_ICON_MAP: {[key: string]: any} = {
   "file": EditIcon,
   "browser": BrowserIcon,
   "search": SearchIcon,
-  "message": ""
+  "message": "",
+  "mcp": SearchIcon  // 暂时使用搜索图标，可以后续创建专门的MCP图标
 };
 
 import ShellToolView from '../components/ShellToolView.vue';
 import FileToolView from '../components/FileToolView.vue';
 import SearchToolView from '../components/SearchToolView.vue';
 import BrowserToolView from '../components/BrowserToolView.vue';
+import McpToolView from '../components/McpToolView.vue';
 
 /**
  * Mapping from tool names to components
@@ -108,5 +111,6 @@ export const TOOL_COMPONENT_MAP: {[key: string]: any} = {
   "shell": ShellToolView,
   "file": FileToolView,
   "search": SearchToolView,
-  "browser": BrowserToolView
+  "browser": BrowserToolView,
+  "mcp": McpToolView
 };

@@ -1,11 +1,11 @@
 # 📅 Development Roadmap
 
-> Currently under development: MCP support
+> Currently under development: Multi-user support
 
 ## Tools
 
  * [x] Support browser takeover
- * [ ] Support external MCP tool integration [In Development]
+ * [x] Support external MCP tool integration
  * [ ] Support Deploy & Expose tools
 
 ## User Authentication

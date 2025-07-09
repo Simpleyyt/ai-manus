@@ -2,7 +2,7 @@
 
 ## Overall Design
 
-![Image](https://github.com/user-attachments/assets/69775011-1eb7-452f-adaf-cd6603a4dde5)
+![Image](https://github.com/user-attachments/assets/69775011-1eb7-452f-adaf-cd6603a4dde5 ':size=600')
 
 **When a user initiates a conversation:**
 

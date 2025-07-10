@@ -62,3 +62,24 @@ class SessionRepository(Protocol):
     async def get_all(self) -> List[Session]:
         """Get all sessions"""
         ...
+
+    # 新增分享相关方法
+    async def share_session(self, session_id: str) -> None:
+        """Share a session and generate share ID"""
+        ...
+
+    async def unshare_session(self, session_id: str) -> None:
+        """Unshare a session"""
+        ...
+
+    async def find_by_share_id(self, share_id: str) -> Optional[Session]:
+        """Find a session by its share ID"""
+        ...
+
+    async def validate_share_token(self, share_id: str, token: str) -> bool:
+        """Validate share token for a shared session"""
+        ...
+
+    async def get_timeline(self, session_id: str) -> List[dict]:
+        """Get timeline data for session playback"""
+        ...

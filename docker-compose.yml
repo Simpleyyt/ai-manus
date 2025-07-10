@@ -27,6 +27,8 @@ services:
         platforms:
           - linux/amd64
           - linux/arm64
+    ports:
+      - "8000:8000"
     depends_on:
       - sandbox
       - mongodb

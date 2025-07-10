@@ -1,26 +1,28 @@
-from typing import AsyncGenerator, Dict, Any, Optional, Generator, List
+from typing import AsyncGenerator, Dict, Any, Optional, Generator, List, Type, AsyncGenerator
 import logging
-from datetime import datetime
-from app.domain.models.session import Session
+from datetime import datetime, UTC
+from app.domain.models.session import Session, SessionStatus
 from app.domain.repositories.session_repository import SessionRepository
+from app.domain.repositories.mcp_repository import MCPRepository
 
-from app.interfaces.schemas.response import ShellViewResponse, FileViewResponse, GetSessionResponse
+from app.interfaces.schemas.response import ShellViewResponse, FileViewResponse, GetSessionResponse, ShareSessionResponse, PlaybackSession
 from app.domain.models.agent import Agent
 from app.domain.services.agent_domain_service import AgentDomainService
 from app.domain.events.agent_events import AgentEvent
 from app.application.errors.exceptions import NotFoundError
-from typing import Type
-from app.domain.models.agent import Agent
+from app.domain.models.file import FileInfo
+from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.external.sandbox import Sandbox
 from app.domain.external.search import SearchEngine
 from app.domain.external.llm import LLM
 from app.domain.external.file import FileStorage
-from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.external.task import Task
 from app.domain.utils.json_parser import JsonParser
 from app.application.services.file_service import FileService
-from app.domain.models.file import FileInfo
-from app.domain.repositories.mcp_repository import MCPRepository
+from app.interfaces.schemas.event import SSEEventFactory
+import uuid
+import secrets
+from app.application.errors.exceptions import UnauthorizedError
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -234,3 +236,74 @@ class AgentService:
             logger.warning(f"Session not found: {session_id}")
             raise NotFoundError(f"Session not found: {session_id}")
         return session.files
+
+    async def share_session(self, session_id: str) -> Session:
+        """分享会话
+        
+        Args:
+            session_id: 会话ID
+            
+        Returns:
+            更新后的会话信息
+        """
+        session = await self.get_session(session_id)
+        if session.is_shared:
+            return session
+            
+        # 生成分享ID和访问令牌
+        session.share_id = uuid.uuid4().hex[:16]
+        session.share_token = secrets.token_urlsafe(32)
+        session.is_shared = True
+        session.shared_at = datetime.now(UTC)
+        
+        # 更新会话
+        await self._session_repository.update(session)
+        return session
+        
+    async def cancel_share_session(self, session_id: str):
+        """取消分享会话
+        
+        Args:
+            session_id: 会话ID
+        """
+        session = await self.get_session(session_id)
+        if not session.is_shared:
+            return
+            
+        # 清除分享相关信息
+        session.share_id = None
+        session.share_token = None
+        session.is_shared = False
+        session.shared_at = None
+        
+        # 更新会话
+        await self._session_repository.update(session)
+        
+    async def get_shared_session(self, share_id: str, share_token: str) -> Session:
+        """获取分享的会话
+        
+        Args:
+            share_id: 分享ID
+            share_token: 访问令牌
+            
+        Returns:
+            会话信息
+        """
+        # 根据分享ID查找会话
+        session = await self._session_repository.find_by_share_id(share_id)
+        if not session:
+            raise NotFoundError(f"Shared session not found: {share_id}")
+            
+        # 验证访问令牌
+        if not session.is_shared or session.share_token != share_token:
+            raise UnauthorizedError("Invalid share token")
+            
+        return session
+
+    async def get_session_timeline(self, session_id: str) -> List[dict]:
+        """获取会话的时间线数据"""
+        session = await self._session_repository.find_by_id(session_id)
+        if not session:
+            raise ValueError(f"Session {session_id} not found")
+        
+        return await self._session_repository.get_timeline(session_id)

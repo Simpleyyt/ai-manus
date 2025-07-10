@@ -1,4 +1,5 @@
 import { AgentSSEEvent } from "./event";
+import { FileInfo } from "../api/file";
 
 export enum SessionStatus {
     PENDING = "pending",
@@ -46,4 +47,18 @@ export interface FileViewResponse {
     content: string;
     file: string;
   }
+
+export interface ShareSessionResponse {
+    share_id: string;
+    share_token: string;
+    shared_at: number;
+}
+
+export interface GetSharedSessionResponse {
+    session_id: string;
+    title: string | null;
+    events: AgentSSEEvent[];
+    files: FileInfo[];
+    shared_at: number;
+}
   

@@ -38,8 +38,15 @@ class SessionDocument(Document):
     events: List[AgentEvent]
     status: SessionStatus
     files: List[FileInfo] = []
+    # 分享功能相关字段
+    share_id: Optional[str] = None
+    is_shared: bool = False
+    shared_at: Optional[datetime] = None
+    share_token: Optional[str] = None
+
     class Settings:
         name = "sessions"
         indexes = [
             "session_id",
+            "share_id",  # 添加 share_id 索引以便快速查找
         ]

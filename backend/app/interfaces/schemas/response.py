@@ -3,6 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel
 from app.interfaces.schemas.event import AgentSSEEvent
 from app.domain.models.session import SessionStatus
+from app.domain.models.file import FileInfo
 
 T = TypeVar('T')
 
@@ -28,6 +29,10 @@ class GetSessionResponse(BaseModel):
     session_id: str
     title: Optional[str] = None
     events: List[AgentSSEEvent] = []
+    # 添加分享相关信息
+    is_shared: bool = False
+    share_id: Optional[str] = None
+    shared_at: Optional[datetime] = None
 
 class ListSessionItem(BaseModel):
     session_id: str
@@ -36,9 +41,34 @@ class ListSessionItem(BaseModel):
     latest_message_at: Optional[int] = None
     status: SessionStatus
     unread_message_count: int
+    # 添加分享状态
+    is_shared: bool = False
 
 class ListSessionResponse(BaseModel):
     sessions: List[ListSessionItem]
+
+# 新增分享相关响应模型
+class ShareSessionResponse(BaseModel):
+    share_id: str
+    share_token: str
+    shared_at: int
+
+# 新增回放相关响应模型
+class TimelinePoint(BaseModel):
+    """时间线上的一个点"""
+    timestamp: int
+    type: str  # "thinking" | "action" | "decision" | "info" | "solution"
+    content: str
+    details: Optional[dict] = None
+
+class PlaybackSession(BaseModel):
+    """回放会话信息"""
+    session_id: str
+    title: Optional[str] = None
+    events: List[AgentSSEEvent] = []
+    timeline: List[TimelinePoint] = []
+    created_at: datetime
+    completed_at: Optional[datetime] = None
 
 class ConsoleRecord(BaseModel):
     ps1: str
@@ -69,3 +99,10 @@ class FileInfoResponse(BaseModel):
     size: int
     upload_date: str
     metadata: Optional[Dict[str, Any]]
+
+class GetSharedSessionResponse(BaseModel):
+    session_id: str
+    title: Optional[str] = None
+    events: List[AgentSSEEvent] = []
+    files: List[FileInfo] = []
+    shared_at: int

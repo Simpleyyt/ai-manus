@@ -13,13 +13,18 @@
               </span>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
-              <button @click="handleFileListShow"
-                class="p-[5px] flex items-center justify-center hover:bg-[var(--fill-tsp-white-dark)] rounded-lg cursor-pointer">
-                <FileSearch class="text-[var(--icon-secondary)]" :size="18" />
-              </button>
+              <!-- File list button moved to top right area -->
             </div>
           </div>
           <div class="w-full flex justify-between items-center">
+            <div class="absolute top-4 end-5 flex gap-2">
+              <button @click="handleFileListShow" class="btn-icon">
+                <FileSearch :size="20" />
+              </button>
+              <button @click="handleShare" class="btn-icon">
+                <Share2 :size="20" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -76,8 +81,8 @@ import {
 } from '../types/event';
 import RightPanel from '../components/RightPanel.vue';
 import PlanPanel from '../components/PlanPanel.vue';
-import { ArrowDown, FileSearch } from 'lucide-vue-next';
-import { showErrorToast } from '../utils/toast';
+import { ArrowDown, FileSearch, Share2 } from 'lucide-vue-next';
+import { showErrorToast, showSuccessToast } from '../utils/toast';
 import { eventBus } from '../utils/eventBus';
 import { EVENT_SESSION_FILE_LIST_SHOW } from '../constants/event';
 import type { FileInfo } from '../api/file';
@@ -120,6 +125,7 @@ const {
   title,
   plan,
   lastNoMessageTool,
+  lastMessageTool,
   lastTool,
   lastEventId,
   shouldAddPaddingClass,
@@ -272,9 +278,9 @@ const handleEvent = (event: AgentSSEEvent) => {
   lastEventId.value = event.data.event_id;
 }
 
-const handleSubmit = () => {
-  chat(inputMessage.value, attachments.value);
-}
+const handleSubmit = async (message: string = ''): Promise<void> => {
+  chat(message, attachments.value);
+};
 
 const chat = async (message: string = '', files: FileInfo[] = []) => {
   if (!sessionId.value) return;
@@ -380,7 +386,11 @@ const checkElementPosition = () => {
   toolPanelSize.value = Math.min((simpleBarRef.value?.$el.clientWidth ?? 0) / 2, 768);
 };
 
-onBeforeRouteUpdate((to, _, next) => {
+const handleTitleChange = (newTitle: string): void => {
+  title.value = newTitle;
+};
+
+onBeforeRouteUpdate((to: any, _: any, next: () => void): void => {
   if (rightPanel.value) {
     rightPanel.value?.hide();
   }
@@ -480,9 +490,28 @@ const handleStop = () => {
   }
 }
 
+
 const handleFileListShow = () => {
   eventBus.emit(EVENT_SESSION_FILE_LIST_SHOW);
 }
+
+// 处理分享按钮点击
+const handleShare = async () => {
+  if (!sessionId.value) {
+    showErrorToast(t('No session to share'));
+    return;
+  }
+
+  try {
+    const shareInfo = await agentApi.shareSession(sessionId.value);
+    const shareUrl = `${window.location.origin}/shared/${shareInfo.share_id}/${shareInfo.share_token}`;
+    await navigator.clipboard.writeText(shareUrl);
+    showSuccessToast(t('Share link copied to clipboard'));
+  } catch (error) {
+    console.error('Failed to share session:', error);
+    showErrorToast(t('Failed to share session'));
+  }
+};
 </script>
 
 <style scoped>
@@ -511,5 +540,9 @@ const handleFileListShow = () => {
 
 .\[\&\:not\(\:empty\)\]\:pb-2:not(:empty) {
   padding-bottom: .5rem;
+}
+
+.btn-icon {
+  @apply p-2 rounded-full hover:bg-[var(--background-gray-main)] transition-colors;
 }
 </style>

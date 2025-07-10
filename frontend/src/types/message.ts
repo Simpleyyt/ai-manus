@@ -3,8 +3,9 @@ import type { FileInfo } from '../api/file';
 export type MessageType = "user" | "assistant" | "tool" | "step" | "attachments";
 
 export interface Message {
-  type: MessageType;
-  content: BaseContent;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
 }
 
 export interface BaseContent {

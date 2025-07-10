@@ -1,3 +1,7 @@
+import { useToast } from 'vue-toastification';
+
+const toast = useToast();
+
 /**
  * Toast service
  * Provide global Toast message notification functionality
@@ -39,16 +43,20 @@ export function showToast(options: ToastOptions | string): void {
 }
 
 // Convenient methods
-export function showErrorToast(message: string, duration?: number): void {
-  showToast({ message, type: 'error', duration });
+export function showErrorToast(message: string) {
+  toast.error(message);
 }
 
-export function showInfoToast(message: string, duration?: number): void {
-  showToast({ message, type: 'info', duration });
+export function showSuccessToast(message: string) {
+  toast.success(message);
 }
 
-export function showSuccessToast(message: string, duration?: number): void {
-  showToast({ message, type: 'success', duration });
+export function showInfoToast(message: string) {
+  toast.info(message);
+}
+
+export function showWarningToast(message: string) {
+  toast.warning(message);
 }
 
 // To support non-Vue page calls, add to global window object

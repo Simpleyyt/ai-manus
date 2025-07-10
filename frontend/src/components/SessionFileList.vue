@@ -88,8 +88,16 @@ const downloadFile = async (fileId: string) => {
     window.open(url, '_blank');
 }
 
-const open = () => {
-    const sessionId = route.params.sessionId as string;
+const open = (sessionIdOverride?: string, filesOverride?: FileInfo[]) => {
+    // 如果提供了文件列表覆盖，直接使用（用于回放模式）
+    if (filesOverride) {
+        files.value = filesOverride;
+        visible.value = true;
+        return;
+    }
+    
+    // 正常模式：从路由获取 sessionId
+    const sessionId = sessionIdOverride || route.params.sessionId as string;
     if (sessionId) {
         visible.value = true;
         fetchFiles(sessionId);
@@ -105,8 +113,19 @@ const close = () => {
     visible.value = false;
 }
 
-const handleShow = () => {
-    open();
+const handleShow = (eventData?: any) => {
+    if (eventData && eventData.isPlaybackMode) {
+        if (eventData.files) {
+            // 回放模式：直接使用提供的文件列表
+            open(undefined, eventData.files);
+        } else if (eventData.sessionId) {
+            // 回放模式：使用提供的 sessionId
+            open(eventData.sessionId);
+        }
+    } else {
+        // 正常模式
+        open();
+    }
 }
 
 onMounted(() => {

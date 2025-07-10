@@ -31,6 +31,11 @@ class Session(BaseModel):
     events: List[AgentEvent] = []
     files: List[FileInfo] = []
     status: SessionStatus = SessionStatus.PENDING
+    # 分享功能相关字段
+    share_id: Optional[str] = None  # 分享链接的唯一标识符
+    is_shared: bool = False  # 是否已分享
+    shared_at: Optional[datetime] = None  # 分享时间
+    share_token: Optional[str] = None  # 分享访问令牌，用于安全验证
 
     def get_last_plan(self) -> Optional[Plan]:
         """Get the last plan from the events"""

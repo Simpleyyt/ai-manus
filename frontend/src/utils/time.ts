@@ -114,3 +114,8 @@ export const formatCustomTime = (timestamp: number, t?: (key: string) => string,
   // Other years: show year/month
   return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}`;
 }; 
+
+export function formatDateTime(timestamp: number): string {
+  const date = new Date(timestamp);
+  return date.toLocaleString();
+} 

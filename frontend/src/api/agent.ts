@@ -1,7 +1,7 @@
 // Backend API service
 import { apiClient, BASE_URL, ApiResponse, createSSEConnection, SSECallbacks } from './client';
 import { AgentSSEEvent } from '../types/event';
-import { CreateSessionResponse, GetSessionResponse, ShellViewResponse, FileViewResponse, ListSessionResponse } from '../types/response';
+import { CreateSessionResponse, GetSessionResponse, ShellViewResponse, FileViewResponse, ListSessionResponse, ShareSessionResponse, GetSharedSessionResponse } from '../types/response';
 import type { FileInfo } from './file';
 
 /**
@@ -109,5 +109,38 @@ export async function viewFile(sessionId: string, file: string, callbacks?: SSEC
 
 export async function getSessionFiles(sessionId: string): Promise<FileInfo[]> {
   const response = await apiClient.get<ApiResponse<FileInfo[]>>(`/sessions/${sessionId}/files`);
+  return response.data.data;
+}
+
+/**
+ * Share Session
+ * @param sessionId Session ID
+ * @returns ShareSessionResponse
+ */
+export async function shareSession(sessionId: string): Promise<ShareSessionResponse> {
+  const response = await apiClient.post<ApiResponse<ShareSessionResponse>>(`/sessions/${sessionId}/share`);
+  return response.data.data;
+}
+
+/**
+ * Cancel Share Session
+ * @param sessionId Session ID
+ */
+export async function cancelShareSession(sessionId: string): Promise<void> {
+  await apiClient.delete<ApiResponse<void>>(`/sessions/${sessionId}/share`);
+}
+
+/**
+ * Get Shared Session
+ * @param shareId Share ID
+ * @param shareToken Share Token
+ * @returns GetSharedSessionResponse
+ */
+export async function getSharedSession(shareId: string, shareToken: string): Promise<GetSharedSessionResponse> {
+  const response = await apiClient.get<ApiResponse<GetSharedSessionResponse>>(`/sessions/shared/${shareId}`, {
+    headers: {
+      'X-Share-Token': shareToken
+    }
+  });
   return response.data.data;
 }

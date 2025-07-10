@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, HTTPException, Header
 from sse_starlette.sse import EventSourceResponse
 from typing import AsyncGenerator, List
 from sse_starlette.event import ServerSentEvent
@@ -11,7 +11,8 @@ from app.application.services.agent_service import AgentService
 from app.interfaces.schemas.request import ChatRequest, FileViewRequest, ShellViewRequest
 from app.interfaces.schemas.response import (
     APIResponse, CreateSessionResponse, GetSessionResponse, 
-    ListSessionItem, ListSessionResponse
+    ListSessionItem, ListSessionResponse, ShareSessionResponse,
+    PlaybackSession, GetSharedSessionResponse
 )
 from app.interfaces.schemas.event import SSEEventFactory
 from app.domain.models.file import FileInfo
@@ -265,3 +266,83 @@ async def get_session_files(
 ) -> APIResponse[List[FileInfo]]:
     files = await agent_service.get_session_files(session_id)
     return APIResponse.success(files)
+
+@router.post("/{session_id}/share", response_model=APIResponse[ShareSessionResponse])
+async def share_session(
+    session_id: str,
+    agent_service: AgentService = Depends(get_agent_service)
+) -> APIResponse[ShareSessionResponse]:
+    """分享会话
+    
+    Args:
+        session_id: 会话ID
+        
+    Returns:
+        分享信息，包含分享ID和访问令牌
+    """
+    share_info = await agent_service.share_session(session_id)
+    return APIResponse.success(ShareSessionResponse(
+        share_id=share_info.share_id,
+        share_token=share_info.share_token,
+        shared_at=int(share_info.shared_at.timestamp())
+    ))
+
+@router.delete("/{session_id}/share", response_model=APIResponse[None])
+async def cancel_share_session(
+    session_id: str,
+    agent_service: AgentService = Depends(get_agent_service)
+) -> APIResponse[None]:
+    """取消分享会话
+    
+    Args:
+        session_id: 会话ID
+    """
+    await agent_service.cancel_share_session(session_id)
+    return APIResponse.success()
+
+@router.get("/shared/{share_id}", response_model=APIResponse[GetSharedSessionResponse])
+async def get_shared_session(
+    share_id: str,
+    share_token: str = Header(..., alias="X-Share-Token"),
+    agent_service: AgentService = Depends(get_agent_service)
+) -> APIResponse[GetSharedSessionResponse]:
+    """获取分享的会话
+    
+    Args:
+        share_id: 分享ID
+        share_token: 访问令牌
+        
+    Returns:
+        会话信息
+    """
+    session = await agent_service.get_shared_session(share_id, share_token)
+    
+    # 将原始事件转换为 SSE 事件
+    sse_events = []
+    for event in session.events:
+        sse_event = SSEEventFactory.from_event(event)
+        if sse_event:
+            sse_events.append(sse_event)
+    
+    # 获取会话文件（使用与普通会话相同的方法）
+    session_files = await agent_service.get_session_files(session.id)
+    
+    return APIResponse.success(GetSharedSessionResponse(
+        session_id=session.id,
+        title=session.title,
+        events=sse_events,
+        files=session_files,
+        shared_at=int(session.shared_at.timestamp()) if session.shared_at else 0
+    ))
+
+@router.get("/{session_id}/timeline", response_model=APIResponse[List[dict]])
+async def get_session_timeline(
+    session_id: str,
+    agent_service: AgentService = Depends(get_agent_service)
+) -> APIResponse[List[dict]]:
+    """获取会话的时间线数据"""
+    try:
+        timeline = await agent_service.get_session_timeline(session_id)
+        return APIResponse.success(timeline)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))

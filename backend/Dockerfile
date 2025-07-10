@@ -2,7 +2,6 @@ FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/python:3.12-slim
 
 WORKDIR /app
 
-<<<<<<< HEAD
 # Install system dependencies for Playwright
 RUN apt-get update && apt-get install -y \
     wget \
@@ -43,15 +42,14 @@ RUN apt-get update && apt-get install -y \
     libxcb-xinerama0 \
     libxcb-xkb1 \
     libxkbcommon-x11-0 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
-=======
-# Install curl
-RUN apt-get update && apt-get install -y curl
 
-# Install uv
+# Install Node.js
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
-    apt-get install -y nodejs
->>>>>>> fa996e6b5bd8fa04e4e7d1b333a3a73cd881482b
+    apt-get update && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install uv
 RUN pip install uv

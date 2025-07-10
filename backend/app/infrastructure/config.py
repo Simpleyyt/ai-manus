@@ -41,16 +41,14 @@ class Settings(BaseSettings):
     google_search_api_key: str | None = None
     google_search_engine_id: str | None = None
     
-<<<<<<< HEAD
     # Crawl4AI configuration
     use_crawl4ai: bool = True  # 默认启用Crawl4AI
     crawl4ai_timeout: int = 30  # 超时时间（秒）
     crawl4ai_max_retries: int = 3  # 重试次数
     browser_mode: str = "crawl4ai"  # "crawl4ai" 或 "browser" - 默认使用Crawl4AI快速模式
-=======
+    
     # MCP configuration
     mcp_config_path: str = "/etc/mcp.json"
->>>>>>> fa996e6b5bd8fa04e4e7d1b333a3a73cd881482b
     
     # Logging configuration
     log_level: str = "INFO"

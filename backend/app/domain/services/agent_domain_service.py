@@ -84,7 +84,6 @@ class AgentDomainService:
             
             await self._session_repository.save(session)
 
-<<<<<<< HEAD
             task_runner = AgentTaskRunner(
                 session_id=session.id,
                 agent_id=session.agent_id,
@@ -96,22 +95,8 @@ class AgentDomainService:
                 session_repository=self._session_repository,
                 json_parser=self._json_parser,
                 agent_repository=self._repository,
+                mcp_repository=self._mcp_repository,
             )
-=======
-        task_runner = AgentTaskRunner(
-            session_id=session.id,
-            agent_id=session.agent_id,
-            llm=self._llm,
-            sandbox=sandbox,
-            browser=browser,
-            file_storage=self._file_storage,
-            search_engine=self._search_engine,
-            session_repository=self._session_repository,
-            json_parser=self._json_parser,
-            agent_repository=self._repository,
-            mcp_repository=self._mcp_repository,
-        )
->>>>>>> fa996e6b5bd8fa04e4e7d1b333a3a73cd881482b
 
             task = self._task_cls.create(task_runner)
             session.task_id = task.id

@@ -26,7 +26,7 @@ class QuarkSearch(SearchEngine):
     }
     
     def __init__(self):
-        self.base_url = "http://192.168.1.204:9018/search"
+        self.base_url = "http://*********/search"
 
     def _clean_text(self, text: str) -> str:
         """Clean text by removing problematic characters and normalizing whitespace"""

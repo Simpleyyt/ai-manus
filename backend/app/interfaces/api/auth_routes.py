@@ -11,7 +11,7 @@ from app.interfaces.schemas.auth import (
     LoginResponse, RegisterResponse, AuthStatusResponse, RefreshTokenResponse,
     UserResponse
 )
-from app.infrastructure.config import get_settings
+from app.core.config import get_settings
 from app.domain.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ def _user_to_response(user) -> UserResponse:
     """Convert user domain model to response schema"""
     return UserResponse(
         id=user.id,
-        username=user.username,
+        fullname=user.fullname,
         email=user.email,
         role=user.role,
         is_active=user.is_active,
@@ -41,7 +41,7 @@ async def login(
     """User login endpoint"""
     try:
         # Authenticate user and get tokens
-        auth_result = await auth_service.login_with_tokens(request.username, request.password)
+        auth_result = await auth_service.login_with_tokens(request.email, request.password)
         
         # Return success response with tokens
         return APIResponse.success(LoginResponse(
@@ -72,7 +72,7 @@ async def register(
     try:
         # Register user
         user = await auth_service.register_user(
-            username=request.username,
+            fullname=request.fullname,
             password=request.password,
             email=request.email
         )

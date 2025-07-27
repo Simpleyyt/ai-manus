@@ -8,6 +8,7 @@ from app.domain.models.event import AgentEvent
 from app.domain.models.session import Session, SessionStatus
 from app.domain.models.file import FileInfo
 from app.domain.models.user import User, UserRole
+from pymongo import IndexModel, ASCENDING
 
 T = TypeVar('T', bound=BaseModel)
 
@@ -45,8 +46,8 @@ class BaseDocument(Document, Generic[T]):
 class UserDocument(BaseDocument[User], id_field="user_id", domain_model_class=User):
     """MongoDB document for User"""
     user_id: str
-    username: str
-    email: Optional[str] = None
+    fullname: str
+    email: str  # Now required field for login
     password_hash: Optional[str] = None
     role: UserRole = UserRole.USER
     is_active: bool = True
@@ -58,8 +59,8 @@ class UserDocument(BaseDocument[User], id_field="user_id", domain_model_class=Us
         name = "users"
         indexes = [
             "user_id",
-            "username",
-            "email",
+            "fullname",  # Keep fullname index but not unique
+            IndexModel([("email", ASCENDING)], unique=True),  # Email as unique index
         ]
 
 class AgentDocument(BaseDocument[Agent], id_field="agent_id", domain_model_class=Agent):

@@ -97,5 +97,29 @@ export default {
   'Document': 'Document',
   'Video': 'Video',
   'Audio': 'Audio',
-  'Archive': 'Archive'
+  'Archive': 'Archive',
+  // Login/Register Page
+  'Login to Manus': 'Login to Manus',
+  'Register to Manus': 'Register to Manus',
+  'Full Name': 'Full Name',
+  'Email': 'Email',
+  'Password': 'Password',
+  'Confirm Password': 'Confirm Password',
+  'Enter your full name': 'Enter your full name',
+  'Enter password': 'Enter password',
+  'Enter password again': 'Enter password again',
+  'Processing...': 'Processing...',
+  'Login': 'Login',
+  'Register': 'Register',
+  'Already have an account?': 'Already have an account?',
+  'Don\'t have an account?': 'Don\'t have an account?',
+  'Login successful! Welcome back': 'Login successful! Welcome back',
+  'Registration successful! Welcome to Manus': 'Registration successful! Welcome to Manus',
+  'Authentication failed, please try again': 'Authentication failed, please try again',
+  'Passwords do not match': 'Passwords do not match',
+  // Validation error messages
+  'Full name must be at least 2 characters long': 'Full name must be at least 2 characters long',
+  'Full name must be less than 100 characters': 'Full name must be less than 100 characters',
+  'Please enter a valid email address': 'Please enter a valid email address',
+  'Password must be at least 6 characters long': 'Password must be at least 6 characters long'
 } 

@@ -21,6 +21,8 @@ from app.domain.utils.json_parser import JsonParser
 from app.application.services.file_service import FileService
 from app.domain.models.file import FileInfo
 from app.domain.repositories.mcp_repository import MCPRepository
+from app.domain.models.tool_result import ToolResult
+from app.domain.models.sandbox.shell import ShellViewResult
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -168,7 +170,7 @@ class AgentService:
         err = ""
         try:
             sandbox = await self._get_sandbox(session_id)
-            result = await sandbox.view_shell(shell_session_id, console=True)
+            result: ToolResult[ShellViewResult] = await sandbox.view_shell(shell_session_id, console=True)
             if result.success:
                 return ShellViewResponse(**result.data)
             else:

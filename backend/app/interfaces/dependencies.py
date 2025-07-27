@@ -2,7 +2,7 @@ import logging
 from functools import lru_cache
 from fastapi import Request, HTTPException, status
 
-from app.infrastructure.config import get_settings
+from app.core.config import get_settings
 from app.infrastructure.storage.mongodb import get_mongodb
 from app.infrastructure.storage.redis import get_redis
 from app.infrastructure.external.file.gridfsfile import get_file_storage

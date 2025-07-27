@@ -1,7 +1,7 @@
 from typing import List, Dict, Any, Optional
 from openai import AsyncOpenAI
 from app.domain.external.llm import LLM
-from app.infrastructure.config import get_settings
+from app.core.config import get_settings
 import logging
 
 

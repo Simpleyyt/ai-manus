@@ -1,18 +1,17 @@
 <template>
-    <div class="flex flex-1 min-w-0 min-h-0">
-        <div class="[&_.simplebar-scrollbar]:opacity-0 [&_.simplebar-scrollbar::before]:w-[var(--simplebar-scrollbar-width)] [&_.simplebar-scrollbar::before]:bg-[var(--text-disable)] [&_.simplebar-track.simplebar-vertical]:w-[calc(var(--simplebar-scrollbar-width)+2px)] [&_.simplebar-track.simplebar-vertical]:mr-1 [&:hover_.simplebar-scrollbar]:opacity-100 [&:hover_.simplebar-scrollbar::before]:bg-[var(--text-tertiary)] [&_.simplebar-track.simplebar-vertical.simplebar-hover_.simplebar-scrollbar::before]:bg-[var(--text-tertiary)] [&_.simplebar-content-wrapper]:flex [&_.simplebar-content-wrapper]:flex-col [&_.simplebar-content-wrapper]:h-full [&_.simplebar-content]:flex [&_.simplebar-content]:flex-1 flex flex-1 min-w-0 h-full [&_.simplebar-content]:flex-row simplebar-scrollable-y"
-            style="--simplebar-scrollbar-width: 6px;">
-            <div class="simplebar-wrapper" :style="{ margin: 0 }">
-                <div class="simplebar-height-auto-observer-wrapper">
-                    <div class="simplebar-height-auto-observer"></div>
-                </div>
-                <div class="simplebar-mask">
-                    <div class="simplebar-offset" :style="{ right: '0px', bottom: '0px' }">
-                        <div ref="contentWrapperRef" class="simplebar-content-wrapper" tabIndex="0" role="region"
-                            aria-label="scrollable content" :style="{ height: '100%', overflow: 'hidden scroll' }" @scroll="handleScroll">
-                            <div class="simplebar-content" :style="{ padding: '0px' }">
-                                <slot></slot>
-                            </div>
+    <div data-simplebar="init" class="[&_.simplebar-scrollbar]:opacity-0 [&_.simplebar-scrollbar::before]:w-[var(--simplebar-scrollbar-width)] [&_.simplebar-scrollbar::before]:bg-[var(--text-disable)] [&_.simplebar-track.simplebar-vertical]:w-[calc(var(--simplebar-scrollbar-width)+2px)] [&_.simplebar-track.simplebar-vertical]:mr-1 [&:hover_.simplebar-scrollbar]:opacity-100 [&:hover_.simplebar-scrollbar::before]:bg-[var(--text-tertiary)] [&_.simplebar-track.simplebar-vertical.simplebar-hover_.simplebar-scrollbar::before]:bg-[var(--text-tertiary)] [&_.simplebar-content-wrapper]:flex [&_.simplebar-content-wrapper]:flex-col [&_.simplebar-content-wrapper]:h-full [&_.simplebar-content]:flex [&_.simplebar-content]:flex-1 flex flex-1 min-w-0 h-full [&_.simplebar-content]:flex-row simplebar-scrollable-y"
+        style="--simplebar-scrollbar-width: 6px;">
+        <div class="simplebar-wrapper" :style="{ margin: 0 }">
+            <div class="simplebar-height-auto-observer-wrapper">
+                <div class="simplebar-height-auto-observer"></div>
+            </div>
+            <div class="simplebar-mask">
+                <div class="simplebar-offset" :style="{ right: '0px', bottom: '0px' }">
+                    <div ref="contentWrapperRef" class="simplebar-content-wrapper" tabIndex="0" role="region"
+                        aria-label="scrollable content" :style="{ height: '100%', overflow: 'hidden scroll' }"
+                        @scroll="handleScroll">
+                        <div class="simplebar-content" :style="{ padding: '0px' }">
+                            <slot></slot>
                         </div>
                     </div>
                 </div>

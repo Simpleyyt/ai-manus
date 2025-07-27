@@ -5,7 +5,7 @@ from starlette.responses import Response
 from typing import Optional
 import logging
 
-from app.infrastructure.config import get_settings
+from app.core.config import get_settings
 from app.application.services.auth_service import AuthService
 from app.infrastructure.repositories.user_repository import MongoUserRepository
 from app.domain.models.user import User
@@ -27,6 +27,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             "/api/v1/auth/register",
             "/api/v1/auth/status",
             "/api/v1/auth/refresh",
+            "/api/v1/files"
         ]
     
     async def dispatch(self, request: Request, call_next):

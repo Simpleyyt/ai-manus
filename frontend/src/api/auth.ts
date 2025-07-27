@@ -11,7 +11,7 @@ export type UserRole = 'admin' | 'user';
  */
 export interface User {
   id: string;
-  username: string;
+  fullname: string;
   email: string;
   role: UserRole;
   is_active: boolean;
@@ -24,7 +24,16 @@ export interface User {
  * Login request type
  */
 export interface LoginRequest {
-  username: string;
+  email: string;
+  password: string;
+}
+
+/**
+ * Register request type
+ */
+export interface RegisterRequest {
+  fullname: string;
+  email: string;
   password: string;
 }
 
@@ -37,15 +46,6 @@ export interface LoginResponse {
   refresh_token: string;
   token_type: string;
   message: string;
-}
-
-/**
- * Register request type
- */
-export interface RegisterRequest {
-  username: string;
-  password: string;
-  email: string;
 }
 
 /**
@@ -191,15 +191,15 @@ export async function logout(): Promise<{ message: string }> {
 }
 
 /**
- * Set authentication token for subsequent requests
- * @param token Access token to set
+ * Set authentication token in request headers
+ * @param token JWT access token
  */
 export function setAuthToken(token: string): void {
   apiClient.defaults.headers.Authorization = `Bearer ${token}`;
 }
 
 /**
- * Clear authentication token
+ * Clear authentication token from request headers
  */
 export function clearAuthToken(): void {
   delete apiClient.defaults.headers.Authorization;

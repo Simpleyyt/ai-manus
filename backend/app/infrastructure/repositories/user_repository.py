@@ -13,7 +13,7 @@ class MongoUserRepository(UserRepository):
     
     async def create_user(self, user: User) -> User:
         """Create a new user"""
-        logger.info(f"Creating user: {user.username}")
+        logger.info(f"Creating user: {user.fullname}")
         
         # Convert domain model to document
         user_doc = UserDocument.from_domain(user)
@@ -37,13 +37,13 @@ class MongoUserRepository(UserRepository):
         
         return user_doc.to_domain()
     
-    async def get_user_by_username(self, username: str) -> Optional[User]:
-        """Get user by username"""
-        logger.debug(f"Getting user by username: {username}")
+    async def get_user_by_fullname(self, fullname: str) -> Optional[User]:
+        """Get user by fullname"""
+        logger.debug(f"Getting user by fullname: {fullname}")
         
-        user_doc = await UserDocument.find_one(UserDocument.username == username)
+        user_doc = await UserDocument.find_one(UserDocument.fullname == fullname)
         if not user_doc:
-            logger.debug(f"User not found: {username}")
+            logger.debug(f"User not found: {fullname}")
             return None
         
         return user_doc.to_domain()
@@ -52,7 +52,7 @@ class MongoUserRepository(UserRepository):
         """Get user by email"""
         logger.debug(f"Getting user by email: {email}")
         
-        user_doc = await UserDocument.find_one(UserDocument.email == email)
+        user_doc = await UserDocument.find_one(UserDocument.email == email.lower())
         if not user_doc:
             logger.debug(f"User not found: {email}")
             return None
@@ -71,8 +71,8 @@ class MongoUserRepository(UserRepository):
         # Update document from domain model
         user_doc.update_from_domain(user)
         
-        # Save changes
-        await user_doc.save(link_rule=WriteRules.WRITE)
+        # Save to database
+        await user_doc.save()
         
         # Convert back to domain model
         result = user_doc.to_domain()
@@ -96,28 +96,26 @@ class MongoUserRepository(UserRepository):
         """List users with pagination"""
         logger.debug(f"Listing users: limit={limit}, offset={offset}")
         
-        user_docs = await UserDocument.find_all().skip(offset).limit(limit).to_list()
-        users = [doc.to_domain() for doc in user_docs]
+        user_docs = await UserDocument.find().skip(offset).limit(limit).to_list()
         
+        users = [doc.to_domain() for doc in user_docs]
         logger.debug(f"Found {len(users)} users")
         return users
     
-    async def user_exists(self, username: str) -> bool:
-        """Check if user exists by username"""
-        logger.debug(f"Checking if user exists: {username}")
+    async def fullname_exists(self, fullname: str) -> bool:
+        """Check if fullname exists"""
+        logger.debug(f"Checking if fullname exists: {fullname}")
         
-        user_doc = await UserDocument.find_one(UserDocument.username == username)
+        user_doc = await UserDocument.find_one(UserDocument.fullname == fullname)
         exists = user_doc is not None
-        
-        logger.debug(f"User exists: {username} = {exists}")
+        logger.debug(f"Fullname exists: {exists}")
         return exists
     
     async def email_exists(self, email: str) -> bool:
         """Check if email exists"""
         logger.debug(f"Checking if email exists: {email}")
         
-        user_doc = await UserDocument.find_one(UserDocument.email == email)
+        user_doc = await UserDocument.find_one(UserDocument.email == email.lower())
         exists = user_doc is not None
-        
-        logger.debug(f"Email exists: {email} = {exists}")
+        logger.debug(f"Email exists: {exists}")
         return exists 

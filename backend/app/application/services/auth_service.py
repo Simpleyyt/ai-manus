@@ -5,8 +5,8 @@ from datetime import datetime, timedelta
 from app.domain.models.user import User, UserRole
 from app.domain.repositories.user_repository import UserRepository
 from app.application.errors.exceptions import UnauthorizedError, ValidationError
-from app.infrastructure.config import get_settings
-from app.infrastructure.utils.jwt import get_jwt_manager
+from app.core.config import get_settings
+from app.application.services.jwt import get_jwt_manager
 import logging
 
 logger = logging.getLogger(__name__)
@@ -45,47 +45,45 @@ class AuthService:
         # Return salt + hash as hex string
         return salt + hash_bytes.hex()
     
-    def _verify_password(self, password: str, hashed_password: str) -> bool:
+    def _verify_password(self, password: str, password_hash: str) -> bool:
         """Verify password against hash"""
+        if not password_hash:
+            return False
+        
         try:
-            # Extract salt from stored hash
-            salt_length = len(self.settings.password_salt or secrets.token_hex(32))
-            salt = hashed_password[:salt_length]
+            # Extract salt from hash (first 64 chars for 32-byte salt)
+            salt = password_hash[:64]
+            expected_hash = password_hash[64:]
             
-            # Hash the provided password with the same salt
-            new_hash = self._hash_password(password, salt)
+            # Generate hash with extracted salt
+            generated_hash = self._pbkdf2_sha256(password, salt)[64:]
             
-            # Compare hashes
-            return new_hash == hashed_password
+            return generated_hash == expected_hash
         except Exception as e:
-            logger.error(f"Password verification failed: {e}")
+            logger.error(f"Password verification error: {e}")
             return False
     
     def _generate_user_id(self) -> str:
         """Generate unique user ID"""
-        return f"user_{secrets.token_hex(16)}"
+        return secrets.token_urlsafe(16)
     
-    async def register_user(self, username: str, password: str, email: str = None, role: UserRole = UserRole.USER) -> User:
+    async def register_user(self, fullname: str, password: str, email: str, role: UserRole = UserRole.USER) -> User:
         """Register a new user"""
-        logger.info(f"Registering new user: {username}")
-        
-        # Check if authentication is disabled
-        if self.settings.auth_provider == "none":
-            raise ValidationError("User registration is disabled when auth_provider is 'none'")
+        logger.info(f"Registering user: {email}")
         
         # Validate input
-        if not username or len(username.strip()) < 3:
-            raise ValidationError("Username must be at least 3 characters long")
+        if not fullname or len(fullname.strip()) < 2:
+            raise ValidationError("Full name must be at least 2 characters long")
+        
+        if not email or '@' not in email:
+            raise ValidationError("Valid email is required")
         
         if not password or len(password) < 6:
             raise ValidationError("Password must be at least 6 characters long")
         
-        # Check if user already exists
-        if await self.user_repository.user_exists(username):
-            raise ValidationError(f"User {username} already exists")
-        
-        if email and await self.user_repository.email_exists(email):
-            raise ValidationError(f"Email {email} already exists")
+        # Check if email already exists
+        if await self.user_repository.email_exists(email):
+            raise ValidationError("Email already exists")
         
         # Hash password
         password_hash = self._hash_password(password)
@@ -93,8 +91,8 @@ class AuthService:
         # Create user
         user = User(
             id=self._generate_user_id(),
-            username=username.strip(),
-            email=email,
+            fullname=fullname.strip(),
+            email=email.lower(),
             password_hash=password_hash,
             role=role,
             is_active=True,
@@ -108,70 +106,72 @@ class AuthService:
         logger.info(f"User registered successfully: {created_user.id}")
         return created_user
     
-    async def authenticate_user(self, username: str, password: str) -> Optional[User]:
-        """Authenticate user by username and password"""
-        logger.debug(f"Authenticating user: {username}")
+    async def authenticate_user(self, email: str, password: str) -> Optional[User]:
+        """Authenticate user by email and password"""
+        logger.debug(f"Authenticating user: {email}")
         
         # Handle different auth providers
         if self.settings.auth_provider == "none":
             # No authentication required - return a default user
             return User(
                 id="anonymous",
-                username="anonymous",
+                fullname="anonymous",
+                email="anonymous@localhost",
                 role=UserRole.USER,
                 is_active=True
             )
         
         elif self.settings.auth_provider == "local":
             # Local authentication using configured credentials
-            if (username == self.settings.local_auth_username and 
+            if (email == self.settings.local_auth_email and 
                 password == self.settings.local_auth_password):
                 return User(
                     id="local_admin",
-                    username=self.settings.local_auth_username,
+                    fullname="Local Admin",
+                    email=email,
                     role=UserRole.ADMIN,
                     is_active=True
                 )
             else:
-                logger.warning(f"Local authentication failed for user: {username}")
+                logger.warning(f"Local authentication failed for user: {email}")
                 return None
         
         elif self.settings.auth_provider == "password":
             # Database password authentication
-            user = await self.user_repository.get_user_by_username(username)
+            user = await self.user_repository.get_user_by_email(email)
             if not user:
-                logger.warning(f"User not found: {username}")
+                logger.warning(f"User not found: {email}")
                 return None
             
             if not user.is_active:
-                logger.warning(f"User account is inactive: {username}")
+                logger.warning(f"User account is inactive: {email}")
                 return None
             
             if not user.password_hash:
-                logger.warning(f"User has no password hash: {username}")
+                logger.warning(f"User has no password hash: {email}")
                 return None
             
             # Verify password
             if not self._verify_password(password, user.password_hash):
-                logger.warning(f"Invalid password for user: {username}")
+                logger.warning(f"Invalid password for user: {email}")
                 return None
             
             # Update last login
             user.update_last_login()
             await self.user_repository.update_user(user)
             
-            logger.info(f"User authenticated successfully: {username}")
+            logger.info(f"User authenticated successfully: {email}")
             return user
         
         else:
             raise ValueError(f"Unsupported auth provider: {self.settings.auth_provider}")
     
-    async def login_with_tokens(self, username: str, password: str) -> Dict[str, Any]:
+    async def login_with_tokens(self, email: str, password: str) -> Dict[str, Any]:
         """Authenticate user and return JWT tokens"""
-        user = await self.authenticate_user(username, password)
+        user = await self.authenticate_user(email, password)
         
         if not user:
-            raise UnauthorizedError("Invalid username or password")
+            raise UnauthorizedError("Invalid email or password")
         
         # Generate JWT tokens
         access_token = self.jwt_manager.create_access_token(user)
@@ -226,7 +226,7 @@ class AuthService:
         # For local/none authentication, create user from token info
         return User(
             id=user_info["id"],
-            username=user_info["username"],
+            fullname=user_info["fullname"],
             email=user_info.get("email"),
             role=UserRole(user_info.get("role", "user")),
             is_active=user_info.get("is_active", True)
@@ -236,44 +236,41 @@ class AuthService:
         """Logout user by revoking token"""
         return self.jwt_manager.revoke_token(token)
     
-    async def get_user_by_id(self, user_id: str) -> Optional[User]:
-        """Get user by ID"""
-        return await self.user_repository.get_user_by_id(user_id)
-    
-    async def get_user_by_username(self, username: str) -> Optional[User]:
-        """Get user by username"""
-        return await self.user_repository.get_user_by_username(username)
-    
     async def change_password(self, user_id: str, old_password: str, new_password: str) -> bool:
         """Change user password"""
         logger.info(f"Changing password for user: {user_id}")
-        
-        # Only supported for password authentication
-        if self.settings.auth_provider != "password":
-            raise ValidationError("Password change is only supported for password authentication")
         
         # Get user
         user = await self.user_repository.get_user_by_id(user_id)
         if not user:
             raise ValidationError("User not found")
         
+        if not user.is_active:
+            raise UnauthorizedError("User account is inactive")
+        
         # Verify old password
-        if not self._verify_password(old_password, user.password_hash):
-            raise UnauthorizedError("Invalid current password")
+        if not user.password_hash or not self._verify_password(old_password, user.password_hash):
+            raise UnauthorizedError("Invalid old password")
         
         # Validate new password
-        if len(new_password) < 6:
+        if not new_password or len(new_password) < 6:
             raise ValidationError("New password must be at least 6 characters long")
         
         # Hash new password
-        user.password_hash = self._hash_password(new_password)
+        new_password_hash = self._hash_password(new_password)
+        
+        # Update user password
+        user.password_hash = new_password_hash
         user.updated_at = datetime.utcnow()
         
-        # Save changes
         await self.user_repository.update_user(user)
         
         logger.info(f"Password changed successfully for user: {user_id}")
         return True
+    
+    async def get_user_by_id(self, user_id: str) -> Optional[User]:
+        """Get user by ID"""
+        return await self.user_repository.get_user_by_id(user_id)
     
     async def deactivate_user(self, user_id: str) -> bool:
         """Deactivate user account"""

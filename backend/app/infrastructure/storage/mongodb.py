@@ -2,7 +2,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.errors import ConnectionFailure
 from typing import Optional
 import logging
-from app.infrastructure.config import get_settings
+from app.core.config import get_settings
 from functools import lru_cache
 
 logger = logging.getLogger(__name__)

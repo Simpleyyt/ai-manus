@@ -8,7 +8,7 @@ from motor.motor_asyncio import AsyncIOMotorGridFSBucket
 from app.domain.external.file import FileStorage
 from app.domain.models.file import FileInfo
 from app.infrastructure.storage.mongodb import MongoDB
-from app.infrastructure.config import get_settings
+from app.core.config import get_settings
 from functools import lru_cache
 
 logger = logging.getLogger(__name__)

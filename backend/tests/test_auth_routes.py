@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 def test_user_data():
     """Create test user data"""
     return {
-        "username": "testuser",
+        "fullname": "Test User",
         "password": "password123",
         "email": "test@example.com"
     }
@@ -21,7 +21,7 @@ def test_user_data():
 def admin_user_data():
     """Create admin user data"""
     return {
-        "username": "adminuser",
+        "fullname": "Admin User",
         "password": "admin123",
         "email": "admin@example.com"
     }
@@ -48,7 +48,7 @@ def authenticated_user(client, test_user_data):
     # If registration fails, try login (user might already exist)
     login_url = f"{BASE_URL}/auth/login"
     login_response = client.post(login_url, json={
-        "username": test_user_data["username"],
+        "email": test_user_data["email"],
         "password": test_user_data["password"]
     })
     
@@ -73,7 +73,7 @@ def authenticated_admin(client, admin_user_data):
     # Try to login first
     login_url = f"{BASE_URL}/auth/login"
     login_response = client.post(login_url, json={
-        "username": admin_user_data["username"],
+        "email": admin_user_data["email"],
         "password": admin_user_data["password"]
     })
     
@@ -111,10 +111,10 @@ class TestAuthRoutes:
         """Test successful user registration"""
         import uuid
         url = f"{BASE_URL}/auth/register"
-        # Use UUID to ensure unique username
+        # Use UUID to ensure unique email
         unique_suffix = str(uuid.uuid4())[:8]
         user_data = {
-            "username": f"newuser_{unique_suffix}",
+            "fullname": f"New User {unique_suffix}",
             "password": "password123",
             "email": f"newuser_{unique_suffix}@example.com"
         }
@@ -128,30 +128,30 @@ class TestAuthRoutes:
         assert data["msg"] == "success"
         assert "access_token" in data["data"]
         assert "refresh_token" in data["data"]
-        assert data["data"]["user"]["username"] == user_data["username"]
+        assert data["data"]["user"]["fullname"] == user_data["fullname"]
         assert data["data"]["user"]["email"] == user_data["email"]
         assert data["data"]["user"]["role"] == "user"
         assert data["data"]["user"]["is_active"] is True
 
-    def test_register_validation_error_short_username(self, client):
-        """Test registration with short username"""
+    def test_register_validation_error_short_fullname(self, client):
+        """Test registration with short fullname"""
         url = f"{BASE_URL}/auth/register"
         user_data = {
-            "username": "ab",  # Too short
+            "fullname": "A",  # Too short
             "password": "password123",
             "email": "test@example.com"
         }
         
         response = client.post(url, json=user_data)
         
-        logger.info(f"Register short username response: {response.status_code} - {response.text}")
+        logger.info(f"Register short fullname response: {response.status_code} - {response.text}")
         assert response.status_code == 422
 
     def test_register_validation_error_short_password(self, client):
         """Test registration with short password"""
         url = f"{BASE_URL}/auth/register"
         user_data = {
-            "username": "testuser",
+            "fullname": "Test User",
             "password": "123",  # Too short
             "email": "test@example.com"
         }
@@ -165,7 +165,7 @@ class TestAuthRoutes:
         """Test registration with invalid email"""
         url = f"{BASE_URL}/auth/register"
         user_data = {
-            "username": "testuser",
+            "fullname": "Test User",
             "password": "password123",
             "email": "invalid-email"  # Invalid email
         }
@@ -175,16 +175,21 @@ class TestAuthRoutes:
         logger.info(f"Register invalid email response: {response.status_code} - {response.text}")
         assert response.status_code == 422
 
-    def test_register_duplicate_username(self, client, test_user_data):
-        """Test registration with duplicate username"""
+    def test_register_duplicate_email(self, client, test_user_data):
+        """Test registration with duplicate email"""
         url = f"{BASE_URL}/auth/register"
         
         # First registration
         response1 = client.post(url, json=test_user_data)
         logger.info(f"First registration response: {response1.status_code} - {response1.text}")
         
-        # Second registration with same username
-        response2 = client.post(url, json=test_user_data)
+        # Second registration with same email but different fullname
+        duplicate_data = {
+            "fullname": "Different User",
+            "password": "password123",
+            "email": test_user_data["email"]  # Same email
+        }
+        response2 = client.post(url, json=duplicate_data)
         logger.info(f"Duplicate registration response: {response2.status_code} - {response2.text}")
         
         # Second registration should fail
@@ -194,7 +199,7 @@ class TestAuthRoutes:
         """Test successful login"""
         url = f"{BASE_URL}/auth/login"
         login_data = {
-            "username": authenticated_user["user_data"]["username"],
+            "email": authenticated_user["user_data"]["email"],
             "password": authenticated_user["user_data"]["password"]
         }
         
@@ -206,14 +211,14 @@ class TestAuthRoutes:
         assert data["code"] == 0
         assert "access_token" in data["data"]
         assert "refresh_token" in data["data"]
-        assert data["data"]["user"]["username"] == login_data["username"]
+        assert data["data"]["user"]["email"] == login_data["email"]
         assert data["data"]["token_type"] == "bearer"
 
     def test_login_invalid_credentials(self, client, authenticated_user):
         """Test login with invalid credentials"""
         url = f"{BASE_URL}/auth/login"
         login_data = {
-            "username": authenticated_user["user_data"]["username"],
+            "email": authenticated_user["user_data"]["email"],
             "password": "wrongpassword"
         }
         
@@ -226,7 +231,7 @@ class TestAuthRoutes:
         """Test login with nonexistent user"""
         url = f"{BASE_URL}/auth/login"
         login_data = {
-            "username": "nonexistentuser",
+            "email": "nonexistent@example.com",
             "password": "password123"
         }
         
@@ -260,7 +265,7 @@ class TestAuthRoutes:
         assert response.status_code == 200
         data = response.json()
         assert data["code"] == 0
-        assert data["data"]["username"] == authenticated_user["user_data"]["username"]
+        assert data["data"]["fullname"] == authenticated_user["user_data"]["fullname"]
         assert data["data"]["email"] == authenticated_user["user_data"]["email"]
         assert data["data"]["role"] == "user"
 
@@ -379,10 +384,10 @@ class TestAuthRoutes:
     def test_complete_user_lifecycle(self, client):
         """Test complete user lifecycle: register -> login -> change password -> logout"""
         import uuid
-        # Use UUID to ensure unique username
+        # Use UUID to ensure unique email
         unique_suffix = str(uuid.uuid4())[:8]
         user_data = {
-            "username": f"lifecycle_user_{unique_suffix}",
+            "fullname": f"Lifecycle User {unique_suffix}",
             "password": "password123",
             "email": f"lifecycle_{unique_suffix}@example.com"
         }
@@ -396,7 +401,7 @@ class TestAuthRoutes:
         # 2. Login
         login_url = f"{BASE_URL}/auth/login"
         login_response = client.post(login_url, json={
-            "username": user_data["username"],
+            "email": user_data["email"],
             "password": user_data["password"]
         })
         logger.info(f"Lifecycle login response: {login_response.status_code} - {login_response.text}")
@@ -438,4 +443,4 @@ class TestAuthRoutes:
         me_response = client.get(me_url, headers=headers)
         logger.info(f"Token refresh workflow me response: {me_response.status_code} - {me_response.text}")
         assert me_response.status_code == 200
-        assert me_response.json()["data"]["username"] == authenticated_user["user_data"]["username"] 
+        assert me_response.json()["data"]["email"] == authenticated_user["user_data"]["email"] 

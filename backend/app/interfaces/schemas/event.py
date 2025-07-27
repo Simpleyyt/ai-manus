@@ -19,6 +19,11 @@ class BaseEventData(BaseModel):
     event_id: Optional[str]
     timestamp: datetime = Field(default_factory=lambda: datetime.now())
 
+    class Config:
+        json_encoders = {
+            datetime: lambda v: int(v.timestamp())
+        }
+
     @classmethod
     def base_event_data(cls, event: AgentEvent) -> dict:
         return {

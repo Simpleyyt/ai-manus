@@ -1,12 +1,19 @@
 <template>
   <SimpleBar ref="simpleBarRef" @scroll="handleScroll">
-    <div ref="chatContainerRef"
-      class="relative flex flex-col h-full flex-1 min-w-0 mx-auto w-full max-w-full sm:max-w-[768px] sm:min-w-[390px] px-5">
+    <div ref="chatContainerRef" class="relative flex flex-col h-full flex-1 min-w-0 px-5">
       <div ref="observerRef"
-        class="sticky top-0 z-10 bg-[var(--background-gray-main)] flex-shrink-0 flex flex-row items-center justify-between pt-4 pb-1">
-        <div class="flex w-full flex-col gap-[4px]">
+        class="sm:min-w-[390px] flex flex-row items-center justify-between pt-3 pb-1 gap-1 sticky top-0 z-10 bg-[var(--background-gray-main)] flex-shrink-0">
+        <div class="flex items-center flex-1">
+          <div class="relative flex items-center">
+            <div @click="toggleLeftPanel" v-if="!isLeftPanelShow"
+              class="flex h-7 w-7 items-center justify-center cursor-pointer rounded-md hover:bg-[var(--fill-tsp-gray-main)]">
+              <PanelLeft class="size-5 text-[var(--icon-secondary)]" />
+            </div>
+          </div>
+        </div>
+        <div class="max-w-full sm:max-w-[768px] sm:min-w-[390px] flex w-full flex-col gap-[4px] overflow-hidden">
           <div
-            :class="['text-[var(--text-primary)] text-lg font-medium w-full flex flex-row items-center justify-between flex-1 min-w-0 gap-2', { 'ps-7': shouldAddPaddingClass }]">
+            class="text-[var(--text-primary)] text-lg font-medium w-full flex flex-row items-center justify-between flex-1 min-w-0 gap-2">
             <div class="flex flex-row items-center gap-[6px] flex-1 min-w-0">
               <span class="whitespace-nowrap text-ellipsis overflow-hidden">
                 {{ title }}
@@ -22,36 +29,38 @@
           <div class="w-full flex justify-between items-center">
           </div>
         </div>
+        <div class="flex-1"></div>
       </div>
+      <div class="mx-auto w-full max-w-full sm:max-w-[768px] sm:min-w-[390px] flex flex-col flex-1">
+        <div class="flex flex-col w-full gap-[12px] pb-[80px] pt-[12px] flex-1 overflow-y-auto">
+          <ChatMessage v-for="(message, index) in messages" :key="index" :message="message"
+            @toolClick="handleToolClick" />
 
-      <div class="flex flex-col w-full gap-[12px] pb-[80px] pt-[12px] flex-1 overflow-y-auto">
-        <ChatMessage v-for="(message, index) in messages" :key="index" :message="message"
-          @toolClick="handleToolClick" />
+          <!-- Loading indicator -->
+          <div v-if="isLoading" class="flex items-center gap-1 text-[var(--text-tertiary)] text-sm"><span>{{
+            $t('Thinking') }}</span><span class="flex gap-1 relative top-[4px]"><span
+                class="w-[3px] h-[3px] rounded animate-bounce-dot bg-[var(--icon-tertiary)]"
+                style="animation-delay: 0ms;"></span><span
+                class="w-[3px] h-[3px] rounded animate-bounce-dot bg-[var(--icon-tertiary)]"
+                style="animation-delay: 200ms;"></span><span
+                class="w-[3px] h-[3px] rounded animate-bounce-dot bg-[var(--icon-tertiary)]"
+                style="animation-delay: 400ms;"></span></span></div>
+        </div>
 
-        <!-- Loading indicator -->
-        <div v-if="isLoading" class="flex items-center gap-1 text-[var(--text-tertiary)] text-sm"><span>{{
-          $t('Thinking') }}</span><span class="flex gap-1 relative top-[4px]"><span
-              class="w-[3px] h-[3px] rounded animate-bounce-dot bg-[var(--icon-tertiary)]"
-              style="animation-delay: 0ms;"></span><span
-              class="w-[3px] h-[3px] rounded animate-bounce-dot bg-[var(--icon-tertiary)]"
-              style="animation-delay: 200ms;"></span><span
-              class="w-[3px] h-[3px] rounded animate-bounce-dot bg-[var(--icon-tertiary)]"
-              style="animation-delay: 400ms;"></span></span></div>
-      </div>
-
-      <div class="flex flex-col bg-[var(--background-gray-main)] sticky bottom-0">
-        <template v-if="plan && plan.steps.length > 0">
-          <button @click="handleFollow" v-if="!follow"
-            class="flex items-center justify-center w-[36px] h-[36px] rounded-full bg-[var(--background-white-main)] hover:bg-[var(--background-gray-main)] clickable border border-[var(--border-main)] shadow-[0px_5px_16px_0px_var(--shadow-S),0px_0px_1.25px_0px_var(--shadow-S)] absolute -top-20 left-1/2 -translate-x-1/2">
-            <ArrowDown class="text-[var(--icon-primary)]" :size="20" />
-          </button>
-          <PlanPanel :plan="plan" />
-        </template>
-        <ChatBox v-model="inputMessage" :rows="1" @submit="handleSubmit" :isRunning="isLoading"
-          @stop="handleStop" :attachments="attachments" />
+        <div class="flex flex-col bg-[var(--background-gray-main)] sticky bottom-0">
+          <template v-if="plan && plan.steps.length > 0">
+            <button @click="handleFollow" v-if="!follow"
+              class="flex items-center justify-center w-[36px] h-[36px] rounded-full bg-[var(--background-white-main)] hover:bg-[var(--background-gray-main)] clickable border border-[var(--border-main)] shadow-[0px_5px_16px_0px_var(--shadow-S),0px_0px_1.25px_0px_var(--shadow-S)] absolute -top-20 left-1/2 -translate-x-1/2">
+              <ArrowDown class="text-[var(--icon-primary)]" :size="20" />
+            </button>
+            <PlanPanel :plan="plan" />
+          </template>
+          <ChatBox v-model="inputMessage" :rows="1" @submit="handleSubmit" :isRunning="isLoading" @stop="handleStop"
+            :attachments="attachments" />
+        </div>
       </div>
     </div>
-    <RightPanel ref="rightPanel" :size="toolPanelSize" :sessionId="sessionId" :realTime="realTime"
+    <ToolPanel ref="toolPanel" :size="toolPanelSize" :sessionId="sessionId" :realTime="realTime"
       @jumpToRealTime="jumpToRealTime" />
   </SimpleBar>
 </template>
@@ -74,16 +83,20 @@ import {
   PlanEventData,
   AgentSSEEvent,
 } from '../types/event';
-import RightPanel from '../components/RightPanel.vue';
+import ToolPanel from '../components/ToolPanel.vue'
 import PlanPanel from '../components/PlanPanel.vue';
-import { ArrowDown, FileSearch } from 'lucide-vue-next';
+import { ArrowDown, FileSearch, PanelLeft } from 'lucide-vue-next';
 import { showErrorToast } from '../utils/toast';
-import { eventBus } from '../utils/eventBus';
-import { EVENT_SESSION_FILE_LIST_SHOW } from '../constants/event';
 import type { FileInfo } from '../api/file';
+import { useLeftPanel } from '../composables/useLeftPanel'
+import { useSessionFileList } from '../composables/useSessionFileList'
+import { useFilePanel } from '../composables/useFilePanel'
 
-const router = useRouter();
-const { t } = useI18n();
+const router = useRouter()
+const { t } = useI18n()
+const { toggleLeftPanel, isLeftPanelShow } = useLeftPanel()
+const { showSessionFileList } = useSessionFileList()
+const { hideFilePanel } = useFilePanel()
 
 // Create initial state factory
 const createInitialState = () => ({
@@ -100,7 +113,6 @@ const createInitialState = () => ({
   lastMessageTool: undefined as ToolContent | undefined,
   lastTool: undefined as ToolContent | undefined,
   lastEventId: undefined as string | undefined,
-  shouldAddPaddingClass: false,
   cancelCurrentChat: null as (() => void) | null,
   attachments: [] as FileInfo[]
 });
@@ -122,16 +134,14 @@ const {
   lastNoMessageTool,
   lastTool,
   lastEventId,
-  shouldAddPaddingClass,
   cancelCurrentChat,
   attachments
 } = toRefs(state);
 
 // Non-state refs that don't need reset
-const rightPanel = ref();
+const toolPanel = ref<InstanceType<typeof ToolPanel>>()
 const simpleBarRef = ref<InstanceType<typeof SimpleBar>>();
 const observerRef = ref<HTMLDivElement>();
-const resizeObserver = ref<ResizeObserver>();
 const chatContainerRef = ref<HTMLDivElement>();
 
 // Reset all refs to their initial values
@@ -200,7 +210,7 @@ const handleToolEvent = (toolData: ToolEventData) => {
   if (toolContent.name !== 'message') {
     lastNoMessageTool.value = toolContent;
     if (realTime.value) {
-      rightPanel.value?.showTool(toolContent, true);
+      toolPanel.value?.showToolPanel(toolContent, true);
     }
   }
 }
@@ -367,20 +377,11 @@ const restoreSession = async () => {
   await chat();
 }
 
-// Position monitoring function
-const checkElementPosition = () => {
-  const element = observerRef.value;
-  if (element) {
-    const rect = element.getBoundingClientRect();
-    shouldAddPaddingClass.value = rect.left <= 40;
-  }
-  toolPanelSize.value = Math.min((simpleBarRef.value?.$el.clientWidth ?? 0) / 2, 768);
-};
+
 
 onBeforeRouteUpdate((to, _, next) => {
-  if (rightPanel.value) {
-    rightPanel.value?.hide();
-  }
+  toolPanel.value?.hideToolPanel();
+  hideFilePanel();
   resetState();
   if (to.params.sessionId) {
     messages.value = [];
@@ -392,6 +393,7 @@ onBeforeRouteUpdate((to, _, next) => {
 
 // Initialize active conversation
 onMounted(() => {
+  hideFilePanel();
   const routeParams = router.currentRoute.value.params;
   if (routeParams.sessionId) {
     // If sessionId is included in URL, use it directly
@@ -407,17 +409,7 @@ onMounted(() => {
     }
   }
 
-  resizeObserver.value = new ResizeObserver(() => {
-    checkElementPosition();
-  });
 
-  // Add position listener
-  nextTick(() => {
-    checkElementPosition();
-    resizeObserver.value?.observe(observerRef.value as Element);
-    resizeObserver.value?.observe(document.body as Element);
-    resizeObserver.value?.observe(rightPanel.value.$el as Element);
-  });
 });
 
 onUnmounted(() => {
@@ -425,7 +417,6 @@ onUnmounted(() => {
     cancelCurrentChat.value();
     cancelCurrentChat.value = null;
   }
-  resizeObserver.value?.disconnect();
 })
 
 const isLastNoMessageTool = (tool: ToolContent) => {
@@ -447,15 +438,15 @@ const isLiveTool = (tool: ToolContent) => {
 
 const handleToolClick = (tool: ToolContent) => {
   realTime.value = false;
-  if (rightPanel.value && sessionId.value) {
-    rightPanel.value.showTool(tool, isLiveTool(tool));
+  if (sessionId.value) {
+    toolPanel.value?.showToolPanel(tool, isLiveTool(tool));
   }
 }
 
 const jumpToRealTime = () => {
   realTime.value = true;
   if (lastNoMessageTool.value) {
-    rightPanel.value?.showTool(lastNoMessageTool.value, isLiveTool(lastNoMessageTool.value));
+    toolPanel.value?.showToolPanel(lastNoMessageTool.value, isLiveTool(lastNoMessageTool.value));
   }
 }
 
@@ -475,7 +466,7 @@ const handleStop = () => {
 }
 
 const handleFileListShow = () => {
-  eventBus.emit(EVENT_SESSION_FILE_LIST_SHOW);
+  showSessionFileList()
 }
 </script>
 

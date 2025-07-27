@@ -2,6 +2,7 @@
 import axios, { AxiosError } from 'axios';
 import { fetchEventSource, EventSourceMessage } from '@microsoft/fetch-event-source';
 import { router } from '@/main';
+import { clearStoredTokens } from './auth';
 
 // API configuration
 export const API_CONFIG = {
@@ -102,7 +103,7 @@ const refreshAuthToken = async (): Promise<string | null> => {
   
   if (!refreshToken) {
     // No refresh token available, clear auth and redirect to login
-    localStorage.removeItem('access_token');
+    clearStoredTokens();
     delete apiClient.defaults.headers.Authorization;
     window.dispatchEvent(new CustomEvent('auth:logout'));
     redirectToLogin();
@@ -132,8 +133,7 @@ const refreshAuthToken = async (): Promise<string | null> => {
     }
   } catch (refreshError) {
     // Refresh token failed, clear tokens and redirect to login
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
+    clearStoredTokens();
     delete apiClient.defaults.headers.Authorization;
     
     processQueue(refreshError, null);

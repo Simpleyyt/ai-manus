@@ -7,7 +7,7 @@ import logging
 import asyncio
 import io
 from async_lru import alru_cache
-from app.infrastructure.config import get_settings
+from app.core.config import get_settings
 from app.domain.models.tool_result import ToolResult
 from app.domain.external.sandbox import Sandbox
 from app.infrastructure.external.browser.playwright_browser import PlaywrightBrowser

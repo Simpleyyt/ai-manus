@@ -1,9 +1,10 @@
 import jwt
 from datetime import datetime, timedelta, UTC
 from typing import Optional, Dict, Any
-from app.infrastructure.config import get_settings
+from app.core.config import get_settings
 from app.domain.models.user import User
 import logging
+from functools import lru_cache
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ class JWTManager:
         
         payload = {
             "sub": user.id,  # Subject (user ID)
-            "username": user.username,
+            "fullname": user.fullname,
             "email": user.email,
             "role": user.role.value,
             "is_active": user.is_active,
@@ -36,7 +37,7 @@ class JWTManager:
                 self.settings.jwt_secret_key,
                 algorithm=self.settings.jwt_algorithm
             )
-            logger.debug(f"Created access token for user: {user.username}")
+            logger.debug(f"Created access token for user: {user.fullname}")
             return token
         except Exception as e:
             logger.error(f"Failed to create access token: {e}")
@@ -49,7 +50,7 @@ class JWTManager:
         
         payload = {
             "sub": user.id,  # Subject (user ID)
-            "username": user.username,
+            "fullname": user.fullname,
             "iat": int(now.timestamp()),  # Issued at (timestamp)
             "exp": int(expire.timestamp()),  # Expiration time (timestamp)
             "type": "refresh"
@@ -61,7 +62,7 @@ class JWTManager:
                 self.settings.jwt_secret_key,
                 algorithm=self.settings.jwt_algorithm
             )
-            logger.debug(f"Created refresh token for user: {user.username}")
+            logger.debug(f"Created refresh token for user: {user.fullname}")
             return token
         except Exception as e:
             logger.error(f"Failed to create refresh token: {e}")
@@ -82,7 +83,7 @@ class JWTManager:
                 logger.warning("Token has expired")
                 return None
             
-            logger.debug(f"Token verified for user: {payload.get('username')}")
+            logger.debug(f"Token verified for user: {payload.get('fullname')}")
             return payload
             
         except jwt.ExpiredSignatureError:
@@ -105,7 +106,7 @@ class JWTManager:
         # Return user info from token payload
         return {
             "id": payload.get("sub"),
-            "username": payload.get("username"),
+            "fullname": payload.get("fullname"),
             "email": payload.get("email"),
             "role": payload.get("role"),
             "is_active": payload.get("is_active", True),
@@ -135,10 +136,7 @@ class JWTManager:
         return True
 
 
-# Global JWT manager instance
-jwt_manager = JWTManager()
-
-
+@lru_cache()
 def get_jwt_manager() -> JWTManager:
     """Get JWT manager instance"""
-    return jwt_manager 
+    return JWTManager()

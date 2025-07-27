@@ -1,6 +1,6 @@
 from typing import Optional
 from datetime import datetime, UTC
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, EmailStr
 from enum import Enum
 
 
@@ -12,8 +12,8 @@ class UserRole(str, Enum):
 class User(BaseModel):
     """User domain model"""
     id: str
-    username: str
-    email: Optional[str] = None
+    fullname: str
+    email: str  # Now required field for login
     password_hash: Optional[str] = None
     role: UserRole = UserRole.USER
     is_active: bool = True
@@ -21,19 +21,19 @@ class User(BaseModel):
     updated_at: datetime = datetime.now(UTC)
     last_login_at: Optional[datetime] = None
     
-    @field_validator('username')
+    @field_validator('fullname')
     @classmethod
-    def validate_username(cls, v):
-        if not v or len(v.strip()) < 3:
-            raise ValueError("Username must be at least 3 characters long")
+    def validate_fullname(cls, v):
+        if not v or len(v.strip()) < 2:
+            raise ValueError("Full name must be at least 2 characters long")
         return v.strip()
     
     @field_validator('email')
     @classmethod
     def validate_email(cls, v):
-        if v and '@' not in v:
-            raise ValueError("Invalid email format")
-        return v
+        if not v or '@' not in v:
+            raise ValueError("Valid email is required")
+        return v.strip().lower()
     
     def update_last_login(self):
         """Update last login timestamp"""

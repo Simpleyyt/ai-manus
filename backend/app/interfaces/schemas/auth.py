@@ -6,15 +6,15 @@ from app.domain.models.user import UserRole
 
 class LoginRequest(BaseModel):
     """Login request schema"""
-    username: str
+    email: str
     password: str
     
-    @field_validator('username')
+    @field_validator('email')
     @classmethod
-    def validate_username(cls, v):
-        if not v or len(v.strip()) < 3:
-            raise ValueError("Username must be at least 3 characters long")
-        return v.strip()
+    def validate_email(cls, v):
+        if not v or '@' not in v:
+            raise ValueError("Valid email is required")
+        return v.strip().lower()
     
     @field_validator('password')
     @classmethod
@@ -26,29 +26,29 @@ class LoginRequest(BaseModel):
 
 class RegisterRequest(BaseModel):
     """Register request schema"""
-    username: str
+    fullname: str
+    email: str
     password: str
-    email: Optional[str] = None
     
-    @field_validator('username')
+    @field_validator('fullname')
     @classmethod
-    def validate_username(cls, v):
-        if not v or len(v.strip()) < 3:
-            raise ValueError("Username must be at least 3 characters long")
+    def validate_fullname(cls, v):
+        if not v or len(v.strip()) < 2:
+            raise ValueError("Full name must be at least 2 characters long")
         return v.strip()
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v):
+        if not v or '@' not in v:
+            raise ValueError("Valid email is required")
+        return v.strip().lower()
     
     @field_validator('password')
     @classmethod
     def validate_password(cls, v):
         if not v or len(v) < 6:
             raise ValueError("Password must be at least 6 characters long")
-        return v
-    
-    @field_validator('email')
-    @classmethod
-    def validate_email(cls, v):
-        if v and '@' not in v:
-            raise ValueError("Invalid email format")
         return v
 
 
@@ -72,11 +72,23 @@ class ChangePasswordRequest(BaseModel):
         return v
 
 
+class RefreshTokenRequest(BaseModel):
+    """Refresh token request schema"""
+    refresh_token: str
+    
+    @field_validator('refresh_token')
+    @classmethod
+    def validate_refresh_token(cls, v):
+        if not v:
+            raise ValueError("Refresh token is required")
+        return v
+
+
 class UserResponse(BaseModel):
     """User response schema"""
     id: str
-    username: str
-    email: Optional[str] = None
+    fullname: str
+    email: str
     role: UserRole
     is_active: bool
     created_at: datetime
@@ -93,25 +105,6 @@ class LoginResponse(BaseModel):
     message: str = "Login successful"
 
 
-class RefreshTokenRequest(BaseModel):
-    """Refresh token request schema"""
-    refresh_token: str
-    
-    @field_validator('refresh_token')
-    @classmethod
-    def validate_refresh_token(cls, v):
-        if not v:
-            raise ValueError("Refresh token is required")
-        return v
-
-
-class RefreshTokenResponse(BaseModel):
-    """Refresh token response schema"""
-    access_token: str
-    token_type: str = "bearer"
-    message: str = "Token refreshed successfully"
-
-
 class RegisterResponse(BaseModel):
     """Register response schema"""
     user: UserResponse
@@ -122,8 +115,15 @@ class RegisterResponse(BaseModel):
 
 
 class AuthStatusResponse(BaseModel):
-    """Auth status response schema"""
+    """Authentication status response schema"""
     authenticated: bool
     user: Optional[UserResponse] = None
     auth_provider: str
-    message: str 
+    message: str
+
+
+class RefreshTokenResponse(BaseModel):
+    """Refresh token response schema"""
+    access_token: str
+    token_type: str = "bearer"
+    message: str = "Token refreshed successfully" 

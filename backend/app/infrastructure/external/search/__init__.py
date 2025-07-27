@@ -3,7 +3,7 @@ from typing import Optional
 import logging
 
 from app.domain.external.search import SearchEngine
-from app.infrastructure.config import get_settings
+from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 

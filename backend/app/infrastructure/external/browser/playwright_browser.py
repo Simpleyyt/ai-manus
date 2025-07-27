@@ -3,7 +3,7 @@ from playwright.async_api import async_playwright, Browser, Page
 import asyncio
 from markdownify import markdownify
 from app.infrastructure.external.llm.openai_llm import OpenAILLM
-from app.infrastructure.config import get_settings
+from app.core.config import get_settings
 from app.domain.models.tool_result import ToolResult
 import logging
 

@@ -1,8 +1,10 @@
 // Backend API service
-import { apiClient, BASE_URL, ApiResponse, createSSEConnection, SSECallbacks } from './client';
+import { apiClient, API_CONFIG, ApiResponse, createSSEConnection, SSECallbacks } from './client';
 import { AgentSSEEvent } from '../types/event';
-import { CreateSessionResponse, GetSessionResponse, ShellViewResponse, FileViewResponse, ListSessionResponse } from '../types/response';
+import { CreateSessionResponse, GetSessionResponse, ShellViewResponse, FileViewResponse, ListSessionResponse, SignedUrlResponse } from '../types/response';
 import type { FileInfo } from './file';
+
+
 
 /**
  * Create Session
@@ -41,10 +43,37 @@ export async function stopSession(sessionId: string): Promise<void> {
   await apiClient.post<ApiResponse<void>>(`/sessions/${sessionId}/stop`);
 }
 
-export const getVNCUrl = (sessionId: string): string => {
-  // Convert http to ws, https to wss
-  const wsBaseUrl = BASE_URL.replace(/^http/, 'ws');
-  return `${wsBaseUrl}/sessions/${sessionId}/vnc`;
+/**
+ * Create VNC signed URL
+ * @param sessionId Session ID to create signed URL for
+ * @param expireMinutes URL expiration time in minutes (default: 15)
+ * @returns Signed URL response for VNC WebSocket access
+ */
+export async function createVncSignedUrl(sessionId: string, expireMinutes: number = 15): Promise<SignedUrlResponse> {
+  const response = await apiClient.post<ApiResponse<SignedUrlResponse>>(`/sessions/${sessionId}/vnc/signed-url`, {
+    expire_minutes: expireMinutes
+  });
+  return response.data.data;
+}
+
+/**
+ * Get VNC WebSocket URL with signed URL
+ * @param sessionId Session ID
+ * @param expireMinutes URL expiration time in minutes (default: 60)
+ * @returns Promise resolving to signed VNC WebSocket URL string
+ * 
+ * @example
+ * // Signed URL (no Authorization header needed, more secure)
+ * const url = await getVNCUrl('session123');
+ * const url = await getVNCUrl('session123', 120);
+ */
+export const getVNCUrl = async (
+  sessionId: string, 
+  expireMinutes: number = 15
+): Promise<string> => {
+    const signedUrlResponse = await createVncSignedUrl(sessionId, expireMinutes);
+    const wsBaseUrl = API_CONFIG.host.replace(/^http/, 'ws');
+    return `${wsBaseUrl}${signedUrlResponse.signed_url}`;
 }
 
 /**

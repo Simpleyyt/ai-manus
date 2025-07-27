@@ -19,48 +19,48 @@
                         <Bot :size="80" />
                     </div>
                     <h1 class="text-[20px] font-bold text-center text-[var(--text-primary)] max-sm:text-[18px]">
-                        {{ isRegistering ? '注册 Manus' : '登录 Manus' }}
+                        {{ isRegistering ? t('Register to Manus') : t('Login to Manus') }}
                     </h1>
                 </div>
             </div>
             <div class="w-full max-w-[384px] py-[24px] pt-0 px-[12px] relative" style="z-index:1">
                 <div class="flex flex-col justify-center gap-[40px] text-[var(--text-primary)] max-sm:gap-[12px]">
-                    <!-- 移除显示全局错误信息的区域 -->
+                    <!-- Global error message area removed -->
 
                     <form @submit.prevent="handleSubmit" class="flex flex-col items-stretch gap-[20px]">
                         <div class="relative">
                             <div class="transition-all duration-500 ease-out opacity-100 scale-100">
                                 <div class="flex flex-col gap-[12px]">
-                                    <!-- 用户名字段（仅注册时显示） -->
+                                    <!-- Full name field (only shown during registration) -->
                                     <div v-if="isRegistering" class="flex flex-col items-start">
                                         <div class="w-full flex items-center justify-between gap-[12px] mb-[8px]">
-                                            <label for="username"
+                                            <label for="fullname"
                                                 class="text-[13px] text-[var(--text-primary)] font-medium after:content-[&quot;*&quot;] after:text-[var(--function-error)] after:ml-[4px]">
-                                                <span>用户名</span>
+                                                <span>{{ t('Full Name') }}</span>
                                             </label>
                                         </div>
                                         <input
-                                            v-model="formData.username"
+                                            v-model="formData.fullname"
                                             class="rounded-[10px] overflow-hidden text-sm leading-[22px] text-[var(--text-primary)] h-10 disabled:cursor-not-allowed placeholder:text-[var(--text-disable)] bg-[var(--fill-input-chat)] pt-1 pr-1.5 pb-1 pl-3 focus:ring-[1.5px] focus:ring-[var(--border-dark)] w-full"
-                                            :class="{ 'ring-1 ring-[var(--function-error)]': validationErrors.username }"
-                                            id="username" 
-                                            placeholder="输入用户名" 
+                                            :class="{ 'ring-1 ring-[var(--function-error)]': validationErrors.fullname }"
+                                            id="fullname" 
+                                            :placeholder="t('Enter your full name')" 
                                             :disabled="isLoading"
-                                            @input="validateField('username')"
-                                            @blur="validateField('username')">
+                                            @input="validateField('fullname')"
+                                            @blur="validateField('fullname')">
                                         <div
                                             class="text-[13px] text-[var(--function-error)] leading-[18px] overflow-hidden transition-all duration-300 ease-out"
-                                            :class="validationErrors.username ? 'opacity-100 max-h-[60px] mt-[2px]' : 'opacity-0 max-h-0 mt-0'">
-                                            {{ validationErrors.username }}
+                                            :class="validationErrors.fullname ? 'opacity-100 max-h-[60px] mt-[2px]' : 'opacity-0 max-h-0 mt-0'">
+                                            {{ validationErrors.fullname }}
                                         </div>
                                     </div>
 
-                                    <!-- 邮箱字段 -->
+                                    <!-- Email field -->
                                     <div class="flex flex-col items-start">
                                         <div class="w-full flex items-center justify-between gap-[12px] mb-[8px]">
                                             <label for="email"
                                                 class="text-[13px] text-[var(--text-primary)] font-medium after:content-[&quot;*&quot;] after:text-[var(--function-error)] after:ml-[4px]">
-                                                <span>邮箱</span>
+                                                <span>{{ t('Email') }}</span>
                                             </label>
                                         </div>
                                         <input
@@ -80,12 +80,12 @@
                                         </div>
                                     </div>
 
-                                    <!-- 密码字段 -->
+                                    <!-- Password field -->
                                     <div class="flex flex-col items-start">
                                         <div class="w-full flex items-center justify-between gap-[12px] mb-[8px]">
                                             <label for="password"
                                                 class="text-[13px] text-[var(--text-primary)] font-medium after:content-[&quot;*&quot;] after:text-[var(--function-error)] after:ml-[4px]">
-                                                <span>密码</span>
+                                                <span>{{ t('Password') }}</span>
                                             </label>
                                         </div>
                                         <div class="relative w-full">
@@ -93,7 +93,7 @@
                                                 v-model="formData.password"
                                                 class="rounded-[10px] overflow-hidden text-sm leading-[22px] text-[var(--text-primary)] h-10 w-full disabled:cursor-not-allowed placeholder:text-[var(--text-disable)] bg-[var(--fill-input-chat)] pt-1 pb-1 pl-3 focus:ring-[1.5px] focus:ring-[var(--border-dark)] pr-[40px]"
                                                 :class="{ 'ring-1 ring-[var(--function-error)]': validationErrors.password }"
-                                                placeholder="输入密码" 
+                                                :placeholder="t('Enter password')" 
                                                 :type="showPassword ? 'text' : 'password'"
                                                 :disabled="isLoading"
                                                 @input="validateField('password')"
@@ -112,12 +112,12 @@
                                         </div>
                                     </div>
 
-                                    <!-- 确认密码字段（仅注册时显示） -->
+                                    <!-- Confirm password field (only shown during registration) -->
                                     <div v-if="isRegistering" class="flex flex-col items-start">
                                         <div class="w-full flex items-center justify-between gap-[12px] mb-[8px]">
                                             <label for="confirmPassword"
                                                 class="text-[13px] text-[var(--text-primary)] font-medium after:content-[&quot;*&quot;] after:text-[var(--function-error)] after:ml-[4px]">
-                                                <span>确认密码</span>
+                                                <span>{{ t('Confirm Password') }}</span>
                                             </label>
                                         </div>
                                         <div class="relative w-full">
@@ -125,7 +125,7 @@
                                                 v-model="formData.confirmPassword"
                                                 class="rounded-[10px] overflow-hidden text-sm leading-[22px] text-[var(--text-primary)] h-10 w-full disabled:cursor-not-allowed placeholder:text-[var(--text-disable)] bg-[var(--fill-input-chat)] pt-1 pb-1 pl-3 focus:ring-[1.5px] focus:ring-[var(--border-dark)] pr-[40px]"
                                                 :class="{ 'ring-1 ring-[var(--function-error)]': validationErrors.confirmPassword }"
-                                                placeholder="再次输入密码" 
+                                                :placeholder="t('Enter password again')" 
                                                 :type="showConfirmPassword ? 'text' : 'password'"
                                                 :disabled="isLoading"
                                                 @input="validateField('confirmPassword')"
@@ -144,7 +144,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- 提交按钮 -->
+                                    <!-- Submit button -->
                                     <button
                                         type="submit"
                                         class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors h-[40px] px-[16px] rounded-[10px] gap-[6px] text-sm min-w-16 w-full"
@@ -153,19 +153,19 @@
                                             : 'bg-[#898988] dark:bg-[#939393] text-[var(--text-onblack)] opacity-50 cursor-not-allowed'"
                                         :disabled="!isFormValid || isLoading">
                                         <LoaderCircle v-if="isLoading" :size="16" class="animate-spin" />
-                                        <span>{{ isLoading ? '处理中...' : (isRegistering ? '注册' : '登录') }}</span>
+                                        <span>{{ isLoading ? t('Processing...') : (isRegistering ? t('Register') : t('Login')) }}</span>
                                     </button>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- 切换登录/注册 -->
+                        <!-- Toggle login/register -->
                         <div class="text-center text-[13px] leading-[18px] text-[var(--text-tertiary)] mt-[8px]">
-                            <span>{{ isRegistering ? '已有账户？' : '没有账户？' }}</span>
+                            <span>{{ isRegistering ? t('Already have an account?') : t('Don\'t have an account?') }}</span>
                             <span
                                 class="ms-[8px] text-[var(--text-secondary)] cursor-pointer select-none hover:opacity-80 active:opacity-70 transition-all underline"
                                 @click="toggleMode">
-                                {{ isRegistering ? '登录' : '注册' }}
+                                {{ isRegistering ? t('Login') : t('Register') }}
                             </span>
                         </div>
                     </form>
@@ -178,41 +178,44 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { Bot, Eye, EyeOff, LoaderCircle } from 'lucide-vue-next'
 import ManusLogoTextIcon from '@/components/icons/ManusLogoTextIcon.vue'
 import { useAuth } from '@/api'
 import { validateUserInput } from '@/utils/auth'
 import { showErrorToast, showSuccessToast } from '@/utils/toast'
 
-const router = useRouter()
-const { login, register, isLoading, authError, isAuthenticated, clearError } = useAuth()
+const { t } = useI18n()
 
-// 表单状态
+const router = useRouter()
+const { login, register, isLoading, authError, isAuthenticated } = useAuth()
+
+// Form state
 const isRegistering = ref(false)
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 
-// 表单数据
+// Form data
 const formData = ref({
-  username: '',
+  fullname: '',
   email: '',
   password: '',
   confirmPassword: ''
 })
 
-// 验证错误
+// Validation errors
 const validationErrors = ref<Record<string, string>>({})
 
-// 切换登录/注册模式
+// Toggle login/register mode
 const toggleMode = () => {
   isRegistering.value = !isRegistering.value
   clearForm()
 }
 
-// 清空表单
+// Clear form
 const clearForm = () => {
   formData.value = {
-    username: '',
+    fullname: '',
     email: '',
     password: '',
     confirmPassword: ''
@@ -220,14 +223,14 @@ const clearForm = () => {
   validationErrors.value = {}
 }
 
-// 验证单个字段
+// Validate single field
 const validateField = (field: string) => {
   const errors: Record<string, string> = {}
   
-  if (field === 'username' && isRegistering.value) {
-    const result = validateUserInput({ username: formData.value.username })
-    if (result.errors.username) {
-      errors.username = result.errors.username
+  if (field === 'fullname' && isRegistering.value) {
+    const result = validateUserInput({ fullname: formData.value.fullname })
+    if (result.errors.fullname) {
+      errors.fullname = result.errors.fullname
     }
   }
   
@@ -247,22 +250,22 @@ const validateField = (field: string) => {
   
   if (field === 'confirmPassword' && isRegistering.value) {
     if (formData.value.password !== formData.value.confirmPassword) {
-      errors.confirmPassword = '两次密码输入不一致'
+      errors.confirmPassword = t('Passwords do not match')
     }
   }
   
-  // 更新错误状态
+  // Update error state
   Object.keys(errors).forEach(key => {
     validationErrors.value[key] = errors[key]
   })
   
-  // 清除已修复的错误
+  // Clear fixed errors
   if (!errors[field]) {
     delete validationErrors.value[field]
   }
 }
 
-// 验证整个表单
+// Validate entire form
 const validateForm = () => {
   const data: any = {
     email: formData.value.email,
@@ -270,24 +273,24 @@ const validateForm = () => {
   }
   
   if (isRegistering.value) {
-    data.username = formData.value.username
+    data.fullname = formData.value.fullname
   }
   
   const result = validateUserInput(data)
   validationErrors.value = { ...result.errors }
   
-  // 验证确认密码
+  // Validate confirm password
   if (isRegistering.value && formData.value.password !== formData.value.confirmPassword) {
-    validationErrors.value.confirmPassword = '两次密码输入不一致'
+    validationErrors.value.confirmPassword = t('Passwords do not match')
   }
   
   return Object.keys(validationErrors.value).length === 0
 }
 
-// 检查表单是否有效
+// Check if form is valid
 const isFormValid = computed(() => {
   const hasRequiredFields = isRegistering.value
-    ? formData.value.username.trim() && formData.value.email.trim() && formData.value.password.trim() && formData.value.confirmPassword.trim()
+    ? formData.value.fullname.trim() && formData.value.email.trim() && formData.value.password.trim() && formData.value.confirmPassword.trim()
     : formData.value.email.trim() && formData.value.password.trim()
   
   const hasNoErrors = Object.keys(validationErrors.value).length === 0
@@ -295,7 +298,7 @@ const isFormValid = computed(() => {
   return hasRequiredFields && hasNoErrors
 })
 
-// 提交表单
+// Submit form
 const handleSubmit = async () => {
   if (!validateForm()) {
     return
@@ -304,32 +307,32 @@ const handleSubmit = async () => {
   try {
     if (isRegistering.value) {
       await register({
-        username: formData.value.username,
+        fullname: formData.value.fullname,
         email: formData.value.email,
         password: formData.value.password
       })
-      // 注册成功提示
-      showSuccessToast('注册成功！欢迎使用 Manus')
+      // Registration success message
+      showSuccessToast(t('Registration successful! Welcome to Manus'))
     } else {
       await login({
-        username: formData.value.email, // 后端使用 username 字段，但可以接受邮箱
+        email: formData.value.email,
         password: formData.value.password
       })
-      // 登录成功提示
-      showSuccessToast('登录成功！欢迎回来')
+      // Login success message
+      showSuccessToast(t('Login successful! Welcome back'))
     }
     
-    // 成功后跳转到主页或用户之前访问的页面
+    // Redirect to home page or previously accessed page after success
     const redirect = router.currentRoute.value.query.redirect as string
     router.push(redirect || '/')
   } catch (error: any) {
     console.error('Authentication failed:', error)
-    // 使用 toast 显示错误信息
-    showErrorToast(authError.value || '认证失败，请重试')
+    // Display error message using toast
+    showErrorToast(authError.value || t('Authentication failed, please try again'))
   }
 }
 
-// 监听认证状态变化
+// Listen for authentication state changes
 watch(isAuthenticated, (authenticated) => {
   if (authenticated) {
     const redirect = router.currentRoute.value.query.redirect as string
@@ -337,14 +340,14 @@ watch(isAuthenticated, (authenticated) => {
   }
 })
 
-// 当原密码改变时，重新校验确认密码
+// Re-validate confirm password when original password changes
 watch(() => formData.value.password, () => {
   if (isRegistering.value && formData.value.confirmPassword) {
     validateField('confirmPassword')
   }
 })
 
-// 页面加载时检查是否已登录
+// Check if already logged in when page loads
 onMounted(() => {
   if (isAuthenticated.value) {
     router.push('/')

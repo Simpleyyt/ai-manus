@@ -45,5 +45,10 @@ export interface ConsoleRecord {
 export interface FileViewResponse {
     content: string;
     file: string;
-  }
+}
+
+export interface SignedUrlResponse {
+    signed_url: string;
+    expires_in: number;
+}
   

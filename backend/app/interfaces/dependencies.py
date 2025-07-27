@@ -1,18 +1,17 @@
+from typing import Optional
 import logging
 from functools import lru_cache
-from fastapi import Request, HTTPException, status
-
-from app.infrastructure.config import get_settings
-from app.infrastructure.storage.mongodb import get_mongodb
-from app.infrastructure.storage.redis import get_redis
+from fastapi import Request
 from app.infrastructure.external.file.gridfsfile import get_file_storage
 from app.infrastructure.external.search import get_search_engine
 from app.domain.models.user import User
+from app.application.errors.exceptions import UnauthorizedError
 
 # Import all required services
 from app.application.services.agent_service import AgentService
 from app.application.services.file_service import FileService
 from app.application.services.auth_service import AuthService
+from app.application.services.token_service import TokenService
 
 # Import all required dependencies for agent service
 from app.infrastructure.external.llm.openai_llm import OpenAILLM
@@ -96,7 +95,15 @@ def get_auth_service() -> AuthService:
     
     return AuthService(
         user_repository=user_repository,
+        token_service=get_token_service(),
     )
+
+
+@lru_cache()
+def get_token_service() -> TokenService:
+    """Get token service instance"""
+    logger.info("Creating TokenService instance")
+    return TokenService()
 
 
 def get_current_user(request: Request) -> User:
@@ -107,16 +114,22 @@ def get_current_user(request: Request) -> User:
     that was set by the authentication middleware.
     """
     if not hasattr(request.state, 'user'):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required"
-        )
+        raise UnauthorizedError("Authentication required")
     
     user = request.state.user
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid user session"
-        )
+        raise UnauthorizedError("Invalid user session")
     
     return user
+
+def get_optional_current_user(request: Request) -> Optional[User]:
+    """
+    Get current authenticated user from request state, return None if not authenticated
+    
+    This function extracts the current user from the request state
+    that was set by the authentication middleware. Returns None if no user.
+    """
+    if not hasattr(request.state, 'user'):
+        return None
+    
+    return request.state.user

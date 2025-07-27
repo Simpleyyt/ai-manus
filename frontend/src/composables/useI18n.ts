@@ -30,7 +30,12 @@ export const i18n = createI18n({
   legacy: false, // Use Composition API mode
   locale: getStoredLocale(),
   fallbackLocale: 'en',
-  messages
+  messages,
+  silentTranslationWarn: true,    // Disable translation warnings
+  silentFallbackWarn: true,       // Disable fallback warnings
+  missingWarn: false,             // Disable missing key warnings
+  fallbackWarn: false,            // Disable fallback warnings
+  warnHtmlMessage: false          // Disable HTML in message warnings
 })
 
 // Create a composable to use in components

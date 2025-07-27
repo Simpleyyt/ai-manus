@@ -97,5 +97,29 @@ export default {
   'Document': '文档',
   'Video': '视频',
   'Audio': '音频',
-  'Archive': '压缩包'
+  'Archive': '压缩包',
+  // Login/Register Page
+  'Login to Manus': '登录 Manus',
+  'Register to Manus': '注册 Manus',
+  'Full Name': '姓名',
+  'Email': '邮箱',
+  'Password': '密码',
+  'Confirm Password': '确认密码',
+  'Enter your full name': '输入您的姓名',
+  'Enter password': '输入密码',
+  'Enter password again': '再次输入密码',
+  'Processing...': '处理中...',
+  'Login': '登录',
+  'Register': '注册',
+  'Already have an account?': '已有账户？',
+  'Don\'t have an account?': '没有账户？',
+  'Login successful! Welcome back': '登录成功！欢迎回来',
+  'Registration successful! Welcome to Manus': '注册成功！欢迎使用 Manus',
+  'Authentication failed, please try again': '认证失败，请重试',
+  'Passwords do not match': '两次密码输入不一致',
+  // Validation error messages
+  'Full name must be at least 2 characters long': '姓名至少需要2个字符',
+  'Full name must be less than 100 characters': '姓名不能超过100个字符',
+  'Please enter a valid email address': '请输入有效的邮箱地址',
+  'Password must be at least 6 characters long': '密码至少需要6个字符'
 } 

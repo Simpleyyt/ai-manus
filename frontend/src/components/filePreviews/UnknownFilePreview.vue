@@ -38,8 +38,8 @@ const fileType = computed(() => {
   return getFileType(props.file.filename);
 });
 
-const download = () => {
-  const url = getFileDownloadUrl(props.file.file_id);
+const download = async () => {
+  const url = await getFileDownloadUrl(props.file.file_id);
   window.open(url, '_blank');
 };
 </script>

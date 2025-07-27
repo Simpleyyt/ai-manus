@@ -1,41 +1,22 @@
 <template>
-  <div :class="isPanelShow ?
+  <div :class="isLeftPanelShow ?
     'h-full flex flex-col' :
-    'h-full flex flex-col fixed top-0 start-0 bottom-0 z-[1]'" :style="isPanelShow ?
+    'h-full flex flex-col fixed top-0 start-0 bottom-0 z-[1]'" :style="isLeftPanelShow ?
       'width: 300px; transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);' :
       'width: 24px; transition: width 0.36s cubic-bezier(0.4, 0, 0.2, 1);'">
-    <div :class="isHomepage ?
-      'absolute start-0 top-0 w-[100vw] p-4 bg-[var(--background-gray-main)] pointer-events-none flex' :
-      'absolute start-4 top-3 md:top-4 pointer-events-none flex'">
-      <div class="flex items-center gap-2 pointer-events-auto">
-        <div class="relative flex">
-          <div
-            class="flex h-7 w-7 items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-gray-main)] rounded-md"
-            @click="togglePanel">
-            <PanelRight class="h-5 w-5 text-[var(--icon-secondary)]" />
-          </div>
-        </div>
-        <div v-if="isHomepage" class="flex">
-          <Bot :size="30" />
-          <ManusLogoTextIcon />
-        </div>
-      </div>
-      <div>
-      </div>
-    </div>
     <div
-      :class="isPanelShow ?
+      :class="isLeftPanelShow ?
         'flex flex-col overflow-hidden bg-[var(--background-nav)] h-full opacity-100 translate-x-0' :
         'flex flex-col overflow-hidden bg-[var(--background-nav)] fixed top-1 start-1 bottom-1 z-[1] border-1 dark:border-[1px] border-[var(--border-main)] dark:border-[var(--border-light)] rounded-xl shadow-[0px_8px_32px_0px_rgba(0,0,0,0.16),0px_0px_0px_1px_rgba(0,0,0,0.06)] opacity-0 pointer-events-none -translate-x-10'"
-      :style="(isPanelShow ? 'width: 300px;' : 'width: 0px;') + ' transition: opacity 0.2s, transform 0.2s, width 0.2s;'">
+      :style="(isLeftPanelShow ? 'width: 300px;' : 'width: 0px;') + ' transition: opacity 0.2s, transform 0.2s, width 0.2s;'">
       <div class="flex">
         <div class="flex items-center px-3 py-3 flex-row h-[52px] gap-1 justify-end w-full">
           <div class="flex justify-between w-full px-1 pt-2">
             <div class="relative flex">
               <div
                 class="flex h-7 w-7 items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-gray-main)] rounded-md"
-                @click="togglePanel">
-                <PanelRight class="h-5 w-5 text-[var(--icon-secondary)]" />
+                @click="toggleLeftPanel">
+                <PanelLeft class="h-5 w-5 text-[var(--icon-secondary)]" />
               </div>
             </div>
           </div>
@@ -74,25 +55,19 @@
 </template>
 
 <script setup lang="ts">
-import { PanelRight, Plus, Command, Bot, MessageSquareDashed } from 'lucide-vue-next';
-import ManusLogoTextIcon from './icons/ManusLogoTextIcon.vue';
+import { PanelLeft, Plus, Command, MessageSquareDashed } from 'lucide-vue-next';
 import SessionItem from './SessionItem.vue';
-import { usePanelState } from '../composables/usePanelState';
-import { computed, ref, onMounted, watch, onUnmounted } from 'vue';
+import { useLeftPanel } from '../composables/useLeftPanel';
+import { ref, onMounted, watch, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getSessionsSSE, getSessions } from '../api/agent';
 import { ListSessionItem } from '../types/response';
 import { useI18n } from 'vue-i18n';
 
 const { t } = useI18n()
-const { isPanelShow, togglePanel } = usePanelState()
+const { isLeftPanelShow, toggleLeftPanel } = useLeftPanel()
 const route = useRoute()
 const router = useRouter()
-
-// Check if current page is homepage
-const isHomepage = computed(() => {
-  return route.path === '/'
-})
 
 const sessions = ref<ListSessionItem[]>([])
 const cancelGetSessionsSSE = ref<(() => void) | null>(null)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, Query
 from sse_starlette.sse import EventSourceResponse
 from typing import AsyncGenerator, List
 from sse_starlette.event import ServerSentEvent
@@ -8,14 +8,17 @@ import websockets
 import logging
 
 from app.application.services.agent_service import AgentService
-from app.interfaces.dependencies import get_agent_service
-from app.interfaces.schemas.request import ChatRequest, FileViewRequest, ShellViewRequest
+from app.application.services.token_service import TokenService
+from app.application.errors.exceptions import NotFoundError, UnauthorizedError
+from app.interfaces.dependencies import get_agent_service, get_current_user, get_token_service
+from app.interfaces.schemas.request import ChatRequest, FileViewRequest, ShellViewRequest, AccessTokenRequest
 from app.interfaces.schemas.response import (
     APIResponse, CreateSessionResponse, GetSessionResponse, 
-    ListSessionItem, ListSessionResponse, ShellViewResponse, FileViewResponse
+    ListSessionItem, ListSessionResponse, ShellViewResponse, FileViewResponse, SignedUrlResponse
 )
 from app.interfaces.schemas.event import EventMapper
 from app.domain.models.file import FileInfo
+from app.domain.models.user import User
 
 logger = logging.getLogger(__name__)
 SESSION_POLL_INTERVAL = 5
@@ -24,9 +27,10 @@ router = APIRouter(prefix="/sessions", tags=["sessions"])
 
 @router.put("", response_model=APIResponse[CreateSessionResponse])
 async def create_session(
+    current_user: User = Depends(get_current_user),
     agent_service: AgentService = Depends(get_agent_service)
 ) -> APIResponse[CreateSessionResponse]:
-    session = await agent_service.create_session()
+    session = await agent_service.create_session(current_user.id)
     return APIResponse.success(
         CreateSessionResponse(
             session_id=session.id,
@@ -36,9 +40,12 @@ async def create_session(
 @router.get("/{session_id}", response_model=APIResponse[GetSessionResponse])
 async def get_session(
     session_id: str,
+    current_user: User = Depends(get_current_user),
     agent_service: AgentService = Depends(get_agent_service)
 ) -> APIResponse[GetSessionResponse]:
-    session = await agent_service.get_session(session_id)
+    session = await agent_service.get_session(session_id, current_user.id)
+    if not session:
+        raise NotFoundError("Session not found")
     return APIResponse.success(GetSessionResponse(
         session_id=session.id,
         title=session.title,
@@ -48,24 +55,27 @@ async def get_session(
 @router.delete("/{session_id}", response_model=APIResponse[None])
 async def delete_session(
     session_id: str,
+    current_user: User = Depends(get_current_user),
     agent_service: AgentService = Depends(get_agent_service)
 ) -> APIResponse[None]:
-    await agent_service.delete_session(session_id)
+    await agent_service.delete_session(session_id, current_user.id)
     return APIResponse.success()
 
 @router.post("/{session_id}/stop", response_model=APIResponse[None])
 async def stop_session(
     session_id: str,
+    current_user: User = Depends(get_current_user),
     agent_service: AgentService = Depends(get_agent_service)
 ) -> APIResponse[None]:
-    await agent_service.stop_session(session_id)
+    await agent_service.stop_session(session_id, current_user.id)
     return APIResponse.success()
 
 @router.get("", response_model=APIResponse[ListSessionResponse])
 async def get_all_sessions(
+    current_user: User = Depends(get_current_user),
     agent_service: AgentService = Depends(get_agent_service)
 ) -> APIResponse[ListSessionResponse]:
-    sessions = await agent_service.get_all_sessions()
+    sessions = await agent_service.get_all_sessions(current_user.id)
     session_items = [
         ListSessionItem(
             session_id=session.id,
@@ -80,11 +90,12 @@ async def get_all_sessions(
 
 @router.post("")
 async def stream_sessions(
+    current_user: User = Depends(get_current_user),
     agent_service: AgentService = Depends(get_agent_service)
 ) -> EventSourceResponse:
     async def event_generator() -> AsyncGenerator[ServerSentEvent, None]:
         while True:
-            sessions = await agent_service.get_all_sessions()
+            sessions = await agent_service.get_all_sessions(current_user.id)
             session_items = [
                 ListSessionItem(
                     session_id=session.id,
@@ -106,11 +117,13 @@ async def stream_sessions(
 async def chat(
     session_id: str,
     request: ChatRequest,
+    current_user: User = Depends(get_current_user),
     agent_service: AgentService = Depends(get_agent_service)
 ) -> EventSourceResponse:
     async def event_generator() -> AsyncGenerator[ServerSentEvent, None]:
         async for event in agent_service.chat(
             session_id=session_id,
+            user_id=current_user.id,
             message=request.message,
             timestamp=datetime.fromtimestamp(request.timestamp) if request.timestamp else None,
             event_id=request.event_id,
@@ -131,6 +144,7 @@ async def chat(
 async def view_shell(
     session_id: str,
     request: ShellViewRequest,
+    current_user: User = Depends(get_current_user),
     agent_service: AgentService = Depends(get_agent_service)
 ) -> APIResponse[ShellViewResponse]:
     """View shell session output
@@ -144,13 +158,14 @@ async def view_shell(
     Returns:
         APIResponse with shell output
     """
-    result = await agent_service.shell_view(session_id, request.session_id)
+    result = await agent_service.shell_view(session_id, request.session_id, current_user.id)
     return APIResponse.success(result)
 
 @router.post("/{session_id}/file")
 async def view_file(
     session_id: str,
     request: FileViewRequest,
+    current_user: User = Depends(get_current_user),
     agent_service: AgentService = Depends(get_agent_service)
 ) -> APIResponse[FileViewResponse]:
     """View file content
@@ -164,18 +179,21 @@ async def view_file(
     Returns:
         APIResponse with file content
     """
-    result = await agent_service.file_view(session_id, request.file)
+    result = await agent_service.file_view(session_id, request.file, current_user.id)
     return APIResponse.success(result)
 
 @router.websocket("/{session_id}/vnc")
 async def vnc_websocket(
     websocket: WebSocket,
     session_id: str,
-    agent_service: AgentService = Depends(get_agent_service)
+    signature: str = Query(None),
+    agent_service: AgentService = Depends(get_agent_service),
+    token_service: TokenService = Depends(get_token_service)
 ) -> None:
     """VNC WebSocket endpoint (binary mode)
     
     Establishes a connection with the VNC WebSocket service in the sandbox environment and forwards data bidirectionally
+    Supports authentication via both URL token parameter or Authorization header for backward compatibility
     
     Args:
         websocket: WebSocket connection
@@ -183,10 +201,19 @@ async def vnc_websocket(
     """
     
     await websocket.accept(subprotocol="binary")
+    logger.info(f"Accepted WebSocket connection for session {session_id}")
+
+    if not signature:
+        logger.error(f"Missing signature: {websocket.url}")
+        await websocket.close(code=1011, reason="Missing signature")
+        return
+    if not token_service.verify_signed_url(str(websocket.url)):
+        logger.error(f"Invalid signature: {websocket.url}")
+        await websocket.close(code=1011, reason="Invalid signature")
+        return
     
     try:
-    
-        # Get sandbox environment address
+        # Get sandbox environment address with user validation
         sandbox_ws_url = await agent_service.get_vnc_url(session_id)
 
         logger.info(f"Connecting to VNC WebSocket at {sandbox_ws_url}")
@@ -243,7 +270,47 @@ async def vnc_websocket(
 @router.get("/{session_id}/files")
 async def get_session_files(
     session_id: str,
+    current_user: User = Depends(get_current_user),
     agent_service: AgentService = Depends(get_agent_service)
 ) -> APIResponse[List[FileInfo]]:
-    files = await agent_service.get_session_files(session_id)
+    files = await agent_service.get_session_files(session_id, current_user.id)
     return APIResponse.success(files)
+
+
+@router.post("/{session_id}/vnc/signed-url", response_model=APIResponse[SignedUrlResponse])
+async def create_vnc_signed_url(
+    session_id: str,
+    request_data: AccessTokenRequest,
+    current_user: User = Depends(get_current_user),
+    agent_service: AgentService = Depends(get_agent_service),
+    token_service: TokenService = Depends(get_token_service)
+) -> APIResponse[SignedUrlResponse]:
+    """Generate signed URL for VNC WebSocket access
+    
+    This endpoint creates a signed URL that allows temporary access to the VNC
+    WebSocket for a specific session without requiring authentication headers.
+    """
+    
+    # Validate expiration time (max 15 minutes)
+    expire_minutes = request_data.expire_minutes
+    if expire_minutes > 15:
+        expire_minutes = 15
+    
+    # Check if session exists and belongs to user
+    session = await agent_service.get_session(session_id, current_user.id)
+    if not session:
+        raise NotFoundError("Session not found")
+    
+    # Create signed URL for VNC WebSocket
+    ws_base_url = f"/api/v1/sessions/{session_id}/vnc"
+    signed_url = token_service.create_signed_url(
+        base_url=ws_base_url,
+        expire_minutes=expire_minutes
+    )
+    
+    logger.info(f"Created signed URL for VNC access for user {current_user.id}, session {session_id}")
+    
+    return APIResponse.success(SignedUrlResponse(
+        signed_url=signed_url,
+        expires_in=expire_minutes * 60,
+    ))

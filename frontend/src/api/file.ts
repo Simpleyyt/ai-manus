@@ -1,5 +1,6 @@
 // File API service
-import { apiClient, ApiResponse } from './client';
+import { apiClient, ApiResponse, API_CONFIG } from './client';
+import { SignedUrlResponse } from '../types/response';
 
 /**
  * File info type
@@ -12,6 +13,8 @@ export interface FileInfo {
   upload_date: string;
   metadata?: Record<string, any>;
 }
+
+
 
 /**
  * Upload file
@@ -79,10 +82,28 @@ export async function getFileInfo(fileId: string): Promise<FileInfo | null> {
 }
 
 /**
+ * Create file signed URL
+ * @param fileId File ID to create signed URL for
+ * @param expireMinutes URL expiration time in minutes (default: 15)
+ * @returns Signed URL response for file download
+ */
+export async function createFileSignedUrl(fileId: string, expireMinutes: number = 15): Promise<SignedUrlResponse> {
+  const response = await apiClient.post<ApiResponse<SignedUrlResponse>>(`/files/${fileId}/signed-url`, {
+    expire_minutes: expireMinutes
+  });
+  return response.data.data;
+}
+
+/**
  * Get file download URL
  * @param fileId File ID
- * @returns Download URL string
+ * @param expireMinutes URL/Token expiration time in minutes (default: 15)
+ * @returns Promise resolving to file download URL string
  */
-export function getFileDownloadUrl(fileId: string): string {
-  return `${apiClient.defaults.baseURL}/files/${fileId}`;
+export async function getFileDownloadUrl(
+  fileId: string,
+  expireMinutes: number = 15,
+): Promise<string> {
+  const signedUrlResponse = await createFileSignedUrl(fileId, expireMinutes);
+  return `${API_CONFIG.host}${signedUrlResponse.signed_url}`;
 }

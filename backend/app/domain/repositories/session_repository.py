@@ -15,6 +15,14 @@ class SessionRepository(Protocol):
         """Find a session by its ID"""
         ...
     
+    async def find_by_user_id(self, user_id: str) -> List[Session]:
+        """Find all sessions for a specific user"""
+        ...
+    
+    async def find_by_id_and_user_id(self, session_id: str, user_id: str) -> Optional[Session]:
+        """Find a session by ID and user ID (for authorization)"""
+        ...
+    
     async def update_title(self, session_id: str, title: str) -> None:
         """Update the title of a session"""
         ...
@@ -57,7 +65,7 @@ class SessionRepository(Protocol):
     
     async def delete(self, session_id: str) -> None:
         """Delete a session"""
-        ... 
+        ...
     
     async def get_all(self) -> List[Session]:
         """Get all sessions"""

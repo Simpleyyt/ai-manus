@@ -35,6 +35,21 @@ class MongoSessionRepository(SessionRepository):
         )
         return mongo_session.to_domain() if mongo_session else None
     
+    async def find_by_user_id(self, user_id: str) -> List[Session]:
+        """Find all sessions for a specific user"""
+        mongo_sessions = await SessionDocument.find(
+            SessionDocument.user_id == user_id
+        ).sort("-latest_message_at").to_list()
+        return [mongo_session.to_domain() for mongo_session in mongo_sessions]
+    
+    async def find_by_id_and_user_id(self, session_id: str, user_id: str) -> Optional[Session]:
+        """Find a session by ID and user ID (for authorization)"""
+        mongo_session = await SessionDocument.find_one(
+            SessionDocument.session_id == session_id,
+            SessionDocument.user_id == user_id
+        )
+        return mongo_session.to_domain() if mongo_session else None
+    
     async def update_title(self, session_id: str, title: str) -> None:
         """Update the title of a session"""
         result = await SessionDocument.find_one(
@@ -60,21 +75,21 @@ class MongoSessionRepository(SessionRepository):
         result = await SessionDocument.find_one(
             SessionDocument.session_id == session_id
         ).update(
-            {"$push": {"events": event}, "$set": {"updated_at": datetime.now(UTC)}}
+            {"$push": {"events": event.model_dump()}, "$set": {"updated_at": datetime.now(UTC)}}
         )
         if not result:
             raise ValueError(f"Session {session_id} not found")
-
+    
     async def add_file(self, session_id: str, file_info: FileInfo) -> None:
         """Add a file to a session"""
         result = await SessionDocument.find_one(
             SessionDocument.session_id == session_id
         ).update(
-            {"$push": {"files": file_info}, "$set": {"updated_at": datetime.now(UTC)}}
+            {"$push": {"files": file_info.model_dump()}, "$set": {"updated_at": datetime.now(UTC)}}
         )
         if not result:
             raise ValueError(f"Session {session_id} not found")
-
+    
     async def remove_file(self, session_id: str, file_id: str) -> None:
         """Remove a file from a session"""
         result = await SessionDocument.find_one(

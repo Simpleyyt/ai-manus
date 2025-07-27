@@ -2,7 +2,7 @@ import os
 import logging
 from app.domain.repositories.mcp_repository import MCPRepository
 from app.domain.models.mcp_config import MCPConfig
-from app.infrastructure.config import get_settings
+from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 

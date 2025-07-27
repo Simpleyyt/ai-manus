@@ -11,7 +11,7 @@ export type UserRole = 'admin' | 'user';
  */
 export interface User {
   id: string;
-  username: string;
+  fullname: string;
   email: string;
   role: UserRole;
   is_active: boolean;
@@ -24,7 +24,16 @@ export interface User {
  * Login request type
  */
 export interface LoginRequest {
-  username: string;
+  email: string;
+  password: string;
+}
+
+/**
+ * Register request type
+ */
+export interface RegisterRequest {
+  fullname: string;
+  email: string;
   password: string;
 }
 
@@ -36,16 +45,6 @@ export interface LoginResponse {
   access_token: string;
   refresh_token: string;
   token_type: string;
-  message: string;
-}
-
-/**
- * Register request type
- */
-export interface RegisterRequest {
-  username: string;
-  password: string;
-  email: string;
 }
 
 /**
@@ -56,7 +55,6 @@ export interface RegisterResponse {
   access_token: string;
   refresh_token: string;
   token_type: string;
-  message: string;
 }
 
 /**
@@ -80,7 +78,6 @@ export interface RefreshTokenRequest {
 export interface RefreshTokenResponse {
   access_token: string;
   token_type: string;
-  message: string;
 }
 
 /**
@@ -90,8 +87,28 @@ export interface AuthStatusResponse {
   authenticated: boolean;
   user?: User;
   auth_provider: string;
-  message: string;
 }
+
+/**
+ * Resource access token request type
+ */
+export interface AccessTokenRequest {
+  resource_type: 'file' | 'vnc';
+  resource_id: string;
+  expire_minutes?: number;
+}
+
+/**
+ * Resource access token response type
+ */
+export interface AccessTokenResponse {
+  access_token: string;
+  resource_type: string;
+  resource_id: string;
+  expires_in: number;
+}
+
+
 
 /**
  * User login
@@ -124,11 +141,11 @@ export async function getAuthStatus(): Promise<AuthStatusResponse> {
 
 /**
  * Change user password
- * @param request Password change data
- * @returns Success message
+ * @param request Change password data
+ * @returns Success response
  */
-export async function changePassword(request: ChangePasswordRequest): Promise<{ message: string }> {
-  const response = await apiClient.post<ApiResponse<{ message: string }>>('/auth/change-password', request);
+export async function changePassword(request: ChangePasswordRequest): Promise<{}> {
+  const response = await apiClient.post<ApiResponse<{}>>('/auth/change-password', request);
   return response.data.data;
 }
 
@@ -154,20 +171,20 @@ export async function getUser(userId: string): Promise<User> {
 /**
  * Deactivate user account (admin only)
  * @param userId User ID to deactivate
- * @returns Success message
+ * @returns Success response
  */
-export async function deactivateUser(userId: string): Promise<{ message: string }> {
-  const response = await apiClient.post<ApiResponse<{ message: string }>>(`/auth/user/${userId}/deactivate`);
+export async function deactivateUser(userId: string): Promise<{}> {
+  const response = await apiClient.post<ApiResponse<{}>>(`/auth/user/${userId}/deactivate`);
   return response.data.data;
 }
 
 /**
  * Activate user account (admin only)
  * @param userId User ID to activate
- * @returns Success message
+ * @returns Success response
  */
-export async function activateUser(userId: string): Promise<{ message: string }> {
-  const response = await apiClient.post<ApiResponse<{ message: string }>>(`/auth/user/${userId}/activate`);
+export async function activateUser(userId: string): Promise<{}> {
+  const response = await apiClient.post<ApiResponse<{}>>(`/auth/user/${userId}/activate`);
   return response.data.data;
 }
 
@@ -183,23 +200,25 @@ export async function refreshToken(request: RefreshTokenRequest): Promise<Refres
 
 /**
  * User logout
- * @returns Success message
+ * @returns Success response
  */
-export async function logout(): Promise<{ message: string }> {
-  const response = await apiClient.post<ApiResponse<{ message: string }>>('/auth/logout');
+export async function logout(): Promise<{}> {
+  const response = await apiClient.post<ApiResponse<{}>>('/auth/logout');
   return response.data.data;
 }
 
+
+
 /**
- * Set authentication token for subsequent requests
- * @param token Access token to set
+ * Set authentication token in request headers
+ * @param token JWT access token
  */
 export function setAuthToken(token: string): void {
   apiClient.defaults.headers.Authorization = `Bearer ${token}`;
 }
 
 /**
- * Clear authentication token
+ * Clear authentication token from request headers
  */
 export function clearAuthToken(): void {
   delete apiClient.defaults.headers.Authorization;

@@ -1,13 +1,11 @@
-from fastapi import Request, HTTPException, status
+from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response
 from typing import Optional
 import logging
 
-from app.infrastructure.config import get_settings
-from app.application.services.auth_service import AuthService
-from app.infrastructure.repositories.user_repository import MongoUserRepository
+from app.core.config import get_settings
+from app.interfaces.dependencies import get_token_service, get_auth_service
 from app.domain.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -19,7 +17,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, excluded_paths: Optional[list] = None):
         super().__init__(app)
         self.settings = get_settings()
-        self.auth_service = AuthService(MongoUserRepository())
+        self.auth_service = get_auth_service()
+        self.token_service = get_token_service()
         
         # Default paths that don't require authentication
         self.excluded_paths = excluded_paths or [
@@ -36,6 +35,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if any(request.url.path.startswith(path) for path in self.excluded_paths):
             return await call_next(request)
         
+        # Check if this is a resource access request with token parameter
+        if self._is_resource_access_with_token(request):
+            return await call_next(request)
+        
         # Skip authentication if auth_provider is 'none'
         if self.settings.auth_provider == "none":
             # Add anonymous user to request state
@@ -45,6 +48,11 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 is_active=True
             )
             return await call_next(request)
+        
+        signature = request.query_params.get("signature")
+        if signature:
+            if not self.token_service.verify_signed_url(signature):
+                return self._unauthorized_response("Invalid signature")
         
         # Extract authentication information
         auth_header = request.headers.get("Authorization")
@@ -108,6 +116,37 @@ class AuthMiddleware(BaseHTTPMiddleware):
             logger.warning(f"Bearer token auth failed: {e}")
             return None
     
+    def _is_resource_access_with_token(self, request: Request) -> bool:
+        """Check if request is resource access with valid token parameter or signed URL"""
+        try:
+            signature = request.query_params.get("signature")
+            if signature:
+                return self._verify_signed_url_access(request)
+            
+            return False
+                
+        except Exception as e:
+            logger.error(f"Error checking resource access: {e}")
+            return False
+
+    def _verify_signed_url_access(self, request: Request) -> bool:
+        """Verify signed URL access"""
+        try:
+            # Verify the signed URL directly
+            full_url = str(request.url)
+            is_valid = self.token_service.verify_signed_url(full_url)
+            
+            if is_valid:
+                logger.info(f"Access authenticated via signed URL for path: {request.url.path}")
+                return True
+            else:
+                logger.warning(f"Invalid signed URL for path: {request.url.path}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error checking signed URL access: {e}")
+            return False
+
     def _unauthorized_response(self, message: str) -> JSONResponse:
         """Return unauthorized response"""
         return JSONResponse(
@@ -118,13 +157,4 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 "data": None
             }
         )
-
-
-def get_current_user(request: Request) -> User:
-    """Get current authenticated user from request state"""
-    if not hasattr(request.state, 'user'):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required"
-        )
-    return request.state.user 
+        

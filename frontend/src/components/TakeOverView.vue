@@ -1,8 +1,14 @@
 <template>
     <div v-if="shouldShow" class="fixed bg-[var(--background-gray-main)] z-50 transition-all w-full h-full inset-0">
         <div class="w-full h-full">
-            <div ref="vncContainer"
-                style="display: flex; width: 100%; height: 100%; overflow: auto; background: rgb(40, 40, 40);"></div>
+            <VNCViewer 
+                :session-id="sessionId"
+                :enabled="shouldShow"
+                :view-only="false"
+                @connected="onVNCConnected"
+                @disconnected="onVNCDisconnected"
+                @credentials-required="onVNCCredentialsRequired"
+            />
         </div>
         <div class="absolute bottom-4 left-1/2 -translate-x-1/2">
             <button @click="exitTakeOver"
@@ -14,12 +20,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { getVNCUrl } from '../api/agent';
-// @ts-ignore
-import RFB from '@novnc/novnc/lib/rfb';
+import VNCViewer from './VNCViewer.vue';
 
 const route = useRoute();
 const { t } = useI18n();
@@ -28,9 +32,7 @@ const { t } = useI18n();
 const takeOverActive = ref(false);
 const currentSessionId = ref('');
 
-// VNC related refs
-const vncContainer = ref<HTMLDivElement | null>(null);
-let rfb: RFB | null = null;
+
 
 // Listen to takeover events
 const handleTakeOverEvent = (event: Event) => {
@@ -39,56 +41,17 @@ const handleTakeOverEvent = (event: Event) => {
     currentSessionId.value = customEvent.detail.sessionId;
 };
 
-// Initialize VNC connection
-const initVNCConnection = async () => {
-    await nextTick(); // Wait for DOM to be updated
-    
-    if (!vncContainer.value) {
-        console.warn('VNC container is not available');
-        return;
-    }
+// VNC event handlers
+const onVNCConnected = () => {
+    console.log('TakeOver VNC connection successful');
+};
 
-    // Get sessionId from component state or route parameters
-    const sessionIdToUse = currentSessionId.value || route.params.sessionId as string;
-    if (!sessionIdToUse) {
-        console.warn('No session ID available for VNC connection');
-        return;
-    }
-    
-    const wsUrl = getVNCUrl(sessionIdToUse);
-    console.log('sessionIdToUse', sessionIdToUse);
+const onVNCDisconnected = (reason?: any) => {
+    console.log('TakeOver VNC connection disconnected', reason);
+};
 
-    // Disconnect existing connection if any
-    if (rfb) {
-        rfb.disconnect();
-        rfb = null;
-    }
-
-    // Create NoVNC connection
-    rfb = new RFB(vncContainer.value, wsUrl, {
-        credentials: { password: '' },
-        shared: true,
-        repeaterID: '',
-        wsProtocols: ['binary'],
-        // Scaling options
-        scaleViewport: true,  // Automatically scale to fit container
-        //resizeSession: true   // Request server to adjust resolution
-    });
-
-    rfb.scaleViewport = true;
-    //rfb.resizeSession = true;
-
-    rfb.addEventListener('connect', () => {
-        console.log('VNC connection successful');
-    });
-
-    rfb.addEventListener('disconnect', (e: any) => {
-        console.log('VNC connection disconnected', e);
-    });
-
-    rfb.addEventListener('credentialsrequired', () => {
-        console.log('VNC credentials required');
-    });
+const onVNCCredentialsRequired = () => {
+    console.log('TakeOver VNC credentials required');
 };
 
 // Calculate whether to show takeover view
@@ -109,22 +72,10 @@ onMounted(() => {
     window.addEventListener('takeover', handleTakeOverEvent as EventListener);
 });
 
-// Watch for shouldShow changes to initialize VNC connection
-watch(shouldShow, async (newValue) => {
-    if (newValue) {
-        await initVNCConnection();
-    } else if (rfb) {
-        rfb.disconnect();
-        rfb = null;
-    }
-}, { immediate: true });
+
 
 // Remove event listener when component is unmounted
 onBeforeUnmount(() => {
-    if (rfb) {
-        rfb.disconnect();
-        rfb = null;
-    }
     window.removeEventListener('takeover', handleTakeOverEvent as EventListener);
 });
 
@@ -145,3 +96,6 @@ defineExpose({
     sessionId
 });
 </script>
+
+<style scoped>
+</style>

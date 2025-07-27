@@ -1,14 +1,13 @@
-from typing import AsyncGenerator, Dict, Any, Optional, Generator, List
+from typing import AsyncGenerator, Optional, List
 import logging
 from datetime import datetime
 from app.domain.models.session import Session
 from app.domain.repositories.session_repository import SessionRepository
 
-from app.interfaces.schemas.response import ShellViewResponse, FileViewResponse, GetSessionResponse
+from app.interfaces.schemas.response import ShellViewResponse, FileViewResponse
 from app.domain.models.agent import Agent
 from app.domain.services.agent_domain_service import AgentDomainService
 from app.domain.models.event import AgentEvent
-from app.application.errors.exceptions import NotFoundError
 from typing import Type
 from app.domain.models.agent import Agent
 from app.domain.external.sandbox import Sandbox
@@ -18,9 +17,9 @@ from app.domain.external.file import FileStorage
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.external.task import Task
 from app.domain.utils.json_parser import JsonParser
-from app.application.services.file_service import FileService
 from app.domain.models.file import FileInfo
 from app.domain.repositories.mcp_repository import MCPRepository
+from app.domain.models.session import SessionStatus
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -57,11 +56,11 @@ class AgentService:
         self._search_engine = search_engine
         self._sandbox_cls = sandbox_cls
     
-    async def create_session(self) -> Session:
-        logger.info("Creating new session")
+    async def create_session(self, user_id: str) -> Session:
+        logger.info(f"Creating new session for user: {user_id}")
         agent = await self._create_agent()
-        session = Session(agent_id=agent.id)
-        logger.info(f"Created new Session with ID: {session.id}")
+        session = Session(agent_id=agent.id, user_id=user_id)
+        logger.info(f"Created new Session with ID: {session.id} for user: {user_id}")
         await self._session_repository.save(session)
         return session
 
@@ -86,6 +85,7 @@ class AgentService:
     async def chat(
         self,
         session_id: str,
+        user_id: str,
         message: Optional[str] = None,
         timestamp: Optional[datetime] = None,
         event_id: Optional[str] = None,
@@ -93,27 +93,47 @@ class AgentService:
     ) -> AsyncGenerator[AgentEvent, None]:
         logger.info(f"Starting chat with session {session_id}: {message[:50]}...")
         # Directly use the domain service's chat method, which will check if the session exists
-        async for event in self._agent_domain_service.chat(session_id, message, timestamp, event_id, attachments):
+        async for event in self._agent_domain_service.chat(session_id, user_id, message, timestamp, event_id, attachments):
             logger.debug(f"Received event: {event}")
             yield event
         logger.info(f"Chat with session {session_id} completed")
     
-    async def get_session(self, session_id: str) -> Session:
-        session = await self._session_repository.find_by_id(session_id)
+    async def get_session(self, session_id: str, user_id: str) -> Optional[Session]:
+        """Get a session by ID, ensuring it belongs to the user"""
+        logger.info(f"Getting session {session_id} for user {user_id}")
+        session = await self._session_repository.find_by_id_and_user_id(session_id, user_id)
         if not session:
-            logger.warning(f"Session not found: {session_id}")
-            raise NotFoundError(f"Session not found: {session_id}")
+            logger.error(f"Session {session_id} not found for user {user_id}")
         return session
     
-    async def get_all_sessions(self) -> List[Session]:
-        return await self._session_repository.get_all()
+    async def get_all_sessions(self, user_id: str) -> List[Session]:
+        """Get all sessions for a specific user"""
+        logger.info(f"Getting all sessions for user {user_id}")
+        return await self._session_repository.find_by_user_id(user_id)
 
-    async def delete_session(self, session_id: str):
-        await self._agent_domain_service.stop_session(session_id)
+    async def delete_session(self, session_id: str, user_id: str) -> None:
+        """Delete a session, ensuring it belongs to the user"""
+        logger.info(f"Deleting session {session_id} for user {user_id}")
+        # First verify the session belongs to the user
+        session = await self._session_repository.find_by_id_and_user_id(session_id, user_id)
+        if not session:
+            logger.error(f"Session {session_id} not found for user {user_id}")
+            raise RuntimeError("Session not found")
+        
         await self._session_repository.delete(session_id)
+        logger.info(f"Session {session_id} deleted successfully")
 
-    async def stop_session(self, session_id: str):
-        await self._agent_domain_service.stop_session(session_id)
+    async def stop_session(self, session_id: str, user_id: str) -> None:
+        """Stop a session, ensuring it belongs to the user"""
+        logger.info(f"Stopping session {session_id} for user {user_id}")
+        # First verify the session belongs to the user
+        session = await self._session_repository.find_by_id_and_user_id(session_id, user_id)
+        if not session:
+            logger.error(f"Session {session_id} not found for user {user_id}")
+            raise RuntimeError("Session not found")
+        
+        await self._session_repository.update_status(session_id, SessionStatus.COMPLETED)
+        logger.info(f"Session {session_id} stopped successfully")
 
     async def shutdown(self):
         logger.info("Closing all agents and cleaning up resources")
@@ -121,115 +141,74 @@ class AgentService:
         await self._agent_domain_service.shutdown()
         logger.info("All agents closed successfully")
 
-    async def _get_sandbox(self, session_id: str) -> Sandbox:
-        """Get sandbox instance for the specified agent
-        
-        Args:
-            session_id: Session ID
-            
-        Returns:
-            Sandbox: Sandbox instance
-            
-        Raises:
-            NotFoundError: When Agent or Sandbox does not exist
-        """
-        session = await self._session_repository.find_by_id(session_id)
+    async def shell_view(self, session_id: str, shell_session_id: str, user_id: str) -> ShellViewResponse:
+        """View shell session output, ensuring session belongs to the user"""
+        logger.info(f"Getting shell view for session {session_id} for user {user_id}")
+        session = await self._session_repository.find_by_id_and_user_id(session_id, user_id)
         if not session:
-            logger.warning(f"Session not found: {session_id}")
-            raise NotFoundError(f"Session not found: {session_id}")
+            logger.error(f"Session {session_id} not found for user {user_id}")
+            raise RuntimeError("Session not found")
         
         if not session.sandbox_id:
-            logger.warning(f"Sandbox ID not found for session: {session_id}")
-            raise NotFoundError(f"Sandbox not found: {session_id}")
-            
+            raise RuntimeError("Session has no sandbox environment")
+        
+        # Get sandbox and shell output
         sandbox = await self._sandbox_cls.get(session.sandbox_id)
         if not sandbox:
-            logger.warning(f"Sandbox not found: {session_id}")
-            raise NotFoundError(f"Sandbox not found: {session_id}")
-            
-        return sandbox
-
-    async def shell_view(self, session_id: str, shell_session_id: str) -> ShellViewResponse:
-        """View shell session output
+            raise RuntimeError("Sandbox environment not found")
         
-        Args:
-            session_id: Session ID
-            shell_session_id: Shell session ID
-            
-        Returns:
-            APIResponse: Response entity containing shell output
-            
-        Raises:
-            ResourceNotFoundError: When Agent or Sandbox does not exist
-            OperationError: When a server error occurs during execution
-        """
-        logger.info(f"Viewing shell output for session {session_id}")
-        
-        err = ""
-        try:
-            sandbox = await self._get_sandbox(session_id)
-            result = await sandbox.view_shell(shell_session_id, console=True)
-            if result.success:
-                return ShellViewResponse(**result.data)
-            else:
-                err = result.message
-        except Exception as e:
-            logger.exception(f"Failed to view shell output for session {session_id}: {e}")
-            err = str(e)
-        
-        return ShellViewResponse(output=f"(Failed to view shell output: {err})", session_id=session_id)
+        result = await sandbox.view_shell(shell_session_id, console=True)
+        if result.success:
+            return ShellViewResponse(**result.data)
+        else:
+            raise RuntimeError(f"Failed to get shell output: {result.message}")
 
     async def get_vnc_url(self, session_id: str) -> str:
-        """Get the VNC URL for the Agent sandbox
+        """Get VNC URL for a session, ensuring it belongs to the user"""
+        logger.info(f"Getting VNC URL for session {session_id}")
         
-        Args:
-            session_id: Session ID
-            
-        Returns:
-            str: Sandbox host address
-            
-        Raises:
-            NotFoundError: When Agent or Sandbox does not exist
-        """
-        logger.info(f"Getting sandbox host for session {session_id}")
-        
-        sandbox = await self._get_sandbox(session_id)
-        return sandbox.vnc_url
-
-    async def file_view(self, session_id: str, path: str) -> FileViewResponse:
-        """View file content
-        
-        Args:
-            session_id: Session ID
-            path: File path
-            
-        Returns:
-            APIResponse: Response entity containing file content
-            
-        Raises:
-            ResourceNotFoundError: When Agent or Sandbox does not exist
-            OperationError: When a server error occurs during execution
-        """
-        logger.info(f"Viewing file content for session {session_id}, file path: {path}")
-        err = ""
-        try:
-            sandbox = await self._get_sandbox(session_id)
-            result = await sandbox.file_read(path)
-            logger.info(f"File read successfully: {path}")
-            if result.success:
-                return FileViewResponse(**result.data)
-            else:
-                logger.warning(f"File read failed: {path}, error: {result.message}")
-                err = result.message
-        except Exception as e:
-            logger.exception(f"Failed to read file content for session {session_id}, file path: {path}: {e}")
-            err = str(e)
-        
-        return FileViewResponse(content=f"(Failed to read file content: {err})", file=path)
-
-    async def get_session_files(self, session_id: str) -> List[FileInfo]:
         session = await self._session_repository.find_by_id(session_id)
         if not session:
-            logger.warning(f"Session not found: {session_id}")
-            raise NotFoundError(f"Session not found: {session_id}")
+            logger.error(f"Session {session_id} not found")
+            raise RuntimeError("Session not found")
+        
+        if not session.sandbox_id:
+            raise RuntimeError("Session has no sandbox environment")
+        
+        # Get sandbox and return VNC URL
+        sandbox = await self._sandbox_cls.get(session.sandbox_id)
+        if not sandbox:
+            raise RuntimeError("Sandbox environment not found")
+        
+        return sandbox.vnc_url
+
+    async def file_view(self, session_id: str, file_path: str, user_id: str) -> FileViewResponse:
+        """View file content, ensuring session belongs to the user"""
+        logger.info(f"Getting file view for session {session_id} for user {user_id}")
+        session = await self._session_repository.find_by_id_and_user_id(session_id, user_id)
+        if not session:
+            logger.error(f"Session {session_id} not found for user {user_id}")
+            raise RuntimeError("Session not found")
+        
+        if not session.sandbox_id:
+            raise RuntimeError("Session has no sandbox environment")
+        
+        # Get sandbox and file content
+        sandbox = await self._sandbox_cls.get(session.sandbox_id)
+        if not sandbox:
+            raise RuntimeError("Sandbox environment not found")
+        
+        result = await sandbox.file_read(file_path)
+        if result.success:
+            return FileViewResponse(**result.data)
+        else:
+            raise RuntimeError(f"Failed to read file: {result.message}")
+
+    async def get_session_files(self, session_id: str, user_id: str) -> List[FileInfo]:
+        """Get files for a session, ensuring it belongs to the user"""
+        logger.info(f"Getting files for session {session_id} for user {user_id}")
+        session = await self._session_repository.find_by_id_and_user_id(session_id, user_id)
+        if not session:
+            logger.error(f"Session {session_id} not found for user {user_id}")
+            raise RuntimeError("Session not found")
         return session.files

@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 import logging
 import asyncio
 
-from app.infrastructure.config import get_settings
+from app.core.config import get_settings
 from app.infrastructure.storage.mongodb import get_mongodb
 from app.infrastructure.storage.redis import get_redis
 from app.interfaces.dependencies import get_agent_service
@@ -12,7 +12,7 @@ from app.interfaces.api.routes import router
 from app.infrastructure.logging import setup_logging
 from app.interfaces.errors.exception_handlers import register_exception_handlers
 from app.infrastructure.models.documents import AgentDocument, SessionDocument, UserDocument
-from app.infrastructure.middleware.auth import AuthMiddleware
+from app.interfaces.middleware.auth import AuthMiddleware
 from beanie import init_beanie
 
 # Initialize logging system

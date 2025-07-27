@@ -13,8 +13,8 @@ class APIResponse(BaseModel, Generic[T]):
     data: Optional[T] = None 
 
     @staticmethod
-    def success(data: Optional[T] = None) -> "APIResponse[T]":
-        return APIResponse(code=0, msg="success", data=data)
+    def success(data: Optional[T] = None, msg: str = "success") -> "APIResponse[T]":
+        return APIResponse(code=0, msg=msg, data=data)
 
     @staticmethod
     def error(code: int, msg: str) -> "APIResponse[T]":
@@ -69,3 +69,14 @@ class FileInfoResponse(BaseModel):
     size: int
     upload_date: str
     metadata: Optional[Dict[str, Any]]
+
+class ResourceAccessTokenResponse(BaseModel):
+    access_token: str
+    resource_type: str  # "file", "vnc", etc.
+    resource_id: str    # file_id, session_id, etc.
+    expires_in: int     # seconds
+
+
+class SignedUrlResponse(BaseModel):
+    signed_url: str
+    expires_in: int     # seconds

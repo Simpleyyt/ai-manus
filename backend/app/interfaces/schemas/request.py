@@ -12,3 +12,6 @@ class FileViewRequest(BaseModel):
 
 class ShellViewRequest(BaseModel):
     session_id: str
+
+class AccessTokenRequest(BaseModel):
+    expire_minutes: int = Field(15, description="Token expiration time in minutes (max 15 minutes)", ge=1, le=15)

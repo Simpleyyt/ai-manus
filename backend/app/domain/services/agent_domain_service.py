@@ -75,6 +75,7 @@ class AgentDomainService:
         task_runner = AgentTaskRunner(
             session_id=session.id,
             agent_id=session.agent_id,
+            user_id=session.user_id,
             llm=self._llm,
             sandbox=sandbox,
             browser=browser,
@@ -115,6 +116,7 @@ class AgentDomainService:
     async def chat(
         self,
         session_id: str,
+        user_id: str,
         message: Optional[str] = None,
         timestamp: Optional[datetime] = None,
         latest_event_id: Optional[str] = None,
@@ -125,9 +127,9 @@ class AgentDomainService:
         """
 
         try:
-            session = await self._session_repository.find_by_id(session_id)
+            session = await self._session_repository.find_by_id_and_user_id(session_id, user_id)
             if not session:
-                logger.error(f"Attempted to chat with non-existent Session {session_id}")
+                logger.error(f"Attempted to chat with non-existent Session {session_id} for user {user_id}")
                 raise RuntimeError("Session not found")
 
             task = await self._get_task(session)

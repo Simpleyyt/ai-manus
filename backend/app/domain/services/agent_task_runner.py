@@ -43,6 +43,7 @@ class AgentTaskRunner(TaskRunner):
         self,
         session_id: str,
         agent_id: str,
+        user_id: str,
         llm: LLM,
         sandbox: Sandbox,
         browser: Browser,
@@ -55,6 +56,7 @@ class AgentTaskRunner(TaskRunner):
     ):
         self._session_id = session_id
         self._agent_id = agent_id
+        self._user_id = user_id
         self._llm = llm
         self._sandbox = sandbox
         self._browser = browser
@@ -94,7 +96,7 @@ class AgentTaskRunner(TaskRunner):
     
     async def _get_browser_screenshot(self) -> str:
         screenshot = await self._browser.screenshot()
-        result = await self._file_storage.upload_file(screenshot, "screenshot.png")
+        result = await self._file_storage.upload_file(screenshot, "screenshot.png", self._user_id)
         return result.file_id
 
     async def _sync_file_to_storage(self, file_path: str) -> Optional[FileInfo]:
@@ -105,7 +107,7 @@ class AgentTaskRunner(TaskRunner):
             if file_info:
                 await self._session_repository.remove_file(self._session_id, file_info.file_id)
             file_name = file_path.split("/")[-1]
-            file_info = await self._file_storage.upload_file(file_data, file_name)
+            file_info = await self._file_storage.upload_file(file_data, file_name, self._user_id)
             file_info.file_path = file_path
             await self._session_repository.add_file(self._session_id, file_info)
             return file_info
@@ -115,7 +117,7 @@ class AgentTaskRunner(TaskRunner):
     async def _sync_file_to_sandbox(self, file_id: str) -> Optional[FileInfo]:
         """Download file from storage to sandbox"""
         try:
-            file_data, file_info = await self._file_storage.download_file(file_id)
+            file_data, file_info = await self._file_storage.download_file(file_id, self._user_id)
             file_path = "/home/ubuntu/upload/" + file_info.filename
             result = await self._sandbox.file_upload(file_data, file_path)
             if result.success:

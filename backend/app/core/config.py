@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     password_salt: str | None = None
     password_hash_rounds: int = 10
     password_hash_algorithm: str = "pbkdf2_sha256"
-    local_auth_username: str = "admin"
+    local_auth_email: str = "admin@localhost"
     local_auth_password: str = "admin"
     
     # JWT configuration

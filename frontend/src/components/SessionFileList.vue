@@ -1,7 +1,7 @@
 <template>
     <div v-if="visible" class="absolute z-[1000] pointer-events-auto">
         <div class="w-full h-full bg-black/60 backdrop-blur-[4px] fixed inset-0 data-[state=open]:animate-dialog-bg-fade-in data-[state=closed]:animate-dialog-bg-fade-out"
-            style="position: fixed; overflow: auto; inset: 0px;" @click="close"></div>
+            style="position: fixed; overflow: auto; inset: 0px;" @click="hideSessionFileList"></div>
         <div role="dialog"
             class="bg-[var(--background-menu-white)] rounded-[20px] border border-white/5 fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[95%] max-h-[95%] overflow-auto data-[state=open]:animate-dialog-slide-in-from-bottom data-[state=closed]:animate-dialog-slide-out-to-bottom h-[680px] flex flex-col"
             style="width: 600px;">
@@ -11,7 +11,7 @@
             <header class="flex items-center pt-6 pr-6 pl-6 pb-2.5">
                 <h1 class="flex-1 text-[var(--text-primary)] text-lg font-semibold">{{ $t('All Files in This Task') }}</h1>
                 <div class="flex items-center gap-4">
-                    <div @click="close"
+                    <div @click="hideSessionFileList"
                         class="flex h-7 w-7 items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-gray-main)] rounded-md">
                         <X class="size-5 text-[var(--icon-tertiary)]" />
                     </div>
@@ -61,19 +61,22 @@
 
 <script setup lang="ts">
 import { X, Download, File } from 'lucide-vue-next';
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { eventBus } from '../utils/eventBus';
-import { EVENT_SESSION_FILE_LIST_SHOW, EVENT_FILE_SHOW } from '../constants/event';
 import type { FileInfo } from '../api/file';
 import { getFileDownloadUrl } from '../api/file';
 import { getSessionFiles } from '../api/agent';
 import { formatRelativeTime, parseISODateTime } from '../utils/time';
 import { getFileType } from '../utils/fileType';
+import { useSessionFileList } from '../composables/useSessionFileList';
+import { useFilePanel } from '../composables/useFilePanel';
 
 const route = useRoute();
-const visible = ref(false);
 const files = ref<FileInfo[]>([]);
+
+const { showFilePanel } = useFilePanel();
+
+const { visible, hideSessionFileList } = useSessionFileList();
 
 const fetchFiles = async (sessionId: string) => {
     if (!sessionId) {
@@ -84,41 +87,21 @@ const fetchFiles = async (sessionId: string) => {
 }
 
 const downloadFile = async (fileId: string) => {
-    const url = getFileDownloadUrl(fileId);
+    const url = await getFileDownloadUrl(fileId);
     window.open(url, '_blank');
 }
 
-const open = () => {
-    const sessionId = route.params.sessionId as string;
-    if (sessionId) {
-        visible.value = true;
-        fetchFiles(sessionId);
-    }
-}
-
 const showFile = (file: FileInfo) => {
-    eventBus.emit(EVENT_FILE_SHOW, { file });
-    close();
+    showFilePanel(file);
+    hideSessionFileList();
 }
 
-const close = () => {
-    visible.value = false;
-}
-
-const handleShow = () => {
-    open();
-}
-
-onMounted(() => {
-    eventBus.on(EVENT_SESSION_FILE_LIST_SHOW, handleShow);
+watch(visible, (newVisible) => {
+    if (newVisible) {
+        const sessionId = route.params.sessionId as string;
+        if (sessionId) {
+            fetchFiles(sessionId);
+        }
+    }
 })
-
-onUnmounted(() => {
-    eventBus.off(EVENT_SESSION_FILE_LIST_SHOW, handleShow);
-})
-
-defineExpose({
-    open,
-    close
-});
 </script>

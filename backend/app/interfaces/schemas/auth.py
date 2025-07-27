@@ -6,15 +6,15 @@ from app.domain.models.user import UserRole
 
 class LoginRequest(BaseModel):
     """Login request schema"""
-    username: str
+    email: str
     password: str
     
-    @field_validator('username')
+    @field_validator('email')
     @classmethod
-    def validate_username(cls, v):
-        if not v or len(v.strip()) < 3:
-            raise ValueError("Username must be at least 3 characters long")
-        return v.strip()
+    def validate_email(cls, v):
+        if not v or '@' not in v:
+            raise ValueError("Valid email is required")
+        return v.strip().lower()
     
     @field_validator('password')
     @classmethod
@@ -26,29 +26,29 @@ class LoginRequest(BaseModel):
 
 class RegisterRequest(BaseModel):
     """Register request schema"""
-    username: str
+    fullname: str
+    email: str
     password: str
-    email: Optional[str] = None
     
-    @field_validator('username')
+    @field_validator('fullname')
     @classmethod
-    def validate_username(cls, v):
-        if not v or len(v.strip()) < 3:
-            raise ValueError("Username must be at least 3 characters long")
+    def validate_fullname(cls, v):
+        if not v or len(v.strip()) < 2:
+            raise ValueError("Full name must be at least 2 characters long")
         return v.strip()
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v):
+        if not v or '@' not in v:
+            raise ValueError("Valid email is required")
+        return v.strip().lower()
     
     @field_validator('password')
     @classmethod
     def validate_password(cls, v):
         if not v or len(v) < 6:
             raise ValueError("Password must be at least 6 characters long")
-        return v
-    
-    @field_validator('email')
-    @classmethod
-    def validate_email(cls, v):
-        if v and '@' not in v:
-            raise ValueError("Invalid email format")
         return v
 
 
@@ -72,27 +72,6 @@ class ChangePasswordRequest(BaseModel):
         return v
 
 
-class UserResponse(BaseModel):
-    """User response schema"""
-    id: str
-    username: str
-    email: Optional[str] = None
-    role: UserRole
-    is_active: bool
-    created_at: datetime
-    updated_at: datetime
-    last_login_at: Optional[datetime] = None
-
-
-class LoginResponse(BaseModel):
-    """Login response schema"""
-    user: UserResponse
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-    message: str = "Login successful"
-
-
 class RefreshTokenRequest(BaseModel):
     """Refresh token request schema"""
     refresh_token: str
@@ -105,11 +84,38 @@ class RefreshTokenRequest(BaseModel):
         return v
 
 
-class RefreshTokenResponse(BaseModel):
-    """Refresh token response schema"""
+class UserResponse(BaseModel):
+    """User response schema"""
+    id: str
+    fullname: str
+    email: str
+    role: UserRole
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+    last_login_at: Optional[datetime] = None
+    
+    @staticmethod
+    def from_user(user) -> 'UserResponse':
+        """Convert user domain model to response schema"""
+        return UserResponse(
+            id=user.id,
+            fullname=user.fullname,
+            email=user.email,
+            role=user.role,
+            is_active=user.is_active,
+            created_at=user.created_at,
+            updated_at=user.updated_at,
+            last_login_at=user.last_login_at
+        )
+
+
+class LoginResponse(BaseModel):
+    """Login response schema"""
+    user: UserResponse
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
-    message: str = "Token refreshed successfully"
 
 
 class RegisterResponse(BaseModel):
@@ -118,12 +124,14 @@ class RegisterResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
-    message: str = "User registered successfully"
 
 
 class AuthStatusResponse(BaseModel):
-    """Auth status response schema"""
-    authenticated: bool
-    user: Optional[UserResponse] = None
+    """Authentication status response schema"""
     auth_provider: str
-    message: str 
+
+
+class RefreshTokenResponse(BaseModel):
+    """Refresh token response schema"""
+    access_token: str
+    token_type: str = "bearer" 

@@ -44,7 +44,7 @@ export const router = createRouter({
 })
 
 // 全局路由守卫 - 仅检查本地token，无网络请求
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _, next) => {
   // 检查路由是否需要认证
   const requiresAuth = to.matched.some((record: any) => record.meta?.requiresAuth)
   

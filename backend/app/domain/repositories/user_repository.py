@@ -17,8 +17,8 @@ class UserRepository(ABC):
         pass
     
     @abstractmethod
-    async def get_user_by_username(self, username: str) -> Optional[User]:
-        """Get user by username"""
+    async def get_user_by_fullname(self, fullname: str) -> Optional[User]:
+        """Get user by fullname"""
         pass
     
     @abstractmethod
@@ -42,8 +42,8 @@ class UserRepository(ABC):
         pass
     
     @abstractmethod
-    async def user_exists(self, username: str) -> bool:
-        """Check if user exists by username"""
+    async def fullname_exists(self, fullname: str) -> bool:
+        """Check if fullname exists"""
         pass
     
     @abstractmethod

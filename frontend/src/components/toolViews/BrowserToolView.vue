@@ -11,10 +11,16 @@
     <div class="px-0 py-0 flex flex-col relative h-full">
       <div class="w-full h-full object-cover flex items-center justify-center bg-[var(--fill-white)] relative">
         <div class="w-full h-full">
-          <div v-if="props.live" ref="vncContainer"
-            style="display: flex; width: 100%; height: 100%; overflow: auto; background: rgb(40, 40, 40);">
-          </div>
-          <img v-else alt="Image Preview" class="cursor-pointer w-full" referrerpolicy="no-referrer" :src="getFileDownloadUrl(toolContent?.content?.screenshot)">
+          <VNCViewer 
+            v-if="props.live" 
+            :session-id="props.sessionId"
+            :enabled="props.live"
+            :view-only="true"
+            @connected="onVNCConnected"
+            @disconnected="onVNCDisconnected"
+            @credentials-required="onVNCCredentialsRequired"
+          />
+          <img v-else alt="Image Preview" class="cursor-pointer w-full" referrerpolicy="no-referrer" :src="imageUrl">
         </div>
         <button
           @click="takeOver"
@@ -29,12 +35,10 @@
 
 <script setup lang="ts">
 import { ToolContent } from '@/types/message';
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { getVNCUrl } from '@/api/agent';
 import { getFileDownloadUrl } from '@/api/file';
-// @ts-ignore
-import RFB from '@novnc/novnc/lib/rfb';
+import VNCViewer from '@/components/VNCViewer.vue';
 import TakeOverIcon from '@/components/icons/TakeOverIcon.vue';
 
 const props = defineProps<{
@@ -44,65 +48,34 @@ const props = defineProps<{
 }>();
 
 const { t } = useI18n();
-const vncContainer = ref<HTMLDivElement | null>(null);
-let rfb: RFB | null = null;
+const imageUrl = ref('');
 
-const initVNCConnection = () => {
-  if (!vncContainer.value) return;
-
-  if (rfb) {
-    rfb.disconnect();
-    rfb = null;
-  }
-
-  const sessionId = props.sessionId;
-  const wsUrl = getVNCUrl(sessionId);
-
-  // Create NoVNC connection
-  rfb = new RFB(vncContainer.value, wsUrl, {
-    credentials: { password: '' },
-    shared: true,
-    repeaterID: '',
-    wsProtocols: ['binary'],
-    // Scaling options
-    scaleViewport: true,  // Automatically scale to fit container
-    //resizeSession: true   // Request server to adjust resolution
-  });
-
-  // Explicitly set viewOnly property
-  rfb.viewOnly = true;
-  rfb.scaleViewport = true;
-  //rfb.resizeSession = true;
-
-  rfb.addEventListener('connect', () => {
-    console.log('VNC connection successful');
-  });
-
-  rfb.addEventListener('disconnect', (e: any) => {
-    console.log('VNC connection disconnected', e);
-  });
-
-  rfb.addEventListener('credentialsrequired', () => {
-    console.log('VNC credentials required');
-  });
+// VNC event handlers
+const onVNCConnected = () => {
+  console.log('VNC connection successful');
 };
 
-onMounted(() => {
-  initVNCConnection();
-});
+const onVNCDisconnected = (reason?: any) => {
+  console.log('VNC connection disconnected', reason);
+};
 
-watch(vncContainer, () => {
-  if (vncContainer.value) {
-    initVNCConnection();
-  }
-});
+const onVNCCredentialsRequired = () => {
+  console.log('VNC credentials required');
+};
 
-onBeforeUnmount(() => {
-  if (rfb) {
-    rfb.disconnect();
-    rfb = null;
+
+
+watch(() => props.toolContent?.content?.screenshot, async () => {
+  console.log('live', props.live);
+  if (!props.toolContent?.content?.screenshot) {
+    return;
   }
-});
+  imageUrl.value = await getFileDownloadUrl(props.toolContent?.content?.screenshot);
+}, { immediate: true });
+
+
+
+
 
 const takeOver = () => {
   window.dispatchEvent(new CustomEvent('takeover', {
@@ -113,3 +86,6 @@ const takeOver = () => {
   }));
 };
 </script>
+
+<style scoped>
+</style>

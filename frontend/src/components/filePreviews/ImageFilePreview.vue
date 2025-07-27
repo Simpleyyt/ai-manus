@@ -17,6 +17,6 @@ const imageUrl = ref('');
 
 watch(() => props.file.file_id, async (fileId) => {
     if (!fileId) return;
-    imageUrl.value = getFileDownloadUrl(fileId);
+    imageUrl.value = await getFileDownloadUrl(fileId);
 }, { immediate: true });
 </script>

@@ -1,0 +1,12 @@
+{
+    "name": "@types/dompurify",
+    "version": "3.2.0",
+    "description": "Stub TypeScript definitions entry for dompurify, which provides its own types definitions",
+    "main": "",
+    "scripts": {},
+    "license": "MIT",
+    "dependencies": {
+        "dompurify": "*"
+    },
+    "deprecated": "This is a stub types definition. dompurify provides its own type definitions, so you do not need this installed."
+}

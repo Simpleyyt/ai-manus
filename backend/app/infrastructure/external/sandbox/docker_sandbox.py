@@ -101,7 +101,8 @@ class DockerSandbox(Sandbox):
                     "HTTPS_PROXY": settings.sandbox_https_proxy,
                     "HTTP_PROXY": settings.sandbox_http_proxy,
                     "NO_PROXY": settings.sandbox_no_proxy
-                }
+                },
+                "command": "/usr/bin/python /app/main.py"
             }
             
             # Add network to container config if configured

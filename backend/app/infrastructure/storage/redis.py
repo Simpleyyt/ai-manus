@@ -17,11 +17,8 @@ class RedisClient:
             
         try:
             # Connect to Redis
-            self._client = Redis(
-                host=self._settings.redis_host,
-                port=self._settings.redis_port,
-                db=self._settings.redis_db,
-                password=self._settings.redis_password,
+            self._client = Redis.from_url(
+                self._settings.redis_url,
                 decode_responses=True
             )
             # Verify the connection

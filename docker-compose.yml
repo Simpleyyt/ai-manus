@@ -29,16 +29,16 @@ services:
           - linux/arm64
     depends_on:
       - sandbox
-      - mongodb
-      - redis
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       #- ./mcp.json:/etc/mcp.json # Mount MCP servers directory
     networks:
       - manus-network
+    ports:
+      - "8000:8000"
     env_file:
-      - .env
+      - ./backend/.env
 
   sandbox:
     image: ${IMAGE_REGISTRY:-simpleyyt}/manus-sandbox:${IMAGE_TAG:-latest}
@@ -49,30 +49,9 @@ services:
         platforms:
           - linux/amd64
           - linux/arm64
-    command: /bin/sh -c "exit 0"  # prevent sandbox from starting, ensure image is pulled
-    restart: "no"
-    networks:
-      - manus-network
-
-  mongodb:
-    image: mongo:7.0
-    volumes:
-      - mongodb_data:/data/db
-    restart: unless-stopped
-    #ports:
-    #  - "27017:27017"
-    networks:
-      - manus-network
-
-  redis:
-    image: redis:7.0
     restart: unless-stopped
     networks:
       - manus-network
-
-volumes:
-  mongodb_data:
-    name: manus-mongodb-data
 
 networks:
   manus-network:

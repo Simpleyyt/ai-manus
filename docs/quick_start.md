@@ -57,7 +57,7 @@ services:
       - manus-network
     environment:
       # OpenAI API base URL
-      - API_BASE=https://api.openai.com/v1
+      - API_BASE=https://generativelanguage.googleapis.com/v1
       # OpenAI API key, replace with your own
       - API_KEY=sk-xxxx
       # LLM model name

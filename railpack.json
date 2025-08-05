@@ -1,0 +1,8 @@
+{
+  "build": {
+    "command": "./build.sh"
+  },
+  "deploy": {
+    "startCommand": "./run.sh up"
+  }
+}

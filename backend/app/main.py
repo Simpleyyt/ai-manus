@@ -13,7 +13,7 @@ from app.infrastructure.storage.mongodb import get_mongodb
 from app.infrastructure.storage.redis import get_redis
 from app.infrastructure.external.search.google_search import GoogleSearchEngine
 from app.infrastructure.external.search.baidu_search import BaiduSearchEngine
-from app.infrastructure.external.llm.openai_llm import OpenAILLM
+from app.infrastructure.external.llm.llm_factory import create_llm
 from app.infrastructure.external.sandbox.docker_sandbox import DockerSandbox
 from app.infrastructure.external.file.gridfsfile import GridFSFileStorage
 from app.infrastructure.repositories.mongo_agent_repository import MongoAgentRepository
@@ -58,7 +58,7 @@ def create_agent_service() -> AgentService:
         logger.warning(f"Unknown search provider: {settings.search_provider}")
 
     return AgentService(
-        llm=OpenAILLM(),
+        llm=create_llm(),
         agent_repository=MongoAgentRepository(),
         session_repository=MongoSessionRepository(),
         sandbox_cls=DockerSandbox,

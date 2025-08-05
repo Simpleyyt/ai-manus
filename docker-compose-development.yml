@@ -46,7 +46,7 @@ services:
     networks:
       - manus-network
     env_file:
-      - .env
+      - ./backend/.env
     environment:
       - SANDBOX_ADDRESS=sandbox # Use single container as sandbox
 

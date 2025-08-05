@@ -23,9 +23,9 @@ services:
       - manus-network
     environment:
       # OpenAI API base URL
-      - API_BASE=https://api.openai.com/v1
+      - API_BASE=https://generativelanguage.googleapis.com/v1
       # OpenAI API key, replace with your own
-      - API_KEY=sk-xxxx
+      - API_KEY=AIzaSyDPDvaffqIxR181_mD08jUX42lcNcF3H-0
       # LLM model name
       - MODEL_NAME=gpt-4o
       # LLM temperature parameter, controls randomness

@@ -1,15 +1,25 @@
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 from functools import lru_cache
-
+from typing import Self # Required for type hinting model_validator return
 
 class Settings(BaseSettings):
     
     # Model provider configuration
     api_key: str | None = None
-    api_base: str = "https://api.deepseek.com/v1"
+    gemini_api_key: str | None = None
+    
+    # Corrected api_base to be the true service base URL
+    # The model name part will be appended dynamically
+    api_base: str = "https://generativelanguage.googleapis.com/v1beta" 
+    
+    # Changed default from "deepseek" to "gemini" for consistency
+    # with api_base and model_name defaults.
+    # Options: "deepseek", "openai", "gemini"
+    model_provider: str = "gemini" 
     
     # Model configuration
-    model_name: str = "deepseek-chat"
+    model_name: str = "gemini-2.0-flash"
     temperature: float = 0.7
     max_tokens: int = 2000
     
@@ -20,10 +30,7 @@ class Settings(BaseSettings):
     mongodb_password: str | None = None
     
     # Redis configuration
-    redis_host: str = "redis"
-    redis_port: int = 6379
-    redis_db: int = 0
-    redis_password: str | None = None
+    redis_url: str | None = None
     
     # Sandbox configuration
     sandbox_address: str | None = None
@@ -51,12 +58,39 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
         
-    def validate(self):
-        if not self.api_key:
-            raise ValueError("API key is required")
+    @model_validator(mode='after')
+    def validate_api_keys(self) -> Self:
+        """
+        Performs cross-field validation after the settings model is initialized.
+        Ensures that required API keys are present for the chosen model provider.
+        """
+        if self.model_provider in ["openai", "deepseek"] and not self.api_key:
+            raise ValueError(f"API key is required for '{self.model_provider}' provider.")
+        if self.model_provider == "gemini" and not self.gemini_api_key:
+            raise ValueError("Gemini API key is required for 'gemini' provider.")
+        return self # Important: Must return self for 'after' validators
+
+    @property
+    def gemini_generate_content_url(self) -> str:
+        """
+        Constructs the full Gemini generateContent API URL based on api_base and model_name.
+        This property should only be accessed if model_provider is 'gemini'.
+        """
+        if self.model_provider == "gemini":
+            # Ensure no trailing slashes on base to avoid double slashes in URL
+            base = self.api_base.rstrip('/')
+            return f"{base}/models/{self.model_name}:generateContent"
+        raise AttributeError("gemini_generate_content_url is only available when model_provider is 'gemini'")
+
 
 @lru_cache()
 def get_settings() -> Settings:
+    """
+    Returns a cached instance of the Settings object.
+    Settings are loaded from environment variables or .env file.
+    Validation is performed automatically upon instantiation.
+    """
     settings = Settings()
-    settings.validate()
-    return settings 
+    # The validation is handled automatically by the @model_validator
+    # within the Settings class, so no need for settings.validate() here.
+    return settings

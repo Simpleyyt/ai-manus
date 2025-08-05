@@ -110,7 +110,7 @@ services:
       - manus-network
     environment:
       # OpenAI API base URL
-      - API_BASE=https://api.openai.com/v1
+      - API_BASE=https://generativelanguage.googleapis.com/v1
       # OpenAI API key, replace with your own
       - API_KEY=sk-xxxx
       # LLM model name
@@ -242,11 +242,12 @@ cp .env.example .env
 <!-- .env.example -->
 ```env
 # Model provider configuration
-API_KEY=
-API_BASE=http://mockserver:8090/v1
+API_KEY=your_api_key_here
+API_BASE=https://generativelanguage.googleapis.com/v1  # For Gemini
+MODEL_PROVIDER=gemini  # Options: deepseek, openai, gemini
 
 # Model configuration
-MODEL_NAME=deepseek-chat
+MODEL_NAME=gemini-pro  # For Gemini
 TEMPERATURE=0.7
 MAX_TOKENS=2000
 

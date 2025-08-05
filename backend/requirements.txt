@@ -19,3 +19,4 @@ redis>=5.0.1
 beautifulsoup4>=4.12.0
 python-multipart
 mcp>=1.9.0
+google-generativeai

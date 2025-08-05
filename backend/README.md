@@ -68,7 +68,7 @@ Create a `.env` file and set the following environment variables:
 ```
 # Model provider configuration
 API_KEY=your_api_key_here                # API key for OpenAI or other model providers
-API_BASE=https://api.openai.com/v1       # Base URL for the model API, can be replaced with other model provider API addresses
+API_BASE=https://generativelanguage.googleapis.com/v1       # Base URL for the model API, can be replaced with other model provider API addresses
 
 # Model configuration
 MODEL_NAME=gpt-4o                        # Model name to use

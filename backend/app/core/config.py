@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     sandbox_no_proxy: str | None = None
     
     # Search engine configuration
-    search_provider: str | None = None  # "google", "baidu"
+    search_provider: str | None = "bing"  # "baidu", "google", "bing"
     google_search_api_key: str | None = None
     google_search_engine_id: str | None = None
     
@@ -46,8 +46,15 @@ class Settings(BaseSettings):
     password_salt: str | None = None
     password_hash_rounds: int = 10
     password_hash_algorithm: str = "pbkdf2_sha256"
-    local_auth_email: str = "admin@localhost"
+    local_auth_email: str = "admin@example.com"
     local_auth_password: str = "admin"
+    
+    # Email configuration
+    email_host: str | None = None  # "smtp.gmail.com"
+    email_port: int | None = None  # 587
+    email_username: str | None = None
+    email_password: str | None = None
+    email_from: str | None = None
     
     # JWT configuration
     jwt_secret_key: str = "your-secret-key-here"  # Should be set in production

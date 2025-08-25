@@ -96,6 +96,48 @@ class RefreshTokenRequest(BaseModel):
         return v
 
 
+class SendVerificationCodeRequest(BaseModel):
+    """Send verification code request schema"""
+    email: str
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v):
+        if not v or '@' not in v:
+            raise ValueError("Valid email is required")
+        return v.strip().lower()
+
+
+class ResetPasswordRequest(BaseModel):
+    """Reset password request schema"""
+    email: str
+    verification_code: str
+    new_password: str
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v):
+        if not v or '@' not in v:
+            raise ValueError("Valid email is required")
+        return v.strip().lower()
+    
+    @field_validator('verification_code')
+    @classmethod
+    def validate_verification_code(cls, v):
+        if not v:
+            raise ValueError("Verification code is required")
+        if not v.isdigit() or len(v) != 6:
+            raise ValueError("Verification code must be 6 digits")
+        return v
+    
+    @field_validator('new_password')
+    @classmethod
+    def validate_new_password(cls, v):
+        if not v or len(v) < 6:
+            raise ValueError("New password must be at least 6 characters long")
+        return v
+
+
 class UserResponse(BaseModel):
     """User response schema"""
     id: str

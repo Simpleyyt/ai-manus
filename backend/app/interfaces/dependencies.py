@@ -12,6 +12,8 @@ from app.application.services.agent_service import AgentService
 from app.application.services.file_service import FileService
 from app.application.services.auth_service import AuthService
 from app.application.services.token_service import TokenService
+from app.application.services.email_service import EmailService
+from app.infrastructure.external.cache import get_cache
 
 # Import all required dependencies for agent service
 from app.infrastructure.external.llm.openai_llm import OpenAILLM
@@ -104,6 +106,14 @@ def get_token_service() -> TokenService:
     """Get token service instance"""
     logger.info("Creating TokenService instance")
     return TokenService()
+
+
+@lru_cache()
+def get_email_service() -> EmailService:
+    """Get email service instance"""
+    logger.info("Creating EmailService instance")
+    cache = get_cache()
+    return EmailService(cache=cache)
 
 
 def get_current_user(request: Request) -> User:

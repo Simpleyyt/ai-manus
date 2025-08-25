@@ -329,4 +329,35 @@ class AuthService:
         await self.user_repository.update_user(user)
         
         logger.info(f"User activated successfully: {user_id}")
+        return True
+    
+    async def reset_password(self, email: str, new_password: str) -> bool:
+        """Reset user password with email"""
+        logger.info(f"Resetting password for user: {email}")
+        
+        if self.settings.auth_provider != "password":
+            raise BadRequestError("Password reset is not allowed")
+        
+        # Get user by email
+        user = await self.user_repository.get_user_by_email(email)
+        if not user:
+            raise ValidationError("User not found")
+        
+        if not user.is_active:
+            raise UnauthorizedError("User account is inactive")
+        
+        # Validate new password
+        if not new_password or len(new_password) < 6:
+            raise ValidationError("New password must be at least 6 characters long")
+        
+        # Hash new password
+        new_password_hash = self._hash_password(new_password)
+        
+        # Update user password
+        user.password_hash = new_password_hash
+        user.updated_at = datetime.utcnow()
+        
+        await self.user_repository.update_user(user)
+        
+        logger.info(f"Password reset successfully for user: {email}")
         return True 

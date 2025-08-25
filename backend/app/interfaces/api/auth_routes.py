@@ -5,13 +5,15 @@ from app.application.services.auth_service import AuthService
 from app.application.services.token_service import TokenService
 from app.application.services.file_service import FileService
 from app.application.services.agent_service import AgentService
+from app.application.services.email_service import EmailService
 from app.application.errors.exceptions import (
     UnauthorizedError, NotFoundError, BadRequestError
 )
-from app.interfaces.dependencies import get_auth_service, get_current_user, get_file_service, get_agent_service, get_token_service
+from app.interfaces.dependencies import get_auth_service, get_current_user, get_file_service, get_agent_service, get_token_service, get_email_service
 from app.interfaces.schemas.base import APIResponse
 from app.interfaces.schemas.auth import (
     LoginRequest, RegisterRequest, ChangePasswordRequest, ChangeFullnameRequest, RefreshTokenRequest,
+    SendVerificationCodeRequest, ResetPasswordRequest,
     LoginResponse, RegisterResponse, AuthStatusResponse, RefreshTokenResponse,
     UserResponse
 )
@@ -199,6 +201,50 @@ async def logout(
     
     # Revoke token
     await auth_service.logout(token)
+    
+    return APIResponse.success({})
+
+
+@router.post("/send-verification-code", response_model=APIResponse[dict])
+async def send_verification_code(
+    request: SendVerificationCodeRequest,
+    auth_service: AuthService = Depends(get_auth_service),
+    email_service: EmailService = Depends(get_email_service)
+) -> APIResponse[dict]:
+    """Send verification code for password reset"""
+    if get_settings().auth_provider != "password":
+        raise BadRequestError("Password reset is not available")
+    
+    # Check if user exists with this email
+    user = await auth_service.user_repository.get_user_by_email(request.email)
+    if not user:
+        raise NotFoundError("User not found")
+    
+    if not user.is_active:
+        raise BadRequestError("User account is inactive")
+    
+    # Send verification code
+    await email_service.send_verification_code(request.email)
+    
+    return APIResponse.success({})
+
+
+@router.post("/reset-password", response_model=APIResponse[dict])
+async def reset_password(
+    request: ResetPasswordRequest,
+    auth_service: AuthService = Depends(get_auth_service),
+    email_service: EmailService = Depends(get_email_service)
+) -> APIResponse[dict]:
+    """Reset password with verification code"""
+    if get_settings().auth_provider != "password":
+        raise BadRequestError("Password reset is not available")
+    
+    # Verify the verification code
+    if not await email_service.verify_code(request.email, request.verification_code):
+        raise UnauthorizedError("Invalid or expired verification code")
+    
+    # Reset password
+    await auth_service.reset_password(request.email, request.new_password)
     
     return APIResponse.success({})
  

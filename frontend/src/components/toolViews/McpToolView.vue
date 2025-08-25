@@ -12,26 +12,23 @@
       <div class="flex flex-col overflow-auto h-full px-4 py-3">
         <div class="py-3 pt-0">
           <div class="text-[var(--text-primary)] text-sm font-medium mb-2">
-            Tool: {{ toolContent.function }}
+            {{ t('Tool') }}: {{ toolContent.function }}
           </div>
           
-          <!-- 显示参数 -->
           <div v-if="toolContent.args && Object.keys(toolContent.args).length > 0" class="mb-4">
-            <div class="text-[var(--text-primary)] text-sm font-medium mb-2">Arguments:</div>
+            <div class="text-[var(--text-primary)] text-sm font-medium mb-2">{{ t('Arguments') }}:</div>
             <pre class="bg-[var(--fill-tsp-gray-main)] rounded-lg p-3 text-xs text-[var(--text-secondary)] overflow-x-auto"><code>{{ JSON.stringify(toolContent.args, null, 2) }}</code></pre>
           </div>
           
-          <!-- 显示结果 -->
           <div v-if="toolContent.content?.result" class="mb-4">
-            <div class="text-[var(--text-primary)] text-sm font-medium mb-2">Result:</div>
+            <div class="text-[var(--text-primary)] text-sm font-medium mb-2">{{ t('Result') }}:</div>
             <div class="bg-[var(--fill-tsp-gray-main)] rounded-lg p-3 text-sm text-[var(--text-secondary)] whitespace-pre-wrap">
               {{ toolContent.content.result }}
             </div>
           </div>
           
-          <!-- 如果没有结果，显示状态 -->
           <div v-else class="text-[var(--text-tertiary)] text-sm">
-            {{ toolContent.status === 'calling' ? 'Tool is executing...' : 'Waiting for result...' }}
+            {{ toolContent.status === 'calling' ? t('Tool is executing...') : t('Waiting for result...') }}
           </div>
         </div>
       </div>
@@ -40,7 +37,10 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { ToolContent } from '@/types/message';
+
+const { t } = useI18n()
 
 defineProps<{
   sessionId: string;

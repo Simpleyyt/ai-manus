@@ -115,6 +115,22 @@ export interface AccessTokenResponse {
   expires_in: number;
 }
 
+/**
+ * Send verification code request type
+ */
+export interface SendVerificationCodeRequest {
+  email: string;
+}
+
+/**
+ * Reset password request type
+ */
+export interface ResetPasswordRequest {
+  email: string;
+  verification_code: string;
+  new_password: string;
+}
+
 
 
 /**
@@ -221,6 +237,26 @@ export async function refreshToken(request: RefreshTokenRequest): Promise<Refres
  */
 export async function logout(): Promise<{}> {
   const response = await apiClient.post<ApiResponse<{}>>('/auth/logout');
+  return response.data.data;
+}
+
+/**
+ * Send verification code for password reset
+ * @param request Email to send verification code to
+ * @returns Success response
+ */
+export async function sendVerificationCode(request: SendVerificationCodeRequest): Promise<{}> {
+  const response = await apiClient.post<ApiResponse<{}>>('/auth/send-verification-code', request);
+  return response.data.data;
+}
+
+/**
+ * Reset password with verification code
+ * @param request Reset password data including email, verification code and new password
+ * @returns Success response
+ */
+export async function resetPassword(request: ResetPasswordRequest): Promise<{}> {
+  const response = await apiClient.post<ApiResponse<{}>>('/auth/reset-password', request);
   return response.data.data;
 }
 

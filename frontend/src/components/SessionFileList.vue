@@ -65,7 +65,7 @@ import { ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import type { FileInfo } from '../api/file';
 import { getFileDownloadUrl } from '../api/file';
-import { getSessionFiles } from '../api/agent';
+import { getSessionFiles, getSharedSessionFiles } from '../api/agent';
 import { formatRelativeTime, parseISODateTime } from '../utils/time';
 import { getFileType } from '../utils/fileType';
 import { useSessionFileList } from '../composables/useSessionFileList';
@@ -76,13 +76,18 @@ const files = ref<FileInfo[]>([]);
 
 const { showFilePanel } = useFilePanel();
 
-const { visible, hideSessionFileList } = useSessionFileList();
+const { visible, hideSessionFileList, shared } = useSessionFileList();
 
 const fetchFiles = async (sessionId: string) => {
     if (!sessionId) {
         return;
     }
-    const response = await getSessionFiles(sessionId);
+    let response: FileInfo[] = [];
+    if (shared.value) {
+        response = await getSharedSessionFiles(sessionId);
+    } else {
+        response = await getSessionFiles(sessionId);
+    }
     files.value = response;
 }
 

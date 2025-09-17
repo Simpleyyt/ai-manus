@@ -14,7 +14,8 @@ from app.interfaces.dependencies import get_agent_service, get_current_user, get
 from app.interfaces.schemas.base import APIResponse
 from app.interfaces.schemas.session import (
     ChatRequest, ShellViewRequest, CreateSessionResponse, GetSessionResponse,
-    ListSessionItem, ListSessionResponse, ShellViewResponse
+    ListSessionItem, ListSessionResponse, ShellViewResponse,
+    ShareSessionResponse, SharedSessionResponse
 )
 from app.interfaces.schemas.file import FileViewRequest, FileViewResponse
 from app.interfaces.schemas.resource import AccessTokenRequest, SignedUrlResponse
@@ -52,7 +53,8 @@ async def get_session(
         session_id=session.id,
         title=session.title,
         status=session.status,
-        events=EventMapper.events_to_sse_events(session.events)
+        events=EventMapper.events_to_sse_events(session.events),
+        is_shared=session.is_shared
     ))
 
 @router.delete("/{session_id}", response_model=APIResponse[None])
@@ -95,7 +97,8 @@ async def get_all_sessions(
             status=session.status,
             unread_message_count=session.unread_message_count,
             latest_message=session.latest_message,
-            latest_message_at=int(session.latest_message_at.timestamp()) if session.latest_message_at else None
+            latest_message_at=int(session.latest_message_at.timestamp()) if session.latest_message_at else None,
+            is_shared=session.is_shared
         ) for session in sessions
     ]
     return APIResponse.success(ListSessionResponse(sessions=session_items))
@@ -115,7 +118,8 @@ async def stream_sessions(
                     status=session.status,
                     unread_message_count=session.unread_message_count,
                     latest_message=session.latest_message,
-                    latest_message_at=int(session.latest_message_at.timestamp()) if session.latest_message_at else None
+                    latest_message_at=int(session.latest_message_at.timestamp()) if session.latest_message_at else None,
+                    is_shared=session.is_shared
                 ) for session in sessions
             ]
             yield ServerSentEvent(
@@ -325,4 +329,70 @@ async def create_vnc_signed_url(
     return APIResponse.success(SignedUrlResponse(
         signed_url=signed_url,
         expires_in=expire_minutes * 60,
+    ))
+
+
+@router.post("/{session_id}/share", response_model=APIResponse[ShareSessionResponse])
+async def share_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    agent_service: AgentService = Depends(get_agent_service)
+) -> APIResponse[ShareSessionResponse]:
+    """Share a session to make it publicly accessible
+    
+    This endpoint marks a session as shared, allowing it to be accessed
+    without authentication using the shared session endpoint.
+    """
+    await agent_service.share_session(session_id, current_user.id)
+    return APIResponse.success(ShareSessionResponse(
+        session_id=session_id,
+        is_shared=True
+    ))
+
+@router.get("/{session_id}/share/files")
+async def get_shared_session_files(
+    session_id: str,
+    agent_service: AgentService = Depends(get_agent_service)
+) -> APIResponse[List[FileInfo]]:
+    files = await agent_service.get_shared_session_files(session_id)
+    return APIResponse.success(files)
+
+
+@router.delete("/{session_id}/share", response_model=APIResponse[ShareSessionResponse])
+async def unshare_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    agent_service: AgentService = Depends(get_agent_service)
+) -> APIResponse[ShareSessionResponse]:
+    """Unshare a session to make it private again
+    
+    This endpoint marks a session as not shared, removing public access.
+    """
+    await agent_service.unshare_session(session_id, current_user.id)
+    return APIResponse.success(ShareSessionResponse(
+        session_id=session_id,
+        is_shared=False
+    ))
+
+
+@router.get("/shared/{session_id}", response_model=APIResponse[SharedSessionResponse])
+async def get_shared_session(
+    session_id: str,
+    agent_service: AgentService = Depends(get_agent_service)
+) -> APIResponse[SharedSessionResponse]:
+    """Get a shared session without authentication
+    
+    This endpoint allows public access to sessions that have been marked as shared.
+    No authentication is required, but the session must be explicitly shared.
+    """
+    session = await agent_service.get_shared_session(session_id)
+    if not session:
+        raise NotFoundError("Shared session not found")
+    
+    return APIResponse.success(SharedSessionResponse(
+        session_id=session.id,
+        title=session.title,
+        status=session.status,
+        events=EventMapper.events_to_sse_events(session.events),
+        is_shared=session.is_shared
     ))

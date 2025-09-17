@@ -28,6 +28,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             "/api/v1/auth/refresh",
             "/api/v1/auth/send-verification-code",
             "/api/v1/auth/reset-password",
+            '/api/v1/sessions/share'
         ]
     
     async def dispatch(self, request: Request, call_next):

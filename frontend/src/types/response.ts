@@ -16,6 +16,7 @@ export interface GetSessionResponse {
     title: string | null;
     status: SessionStatus;
     events: AgentSSEEvent[];
+    is_shared: boolean;
 }
 
 export interface ListSessionItem {
@@ -25,6 +26,7 @@ export interface ListSessionItem {
     latest_message_at: number | null;
     status: SessionStatus;
     unread_message_count: number;
+    is_shared: boolean;
 }
 
 export interface ListSessionResponse {
@@ -51,5 +53,18 @@ export interface FileViewResponse {
 export interface SignedUrlResponse {
     signed_url: string;
     expires_in: number;
+}
+
+export interface ShareSessionResponse {
+    session_id: string;
+    is_shared: boolean;
+}
+
+export interface SharedSessionResponse {
+    session_id: string;
+    title: string | null;
+    status: SessionStatus;
+    events: AgentSSEEvent[];
+    is_shared: boolean;
 }
   

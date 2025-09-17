@@ -28,6 +28,7 @@ class GetSessionResponse(BaseModel):
     title: Optional[str] = None
     status: SessionStatus
     events: List[AgentSSEEvent] = []
+    is_shared: bool = False
 
 
 class ListSessionItem(BaseModel):
@@ -38,6 +39,7 @@ class ListSessionItem(BaseModel):
     latest_message_at: Optional[int] = None
     status: SessionStatus
     unread_message_count: int
+    is_shared: bool = False
 
 
 class ListSessionResponse(BaseModel):
@@ -57,3 +59,18 @@ class ShellViewResponse(BaseModel):
     output: str
     session_id: str
     console: Optional[List[ConsoleRecord]] = None
+
+
+class ShareSessionResponse(BaseModel):
+    """Share session response schema"""
+    session_id: str
+    is_shared: bool
+
+
+class SharedSessionResponse(BaseModel):
+    """Shared session response schema (for public access)"""
+    session_id: str
+    title: Optional[str] = None
+    status: SessionStatus
+    events: List[AgentSSEEvent] = []
+    is_shared: bool

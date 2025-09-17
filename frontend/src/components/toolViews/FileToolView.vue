@@ -73,7 +73,7 @@ defineExpose({
 });
 
 const fileContent = ref("");
-const refreshTimer = ref<NodeJS.Timeout | null>(null);
+const refreshTimer = ref<number | null>(null);
 
 const filePath = computed(() => {
   if (props.toolContent && props.toolContent.args.file) {
@@ -91,6 +91,7 @@ const fileName = computed(() => {
 
 // Load file content
 const loadFileContent = async () => {
+  console.log("loadFileContent", props.live, filePath.value, props.toolContent.content);
   if (!props.live) {
     fileContent.value = props.toolContent.content?.content || "";
     return;
@@ -135,6 +136,10 @@ watch(filePath, (newVal: string) => {
   } else {
     stopAutoRefresh();
   }
+});
+
+watch(() => props.toolContent, () => {
+  loadFileContent();
 });
 
 watch(() => props.toolContent.timestamp, () => {

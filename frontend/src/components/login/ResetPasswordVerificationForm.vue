@@ -168,7 +168,7 @@ const showConfirmPassword = ref(false)
 
 // Resend cooldown
 const resendCooldown = ref(0)
-let resendTimer: NodeJS.Timeout | null = null
+let resendTimer: number | null = null
 
 // Form data
 const formData = ref({

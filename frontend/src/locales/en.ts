@@ -189,4 +189,16 @@ export default {
   // Reset Password Form
   'Sending Code...': 'Sending Code...',
   'Send Verification Code': 'Send Verification Code',
+  // Share Feature
+  'Share': 'Share',
+  'Private Only': 'Private Only',
+  'Only visible to you': 'Only visible to you',
+  'Public Access': 'Public Access',
+  'Anyone with the link can view': 'Anyone with the link can view',
+  'Share Instantly': 'Share Instantly',
+  'Copy Link': 'Copy Link',
+  'Link Copied': 'Link Copied',
+  'Link copied to clipboard': 'Link copied to clipboard',
+  'Failed to copy link': 'Failed to copy link',
+  'You are viewing a completed Manus task. Replay will start automatically in {countdown} seconds.': 'You are viewing a completed Manus task. Replay will start automatically in {countdown} seconds.',
 } 

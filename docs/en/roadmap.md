@@ -24,7 +24,7 @@
 
 ## Task Sessions
 
- * [ ] Support sharing
+ * [x] Support sharing
 
 ## Infrastructure
 

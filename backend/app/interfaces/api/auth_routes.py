@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import logging
 
 from app.application.services.auth_service import AuthService
@@ -186,21 +187,16 @@ async def refresh_token(
 
 @router.post("/logout", response_model=APIResponse[dict])
 async def logout(
-    request: Request,
+    current_user: User = Depends(get_current_user),
+    bearer_credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
     auth_service: AuthService = Depends(get_auth_service)
 ) -> APIResponse[dict]:
     """User logout endpoint"""
     if get_settings().auth_provider == "none":
         raise BadRequestError("Logout is not allowed")
-    # Extract token from Authorization header
-    auth_header = request.headers.get("Authorization", "")
-    if not auth_header.startswith("Bearer "):
-        raise UnauthorizedError("Authentication required")
-    
-    token = auth_header.split(" ")[1]
     
     # Revoke token
-    await auth_service.logout(token)
+    await auth_service.logout(bearer_credentials.credentials)
     
     return APIResponse.success({})
 

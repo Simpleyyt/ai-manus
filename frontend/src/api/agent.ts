@@ -1,7 +1,7 @@
 // Backend API service
 import { apiClient, API_CONFIG, ApiResponse, createSSEConnection, SSECallbacks } from './client';
 import { AgentSSEEvent } from '../types/event';
-import { CreateSessionResponse, GetSessionResponse, ShellViewResponse, FileViewResponse, ListSessionResponse, SignedUrlResponse } from '../types/response';
+import { CreateSessionResponse, GetSessionResponse, ShellViewResponse, FileViewResponse, ListSessionResponse, SignedUrlResponse, ShareSessionResponse, SharedSessionResponse } from '../types/response';
 import type { FileInfo } from './file';
 
 
@@ -137,4 +137,68 @@ export async function getSessionFiles(sessionId: string): Promise<FileInfo[]> {
 
 export async function clearUnreadMessageCount(sessionId: string): Promise<void> {
   await apiClient.post<ApiResponse<void>>(`/sessions/${sessionId}/clear_unread_message_count`);
+}
+
+/**
+ * Share a session to make it publicly accessible
+ * @param sessionId Session ID to share
+ * @returns Share session response with current sharing status
+ * 
+ * @example
+ * ```typescript
+ * // Share a session
+ * const result = await shareSession('session123');
+ * console.log(result.is_shared); // true
+ * ```
+ */
+export async function shareSession(sessionId: string): Promise<ShareSessionResponse> {
+  const response = await apiClient.post<ApiResponse<ShareSessionResponse>>(`/sessions/${sessionId}/share`);
+  return response.data.data;
+}
+
+/**
+ * Unshare a session to make it private again
+ * @param sessionId Session ID to unshare
+ * @returns Share session response with current sharing status
+ * 
+ * @example
+ * ```typescript
+ * // Unshare a session
+ * const result = await unshareSession('session123');
+ * console.log(result.is_shared); // false
+ * ```
+ */
+export async function unshareSession(sessionId: string): Promise<ShareSessionResponse> {
+  const response = await apiClient.delete<ApiResponse<ShareSessionResponse>>(`/sessions/${sessionId}/share`);
+  return response.data.data;
+}
+
+/**
+ * Get a shared session without authentication
+ * This endpoint allows public access to sessions that have been marked as shared.
+ * No authentication token is required.
+ * 
+ * @param sessionId Session ID to retrieve
+ * @returns Shared session data (accessible publicly)
+ * 
+ * @example
+ * ```typescript
+ * // Get a shared session (no auth required)
+ * try {
+ *   const sharedSession = await getSharedSession('session123');
+ *   console.log(sharedSession.title);
+ *   console.log(sharedSession.events);
+ * } catch (error) {
+ *   console.error('Session not found or not shared');
+ * }
+ * ```
+ */
+export async function getSharedSession(sessionId: string): Promise<SharedSessionResponse> {
+  const response = await apiClient.get<ApiResponse<SharedSessionResponse>>(`/sessions/shared/${sessionId}`);
+  return response.data.data;
+}
+
+export async function getSharedSessionFiles(sessionId: string): Promise<FileInfo[]> {
+  const response = await apiClient.get<ApiResponse<FileInfo[]>>(`/sessions/${sessionId}/share/files`);
+  return response.data.data;
 }

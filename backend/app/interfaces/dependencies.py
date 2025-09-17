@@ -1,11 +1,14 @@
-from typing import Optional
+from typing import Optional, Union
 import logging
 from functools import lru_cache
-from fastapi import Request
+from fastapi import Request, Header, HTTPException, status, Depends, Query
+from starlette.websockets import WebSocket
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.infrastructure.external.file.gridfsfile import get_file_storage
 from app.infrastructure.external.search import get_search_engine
-from app.domain.models.user import User
+from app.domain.models.user import User, UserRole
 from app.application.errors.exceptions import UnauthorizedError
+from app.core.config import get_settings
 
 # Import all required services
 from app.application.services.agent_service import AgentService
@@ -28,6 +31,9 @@ from app.infrastructure.repositories.user_repository import MongoUserRepository
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+# Security scheme - Bearer Token only
+security_bearer = HTTPBearer(auto_error=False)
 
 @lru_cache()
 def get_agent_service() -> AgentService:
@@ -70,15 +76,17 @@ def get_file_service() -> FileService:
     Get file service instance with required dependencies
     
     This function creates and returns a FileService instance with
-    the necessary file storage dependency.
+    the necessary file storage and token service dependencies.
     """
     logger.info("Creating FileService instance")
     
-    # Get file storage dependency
+    # Get dependencies
     file_storage = get_file_storage()
+    token_service = get_token_service()
     
     return FileService(
         file_storage=file_storage,
+        token_service=token_service,
     )
 
 
@@ -116,30 +124,141 @@ def get_email_service() -> EmailService:
     return EmailService(cache=cache)
 
 
-def get_current_user(request: Request) -> User:
+async def get_current_user(
+    bearer_credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_bearer),
+    auth_service: AuthService = Depends(get_auth_service)
+) -> User:
     """
-    Get current authenticated user from request state
+    Get current authenticated user (required)
     
-    This function extracts the current user from the request state
-    that was set by the authentication middleware.
+    This dependency enforces authentication using Bearer Token.
+    If authentication fails, it raises an UnauthorizedError.
     """
-    if not hasattr(request.state, 'user'):
+    settings = get_settings()
+    
+    # If auth_provider is 'none', return anonymous user
+    if settings.auth_provider == "none":
+        return User(
+            id="anonymous",
+            fullname="anonymous",
+            email="anonymous@localhost",
+            role=UserRole.USER,
+            is_active=True
+        )
+    
+    # Check if bearer token is provided
+    if not bearer_credentials:
         raise UnauthorizedError("Authentication required")
     
-    user = request.state.user
-    if not user:
-        raise UnauthorizedError("Invalid user session")
-    
-    return user
+    try:
+        # Verify bearer token
+        user = await auth_service.verify_token(bearer_credentials.credentials)
+        
+        if not user:
+            raise UnauthorizedError("Invalid token")
+            
+        if not user.is_active:
+            raise UnauthorizedError("User account is inactive")
+            
+        return user
+        
+    except Exception as e:
+        logger.warning(f"Authentication failed: {e}")
+        raise UnauthorizedError("Authentication failed")
 
-def get_optional_current_user(request: Request) -> Optional[User]:
+
+async def get_optional_current_user(
+    bearer_credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_bearer),
+    auth_service: AuthService = Depends(get_auth_service)
+) -> Optional[User]:
     """
-    Get current authenticated user from request state, return None if not authenticated
+    Get current authenticated user (optional)
     
-    This function extracts the current user from the request state
-    that was set by the authentication middleware. Returns None if no user.
+    This dependency allows both authenticated and anonymous access.
+    Returns None if authentication fails or is not provided.
+    
+    Uses Bearer Token authentication.
     """
-    if not hasattr(request.state, 'user'):
+    settings = get_settings()
+    
+    # If auth_provider is 'none', return anonymous user
+    if settings.auth_provider == "none":
+        return User(
+            id="anonymous",
+            fullname="anonymous",
+            email="anonymous@localhost",
+            role=UserRole.USER,
+            is_active=True
+        )
+    
+    # If no bearer token provided, return None
+    if not bearer_credentials:
         return None
     
-    return request.state.user
+    try:
+        # Try to verify bearer token
+        user = await auth_service.verify_token(bearer_credentials.credentials)
+        
+        if user and user.is_active:
+            return user
+            
+    except Exception as e:
+        logger.warning(f"Optional authentication failed: {e}")
+        
+    return None
+
+async def verify_signature(
+    request: Request,
+    signature: Optional[str] = Query(None),
+    token_service: TokenService = Depends(get_token_service)
+) -> str:
+    return await _verify_signature(request, signature, token_service)
+
+async def verify_signature_websocket(
+    request: WebSocket,
+    signature: Optional[str] = Query(None),
+    token_service: TokenService = Depends(get_token_service)
+) -> str:
+    return await _verify_signature(request, signature, token_service)
+
+async def _verify_signature(
+    request: Union[Request, WebSocket],
+    signature: Optional[str] = Query(None),
+    token_service: TokenService = Depends(get_token_service)
+) -> str:
+    """
+    Verify signature for signed URL access
+    
+    This dependency validates the signature parameter in the request URL.
+    If the signature is missing or invalid, it raises an HTTPException.
+    
+    This is designed to work with both regular HTTP endpoints and WebSocket endpoints.
+    For WebSocket connections, the exception will be raised before the connection is accepted,
+    preventing invalid connections from being established.
+    
+    Args:
+        request: The incoming request
+        signature: The signature query parameter
+        token_service: Token service for signature verification
+        
+    Returns:
+        The verified signature string
+        
+    Raises:
+        HTTPException: If signature is missing or invalid (status code 401)
+    """
+    if not signature:
+        logger.error(f"Missing signature: {request.url}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing signature"
+        )
+    
+    if not token_service.verify_signed_url(str(request.url)):
+        logger.error(f"Invalid signature: {request.url}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid signature"
+        )
+    
+    return signature

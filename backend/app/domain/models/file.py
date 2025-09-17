@@ -12,3 +12,4 @@ class FileInfo(BaseModel):
     upload_date: Optional[datetime] = None
     metadata: Optional[Dict[str, Any]] = None
     user_id: Optional[str] = None
+    file_url: Optional[str] = None

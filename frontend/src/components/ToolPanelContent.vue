@@ -26,7 +26,7 @@
       <div
         class="flex flex-col rounded-[12px] overflow-hidden bg-[var(--background-gray-main)] border border-[var(--border-dark)] dark:border-black/30 shadow-[0px_4px_32px_0px_rgba(0,0,0,0.04)] flex-1 min-h-0 mt-[16px]">
         <component v-if="toolInfo" :is="toolInfo.view" :live="live" :sessionId="sessionId"
-          :toolContent="toolContent" />
+          :toolContent="toolContent" :isShare="isShare" />
         <div class="mt-auto flex w-full items-center gap-2 px-4 h-[44px] relative" v-if="!realTime">
           <button
             class="h-10 px-3 border border-[var(--border-main)] flex items-center gap-1 bg-[var(--background-white-main)] hover:bg-[var(--background-gray-main)] shadow-[0px_5px_16px_0px_var(--shadow-S),0px_0px_1.25px_0px_var(--shadow-S)] rounded-full cursor-pointer absolute left-[50%] translate-x-[-50%]"
@@ -51,6 +51,7 @@ const props = defineProps<{
   realTime: boolean;
   toolContent: ToolContent;
   live: boolean;
+  isShare: boolean;
 }>();
 
 const { toolInfo } = useToolInfo(toRef(props, 'toolContent'));

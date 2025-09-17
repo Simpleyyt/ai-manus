@@ -15,8 +15,8 @@ const props = defineProps<{
 
 const imageUrl = ref('');
 
-watch(() => props.file.file_id, async (fileId) => {
-    if (!fileId) return;
-    imageUrl.value = await getFileDownloadUrl(fileId);
+watch(() => props.file, async (file) => {
+    if (!file) return;
+    imageUrl.value = await getFileDownloadUrl(file);
 }, { immediate: true });
 </script>

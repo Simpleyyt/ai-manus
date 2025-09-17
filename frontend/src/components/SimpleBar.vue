@@ -36,6 +36,12 @@ const scrollToBottom = () => {
     }
 };
 
+const scrollToTop = () => {
+    if (contentWrapperRef.value) {
+        contentWrapperRef.value.scrollTop = 0;
+    }
+};
+
 const isScrolledToBottom = (threshold = 10) => {
     if (!contentWrapperRef.value) return false;
     const { scrollTop, scrollHeight, clientHeight } = contentWrapperRef.value;
@@ -49,6 +55,7 @@ const canScroll = () => {
 
 defineExpose({
     scrollToBottom,
+    scrollToTop,
     isScrolledToBottom,
     canScroll
 });

@@ -12,6 +12,7 @@ export interface FileInfo {
   size: number;
   upload_date: string;
   metadata?: Record<string, any>;
+  file_url?: string;
 }
 
 
@@ -44,7 +45,7 @@ export async function uploadFile(file: File, metadata?: Record<string, any>): Pr
  * @returns File download result
  */
 export async function downloadFile(fileId: string): Promise<Blob> {
-  const response = await apiClient.get(`/files/${fileId}`, {
+  const response = await apiClient.get(`/files/${fileId}/download`, {
     responseType: 'blob',
   });
   
@@ -96,14 +97,15 @@ export async function createFileSignedUrl(fileId: string, expireMinutes: number 
 
 /**
  * Get file download URL
- * @param fileId File ID
- * @param expireMinutes URL/Token expiration time in minutes (default: 15)
+ * @param file File info
  * @returns Promise resolving to file download URL string
  */
 export async function getFileDownloadUrl(
-  fileId: string,
-  expireMinutes: number = 15,
+  fileInfo: FileInfo,
 ): Promise<string> {
-  const signedUrlResponse = await createFileSignedUrl(fileId, expireMinutes);
+  if (fileInfo.file_url) {
+    return `${API_CONFIG.host}${fileInfo.file_url}`;
+  }
+  const signedUrlResponse = await createFileSignedUrl(fileInfo.file_id);
   return `${API_CONFIG.host}${signedUrlResponse.signed_url}`;
 }

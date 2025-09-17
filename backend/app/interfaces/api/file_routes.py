@@ -1,26 +1,25 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Query
+from fastapi import APIRouter, Depends, UploadFile, File
 from fastapi.responses import StreamingResponse
 import logging
 
 from app.application.services.file_service import FileService
-from app.application.services.token_service import TokenService
-from app.application.errors.exceptions import NotFoundError, UnauthorizedError
-from app.interfaces.dependencies import get_file_service, get_current_user, get_token_service, get_optional_current_user
+from app.application.errors.exceptions import NotFoundError
+from app.interfaces.dependencies import get_file_service, get_current_user, get_optional_current_user
 from app.domain.models.user import User
 from app.interfaces.schemas.base import APIResponse
-from app.interfaces.schemas.file import FileUploadResponse, FileInfoResponse
+from app.interfaces.schemas.file import FileInfoResponse
 from app.interfaces.schemas.resource import AccessTokenRequest, SignedUrlResponse
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/files", tags=["files"])
 
-@router.post("", response_model=APIResponse[FileUploadResponse])
+@router.post("", response_model=APIResponse[FileInfoResponse])
 async def upload_file(
     file: UploadFile = File(...),
     file_service: FileService = Depends(get_file_service),
     current_user: User = Depends(get_current_user)
-) -> APIResponse[FileUploadResponse]:
+) -> APIResponse[FileInfoResponse]:
     """Upload file"""
     # Upload file
     result = await file_service.upload_file(
@@ -30,13 +29,7 @@ async def upload_file(
         content_type=file.content_type
     )
     
-    return APIResponse.success(FileUploadResponse(
-        file_id=result.file_id,
-        filename=result.filename,
-        size=result.size,
-        upload_date=result.upload_date.isoformat(),
-        message="File uploaded successfully"
-    ))
+    return APIResponse.success(FileInfoResponse.from_file_info(result))
 
 @router.get("/{file_id}")
 async def download_file(
@@ -92,14 +85,7 @@ async def get_file_info(
     if not file_info:
         raise NotFoundError("File not found")
     
-    return APIResponse.success(FileInfoResponse(
-        file_id=file_info.file_id,
-        filename=file_info.filename,
-        content_type=file_info.content_type,
-        size=file_info.size,
-        upload_date=file_info.upload_date.isoformat(),
-        metadata=file_info.metadata
-    ))
+    return APIResponse.success(FileInfoResponse.from_file_info(file_info))
 
 
 @router.post("/{file_id}/signed-url", response_model=APIResponse[SignedUrlResponse])
@@ -107,8 +93,7 @@ async def create_file_signed_url(
     file_id: str,
     request_data: AccessTokenRequest,
     current_user: User = Depends(get_current_user),
-    file_service: FileService = Depends(get_file_service),
-    token_service: TokenService = Depends(get_token_service)
+    file_service: FileService = Depends(get_file_service)
 ) -> APIResponse[SignedUrlResponse]:
     """Generate signed URL for file download
     
@@ -116,26 +101,17 @@ async def create_file_signed_url(
     a specific file without requiring authentication headers.
     """
     
-    # Validate expiration time (max 15 minutes)
-    expire_minutes = request_data.expire_minutes
-    if expire_minutes > 15:
-        expire_minutes = 15
-    
-    # Check if file exists and user has access
-    file_info = await file_service.get_file_info(file_id, current_user.id)
-    if not file_info:
+    try:
+        # Create signed URL using file service
+        signed_url, expires_in = await file_service.create_signed_url(
+            file_id=file_id,
+            user_id=current_user.id,
+            expire_minutes=request_data.expire_minutes
+        )
+        
+        return APIResponse.success(SignedUrlResponse(
+            signed_url=signed_url,
+            expires_in=expires_in,
+        ))
+    except FileNotFoundError:
         raise NotFoundError("File not found")
-    
-    # Create signed URL for file download
-    base_url = f"/api/v1/files/{file_id}"
-    signed_url = token_service.create_signed_url(
-        base_url=base_url,
-        expire_minutes=expire_minutes
-    )
-    
-    logger.info(f"Created signed URL for file download for user {current_user.id}, file {file_id}")
-    
-    return APIResponse.success(SignedUrlResponse(
-        signed_url=signed_url,
-        expires_in=expire_minutes * 60,
-    ))

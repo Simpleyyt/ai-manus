@@ -32,6 +32,7 @@ class Session(BaseModel):
     events: List[AgentEvent] = []
     files: List[FileInfo] = []
     status: SessionStatus = SessionStatus.PENDING
+    is_shared: bool = False  # Whether this session is shared publicly
 
     def get_last_plan(self) -> Optional[Plan]:
         """Get the last plan from the events"""

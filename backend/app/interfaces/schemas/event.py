@@ -3,8 +3,8 @@ from typing import Any, Union, Literal, Dict, Optional, List, Self, Type
 from datetime import datetime
 from dataclasses import dataclass
 from app.domain.models.plan import ExecutionStatus, Step
-from app.domain.models.file import FileInfo
-from app.domain.models.event import ToolStatus
+from app.interfaces.schemas.file import FileInfoResponse
+from app.domain.models.event import ToolStatus, ToolContent, BrowserToolContent
 from app.domain.models.event import (
     AgentEvent,
     ErrorEvent,
@@ -60,20 +60,20 @@ class BaseSSEEvent(BaseModel):
 class MessageEventData(BaseEventData):
     role: Literal["user", "assistant"]
     content: str
-    attachments: Optional[List[FileInfo]] = None
+    attachments: Optional[List[FileInfoResponse]] = None
 
 class MessageSSEEvent(BaseSSEEvent):
     event: Literal["message"] = "message"
     data: MessageEventData
 
     @classmethod
-    def from_event(cls, event: MessageEvent) -> Self:
+    async def from_event_async(cls, event: MessageEvent) -> Self:
         return cls(
             data=MessageEventData(
                 **BaseEventData.base_event_data(event),
                 role=event.role,
                 content=event.message,
-                attachments=event.attachments
+                attachments=[await FileInfoResponse.from_file_info(attachment) for attachment in event.attachments]
             )
         )
 
@@ -83,14 +83,18 @@ class ToolEventData(BaseEventData):
     status: ToolStatus
     function: str
     args: Dict[str, Any]
-    content: Optional[Any] = None
+    content: Optional[ToolContent] = None
 
 class ToolSSEEvent(BaseSSEEvent):
     event: Literal["tool"] = "tool"
     data: ToolEventData
 
     @classmethod
-    def from_event(cls, event: ToolEvent) -> Self:
+    async def from_event_async(cls, event: ToolEvent) -> Self:
+        content = event.tool_content
+        if isinstance(content, BrowserToolContent):
+            from app.interfaces.dependencies import get_file_service
+            content = BrowserToolContent(screenshot=(await get_file_service().create_signed_url(content.screenshot))[0])
         return cls(
             data=ToolEventData(
                 **BaseEventData.base_event_data(event),
@@ -99,7 +103,7 @@ class ToolSSEEvent(BaseSSEEvent):
                 status=event.status,
                 function=event.function_name,
                 args=event.function_args,
-                content=event.tool_content
+                content=content
             )
         )
 
@@ -231,7 +235,7 @@ class EventMapper:
         return mapping
     
     @staticmethod
-    def event_to_sse_event(event: AgentEvent) -> AgentSSEEvent:
+    async def event_to_sse_event(event: AgentEvent) -> AgentSSEEvent:
         # Get mapping dynamically
         event_type_mapping = EventMapper._get_event_type_mapping()
         
@@ -239,15 +243,19 @@ class EventMapper:
         event_mapping = event_type_mapping.get(event.type)
         
         if event_mapping:
-            # Prioritize from_event class method
-            sse_event = event_mapping.sse_event_class.from_event(event)
+            # Prioritize from_event_async class method if exists, otherwise use from_event
+            sse_event_class = event_mapping.sse_event_class
+            if hasattr(sse_event_class, 'from_event_async'):
+                sse_event = await sse_event_class.from_event_async(event)
+            else:
+                sse_event = sse_event_class.from_event(event)
             return sse_event
         # If no matching type found, return base event
         return CommonEventData.from_event(event)
     
     @staticmethod
-    def events_to_sse_events(events: List[AgentEvent]) -> List[AgentSSEEvent]:
+    async def events_to_sse_events(events: List[AgentEvent]) -> List[AgentSSEEvent]:
         """Create SSE event list from event list"""
         return list(filter(lambda x: x is not None, [
-            EventMapper.event_to_sse_event(event) for event in events if event
+            await EventMapper.event_to_sse_event(event) for event in events if event
         ]))

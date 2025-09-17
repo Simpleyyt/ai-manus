@@ -218,3 +218,44 @@ class AgentService:
             logger.error(f"Session {session_id} not found for user {user_id}")
             raise RuntimeError("Session not found")
         return session.files
+    
+    async def get_shared_session_files(self, session_id: str) -> List[FileInfo]:
+        """Get files for a shared session"""
+        logger.info(f"Getting files for shared session {session_id}")
+        session = await self._session_repository.find_by_id(session_id)
+        if not session or not session.is_shared:
+            logger.error(f"Shared session {session_id} not found or not shared")
+            raise RuntimeError("Session not found")
+
+    async def share_session(self, session_id: str, user_id: str) -> None:
+        """Share a session, ensuring it belongs to the user"""
+        logger.info(f"Sharing session {session_id} for user {user_id}")
+        # First verify the session belongs to the user
+        session = await self._session_repository.find_by_id_and_user_id(session_id, user_id)
+        if not session:
+            logger.error(f"Session {session_id} not found for user {user_id}")
+            raise RuntimeError("Session not found")
+        
+        await self._session_repository.update_shared_status(session_id, True)
+        logger.info(f"Session {session_id} shared successfully")
+
+    async def unshare_session(self, session_id: str, user_id: str) -> None:
+        """Unshare a session, ensuring it belongs to the user"""
+        logger.info(f"Unsharing session {session_id} for user {user_id}")
+        # First verify the session belongs to the user
+        session = await self._session_repository.find_by_id_and_user_id(session_id, user_id)
+        if not session:
+            logger.error(f"Session {session_id} not found for user {user_id}")
+            raise RuntimeError("Session not found")
+        
+        await self._session_repository.update_shared_status(session_id, False)
+        logger.info(f"Session {session_id} unshared successfully")
+
+    async def get_shared_session(self, session_id: str) -> Optional[Session]:
+        """Get a shared session by ID (no user authentication required)"""
+        logger.info(f"Getting shared session {session_id}")
+        session = await self._session_repository.find_by_id(session_id)
+        if not session or not session.is_shared:
+            logger.error(f"Shared session {session_id} not found or not shared")
+            return None
+        return session

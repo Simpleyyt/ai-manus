@@ -70,15 +70,17 @@ def get_file_service() -> FileService:
     Get file service instance with required dependencies
     
     This function creates and returns a FileService instance with
-    the necessary file storage dependency.
+    the necessary file storage and token service dependencies.
     """
     logger.info("Creating FileService instance")
     
-    # Get file storage dependency
+    # Get dependencies
     file_storage = get_file_storage()
+    token_service = get_token_service()
     
     return FileService(
         file_storage=file_storage,
+        token_service=token_service,
     )
 
 

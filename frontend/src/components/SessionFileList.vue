@@ -39,7 +39,7 @@
                                             <span class="text-xs text-[var(--text-tertiary)]">{{
                                                 formatRelativeTime(parseISODateTime(file.upload_date)) }}</span>
                                         </div>
-                                        <div @click="downloadFile(file.file_id)"
+                                        <div @click="downloadFile(file)"
                                             class="flex items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-gray-main)] rounded-md w-8 h-8 text-[var(--icon-tertiary)]"
                                             aria-expanded="false" aria-haspopup="dialog">
                                             <Download class="size-5 text-[var(--icon-tertiary)]" />
@@ -65,7 +65,7 @@ import { ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import type { FileInfo } from '../api/file';
 import { getFileDownloadUrl } from '../api/file';
-import { getSessionFiles } from '../api/agent';
+import { getSessionFiles, getSharedSessionFiles } from '../api/agent';
 import { formatRelativeTime, parseISODateTime } from '../utils/time';
 import { getFileType } from '../utils/fileType';
 import { useSessionFileList } from '../composables/useSessionFileList';
@@ -76,18 +76,23 @@ const files = ref<FileInfo[]>([]);
 
 const { showFilePanel } = useFilePanel();
 
-const { visible, hideSessionFileList } = useSessionFileList();
+const { visible, hideSessionFileList, shared } = useSessionFileList();
 
 const fetchFiles = async (sessionId: string) => {
     if (!sessionId) {
         return;
     }
-    const response = await getSessionFiles(sessionId);
+    let response: FileInfo[] = [];
+    if (shared.value) {
+        response = await getSharedSessionFiles(sessionId);
+    } else {
+        response = await getSessionFiles(sessionId);
+    }
     files.value = response;
 }
 
-const downloadFile = async (fileId: string) => {
-    const url = await getFileDownloadUrl(fileId);
+const downloadFile = async (fileInfo: FileInfo) => {
+    const url = await getFileDownloadUrl(fileInfo);
     window.open(url, '_blank');
 }
 

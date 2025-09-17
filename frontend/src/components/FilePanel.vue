@@ -76,7 +76,7 @@ const fileType = computed(() => {
 
 const download = async () => {
   if (!fileInfo.value) return
-  const url = await getFileDownloadUrl(fileInfo.value.file_id)
+  const url = await getFileDownloadUrl(fileInfo.value)
   window.open(url, '_blank')
 }
 

@@ -70,7 +70,7 @@ watch(() => props.toolContent?.content?.screenshot, async () => {
   if (!props.toolContent?.content?.screenshot) {
     return;
   }
-  imageUrl.value = await getFileDownloadUrl(props.toolContent?.content?.screenshot);
+  imageUrl.value = props.toolContent?.content?.screenshot;
 }, { immediate: true });
 
 

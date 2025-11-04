@@ -98,6 +98,10 @@ const stopAutoRefresh = () => {
   }
 };
 
+watch(() => props.toolContent, () => {
+  loadShellContent();
+});
+
 watch(() => props.toolContent.timestamp, () => {
   loadShellContent();
 });

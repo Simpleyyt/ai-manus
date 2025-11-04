@@ -63,7 +63,7 @@ class FileStorage(Protocol):
     async def get_file_info(
         self,
         file_id: str,
-        user_id: str
+        user_id: Optional[str] = None
     ) -> Optional[FileInfo]:
         """Get file metadata from storage
         

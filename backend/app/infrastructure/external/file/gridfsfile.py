@@ -177,7 +177,7 @@ class GridFSFileStorage(FileStorage):
             logger.error(f"Failed to delete file {file_id} for user {user_id}: {str(e)}")
             return False
     
-    async def get_file_info(self, file_id: str, user_id: str) -> Optional[FileInfo]:
+    async def get_file_info(self, file_id: str, user_id: Optional[str] = None) -> Optional[FileInfo]:
         """Get file information"""
         try:
             files_collection = self._get_files_collection()
@@ -195,7 +195,7 @@ class GridFSFileStorage(FileStorage):
             
             # Check if file belongs to the user
             file_user_id = file_info.get('metadata', {}).get('user_id')
-            if file_user_id != user_id:
+            if user_id is not None and file_user_id != user_id:
                 logger.warning(f"Access denied: file {file_id} does not belong to user {user_id}")
                 return None
             

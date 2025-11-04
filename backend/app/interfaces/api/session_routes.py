@@ -1,20 +1,22 @@
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, Query
 from sse_starlette.sse import EventSourceResponse
-from typing import AsyncGenerator, List
+from typing import AsyncGenerator, List, Optional
 from sse_starlette.event import ServerSentEvent
 from datetime import datetime
 import asyncio
 import websockets
 import logging
+from app.interfaces.dependencies import get_file_service
 
 from app.application.services.agent_service import AgentService
 from app.application.services.token_service import TokenService
 from app.application.errors.exceptions import NotFoundError, UnauthorizedError
-from app.interfaces.dependencies import get_agent_service, get_current_user, get_token_service
+from app.interfaces.dependencies import get_agent_service, get_current_user, get_optional_current_user, get_token_service, verify_signature_websocket
 from app.interfaces.schemas.base import APIResponse
 from app.interfaces.schemas.session import (
     ChatRequest, ShellViewRequest, CreateSessionResponse, GetSessionResponse,
-    ListSessionItem, ListSessionResponse, ShellViewResponse
+    ListSessionItem, ListSessionResponse, ShellViewResponse,
+    ShareSessionResponse, SharedSessionResponse
 )
 from app.interfaces.schemas.file import FileViewRequest, FileViewResponse
 from app.interfaces.schemas.resource import AccessTokenRequest, SignedUrlResponse
@@ -52,7 +54,8 @@ async def get_session(
         session_id=session.id,
         title=session.title,
         status=session.status,
-        events=EventMapper.events_to_sse_events(session.events)
+        events=await EventMapper.events_to_sse_events(session.events),
+        is_shared=session.is_shared
     ))
 
 @router.delete("/{session_id}", response_model=APIResponse[None])
@@ -95,7 +98,8 @@ async def get_all_sessions(
             status=session.status,
             unread_message_count=session.unread_message_count,
             latest_message=session.latest_message,
-            latest_message_at=int(session.latest_message_at.timestamp()) if session.latest_message_at else None
+            latest_message_at=int(session.latest_message_at.timestamp()) if session.latest_message_at else None,
+            is_shared=session.is_shared
         ) for session in sessions
     ]
     return APIResponse.success(ListSessionResponse(sessions=session_items))
@@ -115,7 +119,8 @@ async def stream_sessions(
                     status=session.status,
                     unread_message_count=session.unread_message_count,
                     latest_message=session.latest_message,
-                    latest_message_at=int(session.latest_message_at.timestamp()) if session.latest_message_at else None
+                    latest_message_at=int(session.latest_message_at.timestamp()) if session.latest_message_at else None,
+                    is_shared=session.is_shared
                 ) for session in sessions
             ]
             yield ServerSentEvent(
@@ -142,7 +147,7 @@ async def chat(
             attachments=request.attachments
         ):
             logger.debug(f"Received event from chat: {event}")
-            sse_event = EventMapper.event_to_sse_event(event)
+            sse_event = await EventMapper.event_to_sse_event(event)
             logger.debug(f"Received event: {sse_event}")
             if sse_event:
                 yield ServerSentEvent(
@@ -198,31 +203,22 @@ async def view_file(
 async def vnc_websocket(
     websocket: WebSocket,
     session_id: str,
-    signature: str = Query(None),
-    agent_service: AgentService = Depends(get_agent_service),
-    token_service: TokenService = Depends(get_token_service)
+    signature: str = Depends(verify_signature_websocket),
+    agent_service: AgentService = Depends(get_agent_service)
 ) -> None:
     """VNC WebSocket endpoint (binary mode)
     
     Establishes a connection with the VNC WebSocket service in the sandbox environment and forwards data bidirectionally
-    Supports authentication via both URL token parameter or Authorization header for backward compatibility
+    Supports authentication via signed URL with signature verification
     
     Args:
         websocket: WebSocket connection
         session_id: Session ID
+        signature: Verified signature from dependency injection
     """
     
     await websocket.accept(subprotocol="binary")
     logger.info(f"Accepted WebSocket connection for session {session_id}")
-
-    if not signature:
-        logger.error(f"Missing signature: {websocket.url}")
-        await websocket.close(code=1011, reason="Missing signature")
-        return
-    if not token_service.verify_signed_url(str(websocket.url)):
-        logger.error(f"Invalid signature: {websocket.url}")
-        await websocket.close(code=1011, reason="Invalid signature")
-        return
     
     try:
         # Get sandbox environment address with user validation
@@ -282,10 +278,12 @@ async def vnc_websocket(
 @router.get("/{session_id}/files")
 async def get_session_files(
     session_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     agent_service: AgentService = Depends(get_agent_service)
 ) -> APIResponse[List[FileInfo]]:
-    files = await agent_service.get_session_files(session_id, current_user.id)
+    if not current_user and not await agent_service.is_session_shared(session_id):
+        raise UnauthorizedError()
+    files = await agent_service.get_session_files(session_id, current_user.id if current_user else None)
     return APIResponse.success(files)
 
 
@@ -325,4 +323,72 @@ async def create_vnc_signed_url(
     return APIResponse.success(SignedUrlResponse(
         signed_url=signed_url,
         expires_in=expire_minutes * 60,
+    ))
+
+
+@router.post("/{session_id}/share", response_model=APIResponse[ShareSessionResponse])
+async def share_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    agent_service: AgentService = Depends(get_agent_service)
+) -> APIResponse[ShareSessionResponse]:
+    """Share a session to make it publicly accessible
+    
+    This endpoint marks a session as shared, allowing it to be accessed
+    without authentication using the shared session endpoint.
+    """
+    await agent_service.share_session(session_id, current_user.id)
+    return APIResponse.success(ShareSessionResponse(
+        session_id=session_id,
+        is_shared=True
+    ))
+
+@router.get("/{session_id}/share/files")
+async def get_shared_session_files(
+    session_id: str,
+    agent_service: AgentService = Depends(get_agent_service)
+) -> APIResponse[List[FileInfo]]:
+    files = await agent_service.get_shared_session_files(session_id)
+    for file in files:
+        await get_file_service().enrich_with_file_url(file)
+    return APIResponse.success(files)
+
+
+@router.delete("/{session_id}/share", response_model=APIResponse[ShareSessionResponse])
+async def unshare_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    agent_service: AgentService = Depends(get_agent_service)
+) -> APIResponse[ShareSessionResponse]:
+    """Unshare a session to make it private again
+    
+    This endpoint marks a session as not shared, removing public access.
+    """
+    await agent_service.unshare_session(session_id, current_user.id)
+    return APIResponse.success(ShareSessionResponse(
+        session_id=session_id,
+        is_shared=False
+    ))
+
+
+@router.get("/shared/{session_id}", response_model=APIResponse[SharedSessionResponse])
+async def get_shared_session(
+    session_id: str,
+    agent_service: AgentService = Depends(get_agent_service)
+) -> APIResponse[SharedSessionResponse]:
+    """Get a shared session without authentication
+    
+    This endpoint allows public access to sessions that have been marked as shared.
+    No authentication is required, but the session must be explicitly shared.
+    """
+    session = await agent_service.get_shared_session(session_id)
+    if not session:
+        raise NotFoundError("Shared session not found")
+    
+    return APIResponse.success(SharedSessionResponse(
+        session_id=session.id,
+        title=session.title,
+        status=session.status,
+        events=await EventMapper.events_to_sse_events(session.events),
+        is_shared=session.is_shared
     ))

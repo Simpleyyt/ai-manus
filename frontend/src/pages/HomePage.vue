@@ -99,7 +99,7 @@ const avatarLetter = computed(() => {
 
 // User menu state
 const showUserMenu = ref(false);
-const userMenuTimeout = ref<NodeJS.Timeout | null>(null);
+const userMenuTimeout = ref<number | null>(null);
 
 // Show user menu on hover
 const handleUserMenuEnter = () => {

@@ -189,4 +189,16 @@ export default {
   // Reset Password Form
   'Sending Code...': '发送验证码中...',
   'Send Verification Code': '发送验证码',
+  // Share Feature
+  'Share': '分享',
+  'Private Only': '仅限自己',
+  'Only visible to you': '仅自己可见',
+  'Public Access': '公开访问',
+  'Anyone with the link can view': '任何有链接的人都可以查看',
+  'Share Instantly': '立即分享',
+  'Copy Link': '复制链接',
+  'Link Copied': '链接已复制',
+  'Link copied to clipboard': '链接已复制到剪贴板',
+  'Failed to copy link': '复制链接失败',
+  'You are viewing a completed Manus task. Replay will start automatically in {countdown} seconds.': '您正在查看一个已完成的 Manus 任务。回放将在 {countdown} 秒后自动开始。',
 } 

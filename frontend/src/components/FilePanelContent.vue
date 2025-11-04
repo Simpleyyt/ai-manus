@@ -57,7 +57,7 @@ const fileType = computed(() => {
 });
 
 const download = async () => {
-  const url = await getFileDownloadUrl(props.file.file_id);
+  const url = await getFileDownloadUrl(props.file);
   window.open(url, '_blank');
 };
 </script>

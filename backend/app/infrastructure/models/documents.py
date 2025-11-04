@@ -96,6 +96,7 @@ class SessionDocument(BaseDocument[Session], id_field="session_id", domain_model
     events: List[AgentEvent]
     status: SessionStatus
     files: List[FileInfo] = []
+    is_shared: Optional[bool] = False
     class Settings:
         name = "sessions"
         indexes = [

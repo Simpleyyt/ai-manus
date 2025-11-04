@@ -20,6 +20,75 @@
               </span>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
+              <span class="relative flex-shrink-0" aria-expanded="false" aria-haspopup="dialog">
+                <Popover>
+                  <PopoverTrigger>
+                    <button
+                      class="h-8 px-3 rounded-[100px] inline-flex items-center gap-1 clickable outline outline-1 outline-offset-[-1px] outline-[var(--border-btn-main)] hover:bg-[var(--fill-tsp-white-light)] me-1.5">
+                      <ShareIcon color="var(--icon-secondary)" />
+                      <span class="text-[var(--text-secondary)] text-sm font-medium">{{ t('Share') }}</span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent>
+                    <div
+                      class="w-[400px] flex flex-col rounded-2xl bg-[var(--background-menu-white)] shadow-[0px_8px_32px_0px_var(--shadow-S),0px_0px_0px_1px_var(--border-light)]"
+                      style="max-width: calc(-16px + 100vw);">
+                      <div class="flex flex-col pt-[12px] px-[16px] pb-[16px]">
+                        <!-- Private mode option -->
+                        <div @click="handleShareModeChange('private')"
+                          :class="{'pointer-events-none opacity-50': sharingLoading}"
+                          class="flex items-center gap-[10px] px-[8px] -mx-[8px] py-[8px] rounded-[8px] clickable hover:bg-[var(--fill-tsp-white-main)]">
+                          <div
+                            :class="shareMode === 'private' ? 'bg-[var(--Button-primary-black)]' : 'bg-[var(--fill-tsp-white-dark)]'"
+                            class="w-[32px] h-[32px] rounded-[8px] flex items-center justify-center">
+                            <Lock :size="16" :stroke="shareMode === 'private' ? 'var(--text-onblack)' : 'var(--icon-primary)'" :stroke-width="2" /></div>
+                          <div class="flex flex-col flex-1 min-w-0">
+                            <div class="text-sm font-medium text-[var(--text-primary)]">{{ t('Private Only') }}</div>
+                            <div class="text-[13px] text-[var(--text-tertiary)]">{{ t('Only visible to you') }}</div>
+                          </div><Check :size="20" :class="shareMode === 'private' ? 'ml-auto' : 'ml-auto invisible'" :color="shareMode === 'private' ? 'var(--icon-primary)' : 'var(--icon-tertiary)'" />
+                        </div>
+                        <!-- Public mode option -->
+                        <div @click="handleShareModeChange('public')"
+                          :class="{'pointer-events-none opacity-50': sharingLoading}"
+                          class="flex items-center gap-[10px] px-[8px] -mx-[8px] py-[8px] rounded-[8px] clickable hover:bg-[var(--fill-tsp-white-main)]">
+                          <div
+                            :class="shareMode === 'public' ? 'bg-[var(--Button-primary-black)]' : 'bg-[var(--fill-tsp-white-dark)]'"
+                            class="w-[32px] h-[32px] rounded-[8px] flex items-center justify-center">
+                            <Globe :size="16" :stroke="shareMode === 'public' ? 'var(--text-onblack)' : 'var(--icon-primary)'" :stroke-width="2" /></div>
+                          <div class="flex flex-col flex-1 min-w-0">
+                            <div class="text-sm font-medium text-[var(--text-primary)]">{{ t('Public Access') }}</div>
+                            <div class="text-[13px] text-[var(--text-tertiary)]">{{ t('Anyone with the link can view') }}</div>
+                          </div><Check :size="20" :class="shareMode === 'public' ? 'ml-auto' : 'ml-auto invisible'" :color="shareMode === 'public' ? 'var(--icon-primary)' : 'var(--icon-tertiary)'" />
+                        </div>
+                        <div class="border-t border-[var(--border-main)] mt-[4px]"></div>
+                        
+                        <!-- Show instant share button when in private mode -->
+                        <div v-if="shareMode === 'private'">
+                          <button @click.stop="handleInstantShare"
+                            :disabled="sharingLoading"
+                            class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors hover:opacity-90 active:opacity-80 bg-[var(--Button-primary-black)] text-[var(--text-onblack)] h-[36px] px-[12px] rounded-[10px] gap-[6px] text-sm min-w-16 mt-[16px] w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                            data-tabindex="" tabindex="-1">
+                            <div v-if="sharingLoading" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            <Link v-else :size="16" stroke="currentColor" :stroke-width="2" />
+                            {{ sharingLoading ? t('Sharing...') : t('Share Instantly') }}
+                          </button>
+                        </div>
+                        
+                        <!-- Show copy link button when in public mode -->
+                        <div v-else>
+                          <button @click.stop="handleCopyLink"
+                            :class="linkCopied ? 'inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors active:opacity-80 bg-[var(--Button-primary-white)] text-[var(--text-primary)] hover:opacity-70 active:hover-60 h-[36px] px-[12px] rounded-[10px] gap-[6px] text-sm min-w-16 mt-[16px] w-full border border-[var(--border-btn-main)] shadow-none' : 'inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors hover:opacity-90 active:opacity-80 bg-[var(--Button-primary-black)] text-[var(--text-onblack)] h-[36px] px-[12px] rounded-[10px] gap-[6px] text-sm min-w-16 mt-[16px] w-full'"
+                            data-tabindex="" tabindex="-1">
+                            <Link v-if="!linkCopied" :size="16" stroke="currentColor" :stroke-width="2" />
+                            <Check v-else :size="16" color="var(--text-primary)" />
+                            {{ linkCopied ? t('Link Copied') : t('Copy Link') }}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </span>
               <button @click="handleFileListShow"
                 class="p-[5px] flex items-center justify-center hover:bg-[var(--fill-tsp-white-dark)] rounded-lg cursor-pointer">
                 <FileSearch class="text-[var(--icon-secondary)]" :size="18" />
@@ -37,30 +106,22 @@
             @toolClick="handleToolClick" />
 
           <!-- Loading indicator -->
-          <div v-if="isLoading" class="flex items-center gap-1 text-[var(--text-tertiary)] text-sm"><span>{{
-            $t('Thinking') }}</span><span class="flex gap-1 relative top-[4px]"><span
-                class="w-[3px] h-[3px] rounded animate-bounce-dot bg-[var(--icon-tertiary)]"
-                style="animation-delay: 0ms;"></span><span
-                class="w-[3px] h-[3px] rounded animate-bounce-dot bg-[var(--icon-tertiary)]"
-                style="animation-delay: 200ms;"></span><span
-                class="w-[3px] h-[3px] rounded animate-bounce-dot bg-[var(--icon-tertiary)]"
-                style="animation-delay: 400ms;"></span></span></div>
+          <LoadingIndicator v-if="isLoading" :text="$t('Thinking')" />
         </div>
 
         <div class="flex flex-col bg-[var(--background-gray-main)] sticky bottom-0">
-          <template v-if="plan && plan.steps.length > 0">
-            <button @click="handleFollow" v-if="!follow"
-              class="flex items-center justify-center w-[36px] h-[36px] rounded-full bg-[var(--background-white-main)] hover:bg-[var(--background-gray-main)] clickable border border-[var(--border-main)] shadow-[0px_5px_16px_0px_var(--shadow-S),0px_0px_1.25px_0px_var(--shadow-S)] absolute -top-20 left-1/2 -translate-x-1/2">
-              <ArrowDown class="text-[var(--icon-primary)]" :size="20" />
-            </button>
-            <PlanPanel :plan="plan" />
-          </template>
+          <button @click="handleFollow" v-if="!follow"
+            class="flex items-center justify-center w-[36px] h-[36px] rounded-full bg-[var(--background-white-main)] hover:bg-[var(--background-gray-main)] clickable border border-[var(--border-main)] shadow-[0px_5px_16px_0px_var(--shadow-S),0px_0px_1.25px_0px_var(--shadow-S)] absolute -top-20 left-1/2 -translate-x-1/2">
+            <ArrowDown class="text-[var(--icon-primary)]" :size="20" />
+          </button>
+          <PlanPanel v-if="plan && plan.steps.length > 0" :plan="plan" />
           <ChatBox v-model="inputMessage" :rows="1" @submit="handleSubmit" :isRunning="isLoading" @stop="handleStop"
             :attachments="attachments" />
         </div>
       </div>
     </div>
-    <ToolPanel ref="toolPanel" :size="toolPanelSize" :sessionId="sessionId" :realTime="realTime"
+    <ToolPanel ref="toolPanel" :size="toolPanelSize" :sessionId="sessionId" :realTime="realTime" 
+      :isShare="false"
       @jumpToRealTime="jumpToRealTime" />
   </SimpleBar>
 </template>
@@ -85,13 +146,17 @@ import {
 } from '../types/event';
 import ToolPanel from '../components/ToolPanel.vue'
 import PlanPanel from '../components/PlanPanel.vue';
-import { ArrowDown, FileSearch, PanelLeft } from 'lucide-vue-next';
-import { showErrorToast } from '../utils/toast';
+import { ArrowDown, FileSearch, PanelLeft, Lock, Globe, Link, Check } from 'lucide-vue-next';
+import ShareIcon from '@/components/icons/ShareIcon.vue';
+import { showErrorToast, showSuccessToast } from '../utils/toast';
 import type { FileInfo } from '../api/file';
 import { useLeftPanel } from '../composables/useLeftPanel'
 import { useSessionFileList } from '../composables/useSessionFileList'
 import { useFilePanel } from '../composables/useFilePanel'
+import { copyToClipboard } from '../utils/dom'
 import { SessionStatus } from '../types/response';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import LoadingIndicator from '@/components/ui/LoadingIndicator.vue';
 
 const router = useRouter()
 const { t } = useI18n()
@@ -115,7 +180,10 @@ const createInitialState = () => ({
   lastTool: undefined as ToolContent | undefined,
   lastEventId: undefined as string | undefined,
   cancelCurrentChat: null as (() => void) | null,
-  attachments: [] as FileInfo[]
+  attachments: [] as FileInfo[],
+  shareMode: 'private' as 'private' | 'public', // Default to private mode
+  linkCopied: false,
+  sharingLoading: false // Loading state for share operations
 });
 
 // Create reactive state
@@ -136,7 +204,10 @@ const {
   lastTool,
   lastEventId,
   cancelCurrentChat,
-  attachments
+  attachments,
+  shareMode,
+  linkCopied,
+  sharingLoading
 } = toRefs(state);
 
 // Non-state refs that don't need reset
@@ -370,6 +441,8 @@ const restoreSession = async () => {
     return;
   }
   const session = await agentApi.getSession(sessionId.value);
+  // Initialize share mode based on session state
+  shareMode.value = session.is_shared ? 'public' : 'private';
   realTime.value = false;
   for (const event of session.events) {
     handleEvent(event);
@@ -472,33 +545,75 @@ const handleStop = () => {
 const handleFileListShow = () => {
   showSessionFileList()
 }
+
+// Share functionality handlers
+const handleShareModeChange = async (mode: 'private' | 'public') => {
+  if (!sessionId.value || sharingLoading.value) return;
+  
+  // If mode is same as current, no need to call API
+  if (shareMode.value === mode) {
+    linkCopied.value = false;
+    return;
+  }
+  
+  try {
+    sharingLoading.value = true;
+    
+    if (mode === 'public') {
+      await agentApi.shareSession(sessionId.value);
+    } else {
+      await agentApi.unshareSession(sessionId.value);
+    }
+    
+    shareMode.value = mode;
+    linkCopied.value = false;
+  } catch (error) {
+    console.error('Error changing share mode:', error);
+    showErrorToast(t('Failed to change sharing settings'));
+  } finally {
+    sharingLoading.value = false;
+  }
+}
+
+const handleInstantShare = async () => {
+  if (!sessionId.value) return;
+  
+  try {
+    sharingLoading.value = true;
+    await agentApi.shareSession(sessionId.value);
+    shareMode.value = 'public';
+    linkCopied.value = false;
+  } catch (error) {
+    console.error('Error sharing session:', error);
+    showErrorToast(t('Failed to share session'));
+  } finally {
+    sharingLoading.value = false;
+  }
+}
+
+const handleCopyLink = async () => {
+  if (!sessionId.value) return;
+  
+  const shareUrl = `${window.location.origin}/share/${sessionId.value}`;
+  
+  try {
+    const success = await copyToClipboard(shareUrl);
+    
+    if (success) {
+      linkCopied.value = true;
+      setTimeout(() => {
+        linkCopied.value = false;
+      }, 3000);
+      showSuccessToast(t('Link copied to clipboard'));
+    } else {
+      showErrorToast(t('Failed to copy link'));
+    }
+  } catch (error) {
+    console.error('Error copying share link:', error);
+    showErrorToast(t('Failed to copy link'));
+  }
+}
 </script>
 
 <style scoped>
-.animate-bounce-dot {
-  display: inline-block;
-  animation: dot-animation 1.5s infinite;
-}
-
-@keyframes dot-animation {
-  0% {
-    transform: translateY(0);
-  }
-
-  20% {
-    transform: translateY(-4px);
-  }
-
-  40% {
-    transform: translateY(0);
-  }
-
-  100% {
-    transform: translateY(0);
-  }
-}
-
-.\[\&\:not\(\:empty\)\]\:pb-2:not(:empty) {
-  padding-bottom: .5rem;
-}
 </style>

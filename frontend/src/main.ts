@@ -13,6 +13,8 @@ import ChatPage from './pages/ChatPage.vue'
 import LoginPage from './pages/LoginPage.vue'
 import MainLayout from './pages/MainLayout.vue'
 import { configure } from "vue-gtag";
+import SharePage from './pages/SharePage.vue';
+import ShareLayout from './pages/ShareLayout.vue';
 
 configure({
   tagId: 'G-XCRZ3HH31S' // Replace with your own Google Analytics tag ID
@@ -37,6 +39,16 @@ export const router = createRouter({
           path: ':sessionId', 
           component: ChatPage,
           meta: { requiresAuth: true }
+        }
+      ]
+    },
+    {
+      path: '/share',
+      component: ShareLayout,
+      children: [
+        {
+          path: ':sessionId',
+          component: SharePage,
         }
       ]
     },

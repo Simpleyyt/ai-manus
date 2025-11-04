@@ -20,9 +20,10 @@
             @disconnected="onVNCDisconnected"
             @credentials-required="onVNCCredentialsRequired"
           />
-          <img v-else alt="Image Preview" class="cursor-pointer w-full" referrerpolicy="no-referrer" :src="imageUrl">
+          <img v-else-if="imageUrl" alt="Image Preview" class="cursor-pointer w-full" referrerpolicy="no-referrer" :src="imageUrl">
         </div>
         <button
+          v-if="!isShare"
           @click="takeOver"
           class="absolute right-[10px] bottom-[10px] z-10 min-w-10 h-10 flex items-center justify-center rounded-full bg-[var(--background-white-main)] text-[var(--text-primary)] border border-[var(--border-main)] shadow-[0px_5px_16px_0px_var(--shadow-S),0px_0px_1.25px_0px_var(--shadow-S)] backdrop-blur-3xl cursor-pointer hover:bg-[var(--text-brand)] hover:px-4 hover:text-[var(--text-white)] group transition-width duration-300">
           <TakeOverIcon />
@@ -45,6 +46,7 @@ const props = defineProps<{
   sessionId: string;
   toolContent: ToolContent;
   live: boolean;
+  isShare: boolean;
 }>();
 
 const { t } = useI18n();
@@ -66,16 +68,11 @@ const onVNCCredentialsRequired = () => {
 
 
 watch(() => props.toolContent?.content?.screenshot, async () => {
-  console.log('live', props.live);
   if (!props.toolContent?.content?.screenshot) {
     return;
   }
-  imageUrl.value = await getFileDownloadUrl(props.toolContent?.content?.screenshot);
+  imageUrl.value = props.toolContent?.content?.screenshot;
 }, { immediate: true });
-
-
-
-
 
 const takeOver = () => {
   window.dispatchEvent(new CustomEvent('takeover', {

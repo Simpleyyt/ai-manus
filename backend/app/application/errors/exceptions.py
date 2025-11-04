@@ -32,5 +32,5 @@ class ServerError(AppException):
 
 
 class UnauthorizedError(AppException):
-    def __init__(self, msg: str = "Unauthorized"):
+    def __init__(self, msg: str = "Authentication required"):
         super().__init__(code=401, msg=msg, status_code=401) 

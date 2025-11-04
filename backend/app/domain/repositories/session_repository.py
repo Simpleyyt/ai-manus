@@ -63,6 +63,10 @@ class SessionRepository(Protocol):
         """Decrement the unread message count of a session"""
         ...
     
+    async def update_shared_status(self, session_id: str, is_shared: bool) -> None:
+        """Update the shared status of a session"""
+        ...
+    
     async def delete(self, session_id: str) -> None:
         """Delete a session"""
         ...

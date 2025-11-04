@@ -8,7 +8,7 @@
     }"
     :style="{ 'width': isShow ? `${parentSize/2}px` : '0px', 'opacity': isShow ? '1' : '0', 'transition': '0.2s ease-in-out' }">
     <div class="h-full" :style="{ 'width': isShow ? '100%' : '0px' }">
-      <ToolPanelContent v-if="isShow && toolContent" :sessionId="sessionId" :realTime="realTime" :toolContent="toolContent" :live="live" @hide="hideToolPanel" @jumpToRealTime="jumpToRealTime" />
+      <ToolPanelContent v-if="isShow && toolContent" :sessionId="sessionId" :realTime="realTime" :toolContent="toolContent" :live="live" :isShare="isShare" @hide="hideToolPanel" @jumpToRealTime="jumpToRealTime" />
     </div>
   </div>
 </template>
@@ -40,6 +40,7 @@ const emit = defineEmits<{
 defineProps<{
   sessionId?: string
   realTime: boolean
+  isShare: boolean
 }>()
 
 const showToolPanel = (content: ToolContent, isLive: boolean = false) => {

@@ -12,7 +12,6 @@ from app.interfaces.api.routes import router
 from app.infrastructure.logging import setup_logging
 from app.interfaces.errors.exception_handlers import register_exception_handlers
 from app.infrastructure.models.documents import AgentDocument, SessionDocument, UserDocument
-from app.interfaces.middleware.auth import AuthMiddleware
 from beanie import init_beanie
 
 # Initialize logging system
@@ -72,9 +71,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Add authentication middleware
-app.add_middleware(AuthMiddleware)
 
 # Register exception handlers
 register_exception_handlers(app)

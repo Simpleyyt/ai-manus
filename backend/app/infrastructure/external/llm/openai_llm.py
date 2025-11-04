@@ -84,14 +84,10 @@ class OpenAILLM(LLM):
 
                 return response.choices[0].message.model_dump()
 
-            except (ConnectionError, TimeoutError, asyncio.TimeoutError) as e:
+            except Exception as e:
                 error_msg = f"Network error calling OpenAI API on attempt {attempt + 1}: {str(e)}"
                 logger.error(error_msg)
                 if attempt == max_retries:
                     raise ConnectionError(f"Failed after {max_retries + 1} attempts due to network issues: {str(e)}")
                 continue
 
-            except Exception as e:
-                # 对于非网络错误，不进行重试
-                logger.error(f"Non-retryable error calling OpenAI API: {str(e)}")
-                raise

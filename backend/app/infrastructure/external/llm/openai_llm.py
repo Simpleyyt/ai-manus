@@ -85,9 +85,9 @@ class OpenAILLM(LLM):
                 return response.choices[0].message.model_dump()
 
             except Exception as e:
-                error_msg = f"Network error calling OpenAI API on attempt {attempt + 1}: {str(e)}"
+                error_msg = f"Error calling OpenAI API on attempt {attempt + 1}: {str(e)}"
                 logger.error(error_msg)
                 if attempt == max_retries:
-                    raise ConnectionError(f"Failed after {max_retries + 1} attempts due to network issues: {str(e)}")
+                    raise e
                 continue
 

@@ -73,7 +73,7 @@ class MessageSSEEvent(BaseSSEEvent):
                 **BaseEventData.base_event_data(event),
                 role=event.role,
                 content=event.message,
-                attachments=[await FileInfoResponse.from_file_info(attachment) for attachment in event.attachments]
+                attachments=[await FileInfoResponse.from_file_info(attachment) for attachment in event.attachments] if event.attachments else None
             )
         )
 

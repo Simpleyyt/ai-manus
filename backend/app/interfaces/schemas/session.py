@@ -8,7 +8,7 @@ class ChatRequest(BaseModel):
     """Chat request schema"""
     timestamp: Optional[int] = None
     message: Optional[str] = None
-    attachments: Optional[List[str]] = None
+    attachments: Optional[List[dict]] = None
     event_id: Optional[str] = None
 
 

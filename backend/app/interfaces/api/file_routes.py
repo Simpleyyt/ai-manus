@@ -29,7 +29,7 @@ async def upload_file(
         content_type=file.content_type
     )
     
-    return APIResponse.success(FileInfoResponse.from_file_info(result))
+    return APIResponse.success(await FileInfoResponse.from_file_info(result))
 
 @router.get("/{file_id}")
 async def download_file_with_signature(
@@ -116,7 +116,7 @@ async def get_file_info(
     if not file_info:
         raise NotFoundError("File not found")
     
-    return APIResponse.success(FileInfoResponse.from_file_info(file_info))
+    return APIResponse.success(await FileInfoResponse.from_file_info(file_info))
 
 
 @router.post("/{file_id}/signed-url", response_model=APIResponse[SignedUrlResponse])

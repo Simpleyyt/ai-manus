@@ -398,7 +398,8 @@ const chat = async (message: string = '', files: FileInfo[] = []) => {
       sessionId.value,
       message,
       lastEventId.value,
-      files.map((file: FileInfo) => file.file_id),
+      files.map((file: FileInfo) => ({file_id : file.file_id, 
+                                        filename : file.filename})),
       {
         onOpen: () => {
           console.log('Chat opened');

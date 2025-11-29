@@ -1,126 +1,78 @@
-from typing import Dict, Any, List, Callable
+from typing import List, Callable
 import inspect
-from app.domain.models.tool_result import ToolResult
+import copy
 
-def tool(
-    name: str, 
-    description: str,
-    parameters: Dict[str, Dict[str, Any]],
-    required: List[str]
-) -> Callable:
-    """Tool registration decorator
-    
-    Args:
-        name: Tool name
-        description: Tool description
-        parameters: Tool parameter definitions
-        required: List of required parameters
-        
-    Returns:
-        Decorator function
-    """
-    def decorator(func):
-        # Create tool schema directly using provided parameters, without automatic extraction
-        schema = {
-            "type": "function",
-            "function": {
-                "name": name,
-                "description": description,
-                "parameters": {
-                    "type": "object", 
-                    "properties": parameters,
-                    "required": required
-                }
-            }
-        }
-        
-        # Store tool information
-        func._function_name = name
-        func._tool_description = description
-        func._tool_schema = schema
-        
-        return func
-    
-    return decorator
+from langchain_core.tools.structured import StructuredTool
+from langchain.tools import BaseTool
+from langchain.messages import ToolMessage
+from langchain.messages import ToolCall
+from langchain_core.tools.base import BaseToolkit as LangchainBaseToolkit, ArgsSchema
+from typing import Any, Optional
+from pydantic import BaseModel, create_model, ConfigDict
 
-class BaseTool:
-    """Base tool class, providing common tool calling methods"""
+
+def create_model_without_fields(model_class: type[BaseModel], exclude_fields: set[str]) -> type[BaseModel]:
+    fields = {}
+    for field_name, field_info in model_class.model_fields.items():
+        if field_name not in exclude_fields:
+            fields[field_name] = (field_info.annotation, field_info)
+    return create_model(model_class.__name__, **fields)
+
+class Tool(BaseTool):
+    
+    name: str = ""
+    description: str = ""
+    args_schema: ArgsSchema | None = None
+    toolkit: 'BaseToolkit' = None
+
+    def __init__(self, tool: StructuredTool, **kwargs: Any):
+        super().__init__(**kwargs)
+        self.name = tool.name
+        self.description = tool.description
+        self.args_schema = create_model_without_fields(tool.args_schema, {'self'})
+        self._tool = tool
+
+    def _run(self, **kwargs: Any) -> Any:
+        return self._tool.func(self.toolkit, **kwargs)
+
+    async def _arun(self, **kwargs: Any) -> Any:
+        return await self._tool.coroutine(self.toolkit, **kwargs)
+
+
+class BaseToolkit(LangchainBaseToolkit):
+    """Base toolset class, providing common tool calling methods"""
 
     name: str = ""
-    
+    tools: List[Tool] = []
+    model_config = ConfigDict(ignored_types=(BaseTool,), extra='allow')
+
     def __init__(self):
-        """Initialize base tool class"""
-        self._tools_cache = None
+        super().__init__()
+        self.tools = []
+
+        for _, tool in inspect.getmembers(self, lambda x: isinstance(x, BaseTool)):
+            self.tools.append(Tool(tool, toolkit=self))
+        
     
-    def get_tools(self) -> List[Dict[str, Any]]:
+
+    def get_tools(self) -> List[Tool]:
         """Get all registered tools
         
         Returns:
             List of tools
         """
-        if self._tools_cache is not None:
-            return self._tools_cache
-        
-        tools = []
-        for _, method in inspect.getmembers(self, inspect.ismethod):
-            if hasattr(method, '_tool_schema'):
-                tools.append(method._tool_schema)
-        
-        self._tools_cache = tools
-        return tools
+        return self.tools
     
-    def has_function(self, function_name: str) -> bool:
-        """Check if specified function exists
+    def get_tool(self, tool_name: str) -> Optional[Tool]:
+        """Get specified tool
         
         Args:
-            function_name: Function name
+            tool_name: Tool name
             
         Returns:
-            Whether the tool exists
+            Tool
         """
-        for _, method in inspect.getmembers(self, inspect.ismethod):
-            if hasattr(method, '_function_name') and method._function_name == function_name:
-                return True
-        return False
-    
-    def _filter_parameters(self, method: Callable, kwargs: Dict[str, Any]) -> Dict[str, Any]:
-        """Filter parameters to match method signature
-        
-        Args:
-            method: Target method
-            kwargs: Input parameters
-            
-        Returns:
-            Filtered parameters that match the method signature
-        """
-        # Get method signature
-        sig = inspect.signature(method)
-        
-        # Filter kwargs to only include parameters that the method accepts
-        filtered_kwargs = {}
-        for param_name, param_value in kwargs.items():
-            if param_name in sig.parameters:
-                filtered_kwargs[param_name] = param_value
-        
-        return filtered_kwargs
-    
-    async def invoke_function(self, function_name: str, **kwargs) -> ToolResult:
-        """Invoke specified tool
-        
-        Args:
-            function_name: Function name
-            **kwargs: Parameters
-            
-        Returns:
-            Invocation result
-            
-        Raises:
-            ValueError: Raised when tool doesn't exist
-        """
-        for _, method in inspect.getmembers(self, inspect.ismethod):
-            if hasattr(method, '_function_name') and method._function_name == function_name:
-                # Filter parameters to match method signature
-                filtered_kwargs = self._filter_parameters(method, kwargs)
-                return await method(**filtered_kwargs)
-        
-        raise ValueError(f"Tool '{function_name}' not found") 
+        for tool in self.tools:
+            if tool.name == tool_name:
+                return tool
+        return None

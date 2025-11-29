@@ -1,6 +1,9 @@
 from typing import Optional, AsyncGenerator, List
 import asyncio
 import logging
+import sys
+import os
+import debugpy
 from pydantic import TypeAdapter
 from app.domain.models.message import Message
 from app.domain.models.event import (
@@ -33,7 +36,7 @@ from app.domain.repositories.mcp_repository import MCPRepository
 from app.domain.models.session import SessionStatus
 from app.domain.models.file import FileInfo
 from app.domain.utils.json_parser import JsonParser
-from app.domain.services.tools.mcp import MCPTool
+from app.domain.services.tools.mcp import MCPToolkit
 from app.domain.models.tool_result import ToolResult
 from app.domain.models.search import SearchResults
 
@@ -68,7 +71,7 @@ class AgentTaskRunner(TaskRunner):
         self._json_parser = json_parser
         self._file_storage = file_storage
         self._mcp_repository = mcp_repository
-        self._mcp_tool = MCPTool()
+        self._mcp_tool = MCPToolkit()
         self._flow = PlanActFlow(
             self._agent_id,
             self._repository,
@@ -245,6 +248,15 @@ class AgentTaskRunner(TaskRunner):
             await self._session_repository.update_status(self._session_id, SessionStatus.COMPLETED)
         except Exception as e:
             logger.exception(f"Agent {self._agent_id} task encountered exception: {str(e)}")
+            
+            # If debugger is attached, trigger breakpoint for debugging
+            # You can also manually set ENABLE_DEBUG_BREAK=1 environment variable
+            if debugpy.is_client_connected() or os.getenv('ENABLE_DEBUG_BREAK'):
+                logger.debug("Debugger detected, triggering breakpoint")
+                import traceback
+                traceback.print_exc()
+                debugpy.breakpoint()  # This will pause execution if a debugger is attached
+            
             await self._put_and_add_event(task, ErrorEvent(error=f"Task error: {str(e)}"))
             await self._session_repository.update_status(self._session_id, SessionStatus.COMPLETED)
     

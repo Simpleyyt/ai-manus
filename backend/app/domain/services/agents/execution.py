@@ -4,10 +4,6 @@ from app.domain.models.file import FileInfo
 from app.domain.models.message import Message
 from app.domain.services.agents.base import BaseAgent
 from app.domain.external.llm import LLM
-from app.domain.external.sandbox import Sandbox
-from app.domain.external.browser import Browser
-from app.domain.external.search import SearchEngine
-from app.domain.external.file import FileStorage
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.services.prompts.system import SYSTEM_PROMPT
 from app.domain.services.prompts.execution import EXECUTION_SYSTEM_PROMPT, EXECUTION_PROMPT, SUMMARIZE_PROMPT
@@ -22,12 +18,7 @@ from app.domain.models.event import (
     ToolStatus,
     WaitEvent,
 )
-from app.domain.services.tools.base import BaseTool
-from app.domain.services.tools.shell import ShellTool
-from app.domain.services.tools.browser import BrowserTool
-from app.domain.services.tools.search import SearchTool
-from app.domain.services.tools.file import FileTool
-from app.domain.services.tools.message import MessageTool
+from app.domain.services.tools.base import BaseToolkit
 from app.domain.utils.json_parser import JsonParser
 import logging
 
@@ -48,7 +39,7 @@ class ExecutionAgent(BaseAgent):
         agent_id: str,
         agent_repository: AgentRepository,
         llm: LLM,
-        tools: List[BaseTool],
+        tools: List[BaseToolkit],
         json_parser: JsonParser,
     ):
         super().__init__(

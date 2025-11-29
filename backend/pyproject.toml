@@ -1,0 +1,43 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Backend for AI Manus"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "async-lru>=2.0.0",
+    "beanie>=1.25.0",
+    "beautifulsoup4>=4.12.0",
+    "cryptography>=3.4.8",
+    "debugpy>=1.8.17",
+    "docker>=7.1.0",
+    "fastapi>=0.121.2",
+    "httpx>=0.28.1",
+    "langchain>=1.0.7",
+    "langchain-openai>=1.0.3",
+    "markdownify>=1.2.0",
+    "mcp>=1.9.0",
+    "motor>=3.3.2",
+    "openai>=2.8.0",
+    "playwright>=1.42.0",
+    "pydantic>=2.12.4",
+    "pydantic-settings>=2.12.0",
+    "pyjwt[crypto]>=2.8.0",
+    "pymongo>=4.6.1",
+    "python-dotenv>=1.2.1",
+    "python-multipart>=0.0.20",
+    "redis>=5.0.1",
+    "rich>=14.2.0",
+    "sse-starlette>=3.0.3",
+    "uvicorn>=0.38.0",
+    "websockets>=15.0.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.10.0",
+    "requests>=2.28.0",
+]

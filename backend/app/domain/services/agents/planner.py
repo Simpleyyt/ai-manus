@@ -21,9 +21,9 @@ from app.domain.models.event import (
     DoneEvent,
 )
 from app.domain.external.sandbox import Sandbox
-from app.domain.services.tools.base import BaseTool
-from app.domain.services.tools.file import FileTool
-from app.domain.services.tools.shell import ShellTool
+from app.domain.services.tools.base import BaseToolkit
+from app.domain.services.tools.file import FileToolkit
+from app.domain.services.tools.shell import ShellToolkit
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.utils.json_parser import JsonParser
 
@@ -44,7 +44,7 @@ class PlannerAgent(BaseAgent):
         agent_id: str,
         agent_repository: AgentRepository,
         llm: LLM,
-        tools: List[BaseTool],
+        tools: List[BaseToolkit],
         json_parser: JsonParser,
     ):
         super().__init__(

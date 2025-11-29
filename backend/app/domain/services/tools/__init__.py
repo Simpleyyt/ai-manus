@@ -1,17 +1,17 @@
-from app.domain.services.tools.base import BaseTool
-from app.domain.services.tools.browser import BrowserTool
-from app.domain.services.tools.shell import ShellTool
-from app.domain.services.tools.search import SearchTool
-from app.domain.services.tools.message import MessageTool
-from app.domain.services.tools.file import FileTool
-from app.domain.services.tools.mcp import MCPTool
+from app.domain.services.tools.base import BaseToolkit
+from app.domain.services.tools.browser import BrowserToolkit
+from app.domain.services.tools.shell import ShellToolkit
+from app.domain.services.tools.search import SearchToolkit
+from app.domain.services.tools.message import MessageToolkit
+from app.domain.services.tools.file import FileToolkit
+from app.domain.services.tools.mcp import MCPToolkit
 
 __all__ = [
-    'BaseTool',
-    'BrowserTool',
-    'ShellTool',
-    'SearchTool',
-    'MessageTool',
-    'FileTool',
-    'MCPTool',
+    'BaseToolkit',
+    'BrowserToolkit',
+    'ShellToolkit',
+    'SearchToolkit',
+    'MessageToolkit',
+    'FileToolkit',
+    'MCPToolkit',
 ]

@@ -5,7 +5,7 @@ WORKDIR /app
 # Install curl
 RUN apt-get update && apt-get install -y curl
 
-# Install uv
+# Install nodejs
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y nodejs
 
@@ -16,14 +16,11 @@ RUN pip install uv
 ENV UV_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
 
 # Install dependencies
-COPY requirements.txt .
-RUN uv pip install --system --no-cache -r requirements.txt
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
 
 # Copy project files
 COPY . .
-
-# Set script execution permissions
-RUN chmod +x run.sh
 
 # Set environment variables
 ENV PYTHONPATH=/app
@@ -32,4 +29,4 @@ ENV PYTHONPATH=/app
 EXPOSE 8000
 
 # Start command
-CMD ["./run.sh"] 
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"] 

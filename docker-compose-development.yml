@@ -24,7 +24,13 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: ["./dev.sh"]  # Start in reload mode
+    command:
+      [
+        "uv", "run", 
+        "debugpy", "--listen", "0.0.0.0:5678", "-m", # Enable debug
+        "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload",
+        "--timeout-graceful-shutdown","0"
+      ]
     volumes:
       - ./backend:/app  # Mount source code directory
       #- ./mcp.json:/etc/mcp.json # Mount MCP servers directory
@@ -33,6 +39,7 @@ services:
       - /app/.venv  # Avoid overwriting virtual environment
     ports:
       - "8000:8000"
+      - "5678:5678" # Debug port
     depends_on:
       sandbox:
         condition: service_started

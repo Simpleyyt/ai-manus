@@ -24,12 +24,12 @@ from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.utils.json_parser import JsonParser
 from app.domain.repositories.session_repository import SessionRepository
 from app.domain.models.session import SessionStatus
-from app.domain.services.tools.mcp import MCPTool
-from app.domain.services.tools.shell import ShellTool
-from app.domain.services.tools.browser import BrowserTool
-from app.domain.services.tools.file import FileTool
-from app.domain.services.tools.message import MessageTool
-from app.domain.services.tools.search import SearchTool
+from app.domain.services.tools.mcp import MCPToolkit
+from app.domain.services.tools.shell import ShellToolkit
+from app.domain.services.tools.browser import BrowserToolkit
+from app.domain.services.tools.file import FileToolkit
+from app.domain.services.tools.message import MessageToolkit
+from app.domain.services.tools.search import SearchToolkit
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ class PlanActFlow(BaseFlow):
         sandbox: Sandbox,
         browser: Browser,
         json_parser: JsonParser,
-        mcp_tool: MCPTool,
+        mcp_tool: MCPToolkit,
         search_engine: Optional[SearchEngine] = None,
     ):
         self._agent_id = agent_id
@@ -63,16 +63,16 @@ class PlanActFlow(BaseFlow):
         self.plan = None
 
         tools = [
-            ShellTool(sandbox),
-            BrowserTool(browser),
-            FileTool(sandbox),
-            MessageTool(),
+            ShellToolkit(sandbox),
+            BrowserToolkit(browser),
+            FileToolkit(sandbox),
+            MessageToolkit(),
             mcp_tool
         ]
         
         # Only add search tool when search_engine is not None
         if search_engine:
-            tools.append(SearchTool(search_engine))
+            tools.append(SearchToolkit(search_engine))
 
         # Create planner and execution agents
         self.planner = PlannerAgent(

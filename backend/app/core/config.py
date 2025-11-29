@@ -1,3 +1,4 @@
+import os
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -6,10 +7,11 @@ class Settings(BaseSettings):
     
     # Model provider configuration
     api_key: str | None = None
-    api_base: str = "https://api.deepseek.com/v1"
+    api_base: str = "https://api.openai.com/v1"
     
     # Model configuration
-    model_name: str = "deepseek-chat"
+    model_name: str = "gpt-4o"
+    model_provider: str = "openai"
     temperature: float = 0.7
     max_tokens: int = 2000
     
@@ -80,6 +82,8 @@ class Settings(BaseSettings):
 @lru_cache()
 def get_settings() -> Settings:
     """Get application settings"""
+    if not os.environ.get("OPENAI_API_KEY"):
+        os.environ["OPENAI_API_KEY"] = os.getenv("API_KEY")
     settings = Settings()
     settings.validate()
     return settings 

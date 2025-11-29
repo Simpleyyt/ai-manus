@@ -1,8 +1,7 @@
 import logging
 from app.domain.services.flows.base import BaseFlow
-from app.domain.models.agent import Agent
 from app.domain.models.message import Message
-from typing import AsyncGenerator, Optional, List
+from typing import AsyncGenerator, Optional
 from enum import Enum
 from app.domain.models.event import (
     BaseEvent,
@@ -15,21 +14,18 @@ from app.domain.models.event import (
 from app.domain.models.plan import ExecutionStatus
 from app.domain.services.agents.planner import PlannerAgent
 from app.domain.services.agents.execution import ExecutionAgent
-from app.domain.external.llm import LLM
 from app.domain.external.sandbox import Sandbox
 from app.domain.external.browser import Browser
 from app.domain.external.search import SearchEngine
-from app.domain.external.file import FileStorage
 from app.domain.repositories.agent_repository import AgentRepository
-from app.domain.utils.json_parser import JsonParser
 from app.domain.repositories.session_repository import SessionRepository
 from app.domain.models.session import SessionStatus
-from app.domain.services.tools.mcp import MCPTool
-from app.domain.services.tools.shell import ShellTool
-from app.domain.services.tools.browser import BrowserTool
-from app.domain.services.tools.file import FileTool
-from app.domain.services.tools.message import MessageTool
-from app.domain.services.tools.search import SearchTool
+from app.domain.services.tools.mcp import MCPToolkit
+from app.domain.services.tools.shell import ShellToolkit
+from app.domain.services.tools.browser import BrowserToolkit
+from app.domain.services.tools.file import FileToolkit
+from app.domain.services.tools.message import MessageToolkit
+from app.domain.services.tools.search import SearchToolkit
 
 logger = logging.getLogger(__name__)
 
@@ -48,11 +44,9 @@ class PlanActFlow(BaseFlow):
         agent_repository: AgentRepository,
         session_id: str,
         session_repository: SessionRepository,
-        llm: LLM,
         sandbox: Sandbox,
         browser: Browser,
-        json_parser: JsonParser,
-        mcp_tool: MCPTool,
+        mcp_tool: MCPToolkit,
         search_engine: Optional[SearchEngine] = None,
     ):
         self._agent_id = agent_id
@@ -63,33 +57,29 @@ class PlanActFlow(BaseFlow):
         self.plan = None
 
         tools = [
-            ShellTool(sandbox),
-            BrowserTool(browser),
-            FileTool(sandbox),
-            MessageTool(),
+            ShellToolkit(sandbox),
+            BrowserToolkit(browser),
+            FileToolkit(sandbox),
+            MessageToolkit(),
             mcp_tool
         ]
         
         # Only add search tool when search_engine is not None
         if search_engine:
-            tools.append(SearchTool(search_engine))
+            tools.append(SearchToolkit(search_engine))
 
         # Create planner and execution agents
         self.planner = PlannerAgent(
             agent_id=self._agent_id,
             agent_repository=self._repository,
-            llm=llm,
             tools=tools,
-            json_parser=json_parser,
         )
         logger.debug(f"Created planner agent for Agent {self._agent_id}")
             
         self.executor = ExecutionAgent(
             agent_id=self._agent_id,
             agent_repository=self._repository,
-            llm=llm,
             tools=tools,
-            json_parser=json_parser,
         )
         logger.debug(f"Created execution agent for Agent {self._agent_id}")
 

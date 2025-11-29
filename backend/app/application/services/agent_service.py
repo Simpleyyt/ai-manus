@@ -13,12 +13,11 @@ from typing import Type
 from app.domain.models.agent import Agent
 from app.domain.external.sandbox import Sandbox
 from app.domain.external.search import SearchEngine
-from app.domain.external.llm import LLM
 from app.domain.external.file import FileStorage
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.external.task import Task
-from app.domain.utils.json_parser import JsonParser
 from app.domain.models.file import FileInfo
+from app.core.config import get_settings
 from app.domain.repositories.mcp_repository import MCPRepository
 from app.domain.models.session import SessionStatus
 
@@ -28,12 +27,10 @@ logger = logging.getLogger(__name__)
 class AgentService:
     def __init__(
         self,
-        llm: LLM,
         agent_repository: AgentRepository,
         session_repository: SessionRepository,
         sandbox_cls: Type[Sandbox],
         task_cls: Type[Task],
-        json_parser: JsonParser,
         file_storage: FileStorage,
         mcp_repository: MCPRepository,
         search_engine: Optional[SearchEngine] = None,
@@ -45,15 +42,12 @@ class AgentService:
         self._agent_domain_service = AgentDomainService(
             self._agent_repository,
             self._session_repository,
-            llm,
             sandbox_cls,
             task_cls,
-            json_parser,
             file_storage,
             mcp_repository,
             search_engine,
         )
-        self._llm = llm
         self._search_engine = search_engine
         self._sandbox_cls = sandbox_cls
     
@@ -67,12 +61,11 @@ class AgentService:
 
     async def _create_agent(self) -> Agent:
         logger.info("Creating new agent")
-        
-        # Create Agent instance
+        settings = get_settings()
         agent = Agent(
-            model_name=self._llm.model_name,
-            temperature=self._llm.temperature,
-            max_tokens=self._llm.max_tokens,
+            model_name=settings.model_name,
+            temperature=settings.temperature,
+            max_tokens=settings.max_tokens,
         )
         logger.info(f"Created new Agent with ID: {agent.id}")
         

@@ -2,7 +2,8 @@ from typing import Dict, Any, Optional, List
 from playwright.async_api import async_playwright, Browser, Page
 import asyncio
 from markdownify import markdownify
-from app.infrastructure.external.llm.openai_llm import OpenAILLM
+from langchain.chat_models import init_chat_model
+from langchain_core.messages import HumanMessage, SystemMessage
 from app.core.config import get_settings
 from app.domain.models.tool_result import ToolResult
 import logging
@@ -17,8 +18,14 @@ class PlaywrightBrowser:
         self.browser: Optional[Browser] = None
         self.page: Optional[Page] = None
         self.playwright = None
-        self.llm = OpenAILLM()
         self.settings = get_settings()
+        self._model = init_chat_model(
+            model=self.settings.model_name,
+            model_provider=self.settings.model_provider,
+            temperature=self.settings.temperature,
+            max_tokens=self.settings.max_tokens,
+            base_url=self.settings.api_base,
+        )
         self.cdp_url = cdp_url
         
     async def initialize(self):
@@ -216,17 +223,11 @@ class PlaywrightBrowser:
         markdown_content = markdownify(visible_content)
 
         max_content_length = min(50000, len(markdown_content))
-        response = await self.llm.ask([{
-            "role": "system",
-            "content": "You are a professional web page information extraction assistant. Please extract all information from the current page content and convert it to Markdown format."
-        },
-        {
-            "role": "user",
-            "content": markdown_content[:max_content_length]
-        }
+        response = await self._model.ainvoke([
+            SystemMessage(content="You are a professional web page information extraction assistant. Please extract all information from the current page content and convert it to Markdown format."),
+            HumanMessage(content=markdown_content[:max_content_length]),
         ])
-        
-        return response.get("content", "")
+        return response.content
     
     async def view_page(self) -> ToolResult:
         """View visible elements within the current page's viewport and convert to Markdown format"""

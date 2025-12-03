@@ -14,7 +14,7 @@
       </div>
     </div>
   </div>
-  <div v-else-if="message.type === 'assistant'" class="flex flex-col gap-2 w-full group mt-3">
+  <div v-else-if="message.type === 'assistant' || message.type === 'delta'" class="flex flex-col gap-2 w-full group mt-3">
     <div class="flex items-center justify-between h-7 group">
       <div class="flex items-center gap-[3px]">
         <Bot :size="24" class="w-6 h-6" />

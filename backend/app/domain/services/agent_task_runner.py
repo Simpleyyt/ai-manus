@@ -18,7 +18,7 @@ from app.domain.models.event import (
     ToolStatus,
     AgentEvent,
     McpToolContent,
-    ToolStatus
+    ToolStatus, DeltaEvent
 )
 from app.domain.services.flows.plan_act import PlanActFlow
 from app.domain.external.sandbox import Sandbox
@@ -86,6 +86,9 @@ class AgentTaskRunner(TaskRunner):
         event_id = await task.output_stream.put(event.model_dump_json())
         event.id = event_id
         await self._session_repository.add_event(self._session_id, event)
+
+    async def _put_event(self, task: Task, event: AgentEvent) -> None:
+        await task.output_stream.put(event.model_dump_json())
     
     async def _pop_event(self, task: Task) -> AgentEvent:
         event_id, event_str = await task.input_stream.pop()
@@ -226,15 +229,18 @@ class AgentTaskRunner(TaskRunner):
                 message_obj = Message(message=message, attachments=[attachment.file_path for attachment in event.attachments])
                 
                 async for event in self._run_flow(message_obj):
-                    await self._put_and_add_event(task, event)
-                    if isinstance(event, TitleEvent):
-                        await self._session_repository.update_title(self._session_id, event.title)
-                    elif isinstance(event, MessageEvent):
-                        await self._session_repository.update_latest_message(self._session_id, event.message, event.timestamp)
-                        await self._session_repository.increment_unread_message_count(self._session_id)
-                    elif isinstance(event, WaitEvent):
-                        await self._session_repository.update_status(self._session_id, SessionStatus.WAITING)
-                        return
+                    if isinstance(event, DeltaEvent):
+                        await self._put_event(task, event)
+                    else:
+                        await self._put_and_add_event(task, event)
+                        if isinstance(event, TitleEvent):
+                            await self._session_repository.update_title(self._session_id, event.title)
+                        elif isinstance(event, MessageEvent):
+                            await self._session_repository.update_latest_message(self._session_id, event.message, event.timestamp)
+                            await self._session_repository.increment_unread_message_count(self._session_id)
+                        elif isinstance(event, WaitEvent):
+                            await self._session_repository.update_status(self._session_id, SessionStatus.WAITING)
+                            return
                     if not await task.input_stream.is_empty():
                         break
 

@@ -13,6 +13,7 @@ from app.domain.models.event import (
     TitleEvent,
     ToolEvent,
     StepEvent,
+    DeltaEvent,
 )
 
 class BaseEventData(BaseModel):
@@ -30,7 +31,7 @@ class BaseEventData(BaseModel):
             "event_id": event.id,
             "timestamp": int(event.timestamp.timestamp())
         }
-    
+
     @classmethod
     def from_event(cls, event: AgentEvent) -> Self:
         return cls(
@@ -55,6 +56,24 @@ class BaseSSEEvent(BaseModel):
         return cls(
             event=event.type,
             data=data_class.from_event(event)
+        )
+
+class DeltaEventData(BaseEventData):
+    role: Literal["assistant"]
+    content: str
+
+class DeltaSSEEvent(BaseSSEEvent):
+    event: Literal["delta"]  = "delta"
+    data: DeltaEventData
+
+    @classmethod
+    async def from_event_async(cls, event: DeltaEvent) -> Self:
+        return cls(
+            data=DeltaEventData(
+                **BaseEventData.base_event_data(event),
+                role=event.role,
+                content=event.content
+            ),
         )
 
 class MessageEventData(BaseEventData):
@@ -162,7 +181,7 @@ class PlanSSEEvent(BaseSSEEvent):
                 steps=[StepEventData(
                     **BaseEventData.base_event_data(event),
                     status=step.status,
-                    id=step.id, 
+                    id=step.id,
                     description=step.description
                 ) for step in event.plan.steps]
             )
@@ -182,6 +201,7 @@ AgentSSEEvent = Union[
     DoneSSEEvent,
     ErrorSSEEvent,
     WaitSSEEvent,
+    DeltaSSEEvent,
 ]
 
 @dataclass
@@ -193,55 +213,55 @@ class EventMapping:
 
 class EventMapper:
     """Map AgentEvent to SSEEvent"""
-    
+
     _cached_mapping: Optional[Dict[str, EventMapping]] = None
-    
+
     @staticmethod
     def _get_event_type_mapping() -> Dict[str, EventMapping]:
         """Dynamically get mapping from event type to SSE event class with caching"""
         if EventMapper._cached_mapping is not None:
             return EventMapper._cached_mapping
-            
+
         from typing import get_args
-        
+
         # Get all subclasses of AgentSSEEvent Union
         sse_event_classes = get_args(AgentSSEEvent)
         mapping = {}
-        
+
         for sse_event_class in sse_event_classes:
             # Skip base class
             if sse_event_class == BaseSSEEvent:
                 continue
-                
+
             # Get event type
             if hasattr(sse_event_class, '__annotations__') and 'event' in sse_event_class.__annotations__:
                 event_field = sse_event_class.__annotations__['event']
                 if hasattr(event_field, '__args__') and len(event_field.__args__) > 0:
                     event_type = event_field.__args__[0]  # Get Literal value
-                    
+
                     # Get data class from sse_event_class
                     data_class = None
                     if hasattr(sse_event_class, '__annotations__') and 'data' in sse_event_class.__annotations__:
                         data_class = sse_event_class.__annotations__['data']
-                    
+
                     mapping[event_type] = EventMapping(
                         sse_event_class=sse_event_class,
                         data_class=data_class,
                         event_type=event_type
                     )
-        
+
         # Cache the mapping
         EventMapper._cached_mapping = mapping
         return mapping
-    
+
     @staticmethod
     async def event_to_sse_event(event: AgentEvent) -> AgentSSEEvent:
         # Get mapping dynamically
         event_type_mapping = EventMapper._get_event_type_mapping()
-        
+
         # Find matching SSE event class
         event_mapping = event_type_mapping.get(event.type)
-        
+
         if event_mapping:
             # Prioritize from_event_async class method if exists, otherwise use from_event
             sse_event_class = event_mapping.sse_event_class
@@ -252,7 +272,7 @@ class EventMapper:
             return sse_event
         # If no matching type found, return base event
         return CommonEventData.from_event(event)
-    
+
     @staticmethod
     async def events_to_sse_events(events: List[AgentEvent]) -> List[AgentSSEEvent]:
         """Create SSE event list from event list"""

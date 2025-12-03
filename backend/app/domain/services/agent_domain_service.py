@@ -6,7 +6,7 @@ from app.domain.models.session import Session, SessionStatus
 from app.domain.external.llm import LLM
 from app.domain.external.sandbox import Sandbox
 from app.domain.external.search import SearchEngine
-from app.domain.models.event import BaseEvent, ErrorEvent, DoneEvent, MessageEvent, WaitEvent, AgentEvent
+from app.domain.models.event import BaseEvent, ErrorEvent, DoneEvent, MessageEvent, WaitEvent, AgentEvent, DeltaEvent
 from pydantic import TypeAdapter
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.repositories.session_repository import SessionRepository
@@ -168,7 +168,8 @@ class AgentDomainService:
                 event = TypeAdapter(AgentEvent).validate_json(event_str)
                 event.id = event_id
                 logger.debug(f"Got event from Session {session_id}'s event queue: {type(event).__name__}")
-                await self._session_repository.update_unread_message_count(session_id, 0)
+                if not isinstance(event, DeltaEvent):
+                    await self._session_repository.update_unread_message_count(session_id, 0)
                 yield event
                 if isinstance(event, (DoneEvent, ErrorEvent, WaitEvent)):
                     break

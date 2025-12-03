@@ -5,6 +5,7 @@ from app.core.config import get_settings
 import logging
 import asyncio
 import time
+from collections.abc import AsyncIterator
 
 
 logger = logging.getLogger(__name__)
@@ -91,3 +92,54 @@ class OpenAILLM(LLM):
                     raise e
                 continue
 
+
+    async def ask_stream(
+            self,
+            messages: List[Dict[str, str]],
+            tools: Optional[List[Dict[str, Any]]] = None,
+            response_format: Optional[Dict[str, Any]] = None,
+            tool_choice: Optional[str] = None
+    ) -> AsyncIterator[Dict[str, Any]]:
+        try:
+            # 构建基础参数
+            params = {
+                "model": self._model_name,
+                "temperature": self._temperature,
+                "max_tokens": self._max_tokens,
+                "messages": messages,
+                "stream": True,  # 关键：启用流式
+            }
+
+            # 如果有 tools，添加相关参数
+            if tools:
+                logger.debug(f"Sending streaming request to OpenAI with tools, model: {self._model_name}")
+                params.update({
+                    "tools": tools,
+                    "response_format": response_format,
+                    "tool_choice": tool_choice,
+                    "parallel_tool_calls": False,
+                })
+            else:
+                logger.debug(f"Sending streaming request to OpenAI without tools, model: {self._model_name}")
+                if response_format:
+                    params["response_format"] = response_format
+            # 调用流式 API
+            stream = await self.client.chat.completions.create(**params)
+            # 迭代流式响应
+            async for chunk in stream:
+                if chunk.choices and len(chunk.choices) > 0:
+                    choice = chunk.choices[0]
+                    delta = choice.delta.model_dump()
+                    # TODO: reasoning_content 显示
+                    if ("content" in delta and delta["content"]) \
+                        or ("tool_calls" in delta and delta["tool_calls"]):
+                        yield delta
+                    else:
+                        # TODO: 其他逻辑
+                        continue
+                else:
+                    logging.info(f"Done: {chunk.model_dump()}")
+                    break
+        except Exception as e:
+            logger.error(f"Error calling OpenAI streaming API: {str(e)}")
+            raise

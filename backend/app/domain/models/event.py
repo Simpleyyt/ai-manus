@@ -105,6 +105,12 @@ class MessageEvent(BaseEvent):
     message: str
     attachments: Optional[List[FileInfo]] = None
 
+class DeltaEvent(BaseEvent):
+    """Delta event"""
+    type: Literal["delta"] = "delta"
+    role: Literal["assistant"] = "assistant"
+    content: str
+
 class DoneEvent(BaseEvent):
     """Done event"""
     type: Literal["done"] = "done"
@@ -122,4 +128,5 @@ AgentEvent = Union[
     DoneEvent,
     TitleEvent,
     WaitEvent,
+    DeltaEvent,
 ]

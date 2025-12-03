@@ -2,18 +2,18 @@
   <SimpleBar ref="simpleBarRef" @scroll="handleScroll">
     <div ref="chatContainerRef" class="relative flex flex-col h-full flex-1 min-w-0 px-5">
       <div ref="observerRef"
-        class="sm:min-w-[390px] flex flex-row items-center justify-between pt-3 pb-1 gap-1 sticky top-0 z-10 bg-[var(--background-gray-main)] flex-shrink-0">
+           class="sm:min-w-[390px] flex flex-row items-center justify-between pt-3 pb-1 gap-1 sticky top-0 z-10 bg-[var(--background-gray-main)] flex-shrink-0">
         <div class="flex items-center flex-1">
           <div class="relative flex items-center">
             <div @click="toggleLeftPanel" v-if="!isLeftPanelShow"
-              class="flex h-7 w-7 items-center justify-center cursor-pointer rounded-md hover:bg-[var(--fill-tsp-gray-main)]">
-              <PanelLeft class="size-5 text-[var(--icon-secondary)]" />
+                 class="flex h-7 w-7 items-center justify-center cursor-pointer rounded-md hover:bg-[var(--fill-tsp-gray-main)]">
+              <PanelLeft class="size-5 text-[var(--icon-secondary)]"/>
             </div>
           </div>
         </div>
         <div class="max-w-full sm:max-w-[768px] sm:min-w-[390px] flex w-full flex-col gap-[4px] overflow-hidden">
           <div
-            class="text-[var(--text-primary)] text-lg font-medium w-full flex flex-row items-center justify-between flex-1 min-w-0 gap-2">
+              class="text-[var(--text-primary)] text-lg font-medium w-full flex flex-row items-center justify-between flex-1 min-w-0 gap-2">
             <div class="flex flex-row items-center gap-[6px] flex-1 min-w-0">
               <span class="whitespace-nowrap text-ellipsis overflow-hidden">
                 {{ title }}
@@ -24,63 +24,72 @@
                 <Popover>
                   <PopoverTrigger>
                     <button
-                      class="h-8 px-3 rounded-[100px] inline-flex items-center gap-1 clickable outline outline-1 outline-offset-[-1px] outline-[var(--border-btn-main)] hover:bg-[var(--fill-tsp-white-light)] me-1.5">
-                      <ShareIcon color="var(--icon-secondary)" />
+                        class="h-8 px-3 rounded-[100px] inline-flex items-center gap-1 clickable outline outline-1 outline-offset-[-1px] outline-[var(--border-btn-main)] hover:bg-[var(--fill-tsp-white-light)] me-1.5">
+                      <ShareIcon color="var(--icon-secondary)"/>
                       <span class="text-[var(--text-secondary)] text-sm font-medium">{{ t('Share') }}</span>
                     </button>
                   </PopoverTrigger>
                   <PopoverContent>
                     <div
-                      class="w-[400px] flex flex-col rounded-2xl bg-[var(--background-menu-white)] shadow-[0px_8px_32px_0px_var(--shadow-S),0px_0px_0px_1px_var(--border-light)]"
-                      style="max-width: calc(-16px + 100vw);">
+                        class="w-[400px] flex flex-col rounded-2xl bg-[var(--background-menu-white)] shadow-[0px_8px_32px_0px_var(--shadow-S),0px_0px_0px_1px_var(--border-light)]"
+                        style="max-width: calc(-16px + 100vw);">
                       <div class="flex flex-col pt-[12px] px-[16px] pb-[16px]">
                         <!-- Private mode option -->
                         <div @click="handleShareModeChange('private')"
-                          :class="{'pointer-events-none opacity-50': sharingLoading}"
-                          class="flex items-center gap-[10px] px-[8px] -mx-[8px] py-[8px] rounded-[8px] clickable hover:bg-[var(--fill-tsp-white-main)]">
+                             :class="{'pointer-events-none opacity-50': sharingLoading}"
+                             class="flex items-center gap-[10px] px-[8px] -mx-[8px] py-[8px] rounded-[8px] clickable hover:bg-[var(--fill-tsp-white-main)]">
                           <div
-                            :class="shareMode === 'private' ? 'bg-[var(--Button-primary-black)]' : 'bg-[var(--fill-tsp-white-dark)]'"
-                            class="w-[32px] h-[32px] rounded-[8px] flex items-center justify-center">
-                            <Lock :size="16" :stroke="shareMode === 'private' ? 'var(--text-onblack)' : 'var(--icon-primary)'" :stroke-width="2" /></div>
+                              :class="shareMode === 'private' ? 'bg-[var(--Button-primary-black)]' : 'bg-[var(--fill-tsp-white-dark)]'"
+                              class="w-[32px] h-[32px] rounded-[8px] flex items-center justify-center">
+                            <Lock :size="16"
+                                  :stroke="shareMode === 'private' ? 'var(--text-onblack)' : 'var(--icon-primary)'"
+                                  :stroke-width="2"/></div>
                           <div class="flex flex-col flex-1 min-w-0">
                             <div class="text-sm font-medium text-[var(--text-primary)]">{{ t('Private Only') }}</div>
                             <div class="text-[13px] text-[var(--text-tertiary)]">{{ t('Only visible to you') }}</div>
-                          </div><Check :size="20" :class="shareMode === 'private' ? 'ml-auto' : 'ml-auto invisible'" :color="shareMode === 'private' ? 'var(--icon-primary)' : 'var(--icon-tertiary)'" />
+                          </div><Check :size="20" :class="shareMode === 'private' ? 'ml-auto' : 'ml-auto invisible'"
+                                       :color="shareMode === 'private' ? 'var(--icon-primary)' : 'var(--icon-tertiary)'"/>
                         </div>
                         <!-- Public mode option -->
                         <div @click="handleShareModeChange('public')"
-                          :class="{'pointer-events-none opacity-50': sharingLoading}"
-                          class="flex items-center gap-[10px] px-[8px] -mx-[8px] py-[8px] rounded-[8px] clickable hover:bg-[var(--fill-tsp-white-main)]">
+                             :class="{'pointer-events-none opacity-50': sharingLoading}"
+                             class="flex items-center gap-[10px] px-[8px] -mx-[8px] py-[8px] rounded-[8px] clickable hover:bg-[var(--fill-tsp-white-main)]">
                           <div
-                            :class="shareMode === 'public' ? 'bg-[var(--Button-primary-black)]' : 'bg-[var(--fill-tsp-white-dark)]'"
-                            class="w-[32px] h-[32px] rounded-[8px] flex items-center justify-center">
-                            <Globe :size="16" :stroke="shareMode === 'public' ? 'var(--text-onblack)' : 'var(--icon-primary)'" :stroke-width="2" /></div>
+                              :class="shareMode === 'public' ? 'bg-[var(--Button-primary-black)]' : 'bg-[var(--fill-tsp-white-dark)]'"
+                              class="w-[32px] h-[32px] rounded-[8px] flex items-center justify-center">
+                            <Globe :size="16"
+                                   :stroke="shareMode === 'public' ? 'var(--text-onblack)' : 'var(--icon-primary)'"
+                                   :stroke-width="2"/></div>
                           <div class="flex flex-col flex-1 min-w-0">
                             <div class="text-sm font-medium text-[var(--text-primary)]">{{ t('Public Access') }}</div>
-                            <div class="text-[13px] text-[var(--text-tertiary)]">{{ t('Anyone with the link can view') }}</div>
-                          </div><Check :size="20" :class="shareMode === 'public' ? 'ml-auto' : 'ml-auto invisible'" :color="shareMode === 'public' ? 'var(--icon-primary)' : 'var(--icon-tertiary)'" />
+                            <div class="text-[13px] text-[var(--text-tertiary)]">{{
+                                t('Anyone with the link can view')
+                              }}</div>
+                          </div><Check :size="20" :class="shareMode === 'public' ? 'ml-auto' : 'ml-auto invisible'"
+                                       :color="shareMode === 'public' ? 'var(--icon-primary)' : 'var(--icon-tertiary)'"/>
                         </div>
                         <div class="border-t border-[var(--border-main)] mt-[4px]"></div>
-                        
+
                         <!-- Show instant share button when in private mode -->
                         <div v-if="shareMode === 'private'">
                           <button @click.stop="handleInstantShare"
-                            :disabled="sharingLoading"
-                            class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors hover:opacity-90 active:opacity-80 bg-[var(--Button-primary-black)] text-[var(--text-onblack)] h-[36px] px-[12px] rounded-[10px] gap-[6px] text-sm min-w-16 mt-[16px] w-full disabled:opacity-50 disabled:cursor-not-allowed"
-                            data-tabindex="" tabindex="-1">
-                            <div v-if="sharingLoading" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            <Link v-else :size="16" stroke="currentColor" :stroke-width="2" />
+                                  :disabled="sharingLoading"
+                                  class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors hover:opacity-90 active:opacity-80 bg-[var(--Button-primary-black)] text-[var(--text-onblack)] h-[36px] px-[12px] rounded-[10px] gap-[6px] text-sm min-w-16 mt-[16px] w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                                  data-tabindex="" tabindex="-1">
+                            <div v-if="sharingLoading"
+                                 class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            <Link v-else :size="16" stroke="currentColor" :stroke-width="2"/>
                             {{ sharingLoading ? t('Sharing...') : t('Share Instantly') }}
                           </button>
                         </div>
-                        
+
                         <!-- Show copy link button when in public mode -->
                         <div v-else>
                           <button @click.stop="handleCopyLink"
-                            :class="linkCopied ? 'inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors active:opacity-80 bg-[var(--Button-primary-white)] text-[var(--text-primary)] hover:opacity-70 active:hover-60 h-[36px] px-[12px] rounded-[10px] gap-[6px] text-sm min-w-16 mt-[16px] w-full border border-[var(--border-btn-main)] shadow-none' : 'inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors hover:opacity-90 active:opacity-80 bg-[var(--Button-primary-black)] text-[var(--text-onblack)] h-[36px] px-[12px] rounded-[10px] gap-[6px] text-sm min-w-16 mt-[16px] w-full'"
-                            data-tabindex="" tabindex="-1">
-                            <Link v-if="!linkCopied" :size="16" stroke="currentColor" :stroke-width="2" />
-                            <Check v-else :size="16" color="var(--text-primary)" />
+                                  :class="linkCopied ? 'inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors active:opacity-80 bg-[var(--Button-primary-white)] text-[var(--text-primary)] hover:opacity-70 active:hover-60 h-[36px] px-[12px] rounded-[10px] gap-[6px] text-sm min-w-16 mt-[16px] w-full border border-[var(--border-btn-main)] shadow-none' : 'inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors hover:opacity-90 active:opacity-80 bg-[var(--Button-primary-black)] text-[var(--text-onblack)] h-[36px] px-[12px] rounded-[10px] gap-[6px] text-sm min-w-16 mt-[16px] w-full'"
+                                  data-tabindex="" tabindex="-1">
+                            <Link v-if="!linkCopied" :size="16" stroke="currentColor" :stroke-width="2"/>
+                            <Check v-else :size="16" color="var(--text-primary)"/>
                             {{ linkCopied ? t('Link Copied') : t('Copy Link') }}
                           </button>
                         </div>
@@ -90,8 +99,8 @@
                 </Popover>
               </span>
               <button @click="handleFileListShow"
-                class="p-[5px] flex items-center justify-center hover:bg-[var(--fill-tsp-white-dark)] rounded-lg cursor-pointer">
-                <FileSearch class="text-[var(--icon-secondary)]" :size="18" />
+                      class="p-[5px] flex items-center justify-center hover:bg-[var(--fill-tsp-white-dark)] rounded-lg cursor-pointer">
+                <FileSearch class="text-[var(--icon-secondary)]" :size="18"/>
               </button>
             </div>
           </div>
@@ -103,38 +112,38 @@
       <div class="mx-auto w-full max-w-full sm:max-w-[768px] sm:min-w-[390px] flex flex-col flex-1">
         <div class="flex flex-col w-full gap-[12px] pb-[80px] pt-[12px] flex-1 overflow-y-auto">
           <ChatMessage v-for="(message, index) in messages" :key="index" :message="message"
-            @toolClick="handleToolClick" />
+                       @toolClick="handleToolClick"/>
 
           <!-- Loading indicator -->
-          <LoadingIndicator v-if="isLoading" :text="$t('Thinking')" />
+          <LoadingIndicator v-if="isLoading" :text="$t('Thinking')"/>
         </div>
 
         <div class="flex flex-col bg-[var(--background-gray-main)] sticky bottom-0">
           <button @click="handleFollow" v-if="!follow"
-            class="flex items-center justify-center w-[36px] h-[36px] rounded-full bg-[var(--background-white-main)] hover:bg-[var(--background-gray-main)] clickable border border-[var(--border-main)] shadow-[0px_5px_16px_0px_var(--shadow-S),0px_0px_1.25px_0px_var(--shadow-S)] absolute -top-20 left-1/2 -translate-x-1/2">
-            <ArrowDown class="text-[var(--icon-primary)]" :size="20" />
+                  class="flex items-center justify-center w-[36px] h-[36px] rounded-full bg-[var(--background-white-main)] hover:bg-[var(--background-gray-main)] clickable border border-[var(--border-main)] shadow-[0px_5px_16px_0px_var(--shadow-S),0px_0px_1.25px_0px_var(--shadow-S)] absolute -top-20 left-1/2 -translate-x-1/2">
+            <ArrowDown class="text-[var(--icon-primary)]" :size="20"/>
           </button>
-          <PlanPanel v-if="plan && plan.steps.length > 0" :plan="plan" />
+          <PlanPanel v-if="plan && plan.steps.length > 0" :plan="plan"/>
           <ChatBox v-model="inputMessage" :rows="1" @submit="handleSubmit" :isRunning="isLoading" @stop="handleStop"
-            :attachments="attachments" />
+                   :attachments="attachments"/>
         </div>
       </div>
     </div>
-    <ToolPanel ref="toolPanel" :size="toolPanelSize" :sessionId="sessionId" :realTime="realTime" 
-      :isShare="false"
-      @jumpToRealTime="jumpToRealTime" />
+    <ToolPanel ref="toolPanel" :size="toolPanelSize" :sessionId="sessionId" :realTime="realTime"
+               :isShare="false"
+               @jumpToRealTime="jumpToRealTime"/>
   </SimpleBar>
 </template>
 
 <script setup lang="ts">
 import SimpleBar from '../components/SimpleBar.vue';
-import { ref, onMounted, watch, nextTick, onUnmounted, reactive, toRefs } from 'vue';
-import { useRouter, onBeforeRouteUpdate } from 'vue-router';
-import { useI18n } from 'vue-i18n';
+import {ref, onMounted, watch, nextTick, onUnmounted, reactive, toRefs} from 'vue';
+import {useRouter, onBeforeRouteUpdate} from 'vue-router';
+import {useI18n} from 'vue-i18n';
 import ChatBox from '../components/ChatBox.vue';
 import ChatMessage from '../components/ChatMessage.vue';
 import * as agentApi from '../api/agent';
-import { Message, MessageContent, ToolContent, StepContent, AttachmentsContent } from '../types/message';
+import {Message, MessageContent, ToolContent, StepContent, AttachmentsContent, DeltaContent} from '../types/message';
 import {
   StepEventData,
   ToolEventData,
@@ -142,27 +151,27 @@ import {
   ErrorEventData,
   TitleEventData,
   PlanEventData,
-  AgentSSEEvent,
+  AgentSSEEvent, DeltaEventData,
 } from '../types/event';
 import ToolPanel from '../components/ToolPanel.vue'
 import PlanPanel from '../components/PlanPanel.vue';
-import { ArrowDown, FileSearch, PanelLeft, Lock, Globe, Link, Check } from 'lucide-vue-next';
+import {ArrowDown, FileSearch, PanelLeft, Lock, Globe, Link, Check} from 'lucide-vue-next';
 import ShareIcon from '@/components/icons/ShareIcon.vue';
-import { showErrorToast, showSuccessToast } from '../utils/toast';
-import type { FileInfo } from '../api/file';
-import { useLeftPanel } from '../composables/useLeftPanel'
-import { useSessionFileList } from '../composables/useSessionFileList'
-import { useFilePanel } from '../composables/useFilePanel'
-import { copyToClipboard } from '../utils/dom'
-import { SessionStatus } from '../types/response';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {showErrorToast, showSuccessToast} from '../utils/toast';
+import type {FileInfo} from '../api/file';
+import {useLeftPanel} from '../composables/useLeftPanel'
+import {useSessionFileList} from '../composables/useSessionFileList'
+import {useFilePanel} from '../composables/useFilePanel'
+import {copyToClipboard} from '../utils/dom'
+import {SessionStatus} from '../types/response';
+import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover';
 import LoadingIndicator from '@/components/ui/LoadingIndicator.vue';
 
 const router = useRouter()
-const { t } = useI18n()
-const { toggleLeftPanel, isLeftPanelShow } = useLeftPanel()
-const { showSessionFileList } = useSessionFileList()
-const { hideFilePanel } = useFilePanel()
+const {t} = useI18n()
+const {toggleLeftPanel, isLeftPanelShow} = useLeftPanel()
+const {showSessionFileList} = useSessionFileList()
+const {hideFilePanel} = useFilePanel()
 
 // Create initial state factory
 const createInitialState = () => ({
@@ -233,8 +242,7 @@ watch(messages, async () => {
   if (follow.value) {
     simpleBarRef.value?.scrollToBottom();
   }
-}, { deep: true });
-
+}, {deep: true});
 
 
 const getLastStep = (): StepContent | undefined => {
@@ -243,6 +251,11 @@ const getLastStep = (): StepContent | undefined => {
 
 // Handle message event
 const handleMessageEvent = (messageData: MessageEventData) => {
+  const lastMessage = messages.value[messages.value.length - 1];
+  if (lastMessage && lastMessage.type === 'delta') {
+    messages.value.pop();
+  }
+  
   messages.value.push({
     type: messageData.role,
     content: {
@@ -258,6 +271,31 @@ const handleMessageEvent = (messageData: MessageEventData) => {
       } as AttachmentsContent,
     });
   }
+}
+
+// Handle delta event
+const handleDeltaEvent = (deltaData: DeltaEventData) => {
+  if (!deltaData.content) {
+    return;
+  }
+  const messagesLength = messages.value.length;
+  const messageType = messages.value[messagesLength - 1].type;
+  if (
+      messagesLength === 0 ||
+      (messageType !== 'assistant' && messageType !== 'delta')
+  ) {
+    messages.value.push({
+      type: 'delta',
+      content: {
+        ...deltaData
+      } as DeltaContent,
+    });
+    return;
+  }
+
+  const messageContent = messages.value[messagesLength - 1].content as MessageContent;
+  messageContent.content = (messageContent.content || '') + (deltaData.content || '');
+  messageContent.timestamp = deltaData.timestamp;
 }
 
 // Handle tool event
@@ -347,6 +385,8 @@ const handleEvent = (event: AgentSSEEvent) => {
     handleTitleEvent(event.data as TitleEventData);
   } else if (event.event === 'plan') {
     handlePlanEvent(event.data as PlanEventData);
+  } else if (event.event === 'delta') {
+    handleDeltaEvent(event.data as DeltaEventData);
   }
   lastEventId.value = event.data.event_id;
 }
@@ -395,39 +435,41 @@ const chat = async (message: string = '', files: FileInfo[] = []) => {
   try {
     // Use the split event handler function and store the cancel function
     cancelCurrentChat.value = await agentApi.chatWithSession(
-      sessionId.value,
-      message,
-      lastEventId.value,
-      files.map((file: FileInfo) => ({file_id : file.file_id, 
-                                        filename : file.filename})),
-      {
-        onOpen: () => {
-          console.log('Chat opened');
-          isLoading.value = true;
-        },
-        onMessage: ({ event, data }) => {
-          handleEvent({
-            event: event as AgentSSEEvent['event'],
-            data: data as AgentSSEEvent['data']
-          });
-        },
-        onClose: () => {
-          console.log('Chat closed');
-          isLoading.value = false;
-          // Clear the cancel function when connection is closed normally
-          if (cancelCurrentChat.value) {
-            cancelCurrentChat.value = null;
-          }
-        },
-        onError: (error) => {
-          console.error('Chat error:', error);
-          isLoading.value = false;
-          // Clear the cancel function when there's an error
-          if (cancelCurrentChat.value) {
-            cancelCurrentChat.value = null;
+        sessionId.value,
+        message,
+        lastEventId.value,
+        files.map((file: FileInfo) => ({
+          file_id: file.file_id,
+          filename: file.filename
+        })),
+        {
+          onOpen: () => {
+            console.log('Chat opened');
+            isLoading.value = true;
+          },
+          onMessage: ({event, data}) => {
+            handleEvent({
+              event: event as AgentSSEEvent['event'],
+              data: data as AgentSSEEvent['data']
+            });
+          },
+          onClose: () => {
+            console.log('Chat closed');
+            isLoading.value = false;
+            // Clear the cancel function when connection is closed normally
+            if (cancelCurrentChat.value) {
+              cancelCurrentChat.value = null;
+            }
+          },
+          onError: (error) => {
+            console.error('Chat error:', error);
+            isLoading.value = false;
+            // Clear the cancel function when there's an error
+            if (cancelCurrentChat.value) {
+              cancelCurrentChat.value = null;
+            }
           }
         }
-      }
     );
   } catch (error) {
     console.error('Chat error:', error);
@@ -454,7 +496,6 @@ const restoreSession = async () => {
   }
   agentApi.clearUnreadMessageCount(sessionId.value);
 }
-
 
 
 onBeforeRouteUpdate((to, _, next) => {
@@ -550,22 +591,22 @@ const handleFileListShow = () => {
 // Share functionality handlers
 const handleShareModeChange = async (mode: 'private' | 'public') => {
   if (!sessionId.value || sharingLoading.value) return;
-  
+
   // If mode is same as current, no need to call API
   if (shareMode.value === mode) {
     linkCopied.value = false;
     return;
   }
-  
+
   try {
     sharingLoading.value = true;
-    
+
     if (mode === 'public') {
       await agentApi.shareSession(sessionId.value);
     } else {
       await agentApi.unshareSession(sessionId.value);
     }
-    
+
     shareMode.value = mode;
     linkCopied.value = false;
   } catch (error) {
@@ -578,7 +619,7 @@ const handleShareModeChange = async (mode: 'private' | 'public') => {
 
 const handleInstantShare = async () => {
   if (!sessionId.value) return;
-  
+
   try {
     sharingLoading.value = true;
     await agentApi.shareSession(sessionId.value);
@@ -594,12 +635,12 @@ const handleInstantShare = async () => {
 
 const handleCopyLink = async () => {
   if (!sessionId.value) return;
-  
+
   const shareUrl = `${window.location.origin}/share/${sessionId.value}`;
-  
+
   try {
     const success = await copyToClipboard(shareUrl);
-    
+
     if (success) {
       linkCopied.value = true;
       setTimeout(() => {

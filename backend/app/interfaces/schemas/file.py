@@ -20,7 +20,7 @@ class FileInfoResponse(BaseModel):
     file_id: str
     filename: str
     content_type: Optional[str]
-    size: int
+    size: Optional[int]
     upload_date: Optional[datetime] = None
     metadata: Optional[Dict[str, Any]]
     file_url: Optional[str]

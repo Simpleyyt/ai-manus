@@ -1,8 +1,8 @@
 import type { FileInfo } from '../api/file';
 
 export type AgentSSEEvent = {
-  event: 'tool' | 'step' | 'message' | 'error' | 'done' | 'title' | 'wait' | 'plan' | 'attachments';
-  data: ToolEventData | StepEventData | MessageEventData | ErrorEventData | DoneEventData | TitleEventData | WaitEventData | PlanEventData;
+  event: 'tool' | 'step' | 'message' | 'error' | 'done' | 'title' | 'wait' | 'plan' | 'attachments' | 'delta';
+  data: ToolEventData | StepEventData | MessageEventData | ErrorEventData | DoneEventData | TitleEventData | WaitEventData | PlanEventData | DeltaEventData;
 }
 
 export interface BaseEventData {
@@ -47,4 +47,9 @@ export interface TitleEventData extends BaseEventData {
 
 export interface PlanEventData extends BaseEventData {
   steps: StepEventData[];
+}
+
+export interface DeltaEventData extends BaseEventData{
+    content: string;
+    role: "assistant"
 }

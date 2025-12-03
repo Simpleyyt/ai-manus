@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional, Protocol
+from collections.abc import AsyncIterator
 
 class LLM(Protocol):
     """AI service gateway interface for interacting with AI services"""
@@ -20,7 +21,26 @@ class LLM(Protocol):
         Returns:
             Response message from AI service
         """
-        ... 
+        ...
+
+    def ask_stream(
+            self,
+            messages: List[Dict[str, str]],
+            tools: Optional[List[Dict[str, Any]]] = None,
+            response_format: Optional[Dict[str, Any]] = None,
+            tool_choice: Optional[str] = None
+    ) -> AsyncIterator[Dict[str, Any]]:
+        """Send chat request to AI service
+
+        Args:
+            messages: List of messages, including conversation history
+            tools: Optional list of tools for function calling
+            response_format: Optional response format configuration
+            tool_choice: Optional tool choice configuration
+        Returns:
+            Response message from AI service with stream
+        """
+        ...
 
     @property
     def model_name(self) -> str:

@@ -4,7 +4,14 @@ from app.domain.services.tools.base import tool, BaseTool
 from app.domain.models.tool_result import ToolResult
 
 class ShellTool(BaseTool):
-    """Shell tool class, providing Shell interaction related functions"""
+    """
+    Shell tool class with stateful session support (OpenHands SDK pattern).
+    
+    Features:
+    - Persistent CWD and ENV between commands
+    - Background process support (&)
+    - Session-based command execution
+    """
 
     name: str = "shell"
     
@@ -12,47 +19,92 @@ class ShellTool(BaseTool):
         """Initialize Shell tool class
         
         Args:
-            sandbox: Sandbox service
+            sandbox: Sandbox service (must support stateful operations)
         """
         super().__init__()
         self.sandbox = sandbox
         
     @tool(
         name="shell_exec",
-        description="Execute commands in a specified shell session. Use for running code, installing packages, or managing files.",
+        description=(
+            "Execute commands in a stateful shell session with persistent CWD and ENV. "
+            "The session maintains state between commands (like export, cd). "
+            "Supports background processes with & suffix (e.g., 'npm run dev &'). "
+            "Use for running code, installing packages, managing files, or starting servers."
+        ),
         parameters={
             "id": {
                 "type": "string",
-                "description": "Unique identifier of the target shell session"
-            },
-            "exec_dir": {
-                "type": "string",
-                "description": "Working directory for command execution (must use absolute path)"
+                "description": "Unique identifier of the target shell session (optional, defaults to 'default')"
             },
             "command": {
                 "type": "string",
-                "description": "Shell command to execute"
+                "description": (
+                    "Shell command to execute. "
+                    "ENV vars set with 'export VAR=value' persist for this session. "
+                    "Directory changes with 'cd' persist. "
+                    "Append '&' to run in background (e.g., 'npm run dev &')."
+                )
             }
         },
-        required=["id", "exec_dir", "command"]
+        required=["command"]
     )
     async def shell_exec(
         self,
-        id: str,
-        exec_dir: str,
-        command: str
+        command: str,
+        id: Optional[str] = None
     ) -> ToolResult:
-        """Execute Shell command
+        """
+        Execute Shell command with stateful context preservation.
+        
+        Examples:
+            # ENV persistence
+            result1 = await shell_exec(command="export USER=Test")
+            result2 = await shell_exec(command="echo $USER")  # outputs "Test"
+            
+            # CWD persistence
+            result1 = await shell_exec(command="cd /tmp")
+            result2 = await shell_exec(command="pwd")  # outputs "/tmp"
+            
+            # Background process
+            result = await shell_exec(command="npm run dev &")
+            # Returns immediately with PID
         
         Args:
-            id: Unique identifier of the target Shell session
-            exec_dir: Working directory for command execution (must use absolute path)
             command: Shell command to execute
+            id: Session identifier (optional, defaults to "default")
             
         Returns:
-            Command execution result
+            Command execution result with exit_code, stdout, stderr, cwd
         """
-        return await self.sandbox.exec_command(id, exec_dir, command)
+        # Use stateful execution
+        result = await self.sandbox.exec_command_stateful(command, id)
+        
+        # Format message
+        if result["exit_code"] == 0:
+            message = result["stdout"]
+            if result.get("background_pid"):
+                message += f"\n[Background process started with PID: {result['background_pid']}]"
+        else:
+            message = result["stderr"] or f"Command failed with exit code {result['exit_code']}"
+        
+        # Include CWD in data for agent awareness
+        data = {
+            "exit_code": result["exit_code"],
+            "stdout": result["stdout"],
+            "stderr": result["stderr"],
+            "cwd": result["cwd"],
+            "session_id": result["session_id"]
+        }
+        
+        if result.get("background_pid"):
+            data["background_pid"] = result["background_pid"]
+        
+        return ToolResult(
+            success=(result["exit_code"] == 0),
+            message=message,
+            data=data
+        )
     
     @tool(
         name="shell_view",

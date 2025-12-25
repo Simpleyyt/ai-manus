@@ -2,9 +2,20 @@ from typing import Optional, Dict, Any
 from app.domain.external.sandbox import Sandbox
 from app.domain.services.tools.base import tool, BaseTool
 from app.domain.models.tool_result import ToolResult
+from app.infrastructure.loggers import logger
+import os
+import json
 
 class FileTool(BaseTool):
-    """File tool class, providing file operation functions"""
+    """File tool class using OpenHands SDK file_editor
+    
+    Enhanced with:
+    - OpenHands SDK file_editor for advanced editing capabilities
+    - Excel/CSV analysis using pandas
+    - PDF text and table extraction
+    - Smart file detection and processing
+    - Stateful session support
+    """
 
     name: str = "file"
     
@@ -18,172 +29,168 @@ class FileTool(BaseTool):
         self.sandbox = sandbox
         
     @tool(
-        name="file_read",
-        description="Read file content. Use for checking file contents, analyzing logs, or reading configuration files.",
+        name="file_view",
+        description="View file content with line numbers. Perfect for reading code, configs, or logs. Uses OpenHands file_editor for consistent behavior.",
         parameters={
-            "file": {
+            "path": {
                 "type": "string",
-                "description": "Absolute path of the file to read"
+                "description": "Absolute or relative path of the file to view"
             },
-            "start_line": {
-                "type": "integer",
-                "description": "(Optional) Starting line to read from, 0-based"
-            },
-            "end_line": {
-                "type": "integer",
-                "description": "(Optional) Ending line number (exclusive)"
-            },
-            "sudo": {
-                "type": "boolean",
-                "description": "(Optional) Whether to use sudo privileges"
+            "view_range": {
+                "type": "array",
+                "description": "(Optional) [start_line, end_line] 1-indexed. Example: [1, 50] views lines 1-50",
+                "items": {"type": "integer"}
             }
         },
-        required=["file"]
+        required=["path"]
     )
-    async def file_read(
+    async def file_view(
         self,
-        file: str,
-        start_line: Optional[int] = None,
-        end_line: Optional[int] = None,
-        sudo: Optional[bool] = False
+        path: str,
+        view_range: Optional[list] = None
     ) -> ToolResult:
-        """Read file content
+        """View file content using OpenHands file_editor
         
         Args:
-            file: Absolute path of the file to read
-            start_line: (Optional) Starting line, 0-based
-            end_line: (Optional) Ending line (exclusive)
-            sudo: (Optional) Whether to use sudo privileges
+            path: Absolute or relative path of the file
+            view_range: Optional [start_line, end_line] 1-indexed
             
         Returns:
-            File content
+            File content with line numbers
         """
-        # Directly call sandbox's file_read method
-        return await self.sandbox.file_read(
-            file=file,
-            start_line=start_line,
-            end_line=end_line,
-            sudo=sudo
-        )
+        try:
+            # Build command arguments
+            args = {
+                "command": "view",
+                "path": path
+            }
+            if view_range:
+                args["view_range"] = view_range
+            
+            # Execute file_editor inside sandbox
+            cmd = f"python3 /openhands/tools/file_editor_cli.py '{json.dumps(args)}'"
+            result = await self.sandbox.exec_command_stateful(
+                command=cmd,
+                session_id="default"
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"file_view failed: {str(e)}")
+            return ToolResult(
+                success=False,
+                message=f"Failed to view file: {str(e)}"
+            )
     
     @tool(
-        name="file_write",
-        description="Overwrite or append content to a file. Use for creating new files, appending content, or modifying existing files.",
+        name="file_create",
+        description="Create a new file with content. Uses OpenHands file_editor for robust file creation.",
         parameters={
-            "file": {
+            "path": {
                 "type": "string",
-                "description": "Absolute path of the file to write to"
+                "description": "Absolute or relative path of the file to create"
             },
-            "content": {
+            "file_text": {
                 "type": "string",
-                "description": "Text content to write"
-            },
-            "append": {
-                "type": "boolean",
-                "description": "(Optional) Whether to use append mode"
-            },
-            "leading_newline": {
-                "type": "boolean",
-                "description": "(Optional) Whether to add a leading newline"
-            },
-            "trailing_newline": {
-                "type": "boolean",
-                "description": "(Optional) Whether to add a trailing newline"
-            },
-            "sudo": {
-                "type": "boolean",
-                "description": "(Optional) Whether to use sudo privileges"
+                "description": "Complete content to write to the file"
             }
         },
-        required=["file", "content"]
+        required=["path", "file_text"]
     )
-    async def file_write(
+    async def file_create(
         self,
-        file: str,
-        content: str,
-        append: Optional[bool] = False,
-        leading_newline: Optional[bool] = False,
-        trailing_newline: Optional[bool] = False,
-        sudo: Optional[bool] = False
+        path: str,
+        file_text: str
     ) -> ToolResult:
-        """Write content to file
+        """Create a new file using OpenHands file_editor
         
         Args:
-            file: Absolute path of the file to write to
-            content: Text content to write
-            append: (Optional) Whether to use append mode
-            leading_newline: (Optional) Whether to add a leading newline
-            trailing_newline: (Optional) Whether to add a trailing newline
-            sudo: (Optional) Whether to use sudo privileges
+            path: Path of the file to create
+            file_text: Content to write
             
         Returns:
-            Write result
+            Creation result
         """
-        # Prepare content
-        final_content = content
-        if leading_newline:
-            final_content = "\n" + final_content
-        if trailing_newline:
-            final_content = final_content + "\n"
+        try:
+            args = {
+                "command": "create",
+                "path": path,
+                "file_text": file_text
+            }
             
-        # Directly call sandbox's file_write method, pass all parameters
-        return await self.sandbox.file_write(
-            file=file, 
-            content=final_content,
-            append=append,
-            leading_newline=False,  # Already handled in final_content
-            trailing_newline=False,  # Already handled in final_content
-            sudo=sudo
-        )
+            cmd = f"python3 /openhands/tools/file_editor_cli.py '{json.dumps(args)}'"
+            result = await self.sandbox.exec_command_stateful(
+                command=cmd,
+                session_id="default"
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"file_create failed: {str(e)}")
+            return ToolResult(
+                success=False,
+                message=f"Failed to create file: {str(e)}"
+            )
     
     @tool(
         name="file_str_replace",
-        description="Replace specified string in a file. Use for updating specific content in files or fixing errors in code.",
+        description="Replace string in a file intelligently. Uses OpenHands file_editor for smart string replacement with context awareness.",
         parameters={
-            "file": {
+            "path": {
                 "type": "string",
-                "description": "Absolute path of the file to perform replacement on"
+                "description": "Absolute or relative path of the file"
             },
             "old_str": {
                 "type": "string",
-                "description": "Original string to be replaced"
+                "description": "Exact string to find and replace (must match exactly including whitespace)"
             },
             "new_str": {
                 "type": "string",
                 "description": "New string to replace with"
-            },
-            "sudo": {
-                "type": "boolean",
-                "description": "(Optional) Whether to use sudo privileges"
             }
         },
-        required=["file", "old_str", "new_str"]
+        required=["path", "old_str", "new_str"]
     )
     async def file_str_replace(
         self,
-        file: str,
+        path: str,
         old_str: str,
-        new_str: str,
-        sudo: Optional[bool] = False
+        new_str: str
     ) -> ToolResult:
-        """Replace specified string in file
+        """Replace string in file using OpenHands file_editor
         
         Args:
-            file: Absolute path of the file to perform replacement on
-            old_str: Original string to be replaced
-            new_str: New string to replace with
-            sudo: (Optional) Whether to use sudo privileges
+            path: Path of the file
+            old_str: Original string to replace
+            new_str: New string
             
         Returns:
             Replacement result
         """
-        # Directly call sandbox's file_replace method
-        return await self.sandbox.file_replace(
-            file=file,
-            old_str=old_str,
-            new_str=new_str,
-            sudo=sudo
-        )
+        try:
+            args = {
+                "command": "str_replace",
+                "path": path,
+                "old_str": old_str,
+                "new_str": new_str
+            }
+            
+            cmd = f"python3 /openhands/tools/file_editor_cli.py '{json.dumps(args)}'"
+            result = await self.sandbox.exec_command_stateful(
+                command=cmd,
+                session_id="default"
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"file_str_replace failed: {str(e)}")
+            return ToolResult(
+                success=False,
+                message=f"Failed to replace string: {str(e)}"
+            )
     
     @tool(
         name="file_find_in_content",
@@ -260,4 +267,209 @@ class FileTool(BaseTool):
         return await self.sandbox.file_find(
             path=path,
             glob_pattern=glob
-        ) 
+        )
+    
+    @tool(
+        name="file_analyze_excel",
+        description="Analyze Excel or CSV file with pandas. Supports data queries like 'get average of column X' or 'count rows where Y > 100'.",
+        parameters={
+            "file": {
+                "type": "string",
+                "description": "Absolute path of the Excel (.xlsx, .xls) or CSV file"
+            },
+            "query": {
+                "type": "string",
+                "description": "(Optional) Analysis query: 'average column_name', 'sum column_name', 'count', 'max', 'min', 'unique values'"
+            }
+        },
+        required=["file"]
+    )
+    async def file_analyze_excel(
+        self,
+        file: str,
+        query: Optional[str] = None
+    ) -> ToolResult:
+        """Analyze Excel or CSV file using pandas
+        
+        Args:
+            file: Absolute path of Excel/CSV file
+            query: Optional analysis query
+            
+        Returns:
+            File analysis with statistics and query results
+        """
+        try:
+            # Import the processor
+            from app.domain.services.tools.file_processors import DataFileProcessor
+            
+            # Get file extension
+            _, ext = os.path.splitext(file)
+            
+            # Download file as binary directly (no redundant file_read)
+            try:
+                file_stream = await self.sandbox.file_download(file)
+                file_content = file_stream.read()
+            except Exception as e:
+                # Security: Don't leak internal exception details to user
+                logger.error(f"Excel/CSV download failed for {file}: {str(e)}")
+                return ToolResult(
+                    success=False,
+                    message="Failed to download file for processing. Please check the file path and try again."
+                )
+            
+            # Process with pandas
+            analysis_result = DataFileProcessor.process_excel_csv(
+                file_content=file_content,
+                file_extension=ext,
+                query=query
+            )
+            
+            if not analysis_result.get("success"):
+                return ToolResult(
+                    success=False,
+                    message=analysis_result.get("error", "Analysis failed")
+                )
+            
+            # Format result message
+            summary = analysis_result["summary"]
+            message = f"Excel/CSV Analysis:\n"
+            message += f"- Rows: {summary['rows']}\n"
+            message += f"- Columns: {summary['columns']}\n"
+            message += f"- Column names: {', '.join(summary['column_names'])}\n"
+            
+            if analysis_result.get("query_result"):
+                query_res = analysis_result["query_result"]
+                if query_res.get("result"):
+                    message += f"\nQuery Result: {query_res['result']}"
+                elif query_res.get("error"):
+                    message += f"\nQuery Error: {query_res['error']}"
+            
+            return ToolResult(
+                success=True,
+                message=message,
+                data=analysis_result
+            )
+            
+        except Exception as e:
+            return ToolResult(
+                success=False,
+                message=f"Failed to analyze file: {str(e)}"
+            )
+    
+    @tool(
+        name="file_extract_pdf",
+        description="Extract text and tables from PDF files. Maintains document structure and extracts tables in structured format.",
+        parameters={
+            "file": {
+                "type": "string",
+                "description": "Absolute path of the PDF file"
+            },
+            "extract_tables": {
+                "type": "boolean",
+                "description": "(Optional) Whether to extract tables. Default is True."
+            },
+            "start_page": {
+                "type": "integer",
+                "description": "(Optional) Starting page number (0-indexed)"
+            },
+            "end_page": {
+                "type": "integer",
+                "description": "(Optional) Ending page number (exclusive)"
+            }
+        },
+        required=["file"]
+    )
+    async def file_extract_pdf(
+        self,
+        file: str,
+        extract_tables: Optional[bool] = True,
+        start_page: Optional[int] = None,
+        end_page: Optional[int] = None
+    ) -> ToolResult:
+        """Extract text and tables from PDF file
+        
+        Args:
+            file: Absolute path of PDF file
+            extract_tables: Whether to extract tables
+            start_page: Optional starting page
+            end_page: Optional ending page
+            
+        Returns:
+            Extracted text and tables
+        """
+        try:
+            # Import the processor
+            from app.domain.services.tools.file_processors import PDFProcessor
+            
+            # Download file from sandbox
+            try:
+                file_stream = await self.sandbox.file_download(file)
+                file_content = file_stream.read()
+            except Exception as e:
+                # Security: Don't leak internal exception details to user
+                logger.error(f"PDF download failed for {file}: {str(e)}")
+                return ToolResult(
+                    success=False,
+                    message="Failed to download PDF file. Please check the file path and try again."
+                )
+            
+            # Prepare page range - handle both start and end together, or individually
+            page_range = None
+            if start_page is not None or end_page is not None:
+                # Validation: Ensure non-negative page numbers
+                if start_page is not None and start_page < 0:
+                    return ToolResult(
+                        success=False,
+                        message="Invalid start_page: must be non-negative (0-indexed)"
+                    )
+                
+                if end_page is not None and end_page < 0:
+                    return ToolResult(
+                        success=False,
+                        message="Invalid end_page: must be non-negative"
+                    )
+                
+                # Validation: start must be less than end if both provided
+                if start_page is not None and end_page is not None:
+                    if start_page >= end_page:
+                        return ToolResult(
+                            success=False,
+                            message=f"Invalid page range: start_page ({start_page}) must be less than end_page ({end_page})"
+                        )
+                
+                # If only one is provided, use it with a default for the other
+                start = start_page if start_page is not None else 0
+                # end will be set to total pages in the processor if None
+                page_range = (start, end_page)
+            
+            # Process PDF
+            extraction_result = PDFProcessor.process_pdf(
+                file_content=file_content,
+                extract_tables=extract_tables,
+                page_range=page_range
+            )
+            
+            if not extraction_result.get("success"):
+                return ToolResult(
+                    success=False,
+                    message=extraction_result.get("error", "PDF extraction failed")
+                )
+            
+            # Format result message
+            message = f"PDF Extraction:\n"
+            message += f"- Total pages: {extraction_result['total_pages']}\n"
+            message += f"- Pages processed: {len(extraction_result['pages'])}\n"
+            message += f"- Tables found: {len(extraction_result['tables'])}\n"
+            message += f"\nExtracted text preview:\n{extraction_result['text'][:500]}..."
+            
+            return ToolResult(
+                success=True,
+                message=message,
+                data=extraction_result
+            )
+            
+        except Exception as e:
+            return ToolResult(
+                success=False,
+                message=f"Failed to extract PDF: {str(e)}"
+            ) 

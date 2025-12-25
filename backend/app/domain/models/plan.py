@@ -17,6 +17,7 @@ class Step(BaseModel):
     error: Optional[str] = None
     success: bool = False
     attachments: List[str] = []
+    reflection: Optional[str] = None  # Self-reflection on failure or unexpected results
 
     def is_done(self) -> bool:
         return self.status == ExecutionStatus.COMPLETED or self.status == ExecutionStatus.FAILED

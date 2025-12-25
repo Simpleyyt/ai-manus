@@ -11,11 +11,19 @@ CREATE_PLAN_PROMPT = """
 You are now creating a plan based on the user's message:
 {message}
 
+**IMPORTANT - Dynamic Planning Approach:**
+- You are implementing a **Reflexion-based Dynamic Planning** system
+- DO NOT generate a complete multi-step plan upfront
+- Instead, identify the **FINAL GOAL** and generate **ONLY THE FIRST STEP**
+- Each subsequent step will be generated dynamically after observing the actual results
+- This allows for self-correction and adaptation based on real execution feedback
+
 Note:
 - **You must use the language provided by user's message to execute the task**
-- Your plan must be simple and concise, don't add any unnecessary details.
-- Your steps must be atomic and independent, and the next executor can execute them one by one use the tools.
-- You need to determine whether a task can be broken down into multiple steps. If it can, return multiple steps; otherwise, return a single step.
+- Focus on defining a clear, achievable goal
+- Generate only the immediate next action (first step) that moves toward the goal
+- The step must be atomic, concrete, and executable with available tools
+- After execution, the system will evaluate results and plan the next step accordingly
 
 Return format requirements:
 - Must return JSON format that complies with the following TypeScript interface
@@ -29,14 +37,14 @@ interface CreatePlanResponse {{
   message: string;
   /** The working language according to the user's message */
   language: string;
-  /** Array of steps, each step contains id and description */
+  /** Array with ONLY the first step - subsequent steps will be generated dynamically */
   steps: Array<{{
     /** Step identifier */
     id: string;
     /** Step description */
     description: string;
   }}>;
-  /** Plan goal generated based on the context */
+  /** The FINAL GOAL that the agent aims to achieve (not intermediate steps) */
   goal: string;
   /** Plan title generated based on the context */
   title: string;
@@ -46,13 +54,13 @@ interface CreatePlanResponse {{
 EXAMPLE JSON OUTPUT:
 {{
     "message": "User response message",
-    "goal": "Goal description",
+    "goal": "Final goal description - the ultimate objective to achieve",
     "title": "Plan title",
     "language": "en",
     "steps": [
         {{
             "id": "1",
-            "description": "Step 1 description"
+            "description": "First immediate action to take"
         }}
     ]
 }}
@@ -62,7 +70,7 @@ Input:
 - attachments: the user's attachments
 
 Output:
-- the plan in json format
+- the plan with goal and first step only in json format
 
 
 User message:
@@ -73,56 +81,117 @@ Attachments:
 """
 
 UPDATE_PLAN_PROMPT = """
-You are updating the plan, you need to update the plan based on the step execution result:
+You are performing **Dynamic Next-Step Planning** based on the execution result of the current step.
+
+**Reflexion-Based Dynamic Planning:**
+- You are NOT updating a pre-existing multi-step plan
+- Instead, you are **generating the NEXT SINGLE STEP** based on:
+  1. The current goal
+  2. The result of the step just executed
+  3. Any reflection/analysis about what worked or didn't work
+  4. The ground truth observed from actual execution
+
+**Current Execution Context:**
+Step that was just executed:
 {step}
 
-Note:
-- You can delete, add or modify the plan steps, but don't change the plan goal
-- Don't change the description if the change is small
-- Only re-plan the following uncompleted steps, don't change the completed steps
-- Output the step id start with the id of first uncompleted step, re-plan the following steps
-- Delete the step if it is completed or not necessary
-- Carefully read the step result to determine if it is successful, if not, change the following steps
-- According to the step result, you need to update the plan steps accordingly
+Full plan context:
+{plan}
+
+**Your Task:**
+Based on the execution result above, decide what the **NEXT SINGLE ACTION** should be to move closer to the goal.
+
+**Decision Process:**
+1. **Evaluate**: Did the step succeed? What was actually observed?
+2. **Reflect**: If there was a failure or unexpected result, what needs correction?
+3. **Decide**: What is the ONE next concrete action to take?
+4. **Adapt**: The next step should respond to reality, not follow a predetermined path
+
+**Important Notes:**
+- If the previous step completed successfully and the goal is achieved, return an empty steps array
+- If the previous step failed, generate a corrective next step (possibly incorporating reflection)
+- If the previous step succeeded but more work is needed, generate the logical next step
+- Always generate at most ONE step - subsequent steps will be planned after seeing results
+- The step must be concrete, executable, and directly advance toward the goal
 
 Return format requirements:
 - Must return JSON format that complies with the following TypeScript interface
-- Must include all required fields as specified
+- If goal is achieved, return empty steps array
 
 TypeScript Interface Definition:
 ```typescript
 interface UpdatePlanResponse {{
-  /** Array of updated uncompleted steps */
+  /** Array with at most ONE next step. Empty if goal is achieved. */
   steps: Array<{{
-    /** Step identifier */
+    /** Step identifier (should continue numbering from completed steps) */
     id: string;
-    /** Step description */
+    /** Clear, executable description of the next action */
     description: string;
   }}>;
 }}
 ```
 
-EXAMPLE JSON OUTPUT:
+EXAMPLE JSON OUTPUT (goal not yet achieved):
 {{
     "steps": [
         {{
-            "id": "1",
-            "description": "Step 1 description"
+            "id": "2",
+            "description": "Next concrete action based on previous results"
         }}
     ]
 }}
 
-
-Input:
-- step: the current step
-- plan: the plan to update
+EXAMPLE JSON OUTPUT (goal achieved):
+{{
+    "steps": []
+}}
 
 Output:
-- the updated plan uncompleted steps in json format
+- The next single step in JSON format, or empty array if done
+"""
 
-Step:
-{step}
+REFLECT_ON_FAILURE_PROMPT = """
+You are performing self-reflection on a failed or problematic step execution.
 
-Plan:
-{plan}
+**Your task:**
+Analyze why the step failed or produced unexpected results, and provide constructive feedback for correction.
+
+**Context:**
+- Goal: {goal}
+- Failed Step: {step_description}
+- Step Result: {step_result}
+- Error Message: {error_message}
+- Previous Reflection: {previous_reflection}
+
+**Instructions:**
+1. Identify the root cause of the failure (e.g., wrong file path, missing library, incorrect command, misunderstanding of task)
+2. Explain what went wrong in clear terms
+3. Suggest specific corrections or alternative approaches
+4. Consider if the goal itself needs to be reconsidered
+5. Learn from previous reflections to avoid repeating mistakes
+
+Return format requirements:
+- Must return JSON format that complies with the following TypeScript interface
+
+TypeScript Interface Definition:
+```typescript
+interface ReflectionResponse {{
+  /** Analysis of what went wrong and why */
+  analysis: string;
+  /** Specific suggested corrections or next actions */
+  correction_suggestions: string;
+  /** Whether the current approach is viable or needs fundamental change */
+  approach_viable: boolean;
+}}
+```
+
+EXAMPLE JSON OUTPUT:
+{{
+    "analysis": "The command failed because the file path was incorrect. The file is located in /home/user/ not /tmp/",
+    "correction_suggestions": "Use the correct file path: /home/user/file.txt instead of /tmp/file.txt",
+    "approach_viable": true
+}}
+
+Output:
+- Reflection analysis in JSON format
 """

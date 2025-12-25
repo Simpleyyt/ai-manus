@@ -37,6 +37,7 @@ class AgentStatus(str, Enum):
     IDLE = "idle"
     PLANNING = "planning"
     EXECUTING = "executing"
+    REFLECTING = "reflecting"  # New state for self-reflection on failures
     SUMMARIZING = "summarizing"
     COMPLETED = "completed"
     UPDATING = "updating"
@@ -108,7 +109,7 @@ class PlanActFlow(BaseFlow):
         if session.status == SessionStatus.RUNNING:
             logger.debug(f"Session {self._session_id} is in RUNNING status")
             self.status = AgentStatus.PLANNING
-
+        
         if session.status == SessionStatus.WAITING:
             logger.debug(f"Session {self._session_id} is in WAITING status")
             self.status = AgentStatus.EXECUTING
@@ -118,17 +119,21 @@ class PlanActFlow(BaseFlow):
 
         logger.info(f"Agent {self._agent_id} started processing message: {message.message[:50]}...")
         step = None
+        reflection_history = []  # Track reflections to avoid repeating mistakes
+        
         while True:
             if self.status == AgentStatus.IDLE:
                 logger.info(f"Agent {self._agent_id} state changed from {AgentStatus.IDLE} to {AgentStatus.PLANNING}")
                 self.status = AgentStatus.PLANNING
+                
             elif self.status == AgentStatus.PLANNING:
-                # Create plan
-                logger.info(f"Agent {self._agent_id} started creating plan")
+                # Create plan with goal and FIRST STEP ONLY (Dynamic Planning)
+                logger.info(f"Agent {self._agent_id} started creating plan (goal + first step)")
                 async for event in self.planner.create_plan(message):
                     if isinstance(event, PlanEvent) and event.status == PlanStatus.CREATED:
                         self.plan = event.plan
-                        logger.info(f"Agent {self._agent_id} created plan successfully with {len(event.plan.steps)} steps")
+                        logger.info(f"Agent {self._agent_id} created plan with goal: {event.plan.goal}")
+                        logger.info(f"Agent {self._agent_id} generated first step: {len(event.plan.steps)} step(s)")
                         yield TitleEvent(title=event.plan.title)
                         yield MessageEvent(role="assistant", message=event.plan.message)
                     yield event
@@ -139,41 +144,75 @@ class PlanActFlow(BaseFlow):
                     self.status = AgentStatus.COMPLETED
                     
             elif self.status == AgentStatus.EXECUTING:
-                # Execute plan
+                # Execute current step
                 self.plan.status = ExecutionStatus.RUNNING
                 step = self.plan.get_next_step()
                 if not step:
                     logger.info(f"Agent {self._agent_id} has no more steps, state changed from {AgentStatus.EXECUTING} to {AgentStatus.COMPLETED}")
                     self.status = AgentStatus.SUMMARIZING
                     continue
+                
                 # Execute step
                 logger.info(f"Agent {self._agent_id} started executing step {step.id}: {step.description[:50]}...")
                 async for event in self.executor.execute_step(self.plan, step, message):
                     yield event
-                logger.info(f"Agent {self._agent_id} completed step {step.id}, state changed from {AgentStatus.EXECUTING} to {AgentStatus.UPDATING}")
+                logger.info(f"Agent {self._agent_id} completed step {step.id} with status: {step.status}")
                 await self.executor.compact_memory()
                 logger.debug(f"Agent {self._agent_id} compacted memory")
+                
+                # Evaluate execution result and decide next state
+                # If step failed or had unexpected results, move to REFLECTING
+                # Otherwise, move to UPDATING to generate next step
+                if step.status == ExecutionStatus.FAILED or (not step.success and step.error):
+                    logger.info(f"Agent {self._agent_id} detected failure/problem, state changed to {AgentStatus.REFLECTING}")
+                    self.status = AgentStatus.REFLECTING
+                else:
+                    logger.info(f"Agent {self._agent_id} step succeeded, state changed to {AgentStatus.UPDATING}")
+                    self.status = AgentStatus.UPDATING
+                    
+            elif self.status == AgentStatus.REFLECTING:
+                # Perform self-reflection on the failed/problematic step
+                logger.info(f"Agent {self._agent_id} started reflecting on step {step.id}")
+                async for event in self.planner.reflect_on_failure(
+                    goal=self.plan.goal,
+                    step=step,
+                    previous_reflections=reflection_history
+                ):
+                    yield event
+                
+                # Store reflection for future reference
+                if step.reflection:
+                    reflection_history.append(step.reflection)
+                    logger.debug(f"Agent {self._agent_id} stored reflection: {step.reflection[:100]}...")
+                
+                # After reflection, move to UPDATING to generate corrective next step
+                logger.info(f"Agent {self._agent_id} reflection completed, state changed to {AgentStatus.UPDATING}")
                 self.status = AgentStatus.UPDATING
+                
             elif self.status == AgentStatus.UPDATING:
-                # Update plan
-                logger.info(f"Agent {self._agent_id} started updating plan")
+                # Dynamic Next-Step Planning: Generate the NEXT SINGLE STEP based on current context
+                logger.info(f"Agent {self._agent_id} started dynamic next-step planning")
                 async for event in self.planner.update_plan(self.plan, step):
                     yield event
-                logger.info(f"Agent {self._agent_id} plan update completed, state changed from {AgentStatus.UPDATING} to {AgentStatus.EXECUTING}")
+                
+                logger.info(f"Agent {self._agent_id} plan update completed, state changed to {AgentStatus.EXECUTING}")
                 self.status = AgentStatus.EXECUTING
+                
             elif self.status == AgentStatus.SUMMARIZING:
                 # Conclusion
                 logger.info(f"Agent {self._agent_id} started summarizing")
                 async for event in self.executor.summarize():
                     yield event
-                logger.info(f"Agent {self._agent_id} summarizing completed, state changed from {AgentStatus.SUMMARIZING} to {AgentStatus.COMPLETED}")
+                logger.info(f"Agent {self._agent_id} summarizing completed, state changed to {AgentStatus.COMPLETED}")
                 self.status = AgentStatus.COMPLETED
+                
             elif self.status == AgentStatus.COMPLETED:
                 self.plan.status = ExecutionStatus.COMPLETED
                 logger.info(f"Agent {self._agent_id} plan has been completed")
                 yield PlanEvent(status=PlanStatus.COMPLETED, plan=self.plan)
                 self.status = AgentStatus.IDLE
                 break
+                
         yield DoneEvent()
         
         logger.info(f"Agent {self._agent_id} message processing completed")

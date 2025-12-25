@@ -11,7 +11,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 class PlaywrightBrowser:
-    """Playwright client that provides specific implementation of browser operations"""
+    """Playwright client that provides specific implementation of browser operations
+    
+    Enhanced with:
+    - Vision-Enhanced Navigation (bounding boxes)
+    - Smart scroll for infinite scroll pages
+    - Automatic error handling (popups, cookie banners, timeouts)
+    """
     
     def __init__(self, cdp_url: str):
         self.browser: Optional[Browser] = None
@@ -619,7 +625,7 @@ class PlaywrightBrowser:
         return ToolResult(success=True, data={"result": result})
     
     async def console_view(self, max_lines: Optional[int] = None) -> ToolResult:
-        """View console output"""
+        """View browser console output"""
         await self._ensure_page()
         logs = await self.page.evaluate("""() => {
             return window.console.logs || [];
@@ -627,3 +633,219 @@ class PlaywrightBrowser:
         if max_lines is not None:
             logs = logs[-max_lines:]
         return ToolResult(success=True, data={"logs": logs})
+    
+    # ========== Enhanced Features ==========
+    
+    async def _handle_common_popups(self) -> None:
+        """
+        Automatically detect and close common popups, cookie banners, and overlays.
+        This prevents them from blocking interactions with the main page content.
+        """
+        # Common cookie banner selectors
+        cookie_selectors = [
+            # Generic patterns
+            'button:has-text("Accept")',
+            'button:has-text("Accept All")',
+            'button:has-text("Accept Cookies")',
+            'button:has-text("I Accept")',
+            'button:has-text("Agree")',
+            'button:has-text("OK")',
+            'button:has-text("Got it")',
+            'button:has-text("Allow")',
+            '[class*="cookie"] button:has-text("Accept")',
+            '[class*="cookie"] button:has-text("OK")',
+            '[class*="gdpr"] button:has-text("Accept")',
+            '[id*="cookie"] button:has-text("Accept")',
+            # Specific frameworks
+            '.cc-banner button.cc-allow',
+            '.cc-compliance button.cc-allow',
+            '#onetrust-accept-btn-handler',
+            '.optanon-allow-all-button',
+            '[aria-label*="Accept cookies"]',
+            '[aria-label*="Accept all"]',
+        ]
+        
+        # Try to close cookie banners
+        for selector in cookie_selectors:
+            try:
+                element = await self.page.query_selector(selector)
+                if element:
+                    is_visible = await element.is_visible()
+                    if is_visible:
+                        await element.click(timeout=2000)
+                        logger.info(f"Closed cookie banner using selector: {selector}")
+                        await asyncio.sleep(0.5)
+                        break
+            except Exception:
+                continue
+        
+        # Close modal dialogs and popups
+        modal_selectors = [
+            '[class*="modal"] button[class*="close"]',
+            '[class*="popup"] button[class*="close"]',
+            '[class*="overlay"] button[class*="close"]',
+            'button[aria-label="Close"]',
+            'button[aria-label="close"]',
+            '[class*="close-button"]',
+            '.modal-close',
+            '.popup-close',
+        ]
+        
+        for selector in modal_selectors:
+            try:
+                elements = await self.page.query_selector_all(selector)
+                for element in elements:
+                    is_visible = await element.is_visible()
+                    if is_visible:
+                        await element.click(timeout=2000)
+                        logger.info(f"Closed modal using selector: {selector}")
+                        await asyncio.sleep(0.3)
+            except Exception:
+                continue
+    
+    async def smart_scroll(
+        self,
+        direction: str = "down",
+        max_scrolls: int = 10,
+        check_for_new_content: bool = True
+    ) -> ToolResult:
+        """
+        Smart scrolling that handles infinite scroll pages intelligently.
+        
+        Args:
+            direction: 'down' or 'up'
+            max_scrolls: Maximum number of scroll attempts
+            check_for_new_content: If True, stops when no new content is loaded
+            
+        Returns:
+            ToolResult with scroll statistics
+        """
+        await self._ensure_page()
+        
+        stats = {
+            "scrolls_performed": 0,
+            "content_height_start": 0,
+            "content_height_end": 0,
+            "new_content_loaded": False
+        }
+        
+        # Get initial page height
+        initial_height = await self.page.evaluate("document.body.scrollHeight")
+        stats["content_height_start"] = initial_height
+        
+        scroll_pause_time = 1.5  # Wait for content to load
+        last_height = initial_height
+        scrolls_without_change = 0
+        max_scrolls_without_change = 3
+        
+        for scroll_num in range(max_scrolls):
+            # Perform scroll
+            if direction == "down":
+                await self.page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            else:  # up
+                await self.page.evaluate("window.scrollTo(0, 0)")
+            
+            stats["scrolls_performed"] += 1
+            
+            # Wait for new content to load
+            await asyncio.sleep(scroll_pause_time)
+            
+            if check_for_new_content and direction == "down":
+                # Check if new content loaded
+                new_height = await self.page.evaluate("document.body.scrollHeight")
+                
+                if new_height > last_height:
+                    stats["new_content_loaded"] = True
+                    scrolls_without_change = 0
+                    logger.info(f"New content loaded: {new_height} > {last_height}")
+                else:
+                    scrolls_without_change += 1
+                    logger.info(f"No new content after scroll {scroll_num + 1}")
+                
+                last_height = new_height
+                
+                # Stop if no new content for multiple scrolls
+                if scrolls_without_change >= max_scrolls_without_change:
+                    logger.info("Reached end of content (infinite scroll)")
+                    break
+        
+        # Get final height
+        final_height = await self.page.evaluate("document.body.scrollHeight")
+        stats["content_height_end"] = final_height
+        
+        return ToolResult(success=True, data=stats)
+    
+    async def navigate_with_error_handling(
+        self,
+        url: str,
+        max_retries: int = 3,
+        handle_popups: bool = True,
+        timeout: int = 30000
+    ) -> ToolResult:
+        """
+        Navigate to URL with automatic retry and error handling.
+        Automatically handles popups, cookie banners, and timeouts.
+        
+        Args:
+            url: Target URL
+            max_retries: Number of retry attempts
+            handle_popups: Auto-close popups after navigation
+            timeout: Navigation timeout in milliseconds
+            
+        Returns:
+            ToolResult with navigation result
+        """
+        await self._ensure_page()
+        
+        result = {
+            "success": False,
+            "url": url,
+            "attempts": 0,
+            "error": None,
+            "interactive_elements": []
+        }
+        
+        for attempt in range(max_retries):
+            result["attempts"] = attempt + 1
+            
+            try:
+                logger.info(f"Navigation attempt {attempt + 1}/{max_retries} to {url}")
+                
+                # Try to navigate
+                response = await self.page.goto(
+                    url,
+                    timeout=timeout,
+                    wait_until="domcontentloaded"  # More forgiving than "load"
+                )
+                
+                # Wait a bit for JavaScript to initialize
+                await asyncio.sleep(1)
+                
+                # Handle popups if requested
+                if handle_popups:
+                    await self._handle_common_popups()
+                
+                # Extract interactive elements
+                result["interactive_elements"] = await self._extract_interactive_elements()
+                
+                result["success"] = True
+                result["status_code"] = response.status if response else None
+                logger.info(f"Successfully navigated to {url}")
+                break
+                
+            except Exception as e:
+                error_msg = str(e)
+                logger.warning(f"Navigation attempt {attempt + 1} failed: {error_msg}")
+                result["error"] = error_msg
+                
+                # Don't retry certain errors
+                if "net::ERR_NAME_NOT_RESOLVED" in error_msg:
+                    logger.error(f"DNS resolution failed for {url}, not retrying")
+                    break
+                
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt  # Exponential backoff
+                    logger.info(f"Waiting {wait_time}s before retry...")
+                    await asyncio.sleep(wait_time)
+        
+        return ToolResult(success=result["success"], data=result, message=result.get("error"))

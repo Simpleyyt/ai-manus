@@ -346,4 +346,67 @@ class BrowserTool(BaseTool):
         Returns:
             Console output
         """
-        return await self.browser.console_view(max_lines) 
+        return await self.browser.console_view(max_lines)
+    
+    @tool(
+        name="browser_smart_scroll",
+        description="Smart scrolling for long pages and infinite scroll content. Automatically detects when new content loads.",
+        parameters={
+            "direction": {
+                "type": "string",
+                "description": "(Optional) Scroll direction: 'down' or 'up'. Default is 'down'.",
+                "enum": ["down", "up"]
+            },
+            "max_scrolls": {
+                "type": "integer",
+                "description": "(Optional) Maximum number of scrolls to perform. Default is 10."
+            }
+        },
+        required=[]
+    )
+    async def browser_smart_scroll(
+        self,
+        direction: str = "down",
+        max_scrolls: Optional[int] = 10
+    ) -> ToolResult:
+        """Smart scrolling that handles infinite scroll pages intelligently
+        
+        Args:
+            direction: Scroll direction ('down' or 'up')
+            max_scrolls: Maximum number of scroll attempts
+            
+        Returns:
+            Scroll statistics including content loaded
+        """
+        return await self.browser.smart_scroll(direction, max_scrolls, check_for_new_content=True)
+    
+    @tool(
+        name="browser_navigate_robust",
+        description="Navigate to URL with automatic error handling, popup closing, and retry logic. Use this instead of browser_navigate for problematic sites.",
+        parameters={
+            "url": {
+                "type": "string",
+                "description": "Complete URL to visit. Must include protocol prefix."
+            },
+            "handle_popups": {
+                "type": "boolean",
+                "description": "(Optional) Auto-close cookie banners and popups. Default is True."
+            }
+        },
+        required=["url"]
+    )
+    async def browser_navigate_robust(
+        self,
+        url: str,
+        handle_popups: Optional[bool] = True
+    ) -> ToolResult:
+        """Navigate to URL with enhanced error handling and automatic popup closing
+        
+        Args:
+            url: Complete URL address, must include protocol prefix
+            handle_popups: Whether to automatically close popups and cookie banners
+            
+        Returns:
+            Navigation result with interactive elements
+        """
+        return await self.browser.navigate_with_error_handling(url, max_retries=3, handle_popups=handle_popups) 

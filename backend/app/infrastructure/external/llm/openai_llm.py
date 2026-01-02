@@ -52,13 +52,13 @@ class OpenAILLM(LLM):
 
                 if tools:
                     logger.debug(f"Sending request to OpenAI with tools, model: {self._model_name}, attempt: {attempt + 1}")
+                    # Note: Cannot use response_format with function calling (Gemini limitation)
                     response = await self.client.chat.completions.create(
                         model=self._model_name,
                         temperature=self._temperature,
                         max_tokens=self._max_tokens,
                         messages=messages,
                         tools=tools,
-                        response_format=response_format,
                         tool_choice=tool_choice,
                         parallel_tool_calls=False,
                     )

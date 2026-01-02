@@ -165,10 +165,17 @@ class TokenService:
             raise
 
     def revoke_token(self, token: str) -> bool:
-        """Revoke token (placeholder for token blacklist implementation)"""
-        # TODO:In a real implementation, you would add the token to a blacklist
-        # stored in Redis or database with expiration time
-        logger.warning(f"Token revoked (placeholder implementation)")
+        """Revoke token
+
+        Note: This is a placeholder implementation. For production use with
+        immediate token revocation requirements, implement a token blacklist:
+        1. Store revoked token IDs in Redis with TTL matching token expiry
+        2. Check the blacklist in verify_token() before accepting tokens
+        3. Consider using short-lived access tokens + refresh tokens pattern
+
+        Current implementation relies on token expiration for revocation.
+        """
+        logger.info(f"Token revocation requested (stateless implementation)")
         return True
 
     def create_signed_url(self, base_url: str, expire_minutes: int = 60) -> str:

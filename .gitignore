@@ -119,5 +119,35 @@ coverage/
 docker-compose-test.yml
 mcp.json
 
+# Sugar task management
+.sugar/
+
 # Frontend whitelist
 !frontend/src/lib/
+
+# Mobile app secrets (NEVER commit these)
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
+AuthKey_*.p8
+service-account*.json
+google-services.json
+GoogleService-Info.plist
+
+# Mobile build artifacts
+*.aab
+*.apk
+*.ipa
+*.xcarchive
+*.app.dSYM.zip
+
+# Capacitor local files
+frontend/android/.gradle/
+frontend/android/build/
+frontend/android/app/build/
+frontend/ios/App/Pods/
+frontend/ios/DerivedData/
+
+# GitHub Actions workflows (add manually due to permission restrictions)
+.github/workflows/

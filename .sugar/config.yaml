@@ -1,0 +1,177 @@
+# Sugar Configuration for ai-manus
+sugar:
+  # Core Loop Settings
+  loop_interval: 300  # 5 minutes between cycles
+  max_concurrent_work: 3  # Execute multiple tasks per cycle
+  dry_run: false      # Ready for real execution
+  
+  # Claude Code Integration
+  claude:
+    command: "claude"  # Auto-detected Claude CLI path
+    timeout: 1800       # 30 minutes max per task
+    context_file: ".sugar/context.json"
+    
+    # Structured Claude Agent Integration System (Complete Implementation)
+    use_structured_requests: true  # Enable structured JSON communication
+    structured_input_file: ".sugar/claude_input.json"  # Temp file for complex inputs
+    
+    # Agent Selection & Discovery System
+    enable_agents: true        # Enable Claude agent mode selection
+    agent_fallback: true       # Fall back to basic Claude if agent fails
+    agent_selection:           # Map work types to specific agents
+      bug_fix: "tech-lead"           # Strategic analysis for bug fixes
+      feature: "general-purpose"     # General development for features
+      refactor: "code-reviewer"      # Code review expertise for refactoring
+      test: "general-purpose"        # General development for tests
+      documentation: "general-purpose"  # General development for docs
+    
+    # Dynamic Agent Discovery (supports any agents you have configured locally)
+    # available_agents: []       # Optional: specify which agents are available
+                                # If empty, Sugar will accept any agent name
+                                # Example: ["my-custom-agent", "security-specialist", "database-expert"]
+    # auto_discover_agents: false  # Future: auto-discover agents from Claude CLI
+    
+  # Work Discovery
+  discovery:
+    # Global exclusions for all discovery modules
+    global_excluded_dirs: [
+      "node_modules", ".git", "__pycache__", 
+      "venv", ".venv", "env", ".env", "ENV", 
+      "env.bak", "venv.bak", "virtualenv",
+      "build", "dist", ".tox", ".nox",
+      "coverage", "htmlcov", ".pytest_cache",
+      ".sugar", ".claude"
+    ]
+    
+    error_logs:
+      enabled: true
+      paths:
+        - "logs/errors/"
+        - "logs/feedback/"
+        - ".sugar/logs/"
+      patterns:
+        - "*.json"
+        - "*.log"
+      max_age_hours: 24
+    
+    github:
+      enabled: true  # GitHub CLI detected and authenticated
+      repo: "Simpleyyt/ai-manus"  # Auto-detected from git remote
+      
+      # Authentication method: using GitHub CLI
+      auth_method: "gh_cli"  # GitHub CLI is authenticated
+      
+      # GitHub CLI integration  
+      gh_cli:
+        command: "gh"  # GitHub CLI detected
+        use_default_auth: true  # Using existing gh authentication
+        
+      # Discovery settings  
+      issue_labels: []  # No filtering - work on ALL open issues
+      check_interval_minutes: 30
+      # Label filtering options:
+      # issue_labels: ["bug", "enhancement"]  # Specific labels to watch
+      # issue_labels: []                      # No filtering - work on ALL open issues  
+      # issue_labels: ["*"]                   # Work on issues with any labels (exclude unlabeled)
+      # issue_labels: ["unlabeled"]           # Work only on issues without labels
+      
+      # Workflow settings for completed work
+      workflow:
+        # Auto-close issues after successful completion
+        auto_close_issues: true
+        
+        # Git workflow: "direct_commit" or "pull_request"
+        git_workflow: "direct_commit"  # direct_commit|pull_request
+        
+        # Branch settings (used when git_workflow: "pull_request")
+        branch:
+          # Auto-create feature branches for each issue
+          create_branches: true
+          # Branch naming pattern (variables: {issue_number}, {issue_title_slug})
+          name_pattern: "sugar/issue-{issue_number}"
+          # Base branch for new branches and PRs
+          base_branch: "main"
+          
+        # Pull request settings (used when git_workflow: "pull_request")
+        pull_request:
+          # Auto-create PRs after completing work
+          auto_create: true
+          # Auto-merge PRs (only if all checks pass)
+          auto_merge: false
+          # PR title pattern (variables: same as branch naming)
+          title_pattern: "Fix #{issue_number}: {issue_title}"
+          # Include work summary in PR description
+          include_work_summary: true
+          
+        # Commit settings
+        commit:
+          # Include issue reference in commit messages
+          include_issue_ref: true
+          # Commit message pattern (variables: {issue_number}, {work_summary})
+          message_pattern: "Fix #{issue_number}: {work_summary}"
+          # Auto-commit changes after completing work
+          auto_commit: true
+      
+    code_quality:
+      enabled: true
+      root_path: "."  # Analyze current project
+      file_extensions: [".py", ".js", ".ts", ".jsx", ".tsx"]
+      excluded_dirs: [
+        "node_modules", ".git", "__pycache__", 
+        "venv", ".venv", "env", ".env", "ENV", 
+        "env.bak", "venv.bak", "virtualenv",
+        "build", "dist", ".tox", ".nox",
+        "coverage", "htmlcov", ".pytest_cache",
+        ".sugar", ".claude"
+      ]
+      max_files_per_scan: 50
+      
+    test_coverage:
+      enabled: true
+      root_path: "."  # Analyze current project
+      source_dirs: ["src", "lib", "app", "api", "server"]
+      test_dirs: ["tests", "test", "__tests__", "spec"]
+      excluded_dirs: [
+        "node_modules", ".git", "__pycache__", 
+        "venv", ".venv", "env", ".env", "ENV", 
+        "env.bak", "venv.bak", "virtualenv",
+        "build", "dist", ".tox", ".nox",
+        "coverage", "htmlcov", ".pytest_cache",
+        ".sugar", ".claude"
+      ]
+      
+  # Storage
+  storage:
+    database: ".sugar/sugar.db"  # Project-specific database
+    backup_interval: 3600  # 1 hour
+    
+  # Safety
+  safety:
+    max_retries: 3
+    excluded_paths:
+      - "/System"
+      - "/usr/bin"
+      - "/etc"
+      - ".sugar"
+    
+  # Logging
+  logging:
+    level: "INFO"
+    file: ".sugar/sugar.log"  # Project-specific logs
+    
+  # Unified Workflow System
+  workflow:
+    # Workflow profiles: solo (fast), balanced (process), enterprise (governance)
+    profile: "solo"  # Recommended for individual developers
+    
+    # Profile overrides (uncomment to customize beyond profiles)
+    # custom:
+    #   git:
+    #     workflow_type: "direct_commit"  # direct_commit | pull_request
+    #     commit_style: "conventional"    # conventional | simple
+    #     auto_commit: true
+    #   github:
+    #     auto_create_issues: false       # Create GitHub issues for discovered work
+    #     update_existing_issues: true    # Update issues from GitHub discovery
+    #   discovery:
+    #     handle_internally: true         # Keep test/quality improvements internal

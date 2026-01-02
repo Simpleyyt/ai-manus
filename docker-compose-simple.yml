@@ -1,0 +1,61 @@
+version: '3.3'
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - manus-network
+    environment:
+      - BACKEND_URL=http://backend:8000
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      - sandbox
+      - mongodb
+      - redis
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - manus-network
+    env_file:
+      - .env
+
+  sandbox:
+    build:
+      context: ./sandbox
+      dockerfile: Dockerfile
+    command: /bin/sh -c "exit 0"
+    restart: "no"
+    networks:
+      - manus-network
+
+  mongodb:
+    image: mongo:7.0
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+    networks:
+      - manus-network
+
+  redis:
+    image: redis:7.0
+    restart: unless-stopped
+    networks:
+      - manus-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  manus-network:
+    driver: bridge

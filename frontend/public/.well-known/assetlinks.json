@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.aimanus.app",
+      "sha256_cert_fingerprints": [
+        "A2:CE:D2:87:6D:20:5F:26:58:79:D8:08:6D:ED:50:91:0D:A2:BC:11:B7:63:B7:92:8F:33:86:A3:5A:37:81:77"
+      ]
+    }
+  }
+]

@@ -8,7 +8,7 @@ from app.domain.models.event import AgentEvent
 from app.domain.models.session import Session, SessionStatus
 from app.domain.models.file import FileInfo
 from app.domain.models.user import User, UserRole
-from pymongo import IndexModel, ASCENDING
+from pymongo import IndexModel, ASCENDING, DESCENDING
 
 T = TypeVar('T', bound=BaseModel)
 
@@ -101,5 +101,21 @@ class SessionDocument(BaseDocument[Session], id_field="session_id", domain_model
         name = "sessions"
         indexes = [
             "session_id",
-            "user_id",  # Add index for user_id for efficient queries
+            "user_id",
+            # Compound index for listing user's sessions sorted by creation date
+            IndexModel(
+                [("user_id", ASCENDING), ("created_at", DESCENDING)],
+                name="user_sessions_by_date"
+            ),
+            # Index for shared sessions lookup
+            IndexModel(
+                [("is_shared", ASCENDING), ("session_id", ASCENDING)],
+                name="shared_sessions",
+                sparse=True
+            ),
+            # Index for session status queries
+            IndexModel(
+                [("status", ASCENDING), ("updated_at", DESCENDING)],
+                name="sessions_by_status"
+            ),
         ]

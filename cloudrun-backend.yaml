@@ -1,0 +1,78 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: manus-backend
+  labels:
+    cloud.googleapis.com/location: us-central1
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: '1'
+        autoscaling.knative.dev/maxScale: '10'
+        run.googleapis.com/execution-environment: gen2
+        run.googleapis.com/startup-cpu-boost: 'true'
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      containers:
+      - image: gcr.io/<PROJECT_ID>/manus-backend:latest
+        ports:
+        - name: http1
+          containerPort: 8000
+        env:
+        - name: API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: gemini-api-key
+              key: api-key
+        - name: API_BASE
+          value: "https://generativelanguage.googleapis.com/v1beta/openai/"
+        - name: MODEL_NAME
+          value: "gemini-2.0-flash-exp"
+        - name: TEMPERATURE
+          value: "0.7"
+        - name: MAX_TOKENS
+          value: "8192"
+        - name: MONGODB_URI
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-uri
+              key: uri
+        - name: MONGODB_DATABASE
+          value: "manus"
+        - name: REDIS_HOST
+          valueFrom:
+            secretKeyRef:
+              name: redis-config
+              key: host
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_DB
+          value: "0"
+        - name: SANDBOX_IMAGE
+          value: "simpleyyt/manus-sandbox"
+        - name: SANDBOX_NAME_PREFIX
+          value: "sandbox-gcp"
+        - name: SANDBOX_TTL_MINUTES
+          value: "30"
+        - name: SEARCH_PROVIDER
+          value: "google"
+        - name: AUTH_PROVIDER
+          value: "password"
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: jwt-secret
+              key: secret
+        - name: JWT_ALGORITHM
+          value: "HS256"
+        - name: LOG_LEVEL
+          value: "INFO"
+        resources:
+          limits:
+            cpu: '2'
+            memory: 2Gi
+          requests:
+            cpu: '1'
+            memory: 512Mi

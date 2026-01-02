@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "mcp__sequential-thinking__sequentialthinking",
+      "Bash(if [ -f netlify.toml ])",
+      "Bash(then cat netlify.toml)",
+      "Bash(elif [ -f app.yaml ])",
+      "Bash(then cat app.yaml)",
+      "Bash(else echo \"No deployment config found\")",
+      "Bash(fi)",
+      "Bash(find:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(docker ps:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

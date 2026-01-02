@@ -1,0 +1,36 @@
+{
+  "task_type": "test",
+  "title": "Add tests for complex function in email_service.py",
+  "description": "**Complex Function Needs Testing**\n\nFile: /Users/samihalawa/git/PROJECTS_CODING/ai-manus/backend/app/application/services/email_service.py\nFunction: _create_verification_email\nComplexity: 2\nLines: 23\n\nThis complex function should have comprehensive test coverage to ensure reliability.",
+  "execution_mode": "ExecutionMode.AGENT",
+  "agent_type": "AgentType.GENERAL_PURPOSE",
+  "agent_fallback": true,
+  "context": {
+    "work_item_id": "89a7d14d-4252-4d52-9ee1-5e901cf79be2",
+    "source_type": "test_coverage",
+    "priority": 4,
+    "attempts": 1,
+    "files_involved": null,
+    "repository_info": null,
+    "previous_attempts": null,
+    "session_context": {
+      "test_analysis": {
+        "work_type": "test_complex_function",
+        "details": {
+          "file_path": "/Users/samihalawa/git/PROJECTS_CODING/ai-manus/backend/app/application/services/email_service.py",
+          "function_name": "_create_verification_email",
+          "complexity": 2,
+          "line_count": 23,
+          "line_number": 82
+        },
+        "discovered_at": "2025-11-05T23:44:59.388303",
+        "source_type": "test_coverage"
+      }
+    }
+  },
+  "timestamp": "2025-11-05T23:46:30.561072",
+  "sugar_version": "2.1.0",
+  "continue_session": false,
+  "timeout_seconds": 1800,
+  "working_directory": null
+}

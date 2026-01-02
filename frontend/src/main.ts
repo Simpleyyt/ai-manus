@@ -15,6 +15,7 @@ import MainLayout from './pages/MainLayout.vue'
 import { configure } from "vue-gtag";
 import SharePage from './pages/SharePage.vue';
 import ShareLayout from './pages/ShareLayout.vue';
+import ToolsPage from './pages/ToolsPage.vue';
 
 configure({
   tagId: 'G-XCRZ3HH31S' // Replace with your own Google Analytics tag ID
@@ -55,6 +56,11 @@ export const router = createRouter({
     { 
       path: '/login', 
       component: LoginPage
+    },
+    {
+      path: '/tools',
+      component: ToolsPage,
+      meta: { requiresAuth: false }
     }
   ]
 })

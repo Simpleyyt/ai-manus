@@ -59,7 +59,10 @@ const props = defineProps<{
 }>();
 
 const sendEnabled = computed(() => {
-    return chatBoxFileListRef.value?.isAllUploaded && hasTextInput.value;
+    // If no files attached (ref not initialized or no files), only check text input
+    // Otherwise check if all files are uploaded and there's text input
+    const filesReady = !chatBoxFileListRef.value || chatBoxFileListRef.value.isAllUploaded;
+    return filesReady && hasTextInput.value;
 });
 
 const emit = defineEmits<{

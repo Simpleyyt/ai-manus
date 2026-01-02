@@ -1,5 +1,6 @@
 import hashlib
 import secrets
+import hmac
 from typing import Optional
 from datetime import datetime
 from app.domain.models.user import User, UserRole
@@ -15,46 +16,97 @@ logger = logging.getLogger(__name__)
 
 class AuthService:
     """Authentication service handling user authentication and authorization"""
-    
+
+    # Password hash format: $algorithm$rounds$salt$hash
+    HASH_FORMAT_VERSION = "2"  # Version for future-proofing
+
     def __init__(self, user_repository: UserRepository, token_service: TokenService):
         self.user_repository = user_repository
         self.settings = get_settings()
         self.token_service = token_service
-    
-    def _hash_password(self, password: str) -> str:
-        """Hash password using configured algorithm"""
-        salt = self.settings.password_salt or ''
-        
-        return self._pbkdf2_sha256(password, salt)
-    
-    def _pbkdf2_sha256(self, password: str, salt: str) -> str:
-        """PBKDF2 with SHA-256 implementation"""
+
+    def _generate_salt(self) -> str:
+        """Generate a random per-user salt"""
+        return secrets.token_hex(16)  # 32 character hex string
+
+    def _hash_password(self, password: str, user_salt: str | None = None) -> str:
+        """Hash password using PBKDF2-SHA256 with per-user salt
+
+        Format: $2$rounds$user_salt$hash
+        - $2$ = format version
+        - rounds = iteration count
+        - user_salt = per-user random salt
+        - hash = the actual password hash
+        """
+        if user_salt is None:
+            user_salt = self._generate_salt()
+
+        # Combine global salt (pepper) with user salt for extra security
+        global_salt = self.settings.password_salt or ''
+        combined_salt = f"{global_salt}{user_salt}"
+
         password_bytes = password.encode('utf-8')
-        salt_bytes = salt.encode('utf-8')
-        
-        # Use configured rounds
-        rounds = self.settings.password_hash_rounds or 10
-        
+        salt_bytes = combined_salt.encode('utf-8')
+
+        # Use configured rounds (OWASP recommends 100,000+ for PBKDF2-SHA256)
+        rounds = self.settings.password_hash_rounds
+
         # Generate hash
         hash_bytes = hashlib.pbkdf2_hmac('sha256', password_bytes, salt_bytes, rounds)
-        
-        # Return salt + hash as hex string
-        return salt + hash_bytes.hex()
-    
+        hash_hex = hash_bytes.hex()
+
+        # Return formatted hash string
+        return f"${self.HASH_FORMAT_VERSION}${rounds}${user_salt}${hash_hex}"
+
     def _verify_password(self, password: str, password_hash: str) -> bool:
-        """Verify password against hash"""
+        """Verify password against stored hash using constant-time comparison"""
         if not password_hash:
             return False
-        
-        try:
-            # Generate hash with extracted salt
-            generated_hash = self._hash_password(password)
 
-            logger.info(f"Generated hash: {generated_hash} vs expected hash: {password_hash}")
-            return generated_hash == password_hash
+        try:
+            # Handle legacy format (no $ prefix)
+            if not password_hash.startswith('$'):
+                # Legacy format: salt + hash (for backwards compatibility)
+                legacy_salt = self.settings.password_salt or ''
+                legacy_hash = self._legacy_hash_password(password, legacy_salt)
+                return hmac.compare_digest(legacy_hash, password_hash)
+
+            # Parse new format: $version$rounds$salt$hash
+            parts = password_hash.split('$')
+            if len(parts) != 5 or parts[0] != '':
+                logger.warning("Invalid password hash format")
+                return False
+
+            version, stored_rounds, user_salt, stored_hash = parts[1], parts[2], parts[3], parts[4]
+
+            if version != self.HASH_FORMAT_VERSION:
+                logger.warning(f"Unknown password hash version: {version}")
+                return False
+
+            # Regenerate hash with same parameters
+            global_salt = self.settings.password_salt or ''
+            combined_salt = f"{global_salt}{user_salt}"
+
+            password_bytes = password.encode('utf-8')
+            salt_bytes = combined_salt.encode('utf-8')
+
+            hash_bytes = hashlib.pbkdf2_hmac('sha256', password_bytes, salt_bytes, int(stored_rounds))
+            computed_hash = hash_bytes.hex()
+
+            # Constant-time comparison to prevent timing attacks
+            return hmac.compare_digest(computed_hash, stored_hash)
+
         except Exception as e:
             logger.error(f"Password verification error: {e}")
             return False
+
+    def _legacy_hash_password(self, password: str, salt: str) -> str:
+        """Legacy password hashing for backwards compatibility"""
+        password_bytes = password.encode('utf-8')
+        salt_bytes = salt.encode('utf-8')
+        rounds = 10  # Legacy default
+        hash_bytes = hashlib.pbkdf2_hmac('sha256', password_bytes, salt_bytes, rounds)
+        return salt + hash_bytes.hex()
     
     def _generate_user_id(self) -> str:
         """Generate unique user ID"""

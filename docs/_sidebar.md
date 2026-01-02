@@ -8,3 +8,6 @@
  * [📋 配置说明](configuration.md)
  * 👨‍💻 开发指南
    * [⚙️ 系统架构](architecture.md)
+ * **Tooling Reference**
+  * [Built-in Manus Tools](tools/manus_tools.md)
+  * [MCP Tools](tools/mcp_tools.md)

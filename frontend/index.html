@@ -3,12 +3,38 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" href="/favicon.ico" type="image/x-icon" sizes="32x32">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Manus</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <meta name="theme-color" content="#f8f8f7" />
+  <meta name="description" content="AI Manus - Your intelligent AI assistant for complex tasks" />
+  <meta name="robots" content="index, follow" />
+
+  <!-- Open Graph / Social Media -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="AI Manus" />
+  <meta property="og:description" content="Your intelligent AI assistant for complex tasks" />
+  <meta property="og:site_name" content="AI Manus" />
+
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- Favicon -->
+  <link rel="icon" href="/icons/favicon-32x32.png" type="image/png" sizes="32x32" />
+  <link rel="icon" href="/favicon.ico" type="image/x-icon" sizes="16x16" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" sizes="180x180" />
+
+  <!-- Preconnect for performance -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+
+  <title>AI Manus</title>
 </head>
 
 <body>
+  <noscript>
+    <div style="padding: 20px; text-align: center; font-family: system-ui, sans-serif;">
+      <h1>JavaScript Required</h1>
+      <p>AI Manus requires JavaScript to run. Please enable JavaScript in your browser settings.</p>
+    </div>
+  </noscript>
   <div id="app"></div>
   <script type="module" src="/src/main.ts"></script>
 </body>

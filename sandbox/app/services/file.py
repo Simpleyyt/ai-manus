@@ -134,15 +134,17 @@ class FileService:
                 # Clean up temporary file
                 os.unlink(temp_file)
             else:
-                # Ensure directory exists
-                os.makedirs(os.path.dirname(file), exist_ok=True)
-                
+                # Ensure directory exists (only if file has a directory path)
+                file_dir = os.path.dirname(file)
+                if file_dir:
+                    os.makedirs(file_dir, exist_ok=True)
+
                 # Asynchronously write file
                 def write_file_async():
                     mode = 'a' if append else 'w'
                     with open(file, mode, encoding='utf-8') as f:
                         return f.write(content)
-                
+
                 bytes_written = await asyncio.to_thread(write_file_async)
             
             return FileWriteResult(

@@ -1,13 +1,30 @@
 <template>
-  <SimpleBar>
+  <SimpleBar
+    class="[&_.simplebar-scrollbar]:opacity-0
+      [&_.simplebar-scrollbar::before]:bg-[var(--text-disable)]
+      [&:hover_.simplebar-scrollbar]:opacity-100
+      [&:hover_.simplebar-scrollbar::before]:bg-[var(--text-tertiary)]
+      [&_.simplebar-scrollbar::before]:w-[6px]"
+    style="--simplebar-scrollbar-width: 6px;">
     <div
       class="flex flex-col h-full flex-1 min-w-0 mx-auto w-full sm:min-w-[390px] px-5 justify-center items-start gap-2 relative max-w-full sm:max-w-full">
       <div class="w-full pt-4 pb-4 px-5 bg-[var(--background-gray-main)] sticky top-0 z-10 mx-[-1.25]">
+        <!-- Loading Progress Indicator -->
+        <div v-if="isSubmitting"
+          class="absolute top-0 left-0 w-full h-[3px] z-[10]
+          overflow-hidden pointer-events-none">
+          <div class="h-full bg-[var(--text-blue)] transition-all duration-300 ease-out
+            animate-pulse"
+            style="width: 100%; box-shadow: 0 0 10px var(--text-blue);">
+          </div>
+        </div>
         <div class="flex justify-between items-center w-full absolute left-0 right-0">
           <div class="h-8 relative z-20 overflow-hidden flex gap-2 items-center flex-shrink-0">
             <div class="relative flex items-center">
               <div @click="toggleLeftPanel" v-if="!isLeftPanelShow"
-                class="flex h-7 w-7 items-center justify-center cursor-pointer rounded-md hover:bg-[var(--fill-tsp-gray-main)]">
+                class="flex h-7 w-7 items-center justify-center cursor-pointer rounded-md
+                hover:bg-[var(--fill-tsp-gray-main)]
+                transition-colors hover:opacity-90 active:opacity-80 duration-100">
                 <PanelLeft class="size-5 text-[var(--icon-secondary)]" />
               </div>
             </div>
@@ -17,16 +34,10 @@
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <a href="https://github.com/simpleyyt/ai-manus" 
-               target="_blank"
-               class="items-center justify-center whitespace-nowrap font-medium transition-colors hover:opacity-90 active:opacity-80 px-[12px] gap-[6px] text-sm min-w-16 outline outline-1 -outline-offset-1 hover:bg-[var(--fill-tsp-white-light)] text-[var(--text-primary)] outline-[var(--border-btn-main)] bg-transparent clickable hidden sm:flex rounded-[100px] relative h-[32px] group"
-               title="Visit GitHub Repository">
-              <Github class="size-[18px]" />
-              GitHub
-            </a>
             <div class="relative flex items-center" aria-expanded="false" aria-haspopup="dialog"
               @mouseenter="handleUserMenuEnter" @mouseleave="handleUserMenuLeave">
-              <div class="relative flex items-center justify-center font-bold cursor-pointer flex-shrink-0">
+              <div class="relative flex items-center justify-center font-bold cursor-pointer
+                flex-shrink-0 transition-opacity duration-100 hover:opacity-90">
                 <div
                   class="relative flex items-center justify-center font-bold flex-shrink-0 rounded-full overflow-hidden"
                   style="width: 32px; height: 32px; font-size: 16px; color: rgba(255, 255, 255, 0.9); background-color: rgb(59, 130, 246);">
@@ -44,20 +55,21 @@
       </div>
       <div class="w-full max-w-full sm:max-w-[768px] sm:min-w-[390px] mx-auto mt-[180px] mb-auto">
         <div class="w-full flex pl-4 items-center justify-start pb-4">
-          <span class="text-[var(--text-primary)] text-start font-serif text-[32px] leading-[40px]" :style="{
-            fontFamily:
-              'ui-serif, Georgia, Cambria, &quot;Times New Roman&quot;, Times, serif',
-          }">
+          <span class="text-[var(--text-primary)] text-start text-[32px]
+            leading-[40px] font-[500] tracking-[-0.5px]"
+            :style="{ fontFamily: 'ui-serif, Georgia, Cambria, Times, serif' }">
             {{ $t('Hello') }}, {{ currentUser?.fullname }}
             <br />
-            <span class="text-[var(--text-tertiary)]">
+            <span class="text-[var(--text-tertiary)] tracking-[-0.3px]">
               {{ $t('What can I do for you?') }}
             </span>
           </span>
         </div>
         <div class="flex flex-col gap-1 w-full">
-          <div class="flex flex-col bg-[var(--background-gray-main)] w-full">
-            <div class="[&amp;:not(:empty)]:pb-2 bg-[var(--background-gray-main)] rounded-[22px_22px_0px_0px]">
+          <div class="flex flex-col bg-gradient-to-br
+            from-[var(--background-gray-main)] to-[var(--background-card-gray)]
+            w-full rounded-t-[22px]">
+            <div class="[&amp;:not(:empty)]:pb-2 bg-transparent rounded-[22px_22px_0px_0px]">
             </div>
             <ChatBox :rows="2" v-model="message" @submit="handleSubmit" :isRunning="false" :attachments="attachments" />
           </div>
@@ -75,7 +87,7 @@ import { useI18n } from 'vue-i18n';
 import ChatBox from '../components/ChatBox.vue';
 import { createSession } from '../api/agent';
 import { showErrorToast } from '../utils/toast';
-import { Bot, PanelLeft, Github } from 'lucide-vue-next';
+import { Bot, PanelLeft } from 'lucide-vue-next';
 import ManusLogoTextIcon from '../components/icons/ManusLogoTextIcon.vue';
 import type { FileInfo } from '../api/file';
 import { useLeftPanel } from '../composables/useLeftPanel';

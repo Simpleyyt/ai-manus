@@ -1,0 +1,30 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: manus-frontend
+  labels:
+    cloud.googleapis.com/location: us-central1
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: '1'
+        autoscaling.knative.dev/maxScale: '10'
+        run.googleapis.com/execution-environment: gen2
+    spec:
+      containerConcurrency: 80
+      containers:
+      - image: gcr.io/<PROJECT_ID>/manus-frontend:latest
+        ports:
+        - name: http1
+          containerPort: 80
+        env:
+        - name: BACKEND_URL
+          value: "https://manus-backend-<hash>-uc.a.run.app"
+        resources:
+          limits:
+            cpu: '1'
+            memory: 512Mi
+          requests:
+            cpu: '0.5'
+            memory: 256Mi

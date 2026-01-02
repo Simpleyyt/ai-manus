@@ -62,6 +62,11 @@ RUN add-apt-repository ppa:xtradeb/apps -y && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# Install cloudflared for public URL tunneling (enables ExposeTool)
+RUN wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb && \
+    dpkg -i cloudflared-linux-amd64.deb && \
+    rm cloudflared-linux-amd64.deb
+
 # Install Chinese fonts and language support
 RUN apt-get update && apt-get install -y \
     fonts-noto-cjk \

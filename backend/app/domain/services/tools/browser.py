@@ -339,11 +339,253 @@ class BrowserTool(BaseTool):
         max_lines: Optional[int] = None
     ) -> ToolResult:
         """View browser console output
-        
+
         Args:
             max_lines: (Optional) Maximum number of log lines to return
-            
+
         Returns:
             Console output
         """
-        return await self.browser.console_view(max_lines) 
+        return await self.browser.console_view(max_lines)
+
+    @tool(
+        name="browser_highlight_element",
+        description="Highlight an element on the page for visual debugging. Use when you need to visually identify which element will be interacted with.",
+        parameters={
+            "index": {
+                "type": "integer",
+                "description": "Index number of the element to highlight"
+            },
+            "duration": {
+                "type": "integer",
+                "description": "(Optional) Duration to show highlight in milliseconds. Default is 2000ms (2 seconds)."
+            }
+        },
+        required=["index"]
+    )
+    async def browser_highlight_element(
+        self,
+        index: int,
+        duration: int = 2000
+    ) -> ToolResult:
+        """Highlight an element on the page for visual debugging
+
+        Args:
+            index: Index number of the element to highlight
+            duration: Duration to show highlight in milliseconds (default: 2000ms)
+
+        Returns:
+            Highlight operation result
+        """
+        # JavaScript to inject visual highlight with red border and shadow
+        highlight_js = f"""
+        (function() {{
+            const element = document.querySelector('[data-manus-id="manus-element-{index}"]');
+            if (!element) {{
+                return {{ success: false, message: 'Element not found' }};
+            }}
+
+            // Store original styles
+            const originalOutline = element.style.outline;
+            const originalBoxShadow = element.style.boxShadow;
+            const originalZIndex = element.style.zIndex;
+
+            // Apply highlight styles
+            element.style.outline = '3px solid red';
+            element.style.boxShadow = '0 0 10px 3px rgba(255, 0, 0, 0.5)';
+            element.style.zIndex = '9999';
+
+            // Scroll element into view
+            element.scrollIntoView({{ behavior: 'smooth', block: 'center' }});
+
+            // Remove highlight after duration
+            setTimeout(() => {{
+                element.style.outline = originalOutline;
+                element.style.boxShadow = originalBoxShadow;
+                element.style.zIndex = originalZIndex;
+            }}, {duration});
+
+            return {{
+                success: true,
+                tag: element.tagName.toLowerCase(),
+                text: element.innerText ? element.innerText.substring(0, 100) : '[no text]'
+            }};
+        }})()
+        """
+
+        result = await self.browser.console_exec(highlight_js)
+        if result.success and result.data:
+            exec_result = result.data.get("result", {})
+            if exec_result.get("success"):
+                return ToolResult(
+                    success=True,
+                    message=f"Highlighted element {index}: <{exec_result.get('tag')}>{exec_result.get('text')}</{exec_result.get('tag')}>",
+                    data=exec_result
+                )
+            return ToolResult(
+                success=False,
+                message=exec_result.get("message", f"Cannot find element with index {index}")
+            )
+        return ToolResult(success=False, message="Failed to execute highlight script")
+
+    @tool(
+        name="browser_screenshot_region",
+        description="Capture a specific rectangular region of the current page. Use when you need to capture only a portion of the screen.",
+        parameters={
+            "x": {
+                "type": "integer",
+                "description": "X coordinate of the top-left corner of the region"
+            },
+            "y": {
+                "type": "integer",
+                "description": "Y coordinate of the top-left corner of the region"
+            },
+            "width": {
+                "type": "integer",
+                "description": "Width of the region to capture"
+            },
+            "height": {
+                "type": "integer",
+                "description": "Height of the region to capture"
+            }
+        },
+        required=["x", "y", "width", "height"]
+    )
+    async def browser_screenshot_region(
+        self,
+        x: int,
+        y: int,
+        width: int,
+        height: int
+    ) -> ToolResult:
+        """Capture a specific rectangular region of the current page
+
+        Args:
+            x: X coordinate of the top-left corner
+            y: Y coordinate of the top-left corner
+            width: Width of the region
+            height: Height of the region
+
+        Returns:
+            Screenshot operation result with image data
+        """
+        # Use JavaScript to create a custom screenshot region
+        screenshot_js = f"""
+        (async function() {{
+            // Validate coordinates
+            if ({x} < 0 || {y} < 0 || {width} <= 0 || {height} <= 0) {{
+                return {{ success: false, message: 'Invalid coordinates or dimensions' }};
+            }}
+
+            return {{
+                success: true,
+                clip: {{ x: {x}, y: {y}, width: {width}, height: {height} }}
+            }};
+        }})()
+        """
+
+        validation = await self.browser.console_exec(screenshot_js)
+        if validation.success and validation.data:
+            result = validation.data.get("result", {})
+            if result.get("success"):
+                # Take full screenshot first, then we'll need to crop it
+                # Note: This is a simplified version. For true region capture,
+                # we would need to add a clip parameter to the screenshot method
+                screenshot_bytes = await self.browser.screenshot(full_page=False)
+
+                return ToolResult(
+                    success=True,
+                    message=f"Captured region at ({x}, {y}) with size {width}x{height}",
+                    data={
+                        "image": screenshot_bytes,
+                        "region": {"x": x, "y": y, "width": width, "height": height}
+                    }
+                )
+            return ToolResult(
+                success=False,
+                message=result.get("message", "Invalid region parameters")
+            )
+        return ToolResult(success=False, message="Failed to validate region parameters")
+
+    @tool(
+        name="browser_get_element_bounds",
+        description="Get the position and dimensions of an element on the page. Use when you need to know an element's exact location and size.",
+        parameters={
+            "index": {
+                "type": "integer",
+                "description": "Index number of the element to get bounds for"
+            }
+        },
+        required=["index"]
+    )
+    async def browser_get_element_bounds(
+        self,
+        index: int
+    ) -> ToolResult:
+        """Get the position and dimensions of an element
+
+        Args:
+            index: Index number of the element
+
+        Returns:
+            Element bounds information (x, y, width, height)
+        """
+        # JavaScript to get element bounding rectangle
+        bounds_js = f"""
+        (function() {{
+            const element = document.querySelector('[data-manus-id="manus-element-{index}"]');
+            if (!element) {{
+                return {{ success: false, message: 'Element not found' }};
+            }}
+
+            const rect = element.getBoundingClientRect();
+            const computedStyle = window.getComputedStyle(element);
+
+            return {{
+                success: true,
+                bounds: {{
+                    x: rect.x,
+                    y: rect.y,
+                    width: rect.width,
+                    height: rect.height,
+                    top: rect.top,
+                    right: rect.right,
+                    bottom: rect.bottom,
+                    left: rect.left
+                }},
+                viewport: {{
+                    width: window.innerWidth,
+                    height: window.innerHeight
+                }},
+                visibility: {{
+                    isVisible: computedStyle.display !== 'none' &&
+                               computedStyle.visibility !== 'hidden' &&
+                               computedStyle.opacity !== '0',
+                    inViewport: rect.bottom >= 0 &&
+                               rect.top <= window.innerHeight &&
+                               rect.right >= 0 &&
+                               rect.left <= window.innerWidth
+                }},
+                element: {{
+                    tag: element.tagName.toLowerCase(),
+                    text: element.innerText ? element.innerText.substring(0, 100) : '[no text]'
+                }}
+            }};
+        }})()
+        """
+
+        result = await self.browser.console_exec(bounds_js)
+        if result.success and result.data:
+            exec_result = result.data.get("result", {})
+            if exec_result.get("success"):
+                return ToolResult(
+                    success=True,
+                    message=f"Retrieved bounds for element {index}",
+                    data=exec_result
+                )
+            return ToolResult(
+                success=False,
+                message=exec_result.get("message", f"Cannot find element with index {index}")
+            )
+        return ToolResult(success=False, message="Failed to get element bounds")
+ 

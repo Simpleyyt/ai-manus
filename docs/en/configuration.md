@@ -7,12 +7,13 @@
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
 | `API_KEY` | - | Yes | API key for the LLM model |
-| `API_BASE` | `http://mockserver:8090/v1` | Yes | Base API address for specifying model service endpoint |
+| `API_BASE` | `http://mockserver:8090/v1` | No | Base API address for specifying model service endpoint |
 
 ### Model Configuration
 
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
+| `MODEL_PROVIDER` | `openai` | No | Model provider (e.g. `openai`, `anthropic`, `google_genai`, `ollama`) |
 | `MODEL_NAME` | `deepseek-chat` | Yes | Name of the model to use |
 | `TEMPERATURE` | `0.7` | No | Randomness level of model responses, range 0-1 |
 | `MAX_TOKENS` | `2000` | No | Maximum number of tokens in model response |
@@ -57,7 +58,7 @@
 
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
-| `SEARCH_PROVIDER` | `baidu` | No | Search engine provider (`baidu`, `google`, or `bing`) |
+| `SEARCH_PROVIDER` | `bing` | No | Search engine provider (`baidu`, `google`, or `bing`) |
 
 #### Google Search Configuration
 

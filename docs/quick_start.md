@@ -9,7 +9,7 @@
 
 模型能力要求：
 
- * 兼容 OpenAI 接口
+ * 支持 LangChain Chat Model（默认 `openai` 提供商）
  * 支持 FunctionCall
  * 支持 Json Format 输出
 
@@ -28,7 +28,7 @@
 
 ## 部署
 
-使用Docker Compose进行部署，需要修改`API_BASE`与`API_KEY`环境变量：
+使用 Docker Compose 进行部署，至少需要修改 `API_KEY`，并根据模型服务调整 `API_BASE` 与 `MODEL_PROVIDER`：
 
 <!-- docker-compose-example.yml -->
 ```yaml
@@ -62,6 +62,8 @@ services:
       - API_KEY=sk-xxxx
       # LLM model name
       - MODEL_NAME=gpt-4o
+      # LLM model provider
+      - MODEL_PROVIDER=openai
       # LLM temperature parameter, controls randomness
       - TEMPERATURE=0.7
       # Maximum tokens for LLM response

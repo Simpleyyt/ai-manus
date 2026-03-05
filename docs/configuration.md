@@ -7,12 +7,13 @@
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
 | `API_KEY` | - | 是 | LLM 模型的 API 密钥 |
-| `API_BASE` | `http://mockserver:8090/v1` | 是 | API 基础地址，用于指定模型服务的端点 |
+| `API_BASE` | `http://mockserver:8090/v1` | 否 | API 基础地址，用于指定模型服务的端点 |
 
 ### 模型配置
 
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
+| `MODEL_PROVIDER` | `openai` | 否 | 模型提供商（如 `openai`、`anthropic`、`google_genai`、`ollama`） |
 | `MODEL_NAME` | `deepseek-chat` | 是 | 要使用的模型名称 |
 | `TEMPERATURE` | `0.7` | 否 | 模型响应的随机性程度，范围 0-1 |
 | `MAX_TOKENS` | `2000` | 否 | 模型响应的最大 token 数量 |
@@ -57,7 +58,7 @@
 
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
-| `SEARCH_PROVIDER` | `baidu` | 否 | 搜索引擎提供商 (`baidu`、`google` 或 `bing`) |
+| `SEARCH_PROVIDER` | `bing` | 否 | 搜索引擎提供商 (`baidu`、`google` 或 `bing`) |
 
 #### Google 搜索配置
 

@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-AI Manus 是一个基于 FastAPI 和 OpenAI API 的智能对话代理系统。该后端采用领域驱动设计(DDD)架构，支持智能对话、文件操作、Shell命令执行以及浏览器自动化等功能。
+AI Manus 是一个基于 FastAPI 和 LangChain Chat Model 的智能对话代理系统。该后端采用领域驱动设计(DDD)架构，支持智能对话、文件操作、Shell命令执行以及浏览器自动化等功能。
 
 ## 项目架构
 
@@ -25,9 +25,7 @@ backend/
 │   ├── infrastructure/  # 基础设施层：提供技术实现
 │   └── main.py          # 应用入口
 ├── Dockerfile           # Docker配置文件
-├── run.sh               # 生产环境启动脚本
-├── dev.sh               # 开发环境启动脚本
-├── requirements.txt     # 项目依赖
+├── pyproject.toml       # 项目依赖与元数据
 └── README.md            # 项目文档
 ```
 
@@ -45,33 +43,33 @@ backend/
 
 ## 环境要求
 
-- Python 3.9+
+- Python 3.12+
 - Docker 20.10+
 - MongoDB 4.4+
 - Redis 6.0+
 
 ## 安装配置
 
-1. **创建虚拟环境**:
+1. **安装 uv**:
 ```bash
-python -m venv .venv
-source .venv/bin/activate
+pip install uv
 ```
 
 2. **安装依赖**:
 ```bash
-pip install -r requirements.txt
+uv sync
 ```
 
 3. **环境变量配置**:
 创建 `.env` 文件并设置以下环境变量:
 ```
 # Model provider configuration
-API_KEY=your_api_key_here                # OpenAI 或其他模型供应商的 API 密钥
-API_BASE=https://api.openai.com/v1       # 模型 API 的基础 URL，可替换为其他模型供应商的 API 地址
+API_KEY=your_api_key_here                # 模型供应商 API 密钥
+API_BASE=https://api.openai.com/v1       # 模型 API 基础 URL（部分供应商可选）
 
 # Model configuration
 MODEL_NAME=gpt-4o                        # 使用的模型名称
+MODEL_PROVIDER=openai                    # LangChain 模型供应商
 TEMPERATURE=0.7                          # 模型温度参数
 MAX_TOKENS=2000                          # 模型单次请求最大输出 token 数量
 
@@ -86,9 +84,11 @@ SANDBOX_TTL_MINUTES=30                   # 沙盒容器生存时间（分钟）
 SANDBOX_NETWORK=manus-network            # Docker 网络名称，用于沙盒容器间通信
 
 # Database configuration
-MONGODB_URL=mongodb://localhost:27017    # MongoDB 连接 URL
+MONGODB_URI=mongodb://localhost:27017    # MongoDB 连接 URL
 MONGODB_DATABASE=manus                   # MongoDB 数据库名称
-REDIS_URL=redis://localhost:6379/0       # Redis 连接 URL
+REDIS_HOST=localhost                     # Redis 主机地址
+REDIS_PORT=6379                          # Redis 端口
+REDIS_DB=0                               # Redis 数据库编号
 
 # Log configuration
 LOG_LEVEL=INFO                           # 日志级别，可选: DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -99,7 +99,7 @@ LOG_LEVEL=INFO                           # 日志级别，可选: DEBUG, INFO, W
 ### 开发环境
 ```bash
 # 启动开发服务器（带热重载功能）
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 服务将在 http://localhost:8000 启动。

@@ -40,8 +40,11 @@ RUN add-apt-repository ppa:deadsnakes/ppa && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Configure pip to use Aliyun mirror
-RUN pip3 config set global.index-url https://mirrors.aliyun.com/pypi/simple/
+# Install uv
+RUN pip3 install uv
+
+# Configure uv to use Aliyun mirror
+ENV UV_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
 
 # Install Node.js 20.18.0
 RUN mkdir -p /etc/apt/keyrings && \
@@ -81,13 +84,16 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy project files (copy dependency files first to leverage cache)
-COPY requirements.txt .
+COPY pyproject.toml ./
 
 # Install Python dependencies
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN uv sync --no-dev
 
 # Copy remaining project files
 COPY . .
+
+# Ensure application files are writable by app user
+RUN chown -R ubuntu:ubuntu /app
 
 # Configure supervisor
 COPY supervisord.conf /etc/supervisor/conf.d/app.conf

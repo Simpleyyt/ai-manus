@@ -22,7 +22,7 @@ sandbox/
 │   ├── core/              # 核心配置
 │   └── main.py            # 应用入口
 ├── Dockerfile             # Docker构建文件
-├── requirements.txt       # Python依赖
+├── pyproject.toml         # Python依赖（uv）
 ├── supervisord.conf       # Supervisor配置
 └── README.md              # 文档
 ```
@@ -44,28 +44,27 @@ sandbox/
 
 ## 运行环境要求
 
-- Python 3.9+
+- Python 3.10+
 - Docker 20.10+
 
 ## 安装配置
 
 ### 本地开发环境
 
-1. **创建虚拟环境**：
+1. **安装 uv**：
 ```bash
-python -m venv .venv
-source .venv/bin/activate
+pip install uv
 ```
 
 2. **安装依赖**：
 ```bash
-pip install -r requirements.txt
+uv sync --dev
 ```
 
 
 3. **启动开发服务器**：
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
 ### Docker部署

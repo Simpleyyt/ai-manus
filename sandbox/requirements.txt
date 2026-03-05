@@ -1,6 +1,0 @@
-fastapi
-uvicorn
-pydantic
-email-validator
-python-multipart
-pydantic-settings

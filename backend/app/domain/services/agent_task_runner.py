@@ -1,6 +1,8 @@
 from typing import Optional, AsyncGenerator, List
 import asyncio
 import logging
+import os
+import debugpy
 from pydantic import TypeAdapter
 from app.domain.models.message import Message
 from app.domain.models.event import (
@@ -18,13 +20,11 @@ from app.domain.models.event import (
     ToolStatus,
     AgentEvent,
     McpToolContent,
-    ToolStatus
 )
 from app.domain.services.flows.plan_act import PlanActFlow
 from app.domain.external.sandbox import Sandbox
 from app.domain.external.browser import Browser
 from app.domain.external.search import SearchEngine
-from app.domain.external.llm import LLM
 from app.domain.external.file import FileStorage
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.external.task import TaskRunner, Task
@@ -32,8 +32,7 @@ from app.domain.repositories.session_repository import SessionRepository
 from app.domain.repositories.mcp_repository import MCPRepository
 from app.domain.models.session import SessionStatus
 from app.domain.models.file import FileInfo
-from app.domain.utils.json_parser import JsonParser
-from app.domain.services.tools.mcp import MCPTool
+from app.domain.services.tools.mcp import MCPToolkit
 from app.domain.models.tool_result import ToolResult
 from app.domain.models.search import SearchResults
 
@@ -46,12 +45,10 @@ class AgentTaskRunner(TaskRunner):
         session_id: str,
         agent_id: str,
         user_id: str,
-        llm: LLM,
         sandbox: Sandbox,
         browser: Browser,
         agent_repository: AgentRepository,
         session_repository: SessionRepository,
-        json_parser: JsonParser,
         file_storage: FileStorage,
         mcp_repository: MCPRepository,
         search_engine: Optional[SearchEngine] = None,
@@ -59,25 +56,21 @@ class AgentTaskRunner(TaskRunner):
         self._session_id = session_id
         self._agent_id = agent_id
         self._user_id = user_id
-        self._llm = llm
         self._sandbox = sandbox
         self._browser = browser
         self._search_engine = search_engine
         self._repository = agent_repository
         self._session_repository = session_repository
-        self._json_parser = json_parser
         self._file_storage = file_storage
         self._mcp_repository = mcp_repository
-        self._mcp_tool = MCPTool()
+        self._mcp_tool = MCPToolkit()
         self._flow = PlanActFlow(
             self._agent_id,
             self._repository,
             self._session_id,
             self._session_repository,
-            self._llm,
             self._sandbox,
             self._browser,
-            self._json_parser,
             self._mcp_tool,
             self._search_engine,
         )
@@ -245,6 +238,15 @@ class AgentTaskRunner(TaskRunner):
             await self._session_repository.update_status(self._session_id, SessionStatus.COMPLETED)
         except Exception as e:
             logger.exception(f"Agent {self._agent_id} task encountered exception: {str(e)}")
+            
+            # If debugger is attached, trigger breakpoint for debugging
+            # You can also manually set ENABLE_DEBUG_BREAK=1 environment variable
+            if debugpy.is_client_connected() or os.getenv('ENABLE_DEBUG_BREAK'):
+                logger.debug("Debugger detected, triggering breakpoint")
+                import traceback
+                traceback.print_exc()
+                debugpy.breakpoint()  # This will pause execution if a debugger is attached
+            
             await self._put_and_add_event(task, ErrorEvent(error=f"Task error: {str(e)}"))
             await self._session_repository.update_status(self._session_id, SessionStatus.COMPLETED)
     
@@ -273,7 +275,7 @@ class AgentTaskRunner(TaskRunner):
 
     async def destroy(self) -> None:
         """Destroy the task and release resources"""
-        logger.info(f"Starting to destroy agent task")
+        logger.info("Starting to destroy agent task")
         
         # Destroy sandbox environment
         if self._sandbox:

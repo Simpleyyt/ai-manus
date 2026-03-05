@@ -121,3 +121,5 @@ mcp.json
 
 # Frontend whitelist
 !frontend/src/lib/
+
+uv.lock

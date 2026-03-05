@@ -3,11 +3,6 @@ from app.domain.models.plan import Plan, Step, ExecutionStatus
 from app.domain.models.file import FileInfo
 from app.domain.models.message import Message
 from app.domain.services.agents.base import BaseAgent
-from app.domain.external.llm import LLM
-from app.domain.external.sandbox import Sandbox
-from app.domain.external.browser import Browser
-from app.domain.external.search import SearchEngine
-from app.domain.external.file import FileStorage
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.services.prompts.system import SYSTEM_PROMPT
 from app.domain.services.prompts.execution import EXECUTION_SYSTEM_PROMPT, EXECUTION_PROMPT, SUMMARIZE_PROMPT
@@ -22,13 +17,7 @@ from app.domain.models.event import (
     ToolStatus,
     WaitEvent,
 )
-from app.domain.services.tools.base import BaseTool
-from app.domain.services.tools.shell import ShellTool
-from app.domain.services.tools.browser import BrowserTool
-from app.domain.services.tools.search import SearchTool
-from app.domain.services.tools.file import FileTool
-from app.domain.services.tools.message import MessageTool
-from app.domain.utils.json_parser import JsonParser
+from app.domain.services.tools.base import BaseToolkit
 import logging
 
 logger = logging.getLogger(__name__)
@@ -47,15 +36,11 @@ class ExecutionAgent(BaseAgent):
         self,
         agent_id: str,
         agent_repository: AgentRepository,
-        llm: LLM,
-        tools: List[BaseTool],
-        json_parser: JsonParser,
+        tools: List[BaseToolkit],
     ):
         super().__init__(
             agent_id=agent_id,
             agent_repository=agent_repository,
-            llm=llm,
-            json_parser=json_parser,
             tools=tools
         )
     
@@ -75,7 +60,7 @@ class ExecutionAgent(BaseAgent):
                 yield StepEvent(status=StepStatus.FAILED, step=step)
             elif isinstance(event, MessageEvent):
                 step.status = ExecutionStatus.COMPLETED
-                parsed_response = await self.json_parser.parse(event.message)
+                parsed_response = await self._parse_json(event.message)
                 new_step = Step.model_validate(parsed_response)
                 step.success = new_step.success
                 step.result = new_step.result
@@ -100,7 +85,7 @@ class ExecutionAgent(BaseAgent):
         async for event in self.execute(message):
             if isinstance(event, MessageEvent):
                 logger.debug(f"Execution agent summary: {event.message}")
-                parsed_response = await self.json_parser.parse(event.message)
+                parsed_response = await self._parse_json(event.message)
                 message = Message.model_validate(parsed_response)
                 attachments = [FileInfo(file_path=file_path) for file_path in message.attachments]
                 yield MessageEvent(message=message.message, attachments=attachments)

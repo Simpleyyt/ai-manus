@@ -7,9 +7,9 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.sse import sse_client
 from mcp.client.streamable_http import streamablehttp_client
-from mcp.types import Tool as MCPTool
+from mcp.types import Tool as MCPToolkit
 
-from app.domain.services.tools.base import BaseTool, tool
+from app.domain.services.tools.base import BaseToolkit
 from app.domain.models.tool_result import ToolResult
 from app.domain.models.mcp_config import MCPConfig, MCPServerConfig
 
@@ -22,7 +22,7 @@ class MCPClientManager:
     def __init__(self, config: Optional[MCPConfig] = None):
         self._clients: Dict[str, ClientSession] = {}
         self._exit_stack = AsyncExitStack()
-        self._tools_cache: Dict[str, List[MCPTool]] = {}
+        self._tools_cache: Dict[str, List[MCPToolkit]] = {}
         self._initialized = False
         self._config = config
     
@@ -312,10 +312,10 @@ class MCPClientManager:
             logger.error(f"清理 MCP 客户端管理器失败: {e}")
 
 
-class MCPTool(BaseTool):
+class MCPToolkit(BaseToolkit):
     """MCP 工具类"""
     
-    name = "mcp"
+    name: str = "mcp"
     
     def __init__(self):
         super().__init__()

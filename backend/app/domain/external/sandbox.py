@@ -1,7 +1,6 @@
 from typing import Any, Optional, Protocol, BinaryIO
 from app.domain.models.tool_result import ToolResult
 from app.domain.external.browser import Browser
-from app.domain.external.llm import LLM
 
 class Sandbox(Protocol):
     """Sandbox service gateway interface"""

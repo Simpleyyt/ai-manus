@@ -1,9 +1,7 @@
 from typing import Optional, AsyncGenerator, List
 import logging
-import time
 from datetime import datetime
 from app.domain.models.session import Session, SessionStatus
-from app.domain.external.llm import LLM
 from app.domain.external.sandbox import Sandbox
 from app.domain.external.search import SearchEngine
 from app.domain.models.event import BaseEvent, ErrorEvent, DoneEvent, MessageEvent, WaitEvent, AgentEvent
@@ -12,7 +10,6 @@ from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.repositories.session_repository import SessionRepository
 from app.domain.services.agent_task_runner import AgentTaskRunner
 from app.domain.external.task import Task
-from app.domain.utils.json_parser import JsonParser
 from typing import Type
 from app.domain.external.file import FileStorage
 from app.domain.models.file import FileInfo
@@ -30,28 +27,24 @@ class AgentDomainService:
         self,
         agent_repository: AgentRepository,
         session_repository: SessionRepository,
-        llm: LLM,
         sandbox_cls: Type[Sandbox],
         task_cls: Type[Task],
-        json_parser: JsonParser,
         file_storage: FileStorage,
         mcp_repository: MCPRepository,
         search_engine: Optional[SearchEngine] = None,
     ):
         self._repository = agent_repository
-        self._session_repository =session_repository
-        self._llm = llm
+        self._session_repository = session_repository
         self._sandbox_cls = sandbox_cls
         self._search_engine = search_engine
         self._task_cls = task_cls
-        self._json_parser = json_parser
         self._file_storage = file_storage
         self._mcp_repository = mcp_repository
         logger.info("AgentDomainService initialization completed")
             
     async def shutdown(self) -> None:
         """Clean up all Agent's resources"""
-        logger.info(f"Starting to close all Agents")
+        logger.info("Starting to close all Agents")
         await self._task_cls.destroy()
         logger.info("All agents closed successfully")
 
@@ -76,13 +69,11 @@ class AgentDomainService:
             session_id=session.id,
             agent_id=session.agent_id,
             user_id=session.user_id,
-            llm=self._llm,
             sandbox=sandbox,
             browser=browser,
             file_storage=self._file_storage,
             search_engine=self._search_engine,
             session_repository=self._session_repository,
-            json_parser=self._json_parser,
             agent_repository=self._repository,
             mcp_repository=self._mcp_repository,
         )

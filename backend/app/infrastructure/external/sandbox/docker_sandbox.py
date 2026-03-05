@@ -12,7 +12,6 @@ from app.domain.models.tool_result import ToolResult
 from app.domain.external.sandbox import Sandbox
 from app.infrastructure.external.browser.playwright_browser import PlaywrightBrowser
 from app.domain.external.browser import Browser
-from app.domain.external.llm import LLM
 
 logger = logging.getLogger(__name__)
 

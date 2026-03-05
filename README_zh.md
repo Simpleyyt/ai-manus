@@ -58,7 +58,7 @@ https://github.com/user-attachments/assets/5cb2240b-0984-4db0-8818-a24f81624b04
 - Docker Compose
 
 模型能力要求：
-- 兼容OpenAI接口
+- 支持 LangChain Chat Model（默认 `openai` 提供商）
 - 支持FunctionCall
 - 支持Json Format输出
 
@@ -101,6 +101,8 @@ services:
       - API_KEY=sk-xxxx
       # LLM model name
       - MODEL_NAME=gpt-4o
+      # LLM model provider
+      - MODEL_PROVIDER=openai
       # LLM temperature parameter, controls randomness
       - TEMPERATURE=0.7
       # Maximum tokens for LLM response
@@ -279,6 +281,7 @@ API_BASE=http://mockserver:8090/v1
 
 # Model configuration
 MODEL_NAME=deepseek-chat
+MODEL_PROVIDER=openai
 TEMPERATURE=0.7
 MAX_TOKENS=2000
 
@@ -364,7 +367,7 @@ LOG_LEVEL=INFO
 
 > *注意：在 Debug 模式全局只会启动一个沙盒*
 
-2. 当依赖变化时（requirements.txt或package.json），清理并重新构建：
+2. 当依赖变化时（`backend/pyproject.toml` 或 `frontend/package.json`），清理并重新构建：
 ```bash
 # 清理所有相关资源
 ./dev.sh down -v

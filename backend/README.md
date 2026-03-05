@@ -2,7 +2,7 @@
 
 English | [中文](README_zh.md)
 
-AI Manus is an intelligent conversation agent system based on FastAPI and OpenAI API. The backend adopts Domain-Driven Design (DDD) architecture, supporting intelligent dialogue, file operations, Shell command execution, and browser automation.
+AI Manus is an intelligent conversation agent system based on FastAPI and LangChain chat models. The backend adopts Domain-Driven Design (DDD) architecture, supporting intelligent dialogue, file operations, Shell command execution, and browser automation.
 
 ## Project Architecture
 
@@ -25,9 +25,7 @@ backend/
 │   ├── infrastructure/  # Infrastructure layer: provides technical implementation
 │   └── main.py          # Application entry
 ├── Dockerfile           # Docker configuration file
-├── run.sh               # Production environment startup script
-├── dev.sh               # Development environment startup script
-├── requirements.txt     # Project dependencies
+├── pyproject.toml       # Project dependencies and metadata
 └── README.md            # Project documentation
 ```
 
@@ -45,33 +43,33 @@ backend/
 
 ## Requirements
 
-- Python 3.9+
+- Python 3.12+
 - Docker 20.10+
 - MongoDB 4.4+
 - Redis 6.0+
 
 ## Installation and Configuration
 
-1. **Create a virtual environment**:
+1. **Install uv**:
 ```bash
-python -m venv .venv
-source .venv/bin/activate
+pip install uv
 ```
 
 2. **Install dependencies**:
 ```bash
-pip install -r requirements.txt
+uv sync
 ```
 
 3. **Environment variable configuration**:
 Create a `.env` file and set the following environment variables:
 ```
 # Model provider configuration
-API_KEY=your_api_key_here                # API key for OpenAI or other model providers
-API_BASE=https://api.openai.com/v1       # Base URL for the model API, can be replaced with other model provider API addresses
+API_KEY=your_api_key_here                # API key for model providers
+API_BASE=https://api.openai.com/v1       # Base URL for model API (optional for some providers)
 
 # Model configuration
 MODEL_NAME=gpt-4o                        # Model name to use
+MODEL_PROVIDER=openai                    # Model provider for LangChain
 TEMPERATURE=0.7                          # Model temperature parameter
 MAX_TOKENS=2000                          # Maximum output tokens per model request
 
@@ -86,9 +84,11 @@ SANDBOX_TTL_MINUTES=30                   # Sandbox container time-to-live (minut
 SANDBOX_NETWORK=manus-network            # Docker network name for communication between sandbox containers
 
 # Database configuration
-MONGODB_URL=mongodb://localhost:27017    # MongoDB connection URL
+MONGODB_URI=mongodb://localhost:27017    # MongoDB connection URL
 MONGODB_DATABASE=manus                   # MongoDB database name
-REDIS_URL=redis://localhost:6379/0       # Redis connection URL
+REDIS_HOST=localhost                     # Redis host
+REDIS_PORT=6379                          # Redis port
+REDIS_DB=0                               # Redis DB index
 
 # Log configuration
 LOG_LEVEL=INFO                           # Log level, options: DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -99,7 +99,7 @@ LOG_LEVEL=INFO                           # Log level, options: DEBUG, INFO, WARN
 ### Development Environment
 ```bash
 # Start the development server (with hot reload)
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 The service will start at http://localhost:8000.

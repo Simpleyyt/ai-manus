@@ -9,7 +9,7 @@ This project mainly relies on Docker for development and deployment, requiring a
 
 Model capabilities required:
 
- * Compatible with OpenAI API
+ * Supports LangChain chat models (default provider is `openai`)
  * Supports Function Call
  * Supports JSON Format output
 
@@ -27,7 +27,7 @@ Install Docker Engine according to official requirements: https://docs.docker.co
 
 ## Deployment
 
-Deploy using Docker Compose, you need to modify the `API_BASE` and `API_KEY` environment variables:
+Deploy using Docker Compose: at minimum set `API_KEY`, and adjust `API_BASE` and `MODEL_PROVIDER` for your model service:
 
 <!-- docker-compose-example.yml -->
 ```yaml
@@ -61,6 +61,8 @@ services:
       - API_KEY=sk-xxxx
       # LLM model name
       - MODEL_NAME=gpt-4o
+      # LLM model provider
+      - MODEL_PROVIDER=openai
       # LLM temperature parameter, controls randomness
       - TEMPERATURE=0.7
       # Maximum tokens for LLM response

@@ -22,7 +22,7 @@ sandbox/
 │   ├── core/              # Core configurations
 │   └── main.py            # Application entry point
 ├── Dockerfile             # Docker build file
-├── requirements.txt       # Python dependencies
+├── pyproject.toml         # Python dependencies (uv)
 ├── supervisord.conf       # Supervisor configuration
 └── README.md              # Documentation
 ```
@@ -44,27 +44,26 @@ The sandbox environment provides the following core features:
 
 ## System Requirements
 
-- Python 3.9+
+- Python 3.10+
 - Docker 20.10+
 
 ## Installation and Configuration
 
 ### Local Development Environment
 
-1. **Create a virtual environment**:
+1. **Install uv**:
 ```bash
-python -m venv .venv
-source .venv/bin/activate
+pip install uv
 ```
 
 2. **Install dependencies**:
 ```bash
-pip install -r requirements.txt
+uv sync --dev
 ```
 
 3. **Start the development server**:
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
 ### Docker Deployment

@@ -1,6 +1,6 @@
 # AI Manus
 
-[English](README.md) | 中文 | [官方网站](https://app.ai-manus.com) | [文档](https://docs.ai-manus.com)
+[English](README.md) | 中文 | [官方网站](https://ai-manus.com) | [文档](https://docs.ai-manus.com)
 
 [![GitHub stars](https://img.shields.io/github/stars/simpleyyt/ai-manus?style=social)](https://github.com/simpleyyt/ai-manus/stargazers)
 &ensp;

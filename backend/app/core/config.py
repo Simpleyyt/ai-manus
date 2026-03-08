@@ -1,6 +1,24 @@
 import os
+import json
+import logging
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+
+logger = logging.getLogger(__name__)
+
+
+def _parse_extra_headers() -> dict | None:
+    raw = os.environ.get("EXTRA_HEADERS")
+    if not raw:
+        return None
+    try:
+        headers = json.loads(raw)
+        if isinstance(headers, dict):
+            return headers
+        logger.warning("EXTRA_HEADERS is not a JSON object, ignoring")
+    except json.JSONDecodeError:
+        logger.warning("EXTRA_HEADERS is not valid JSON, ignoring")
+    return None
 
 
 class Settings(BaseSettings):
@@ -64,6 +82,9 @@ class Settings(BaseSettings):
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_token_expire_days: int = 7
     
+    # Extra headers for LLM requests (parsed from EXTRA_HEADERS env var, JSON)
+    extra_headers: dict | None = None
+    
     # MCP configuration
     mcp_config_path: str = "/etc/mcp.json"
     
@@ -85,5 +106,6 @@ def get_settings() -> Settings:
     if not os.environ.get("OPENAI_API_KEY"):
         os.environ["OPENAI_API_KEY"] = os.getenv("API_KEY")
     settings = Settings()
+    settings.extra_headers = _parse_extra_headers()
     settings.validate()
     return settings 

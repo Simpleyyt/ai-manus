@@ -19,13 +19,16 @@ class PlaywrightBrowser:
         self.page: Optional[Page] = None
         self.playwright = None
         self.settings = get_settings()
-        self._model = init_chat_model(
+        kwargs = dict(
             model=self.settings.model_name,
             model_provider=self.settings.model_provider,
             temperature=self.settings.temperature,
             max_tokens=self.settings.max_tokens,
             base_url=self.settings.api_base,
         )
+        if self.settings.extra_headers:
+            kwargs["default_headers"] = self.settings.extra_headers
+        self._model = init_chat_model(**kwargs)
         self.cdp_url = cdp_url
         
     async def initialize(self):

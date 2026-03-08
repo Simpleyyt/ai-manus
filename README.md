@@ -16,6 +16,8 @@ Enjoy your own agent with AI Manus!
 
 🚀 [Try a Demo](https://app.ai-manus.com)
 
+📝 [Blog: Rebuild Manus with WebUI and Sandbox](https://simpleyyt.com/2026/03/07/rebuild-manus-with-webui-and-sandbox/)
+
 ## Demos
 
 ### Basic Features

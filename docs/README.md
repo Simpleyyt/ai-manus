@@ -2,6 +2,10 @@
 
 官网地址：<https://ai-manus.com>
 
+GitHub：<https://github.com/simpleyyt/ai-manus> | Demo：<https://app.ai-manus.com>
+
+博客文章：[用 WebUI 和 Sandbox 重建 Manus](https://simpleyyt.com/2026/03/07/rebuild-manus-with-webui-and-sandbox/)
+
 加入我们的社群：[QQ群(1005477581)](https://qun.qq.com/universal-share/share?ac=1&authKey=p4X3Da5iMpR4liAenxwvhs7IValPKiCFtUevRlJouz9qSTSZsMnPJc3hzsJjgQYv&busi_data=eyJncm91cENvZGUiOiIxMDA1NDc3NTgxIiwidG9rZW4iOiJNZmUrTmQ0UzNDZDNqNDFVdjVPS1VCRkJGRWVlV0R3RFJSRVFoZDAwRjFDeUdUM0t6aUIyczlVdzRjV1BYN09IIiwidWluIjoiMzQyMjExODE1In0%3D&data=C3B-E6BlEbailV32co77iXL5vxPIhtD9y_itWLSq50hKqosO_55_isOZym2Faaq4hs9-517tUY8GSWaDwPom-A&svctype=4&tempid=h5_group_info)
 
 ---

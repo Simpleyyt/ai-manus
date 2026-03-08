@@ -278,6 +278,7 @@ cp .env.example .env
 # Model provider configuration
 API_KEY=
 API_BASE=http://mockserver:8090/v1
+EXTRA_HEADER=
 
 # Model configuration
 MODEL_NAME=deepseek-chat

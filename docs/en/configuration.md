@@ -8,6 +8,7 @@
 |---------------|---------------|----------|-------------|
 | `API_KEY` | - | Yes | API key for the LLM model |
 | `API_BASE` | `http://mockserver:8090/v1` | No | Base API address for specifying model service endpoint |
+| `EXTRA_HEADER` | - | No | Extra header value sent as `APP-Code` request header |
 
 ### Model Configuration
 

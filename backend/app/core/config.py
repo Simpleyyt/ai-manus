@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     # Model provider configuration
     api_key: str | None = None
     api_base: str | None = None
+    extra_header: str | None = None
     
     # Model configuration
     model_name: str = "gpt-4o"

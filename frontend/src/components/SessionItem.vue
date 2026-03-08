@@ -1,48 +1,46 @@
 <template>
-  <div class="px-2">
-    <div @click="handleSessionClick"
-      class="group flex h-14 cursor-pointer items-center gap-2 rounded-[10px] px-2 transition-colors"
-      :class="isCurrentSession ? 'bg-[var(--background-white-main)]' : 'hover:bg-[var(--fill-tsp-gray-main)]'">
-      <div class="relative">
-        <div class="h-8 w-8 rounded-full flex items-center justify-center relative bg-[var(--fill-tsp-white-dark)]">
-          <div class="relative h-4 w-4 object-cover brightness-0 opacity-75 dark:opacity-100 dark:brightness-100">
-            <img alt="Hello" class="w-full h-full object-cover" src="/chatting.svg">
-          </div>
-        </div>
-        <div v-if="session.status === SessionStatus.RUNNING || session.status === SessionStatus.PENDING"
-          class="absolute -start-[5px] -top-[3px] w-[calc(100%+8px)] h-[calc(100%+8px)]"
-          style="transform: rotateY(180deg);">
-          <SpinnigIcon />
-        </div>
-        <div v-if="session.unread_message_count > 0 && !isCurrentSession"
-          class="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[var(--function-error)] absolute -end-1 -top-1">
-          <span class="px-1 text-xs text-[var(--text-white)]">{{ session.unread_message_count }}</span>
-        </div>
-      </div>
-      <div class="min-w-20 flex-1 transition-opacity opacity-100">
-        <div class="flex items-center gap-1 overflow-x-hidden">
-          <span class="truncate text-sm font-medium text-[var(--text-primary)] flex-1 min-w-0"
-            :title="session.title || t('New Chat')">
-            <span class="">
-              {{ session.title || t('New Chat') }}
-            </span>
-          </span>
-          <span class="text-[var(--text-tertiary)] text-xs whitespace-nowrap">
-            {{ session.latest_message_at ? customTime(session.latest_message_at) : '' }}
-          </span>
-        </div>
-        <div class="flex items-center gap-2 h-[18px] relative">
-          <span class="min-w-0 flex-1 truncate text-xs text-[var(--text-tertiary)]"
-            :title="session.latest_message || ''">
-            {{ session.latest_message }}
-          </span>
-          <div @click="handleSessionMenuClick"
-            class="w-[22px] h-[22px] flex rounded-[6px] items-center justify-center pointer cursor-pointer border border-[var(--border-main)] shadow-sm group-hover:visible touch-device:visible"
-            :class="!isContextMenuOpen ? 'invisible bg-[var(--background-menu-white)]' : 'visible bg-[var(--fill-tsp-gray-dark)]'"
-            aria-expanded="false" aria-haspopup="dialog">
-            <Ellipsis :size="16" />
-          </div>
-        </div>
+  <div
+    @click="handleSessionClick"
+    class="group flex items-center rounded-[10px] cursor-pointer transition-colors w-full gap-[12px] h-[36px] flex-shrink-0 pointer-events-auto ps-[9px] pe-[2px] active:bg-[var(--fill-tsp-white-dark)]"
+    :class="isCurrentSession ? 'bg-[var(--fill-tsp-white-main)]' : 'hover:bg-[var(--fill-tsp-white-light)]'">
+
+    <!-- 状态图标 -->
+    <div class="shrink-0 size-[18px] flex items-center justify-center relative">
+      <template v-if="session.status === SessionStatus.RUNNING || session.status === SessionStatus.PENDING">
+        <div class="border rounded-full animate-spin" style="width: 18px; height: 18px; border-width: 2px; border-color: var(--fill-blue); border-top-color: var(--icon-brand);"></div>
+      </template>
+      <template v-else-if="session.status === SessionStatus.WAITING">
+        <svg height="18" width="18" fill="none" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+          <g clip-path="url(#waiting-clip)">
+            <circle cx="8" cy="8" r="6.5" stroke="var(--function-warning)" stroke-dasharray="2.44 1.62" stroke-width="1.5"></circle>
+          </g>
+          <defs><clipPath id="waiting-clip"><rect height="16" width="16" fill="white"></rect></clipPath></defs>
+        </svg>
+      </template>
+      <template v-else>
+        <img
+          class="size-[18px] object-cover [filter:brightness(0)_saturate(100%)_invert(52%)_sepia(7%)_saturate(141%)_hue-rotate(349deg)_brightness(95%)_contrast(86%)]"
+          :alt="session.title || ''"
+          src="https://files.manuscdn.com/assets/icon/session/chatting.svg" />
+      </template>
+    
+    </div>
+
+    <!-- 标题 -->
+    <div class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
+      <span class="truncate" :title="session.title || t('New Chat')">
+        {{ session.title || t('New Chat') }}
+      </span>
+    </div>
+
+    <!-- 省略号菜单 -->
+    <div class="shrink-0 flex items-center gap-1">
+      <div
+        @click.stop="handleSessionMenuClick"
+        class="group-hover:flex hidden size-8 rounded-[8px] cursor-pointer items-center justify-center hover:bg-[var(--fill-tsp-white-light)]"
+        :class="isContextMenuOpen ? '!flex bg-[var(--fill-tsp-white-light)]' : ''"
+        aria-expanded="false" aria-haspopup="dialog">
+        <Ellipsis :size="18" class="text-[var(--icon-tertiary)]" />
       </div>
     </div>
   </div>
@@ -53,9 +51,7 @@ import { Ellipsis } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
-import { useCustomTime } from '../composables/useTime';
 import { ListSessionItem, SessionStatus } from '../types/response';
-import SpinnigIcon from './icons/SpinnigIcon.vue';
 import { useContextMenu, createDangerMenuItem } from '../composables/useContextMenu';
 import { useDialog } from '../composables/useDialog';
 import { deleteSession } from '../api/agent';
@@ -69,7 +65,6 @@ interface Props {
 const props = defineProps<Props>();
 
 const { t } = useI18n();
-const { customTime } = useCustomTime();
 const route = useRoute();
 const router = useRouter();
 const { showContextMenu } = useContextMenu();

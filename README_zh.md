@@ -280,7 +280,6 @@ cp .env.example .env
 # Model provider configuration
 API_KEY=
 API_BASE=http://mockserver:8090/v1
-EXTRA_HEADER=
 EXTRA_HEADERS=
 
 # Model configuration

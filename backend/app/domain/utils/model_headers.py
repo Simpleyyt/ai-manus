@@ -45,14 +45,9 @@ def parse_extra_headers(raw_headers: Optional[str]) -> Dict[str, str]:
 
 def build_default_headers(
     model_provider: str,
-    extra_header: Optional[str],
     extra_headers: Optional[str],
 ) -> Dict[str, str]:
     if model_provider not in _HEADER_ENABLED_PROVIDERS:
         return {}
 
-    default_headers: Dict[str, str] = {}
-    if extra_header:
-        default_headers["APP-Code"] = extra_header
-    default_headers.update(parse_extra_headers(extra_headers))
-    return default_headers
+    return parse_extra_headers(extra_headers)

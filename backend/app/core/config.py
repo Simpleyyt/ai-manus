@@ -8,7 +8,6 @@ class Settings(BaseSettings):
     # Model provider configuration
     api_key: str | None = None
     api_base: str | None = None
-    extra_header: str | None = None
     extra_headers: str | None = None
     
     # Model configuration

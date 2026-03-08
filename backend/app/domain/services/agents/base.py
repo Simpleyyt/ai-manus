@@ -38,7 +38,6 @@ def _build_model_init_kwargs(settings: Any) -> Dict[str, Any]:
 
     default_headers = build_default_headers(
         model_provider=settings.model_provider,
-        extra_header=settings.extra_header,
         extra_headers=getattr(settings, "extra_headers", None),
     )
     if default_headers:

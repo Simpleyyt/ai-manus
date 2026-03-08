@@ -67,6 +67,7 @@ Create a `.env` file and set the following environment variables:
 API_KEY=your_api_key_here                # API key for model providers
 API_BASE=https://api.openai.com/v1       # Base URL for model API (optional for some providers)
 EXTRA_HEADER=your_app_code_here          # Optional value sent as APP-Code request header
+EXTRA_HEADERS={"x-app-env":"prod"}       # Optional extra headers (JSON or k:v,k2:v2)
 
 # Model configuration
 MODEL_NAME=gpt-4o                        # Model name to use

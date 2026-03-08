@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     api_key: str | None = None
     api_base: str | None = None
     extra_header: str | None = None
+    extra_headers: str | None = None
     
     # Model configuration
     model_name: str = "gpt-4o"

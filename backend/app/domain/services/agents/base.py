@@ -21,6 +21,7 @@ from app.core.config import get_settings
 from langchain.messages import AIMessage, HumanMessage, ToolCall, ToolMessage, SystemMessage
 from app.domain.services.tools.base import Tool
 from app.domain.utils.robust_json_parser import RobustJsonParser, ToolCallParseError
+from app.domain.utils.model_headers import build_default_headers
 
 
 logger = logging.getLogger(__name__)
@@ -35,8 +36,13 @@ def _build_model_init_kwargs(settings: Any) -> Dict[str, Any]:
         "base_url": settings.api_base,
     }
 
-    if settings.model_provider == "openai" and settings.extra_header:
-        kwargs["default_headers"] = {"APP-Code": settings.extra_header}
+    default_headers = build_default_headers(
+        model_provider=settings.model_provider,
+        extra_header=settings.extra_header,
+        extra_headers=getattr(settings, "extra_headers", None),
+    )
+    if default_headers:
+        kwargs["default_headers"] = default_headers
 
     return kwargs
 

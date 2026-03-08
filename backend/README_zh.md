@@ -66,7 +66,6 @@ uv sync
 # Model provider configuration
 API_KEY=your_api_key_here                # 模型供应商 API 密钥
 API_BASE=https://api.openai.com/v1       # 模型 API 基础 URL（部分供应商可选）
-EXTRA_HEADER=your_app_code_here          # 可选，作为 APP-Code 请求头发送
 
 # Model configuration
 MODEL_NAME=gpt-4o                        # 使用的模型名称

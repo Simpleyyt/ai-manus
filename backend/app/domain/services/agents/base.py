@@ -24,23 +24,6 @@ from app.domain.utils.robust_json_parser import RobustJsonParser, ToolCallParseE
 
 
 logger = logging.getLogger(__name__)
-
-
-def _build_model_init_kwargs(settings: Any) -> Dict[str, Any]:
-    kwargs: Dict[str, Any] = {
-        "model": settings.model_name,
-        "model_provider": settings.model_provider,
-        "temperature": settings.temperature,
-        "max_tokens": settings.max_tokens,
-        "base_url": settings.api_base,
-    }
-
-    if settings.model_provider == "openai" and settings.extra_header:
-        kwargs["default_headers"] = {"APP-Code": settings.extra_header}
-
-    return kwargs
-
-
 class BaseAgent(ABC):
     """
     Base agent class, defining the basic behavior of the agent
@@ -67,7 +50,13 @@ class BaseAgent(ABC):
         settings = get_settings()
         self._agent_id = agent_id
         self._repository = agent_repository
-        self._model = init_chat_model(**_build_model_init_kwargs(settings))
+        self._model = init_chat_model(
+            model=settings.model_name,
+            model_provider=settings.model_provider,
+            temperature=settings.temperature,
+            max_tokens=settings.max_tokens,
+            base_url=settings.api_base
+        )
         self._json_output_parser = RetryWithErrorOutputParser.from_llm(
             parser=JsonOutputParser(),
             llm=self._model,

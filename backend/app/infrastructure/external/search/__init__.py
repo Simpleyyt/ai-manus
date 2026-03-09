@@ -13,6 +13,7 @@ def get_search_engine() -> Optional[SearchEngine]:
     from app.infrastructure.external.search.google_search import GoogleSearchEngine
     from app.infrastructure.external.search.baidu_search import BaiduSearchEngine
     from app.infrastructure.external.search.bing_search import BingSearchEngine
+    from app.infrastructure.external.search.tavily_search import TavilySearchEngine
     
     settings = get_settings()
     if settings.search_provider == "google":
@@ -30,6 +31,12 @@ def get_search_engine() -> Optional[SearchEngine]:
     elif settings.search_provider == "bing":
         logger.info("Initializing Bing Search Engine")
         return BingSearchEngine()
+    elif settings.search_provider == "tavily":
+        if settings.tavily_api_key:
+            logger.info("Initializing Tavily Search Engine")
+            return TavilySearchEngine(api_key=settings.tavily_api_key)
+        else:
+            logger.warning("Tavily Search Engine not initialized: missing API key")
     else:
         logger.warning(f"Unknown search provider: {settings.search_provider}")
     

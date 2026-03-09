@@ -57,9 +57,10 @@ class Settings(BaseSettings):
     sandbox_no_proxy: str | None = None
     
     # Search engine configuration
-    search_provider: str | None = "bing"  # "baidu", "google", "bing"
+    search_provider: str | None = "bing"  # "baidu", "google", "bing", "tavily"
     google_search_api_key: str | None = None
     google_search_engine_id: str | None = None
+    tavily_api_key: str | None = None
     
     # Auth configuration
     auth_provider: str = "password"  # "password", "none", "local"

@@ -60,6 +60,14 @@
 |---------------|---------------|----------|-------------|
 | `SEARCH_PROVIDER` | `bing` | No | Search engine provider (`baidu`, `google`, `bing`, or `tavily`) |
 
+#### Bing Search Configuration
+
+Used only when `SEARCH_PROVIDER=bing`:
+
+| Configuration | Default Value | Required | Description |
+|---------------|---------------|----------|-------------|
+| `BING_SEARCH_API_KEY` | - | Yes | Bing Web Search API key, get from [Azure](https://www.microsoft.com/en-us/bing/apis/bing-web-search-api) |
+
 #### Google Search Configuration
 
 Used only when `SEARCH_PROVIDER=google`:

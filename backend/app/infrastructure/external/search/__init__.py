@@ -29,8 +29,11 @@ def get_search_engine() -> Optional[SearchEngine]:
         logger.info("Initializing Baidu Search Engine")
         return BaiduSearchEngine()
     elif settings.search_provider == "bing":
-        logger.info("Initializing Bing Search Engine")
-        return BingSearchEngine()
+        if settings.bing_search_api_key:
+            logger.info("Initializing Bing Search Engine")
+            return BingSearchEngine(api_key=settings.bing_search_api_key)
+        else:
+            logger.warning("Bing Search Engine not initialized: missing API key (BING_SEARCH_API_KEY)")
     elif settings.search_provider == "tavily":
         if settings.tavily_api_key:
             logger.info("Initializing Tavily Search Engine")

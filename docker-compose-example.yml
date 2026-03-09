@@ -74,6 +74,9 @@ services:
       # Options: baidu, google, bing, tavily
       - SEARCH_PROVIDER=bing
 
+      # Bing search configuration, only used when SEARCH_PROVIDER=bing
+      #- BING_SEARCH_API_KEY=
+
       # Google search configuration, only used when SEARCH_PROVIDER=google
       #- GOOGLE_SEARCH_API_KEY=
       #- GOOGLE_SEARCH_ENGINE_ID=

@@ -58,6 +58,7 @@ class Settings(BaseSettings):
     
     # Search engine configuration
     search_provider: str | None = "bing"  # "baidu", "google", "bing", "tavily"
+    bing_search_api_key: str | None = None
     google_search_api_key: str | None = None
     google_search_engine_id: str | None = None
     tavily_api_key: str | None = None

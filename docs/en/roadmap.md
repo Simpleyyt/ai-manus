@@ -29,7 +29,7 @@
 ## Infrastructure
 
  * [ ] Support Windows & mobile access
- * [ ] Support Bing, Google, Tavily and other search providers
+ * [x] Support Bing, Google, Tavily and other search providers
  * [ ] Support Alibaba Cloud and other file storage providers
  * [ ] Support e2b and other sandbox providers
  * [ ] Support mem0 memory providers

@@ -58,7 +58,7 @@
 
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
-| `SEARCH_PROVIDER` | `bing` | No | Search engine provider (`baidu`, `google`, or `bing`) |
+| `SEARCH_PROVIDER` | `bing` | No | Search engine provider (`baidu`, `google`, `bing`, or `tavily`) |
 
 #### Google Search Configuration
 
@@ -68,6 +68,14 @@ Used only when `SEARCH_PROVIDER=google`:
 |---------------|---------------|----------|-------------|
 | `GOOGLE_SEARCH_API_KEY` | - | Yes | Google Search API key |
 | `GOOGLE_SEARCH_ENGINE_ID` | - | Yes | Google Custom Search Engine ID |
+
+#### Tavily Search Configuration
+
+Used only when `SEARCH_PROVIDER=tavily`:
+
+| Configuration | Default Value | Required | Description |
+|---------------|---------------|----------|-------------|
+| `TAVILY_API_KEY` | - | Yes | Tavily Search API key |
 
 ### Authentication Configuration
 

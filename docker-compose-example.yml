@@ -71,12 +71,15 @@ services:
       #- SANDBOX_NO_PROXY=
       
       # Search engine configuration
-      # Options: baidu, google, bing
+      # Options: baidu, google, bing, tavily
       - SEARCH_PROVIDER=bing
 
       # Google search configuration, only used when SEARCH_PROVIDER=google
       #- GOOGLE_SEARCH_API_KEY=
       #- GOOGLE_SEARCH_ENGINE_ID=
+
+      # Tavily search configuration, only used when SEARCH_PROVIDER=tavily
+      #- TAVILY_API_KEY=
 
       # Auth configuration
       # Options: password, none, local

@@ -58,15 +58,17 @@
 
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
-| `SEARCH_PROVIDER` | `bing` | 否 | 搜索引擎提供商 (`baidu`、`google`、`bing` 或 `tavily`) |
+| `SEARCH_PROVIDER` | `bing` | 否 | 搜索引擎提供商 (`baidu`、`google`、`bing`、`bing_web` 或 `tavily`) |
 
 #### Bing 搜索配置
 
-仅当 `SEARCH_PROVIDER=bing` 时使用：
+仅当 `SEARCH_PROVIDER=bing` 时使用（通过官方 API 搜索）：
 
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
 | `BING_SEARCH_API_KEY` | - | 是 | Bing Web Search API 密钥，从 [Azure](https://www.microsoft.com/en-us/bing/apis/bing-web-search-api) 获取 |
+
+> 若不想申请 API 密钥，可将 `SEARCH_PROVIDER` 设为 `bing_web`，直接通过网页抓取 Bing 搜索结果，无需任何密钥。
 
 #### Google 搜索配置
 

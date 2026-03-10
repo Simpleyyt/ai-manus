@@ -8,6 +8,7 @@ dependencies = [
     "async-lru>=2.0.0",
     "beanie>=1.25.0",
     "beautifulsoup4>=4.12.0",
+    "curl-cffi>=0.14.0",
     "cryptography>=3.4.8",
     "debugpy>=1.8.17",
     "docker>=7.1.0",

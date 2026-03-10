@@ -38,6 +38,14 @@ class Tool(BaseTool):
     async def _arun(self, **kwargs: Any) -> Any:
         return await self._tool.coroutine(self.toolkit, **kwargs)
 
+    async def ainvoke(self, input: Any, config: Any = None, **kwargs: Any) -> ToolMessage:
+        """Invoke tool and return a ToolMessage with the raw result stored in artifact."""
+        args = input.get("args", {}) if isinstance(input, dict) else {}
+        tool_call_id = input.get("id", "") if isinstance(input, dict) else ""
+        raw_result = await self._arun(**args)
+        content = raw_result.model_dump_json() if hasattr(raw_result, "model_dump_json") else str(raw_result)
+        return ToolMessage(tool_call_id=tool_call_id, name=self.name, content=content, artifact=raw_result)
+
 
 class BaseToolkit(LangchainBaseToolkit):
     """Base toolset class, providing common tool calling methods"""

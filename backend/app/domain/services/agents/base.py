@@ -86,7 +86,7 @@ class BaseAgent(ABC):
         return [tool for toolkit in self.toolkits for tool in toolkit.get_tools()]
 
     async def invoke_tool(self, tool: Tool, tool_call: ToolCall) -> ToolMessage:
-        """Invoke specified tool, with retry mechanism"""
+        """Invoke specified tool, with retry mechanism."""
         retries = 0
         while retries <= self.max_retries:
             try:
@@ -97,9 +97,9 @@ class BaseAgent(ABC):
                 if retries <= self.max_retries:
                     await asyncio.sleep(self.retry_interval)
                 else:
-                    logger.exception(f"Tool execution failed, {tool_call["name"]}, {tool_call["args"]}")
+                    logger.exception(f"Tool execution failed, {tool_call['name']}, {tool_call['args']}")
                     break
-        
+
         return ToolMessage(tool_call_id=tool_call["id"], name=tool.name, content=last_error)
     
     async def execute(self, request: str, format: Optional[str] = None) -> AsyncGenerator[BaseEvent, None]:
@@ -129,7 +129,7 @@ class BaseAgent(ABC):
                 )
 
                 tool_result = await self.invoke_tool(tool, tool_call)
-                
+
                 # Generate event after tool call
                 yield ToolEvent(
                     status=ToolStatus.CALLED,
@@ -137,7 +137,7 @@ class BaseAgent(ABC):
                     tool_name=tool.toolkit.name,
                     function_name=function_name,
                     function_args=function_args,
-                    function_result=tool_result
+                    function_result=tool_result.artifact
                 )
 
                 tool_responses.append(tool_result)

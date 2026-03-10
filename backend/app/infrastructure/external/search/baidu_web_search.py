@@ -3,8 +3,8 @@ import logging
 import re
 import time
 
-import httpx
 from bs4 import BeautifulSoup
+from curl_cffi.requests import AsyncSession
 
 from app.domain.external.search import SearchEngine
 from app.domain.models.search import SearchResultItem, SearchResults
@@ -13,33 +13,18 @@ from app.domain.models.tool_result import ToolResult
 logger = logging.getLogger(__name__)
 
 
-class BaiduSearchEngine(SearchEngine):
-    """Baidu search engine implementation using httpx web scraping"""
+class BaiduWebSearchEngine(SearchEngine):
+    """Baidu search engine implementation using web scraping with browser impersonation"""
 
     def __init__(self):
         self.base_url = "https://www.baidu.com/s"
-        self.headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/137.0.0.0 Safari/537.36"
-            ),
-            "Accept": (
-                "text/html,application/xhtml+xml,application/xml;"
-                "q=0.9,image/webp,*/*;q=0.8"
-            ),
-            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Connection": "keep-alive",
-        }
-        self.cookies = httpx.Cookies()
 
     async def search(
         self,
         query: str,
         date_range: Optional[str] = None,
     ) -> ToolResult[SearchResults]:
-        """Search web pages using Baidu web search (httpx).
+        """Search web pages by scraping Baidu search results.
 
         Args:
             query: Search query, using 3-5 keywords
@@ -69,40 +54,13 @@ class BaiduSearchEngine(SearchEngine):
                 params["gpc"] = f"stf={start},{now}|stftype=2"
 
         try:
-            async with httpx.AsyncClient(
-                headers=self.headers,
-                cookies=self.cookies,
-                timeout=30.0,
-                follow_redirects=True,
-            ) as client:
-                response = await client.get(self.base_url, params=params)
+            async with AsyncSession(impersonate="chrome") as session:
+                response = await session.get(
+                    self.base_url, params=params, timeout=30
+                )
                 response.raise_for_status()
 
-                self.cookies.update(response.cookies)
-
                 soup = BeautifulSoup(response.text, "html.parser")
-
-                if "百度安全验证" in response.text:
-                    logger.warning(
-                        "Baidu returned a security verification page. "
-                        "httpx requests are being blocked. "
-                        "Consider using SEARCH_PROVIDER=baidu_web for "
-                        "more reliable results (uses browser impersonation)."
-                    )
-                    error_results = SearchResults(
-                        query=query,
-                        date_range=date_range,
-                        total_results=0,
-                        results=[],
-                    )
-                    return ToolResult(
-                        success=False,
-                        message=(
-                            "Baidu blocked the request (security verification). "
-                            "Try setting SEARCH_PROVIDER=baidu_web instead."
-                        ),
-                        data=error_results,
-                    )
 
                 search_results: list[SearchResultItem] = []
 
@@ -114,9 +72,7 @@ class BaiduSearchEngine(SearchEngine):
                     "div", class_=re.compile(r"\bresult\b")
                 )
                 if not result_divs:
-                    result_divs = content_left.find_all(
-                        "div", class_="c-container"
-                    )
+                    result_divs = content_left.find_all("div", class_="c-container")
 
                 for div in result_divs:
                     try:
@@ -173,9 +129,7 @@ class BaiduSearchEngine(SearchEngine):
                         if not snippet:
                             all_text = div.get_text(separator=" ", strip=True)
                             if title in all_text:
-                                all_text = all_text.replace(
-                                    title, "", 1
-                                ).strip()
+                                all_text = all_text.replace(title, "", 1).strip()
                             if len(all_text) > 30:
                                 snippet = all_text[:300]
 
@@ -189,7 +143,7 @@ class BaiduSearchEngine(SearchEngine):
                             )
                     except Exception as e:
                         logger.warning(
-                            f"Failed to parse Baidu search result: {e}"
+                            f"Failed to parse Baidu search result item: {e}"
                         )
                         continue
 
@@ -201,9 +155,7 @@ class BaiduSearchEngine(SearchEngine):
                     m = re.search(r"约([\d,]+)个", elem.get_text())
                     if m:
                         try:
-                            total_results = int(
-                                m.group(1).replace(",", "")
-                            )
+                            total_results = int(m.group(1).replace(",", ""))
                             break
                         except ValueError:
                             continue
@@ -231,7 +183,7 @@ class BaiduSearchEngine(SearchEngine):
                 return ToolResult(success=True, data=results)
 
         except Exception as e:
-            logger.error(f"Baidu Search failed: {e}")
+            logger.error(f"Baidu Web Search failed: {e}")
             error_results = SearchResults(
                 query=query,
                 date_range=date_range,
@@ -240,7 +192,7 @@ class BaiduSearchEngine(SearchEngine):
             )
             return ToolResult(
                 success=False,
-                message=f"Baidu Search failed: {e}",
+                message=f"Baidu Web Search failed: {e}",
                 data=error_results,
             )
 
@@ -249,11 +201,11 @@ if __name__ == "__main__":
     import asyncio
 
     async def test():
-        search_engine = BaiduSearchEngine()
-        result = await search_engine.search("Python 编程")
+        engine = BaiduWebSearchEngine()
+        result = await engine.search("Python 编程")
 
         if result.success:
-            print(f"Search successful! Found {len(result.data.results)} results")
+            print(f"Found {len(result.data.results)} results")
             for i, item in enumerate(result.data.results[:5]):
                 print(f"{i + 1}. {item.title}")
                 print(f"   {item.link}")

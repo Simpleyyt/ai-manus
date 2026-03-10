@@ -58,7 +58,12 @@
 
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
-| `SEARCH_PROVIDER` | `bing_web` | No | Search engine provider (`baidu`, `google`, `bing`, `bing_web`, or `tavily`) |
+| `SEARCH_PROVIDER` | `bing_web` | No | Search engine provider (`baidu`, `baidu_web`, `google`, `bing`, `bing_web`, or `tavily`) |
+
+#### Baidu Search Configuration
+
+- `baidu`: Scrapes Baidu search results using httpx, no API key needed.
+- `baidu_web`: Scrapes Baidu search results with browser impersonation, no API key needed, more reliable.
 
 #### Bing Search Configuration
 

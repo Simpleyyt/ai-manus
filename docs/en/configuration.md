@@ -58,7 +58,17 @@
 
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
-| `SEARCH_PROVIDER` | `bing` | No | Search engine provider (`baidu`, `google`, `bing`, or `tavily`) |
+| `SEARCH_PROVIDER` | `bing_web` | No | Search engine provider (`baidu`, `google`, `bing`, `bing_web`, or `tavily`) |
+
+#### Bing Search Configuration
+
+Used only when `SEARCH_PROVIDER=bing` (official API):
+
+| Configuration | Default Value | Required | Description |
+|---------------|---------------|----------|-------------|
+| `BING_SEARCH_API_KEY` | - | Yes | Bing Web Search API key, get from [Azure](https://www.microsoft.com/en-us/bing/apis/bing-web-search-api) |
+
+> If you don't want to apply for an API key, set `SEARCH_PROVIDER` to `bing_web` to scrape Bing search results directly without any key.
 
 #### Google Search Configuration
 

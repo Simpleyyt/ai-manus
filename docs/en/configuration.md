@@ -58,7 +58,7 @@
 
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
-| `SEARCH_PROVIDER` | `bing` | No | Search engine provider (`baidu`, `google`, `bing`, `bing_web`, or `tavily`) |
+| `SEARCH_PROVIDER` | `bing_web` | No | Search engine provider (`baidu`, `google`, `bing`, `bing_web`, or `tavily`) |
 
 #### Bing Search Configuration
 

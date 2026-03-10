@@ -58,7 +58,7 @@
 
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
-| `SEARCH_PROVIDER` | `bing` | 否 | 搜索引擎提供商 (`baidu`、`google`、`bing`、`bing_web` 或 `tavily`) |
+| `SEARCH_PROVIDER` | `bing_web` | 否 | 搜索引擎提供商 (`baidu`、`google`、`bing`、`bing_web` 或 `tavily`) |
 
 #### Bing 搜索配置
 

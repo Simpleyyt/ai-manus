@@ -62,8 +62,13 @@
 
 #### Baidu Search Configuration
 
-- `baidu`: Scrapes Baidu search results using httpx, no API key needed.
-- `baidu_web`: Scrapes Baidu search results with browser impersonation, no API key needed, more reliable.
+Used only when `SEARCH_PROVIDER=baidu` (Baidu Qianfan AI Search API):
+
+| Configuration | Default Value | Required | Description |
+|---------------|---------------|----------|-------------|
+| `BAIDU_SEARCH_API_KEY` | - | Yes | Baidu Qianfan AI Search API key, get from [Baidu Qianfan Console](https://console.bce.baidu.com/qianfan/ais/console/onlineService) |
+
+> If you don't want to apply for an API key, set `SEARCH_PROVIDER` to `baidu_web` to scrape Baidu search results directly without any key.
 
 #### Bing Search Configuration
 

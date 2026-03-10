@@ -62,8 +62,13 @@
 
 #### 百度搜索配置
 
-- `baidu`：使用 httpx 抓取百度搜索结果，无需 API 密钥。
-- `baidu_web`：使用浏览器模拟抓取百度搜索结果，无需 API 密钥，更加可靠。
+仅当 `SEARCH_PROVIDER=baidu` 时使用（通过百度千帆 AI 搜索 API）：
+
+| 配置项 | 默认值 | 是否必需 | 说明 |
+|--------|--------|----------|------|
+| `BAIDU_SEARCH_API_KEY` | - | 是 | 百度千帆 AI 搜索 API 密钥，从[百度千帆控制台](https://console.bce.baidu.com/qianfan/ais/console/onlineService)获取 |
+
+> 若不想申请 API 密钥，可将 `SEARCH_PROVIDER` 设为 `baidu_web`，直接通过网页抓取百度搜索结果，无需任何密钥。
 
 #### Bing 搜索配置
 

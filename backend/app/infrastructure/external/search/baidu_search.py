@@ -1,10 +1,7 @@
 from typing import Optional
 import logging
-import re
-import time
 
 import httpx
-from bs4 import BeautifulSoup
 
 from app.domain.external.search import SearchEngine
 from app.domain.models.search import SearchResultItem, SearchResults
@@ -14,222 +11,106 @@ logger = logging.getLogger(__name__)
 
 
 class BaiduSearchEngine(SearchEngine):
-    """Baidu search engine implementation using httpx web scraping"""
+    """Baidu Qianfan AI Search API implementation (requires API key)"""
 
-    def __init__(self):
-        self.base_url = "https://www.baidu.com/s"
-        self.headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/137.0.0.0 Safari/537.36"
-            ),
-            "Accept": (
-                "text/html,application/xhtml+xml,application/xml;"
-                "q=0.9,image/webp,*/*;q=0.8"
-            ),
-            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Connection": "keep-alive",
-        }
-        self.cookies = httpx.Cookies()
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.base_url = (
+            "https://qianfan.baidubce.com/v2/ai_search/web_search"
+        )
 
     async def search(
         self,
         query: str,
         date_range: Optional[str] = None,
     ) -> ToolResult[SearchResults]:
-        """Search web pages using Baidu web search (httpx).
+        """Search web pages using the Baidu Qianfan AI Search API.
 
         Args:
-            query: Search query, using 3-5 keywords
+            query: Search query (max 72 characters)
             date_range: (Optional) Time range filter for search results
 
         Returns:
             Search results
         """
-        params: dict[str, str] = {
-            "wd": query,
-            "rn": "20",
-            "ie": "utf-8",
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}",
+        }
+
+        body: dict = {
+            "messages": [{"role": "user", "content": query[:72]}],
+            "search_source": "baidu_search_v2",
+            "edition": "standard",
+            "resource_type_filter": [{"type": "web", "top_k": 20}],
         }
 
         if date_range and date_range != "all":
-            now = int(time.time())
-            offsets = {
-                "past_hour": 3600,
-                "past_day": 86400,
-                "past_week": 604800,
-                "past_month": 2592000,
-                "past_year": 31536000,
+            recency_mapping = {
+                "past_week": "week",
+                "past_month": "month",
+                "past_year": "year",
             }
-            offset = offsets.get(date_range)
-            if offset:
-                start = now - offset
-                params["gpc"] = f"stf={start},{now}|stftype=2"
+            recency = recency_mapping.get(date_range)
+            if recency:
+                body["search_filter"] = {
+                    "search_recency_filter": recency,
+                }
+            elif date_range == "past_day":
+                body["search_filter"] = {
+                    "range": {
+                        "pageTime": {"gte": "now-1d/d"},
+                    },
+                }
 
         try:
-            async with httpx.AsyncClient(
-                headers=self.headers,
-                cookies=self.cookies,
-                timeout=30.0,
-                follow_redirects=True,
-            ) as client:
-                response = await client.get(self.base_url, params=params)
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    self.base_url, headers=headers, json=body
+                )
                 response.raise_for_status()
-
-                self.cookies.update(response.cookies)
-
-                soup = BeautifulSoup(response.text, "html.parser")
-
-                if "百度安全验证" in response.text:
-                    logger.warning(
-                        "Baidu returned a security verification page. "
-                        "httpx requests are being blocked. "
-                        "Consider using SEARCH_PROVIDER=baidu_web for "
-                        "more reliable results (uses browser impersonation)."
-                    )
-                    error_results = SearchResults(
-                        query=query,
-                        date_range=date_range,
-                        total_results=0,
-                        results=[],
-                    )
-                    return ToolResult(
-                        success=False,
-                        message=(
-                            "Baidu blocked the request (security verification). "
-                            "Try setting SEARCH_PROVIDER=baidu_web instead."
-                        ),
-                        data=error_results,
-                    )
+                data = response.json()
 
                 search_results: list[SearchResultItem] = []
 
-                content_left = soup.find("div", id="content_left")
-                if not content_left:
-                    content_left = soup
-
-                result_divs = content_left.find_all(
-                    "div", class_=re.compile(r"\bresult\b")
-                )
-                if not result_divs:
-                    result_divs = content_left.find_all(
-                        "div", class_="c-container"
+                for item in data.get("search_results", []):
+                    title = item.get("title", "")
+                    link = item.get("url", "")
+                    snippet = item.get("content", "") or item.get(
+                        "snippet", ""
                     )
-
-                for div in result_divs:
-                    try:
-                        title, link = "", ""
-
-                        h3 = div.find("h3")
-                        if h3:
-                            a = h3.find("a")
-                            if a:
-                                title = a.get_text(strip=True)
-                                link = a.get("href", "")
-
-                        if not title:
-                            continue
-
-                        mu = div.get("mu", "")
-                        if mu and mu.startswith("http"):
-                            link = mu
-
-                        if link and "baidu.com/link" in link:
-                            data_log = div.get("data-log", "")
-                            if data_log:
-                                url_match = re.search(
-                                    r'"mu":"(https?://[^"]+)"', data_log
-                                )
-                                if url_match:
-                                    link = url_match.group(1)
-
-                        snippet = ""
-
-                        for tag in div.find_all(
-                            ["div", "span"],
-                            class_=re.compile(
-                                r"c-abstract|content-right|c-span-last"
-                            ),
-                        ):
-                            text = tag.get_text(strip=True)
-                            if len(text) > 20:
-                                snippet = text
-                                break
-
-                        if not snippet:
-                            for tag in div.find_all(["span", "div", "p"]):
-                                cls = " ".join(tag.get("class", []))
-                                if any(
-                                    kw in cls
-                                    for kw in ["abstract", "content", "desc"]
-                                ):
-                                    text = tag.get_text(strip=True)
-                                    if len(text) > 20:
-                                        snippet = text
-                                        break
-
-                        if not snippet:
-                            all_text = div.get_text(separator=" ", strip=True)
-                            if title in all_text:
-                                all_text = all_text.replace(
-                                    title, "", 1
-                                ).strip()
-                            if len(all_text) > 30:
-                                snippet = all_text[:300]
-
-                        if title and link:
-                            search_results.append(
-                                SearchResultItem(
-                                    title=title,
-                                    link=link,
-                                    snippet=snippet,
-                                )
+                    if title and link:
+                        search_results.append(
+                            SearchResultItem(
+                                title=title,
+                                link=link,
+                                snippet=snippet,
                             )
-                    except Exception as e:
-                        logger.warning(
-                            f"Failed to parse Baidu search result: {e}"
                         )
-                        continue
-
-                total_results = 0
-                for elem in soup.find_all(
-                    ["span", "div"],
-                    class_=re.compile(r"nums|hint_PIwjx"),
-                ):
-                    m = re.search(r"约([\d,]+)个", elem.get_text())
-                    if m:
-                        try:
-                            total_results = int(
-                                m.group(1).replace(",", "")
-                            )
-                            break
-                        except ValueError:
-                            continue
-
-                if not total_results:
-                    nums_text = soup.find(
-                        string=re.compile(r"百度为您找到相关结果约")
-                    )
-                    if nums_text:
-                        m = re.search(r"约([\d,]+)个", str(nums_text))
-                        if m:
-                            try:
-                                total_results = int(
-                                    m.group(1).replace(",", "")
-                                )
-                            except ValueError:
-                                pass
 
                 results = SearchResults(
                     query=query,
                     date_range=date_range,
-                    total_results=total_results or len(search_results),
+                    total_results=len(search_results),
                     results=search_results,
                 )
                 return ToolResult(success=True, data=results)
 
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"Baidu Search API HTTP error: {e.response.status_code}"
+            )
+            error_results = SearchResults(
+                query=query,
+                date_range=date_range,
+                total_results=0,
+                results=[],
+            )
+            return ToolResult(
+                success=False,
+                message=f"Baidu Search API error (HTTP {e.response.status_code})",
+                data=error_results,
+            )
         except Exception as e:
             logger.error(f"Baidu Search failed: {e}")
             error_results = SearchResults(
@@ -247,13 +128,20 @@ class BaiduSearchEngine(SearchEngine):
 
 if __name__ == "__main__":
     import asyncio
+    import os
 
     async def test():
-        search_engine = BaiduSearchEngine()
+        api_key = os.environ.get("BAIDU_SEARCH_API_KEY", "")
+        if not api_key:
+            print("Set BAIDU_SEARCH_API_KEY environment variable to test")
+            return
+        search_engine = BaiduSearchEngine(api_key=api_key)
         result = await search_engine.search("Python 编程")
 
         if result.success:
-            print(f"Search successful! Found {len(result.data.results)} results")
+            print(
+                f"Search successful! Found {len(result.data.results)} results"
+            )
             for i, item in enumerate(result.data.results[:5]):
                 print(f"{i + 1}. {item.title}")
                 print(f"   {item.link}")

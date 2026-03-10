@@ -28,8 +28,11 @@ def get_search_engine() -> Optional[SearchEngine]:
         else:
             logger.warning("Google Search Engine not initialized: missing API key or engine ID")
     elif settings.search_provider == "baidu":
-        logger.info("Initializing Baidu Search Engine (httpx)")
-        return BaiduSearchEngine()
+        if settings.baidu_search_api_key:
+            logger.info("Initializing Baidu Search Engine (API)")
+            return BaiduSearchEngine(api_key=settings.baidu_search_api_key)
+        else:
+            logger.warning("Baidu Search Engine not initialized: missing API key (BAIDU_SEARCH_API_KEY)")
     elif settings.search_provider == "baidu_web":
         logger.info("Initializing Baidu Web Search Engine (scraping)")
         return BaiduWebSearchEngine()

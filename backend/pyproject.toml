@@ -24,6 +24,7 @@ dependencies = [
     "mcp>=1.9.0",
     "motor>=3.3.2",
     "openai>=2.8.0",
+    "browser-use>=0.12.1",
     "playwright>=1.42.0",
     "pydantic>=2.12.4",
     "pydantic-settings>=2.12.0",

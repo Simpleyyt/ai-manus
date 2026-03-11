@@ -12,6 +12,7 @@ def get_search_engine() -> Optional[SearchEngine]:
     """Get search engine instance based on configuration"""
     from app.infrastructure.external.search.google_search import GoogleSearchEngine
     from app.infrastructure.external.search.baidu_search import BaiduSearchEngine
+    from app.infrastructure.external.search.baidu_web_search import BaiduWebSearchEngine
     from app.infrastructure.external.search.bing_search import BingSearchEngine
     from app.infrastructure.external.search.bing_web_search import BingWebSearchEngine
     from app.infrastructure.external.search.tavily_search import TavilySearchEngine
@@ -27,8 +28,14 @@ def get_search_engine() -> Optional[SearchEngine]:
         else:
             logger.warning("Google Search Engine not initialized: missing API key or engine ID")
     elif settings.search_provider == "baidu":
-        logger.info("Initializing Baidu Search Engine")
-        return BaiduSearchEngine()
+        if settings.baidu_search_api_key:
+            logger.info("Initializing Baidu Search Engine (API)")
+            return BaiduSearchEngine(api_key=settings.baidu_search_api_key)
+        else:
+            logger.warning("Baidu Search Engine not initialized: missing API key (BAIDU_SEARCH_API_KEY)")
+    elif settings.search_provider == "baidu_web":
+        logger.info("Initializing Baidu Web Search Engine (scraping)")
+        return BaiduWebSearchEngine()
     elif settings.search_provider == "bing":
         if settings.bing_search_api_key:
             logger.info("Initializing Bing Search Engine (API)")

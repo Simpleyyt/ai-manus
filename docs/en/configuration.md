@@ -58,7 +58,17 @@
 
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
-| `SEARCH_PROVIDER` | `bing_web` | No | Search engine provider (`baidu`, `google`, `bing`, `bing_web`, or `tavily`) |
+| `SEARCH_PROVIDER` | `bing_web` | No | Search engine provider (`baidu`, `baidu_web`, `google`, `bing`, `bing_web`, or `tavily`) |
+
+#### Baidu Search Configuration
+
+Used only when `SEARCH_PROVIDER=baidu` (Baidu Qianfan AI Search API):
+
+| Configuration | Default Value | Required | Description |
+|---------------|---------------|----------|-------------|
+| `BAIDU_SEARCH_API_KEY` | - | Yes | Baidu Qianfan AI Search API key, get from [Baidu Qianfan Console](https://console.bce.baidu.com/qianfan/ais/console/onlineService) |
+
+> If you don't want to apply for an API key, set `SEARCH_PROVIDER` to `baidu_web` to scrape Baidu search results directly without any key.
 
 #### Bing Search Configuration
 

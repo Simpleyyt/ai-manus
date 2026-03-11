@@ -75,6 +75,14 @@ class AgentTaskRunner(TaskRunner):
             self._search_engine,
         )
 
+    def get_context(self) -> dict:
+        return {
+            "session_id": self._session_id,
+            "agent_id": self._agent_id,
+            "user_id": self._user_id,
+            "sandbox_id": self._sandbox.id if self._sandbox else "",
+        }
+
     async def _put_and_add_event(self, task: Task, event: AgentEvent) -> None:
         event_id = await task.output_stream.put(event.model_dump_json())
         event.id = event_id

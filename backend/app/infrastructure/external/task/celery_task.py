@@ -1,7 +1,7 @@
 import asyncio
 import uuid
 import logging
-from typing import Optional, Dict
+from typing import Optional, Dict, Callable, Awaitable
 
 from app.domain.external.task import Task, TaskRunner
 from app.domain.external.message_queue import MessageQueue
@@ -9,10 +9,14 @@ from app.infrastructure.external.message_queue.redis_stream_queue import RedisSt
 
 logger = logging.getLogger(__name__)
 
+# Type alias for the runner factory callable.
+# Accepts a context dict (from TaskRunner.get_context()) and returns a TaskRunner.
+TaskRunnerFactory = Callable[[dict], Awaitable[TaskRunner]]
+
 
 class _CeleryTaskProxy:
     """Lightweight proxy used inside the Celery worker to provide the Task
-    interface that ``AgentTaskRunner.run()`` expects (input_stream /
+    interface that ``TaskRunner.run()`` expects (input_stream /
     output_stream).  The proxy reconstructs Redis Stream queues from the
     task ID so the worker can read/write the same streams as the API
     process."""
@@ -36,90 +40,37 @@ class _CeleryTaskProxy:
 
 
 # ---------------------------------------------------------------------------
-# Celery worker-side helpers
+# Celery worker-side execution
 # ---------------------------------------------------------------------------
 
-_worker_infrastructure_ready = False
+async def _execute_in_worker(task_id: str, context: dict) -> None:
+    """Execute a task inside the Celery worker.
 
-
-async def _ensure_worker_infrastructure() -> None:
-    """Initialise MongoDB / Beanie / Redis the first time a Celery worker
-    executes a task.  Subsequent calls are no-ops."""
-    global _worker_infrastructure_ready
-    if _worker_infrastructure_ready:
-        return
-
-    from app.core.config import get_settings
-    from app.infrastructure.storage.mongodb import get_mongodb
-    from app.infrastructure.storage.redis import get_redis
-    from app.infrastructure.models.documents import (
-        AgentDocument,
-        SessionDocument,
-        UserDocument,
-    )
-    from beanie import init_beanie
-
-    settings = get_settings()
-    await get_mongodb().initialize()
-    await init_beanie(
-        database=get_mongodb().client[settings.mongodb_database],
-        document_models=[AgentDocument, SessionDocument, UserDocument],
-    )
-    await get_redis().initialize()
-    _worker_infrastructure_ready = True
-    logger.info("Celery worker infrastructure initialised")
-
-
-async def _execute_in_worker(
-    task_id: str,
-    session_id: str,
-    agent_id: str,
-    user_id: str,
-    sandbox_id: str,
-) -> None:
-    """Reconstruct dependencies and run the ``AgentTaskRunner`` inside the
-    Celery worker process."""
-    from app.infrastructure.external.sandbox.docker_sandbox import DockerSandbox
-    from app.infrastructure.external.file.gridfsfile import get_file_storage
-    from app.infrastructure.external.search import get_search_engine
-    from app.infrastructure.repositories.mongo_agent_repository import MongoAgentRepository
-    from app.infrastructure.repositories.mongo_session_repository import MongoSessionRepository
-    from app.infrastructure.repositories.file_mcp_repository import FileMCPRepository
-    from app.domain.services.agent_task_runner import AgentTaskRunner
+    Uses the runner factory registered via
+    ``CeleryTask.set_runner_factory()`` to construct the ``TaskRunner``
+    from the serialisable *context*, keeping this module free of any
+    concrete infrastructure dependency.
+    """
     from app.domain.models.event import ErrorEvent
-
-    await _ensure_worker_infrastructure()
 
     task_proxy = _CeleryTaskProxy(task_id)
 
-    sandbox = await DockerSandbox.get(sandbox_id)
-    if not sandbox:
-        logger.error("Sandbox %s not found for task %s", sandbox_id, task_id)
+    factory = CeleryTask.get_runner_factory()
+    if factory is None:
+        logger.error("CeleryTask runner factory not configured")
         await task_proxy.output_stream.put(
-            ErrorEvent(error=f"Sandbox {sandbox_id} not found").model_dump_json()
+            ErrorEvent(error="CeleryTask runner factory not configured").model_dump_json()
         )
         return
 
-    browser = await sandbox.get_browser()
-    if not browser:
-        logger.error("Browser unavailable for sandbox %s", sandbox_id)
+    try:
+        runner = await factory(context)
+    except Exception as e:
+        logger.exception("Failed to create TaskRunner from context for task %s", task_id)
         await task_proxy.output_stream.put(
-            ErrorEvent(error="Browser unavailable").model_dump_json()
+            ErrorEvent(error=f"Runner creation failed: {e}").model_dump_json()
         )
         return
-
-    runner = AgentTaskRunner(
-        session_id=session_id,
-        agent_id=agent_id,
-        user_id=user_id,
-        sandbox=sandbox,
-        browser=browser,
-        agent_repository=MongoAgentRepository(),
-        session_repository=MongoSessionRepository(),
-        file_storage=get_file_storage(),
-        mcp_repository=FileMCPRepository(),
-        search_engine=get_search_engine(),
-    )
 
     try:
         await runner.run(task_proxy)
@@ -145,14 +96,11 @@ def _register_celery_tasks() -> None:
     app = get_celery_app()
 
     @app.task(name="manus.execute_agent_task", bind=True)
-    def execute_agent_task(self, task_id: str, session_id: str,
-                           agent_id: str, user_id: str, sandbox_id: str):
+    def execute_agent_task(self, task_id: str, context: dict):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            loop.run_until_complete(
-                _execute_in_worker(task_id, session_id, agent_id, user_id, sandbox_id)
-            )
+            loop.run_until_complete(_execute_in_worker(task_id, context))
         finally:
             loop.close()
 
@@ -177,9 +125,14 @@ class CeleryTask(Task):
     Execution is dispatched to a Celery worker.  Input / output
     communication still uses Redis Streams so the API process can
     read events produced by the worker in real time.
+
+    Before dispatching tasks, a ``TaskRunnerFactory`` must be registered
+    via ``set_runner_factory()`` so the worker can reconstruct a
+    ``TaskRunner`` without depending on concrete implementations.
     """
 
     _task_registry: Dict[str, "CeleryTask"] = {}
+    _runner_factory: Optional[TaskRunnerFactory] = None
 
     def __init__(self, runner: TaskRunner):
         self._runner = runner
@@ -189,15 +142,20 @@ class CeleryTask(Task):
         self._input_stream = RedisStreamQueue(f"task:input:{self._id}")
         self._output_stream = RedisStreamQueue(f"task:output:{self._id}")
 
-        # Extract serialisable context from the runner so the Celery worker
-        # can reconstruct dependencies independently.
-        self._session_id: str = getattr(runner, "_session_id", "")
-        self._agent_id: str = getattr(runner, "_agent_id", "")
-        self._user_id: str = getattr(runner, "_user_id", "")
-        sandbox = getattr(runner, "_sandbox", None)
-        self._sandbox_id: str = sandbox.id if sandbox else ""
+        self._context: dict = runner.get_context()
 
         CeleryTask._task_registry[self._id] = self
+
+    # -- Factory configuration ----------------------------------------------
+
+    @classmethod
+    def set_runner_factory(cls, factory: TaskRunnerFactory) -> None:
+        """Register the factory used by Celery workers to create TaskRunners."""
+        cls._runner_factory = factory
+
+    @classmethod
+    def get_runner_factory(cls) -> Optional[TaskRunnerFactory]:
+        return cls._runner_factory
 
     # -- Task protocol properties -------------------------------------------
 
@@ -232,13 +190,7 @@ class CeleryTask(Task):
         app = get_celery_app()
         self._celery_result = app.send_task(
             "manus.execute_agent_task",
-            args=[
-                self._id,
-                self._session_id,
-                self._agent_id,
-                self._user_id,
-                self._sandbox_id,
-            ],
+            args=[self._id, self._context],
         )
         logger.info("Task %s dispatched to Celery worker", self._id)
 

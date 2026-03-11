@@ -49,7 +49,12 @@ def get_agent_service() -> AgentService:
     session_repository = MongoSessionRepository()
     sandbox_cls = DockerSandbox
     settings = get_settings()
-    task_cls = CeleryTask if settings.task_backend == "celery" else RedisStreamTask
+    if settings.task_backend == "celery":
+        from app.infrastructure.external.task.task_runner_factory import create_runner_from_context
+        CeleryTask.set_runner_factory(create_runner_from_context)
+        task_cls = CeleryTask
+    else:
+        task_cls = RedisStreamTask
     file_storage = get_file_storage()
     search_engine = get_search_engine()
     mcp_repository = FileMCPRepository()

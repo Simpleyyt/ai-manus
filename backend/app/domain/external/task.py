@@ -34,6 +34,15 @@ class TaskRunner(ABC):
         """
         ...
 
+    def get_context(self) -> dict:
+        """Return serializable context for distributed task reconstruction.
+        
+        Override this in subclasses to provide the parameters a remote
+        worker needs to recreate an equivalent TaskRunner instance.
+        The default implementation returns an empty dict.
+        """
+        return {}
+
     @abstractmethod
     async def on_done(self, task: "Task") -> None:
         """Called when task execution is done.

@@ -87,7 +87,7 @@ class RedisTaskBackend(TaskBackend):
     def __init__(self):
         self._tasks: Dict[str, RedisStreamTask] = {}
 
-    async def submit(self, runner: TaskRunner) -> Task:
+    async def submit(self, runner: TaskRunner, context: dict | None = None) -> Task:
         task_id = str(uuid.uuid4())
         task = RedisStreamTask(task_id, runner, on_complete=self._remove)
         self._tasks[task_id] = task

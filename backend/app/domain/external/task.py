@@ -78,8 +78,12 @@ class TaskBackend(ABC):
     """
 
     @abstractmethod
-    async def submit(self, runner: TaskRunner) -> Task:
+    async def submit(self, runner: TaskRunner, context: dict | None = None) -> Task:
         """Create a new :class:`Task` backed by *runner* and register it.
+
+        *context* is an optional JSON-serialisable dict forwarded to
+        remote workers (e.g. ``{"session_id": "…"}``).  Backends that
+        execute in-process may ignore it.
 
         The task is **not** started automatically — the caller should
         invoke ``task.run()`` when ready.

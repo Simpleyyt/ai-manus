@@ -8,31 +8,9 @@ from app.infrastructure.external.message_queue.redis_stream_queue import RedisSt
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Module-level runner registry — shared between the API process and an
-# embedded (same-process) Celery worker so the runner created by the
-# domain service can be executed without reconstruction.
-# ---------------------------------------------------------------------------
-
-_runner_registry: Dict[str, TaskRunner] = {}
-
-
-def get_runner(task_id: str) -> Optional[TaskRunner]:
-    """Retrieve a runner stored during :meth:`CeleryTaskBackend.submit`."""
-    return _runner_registry.get(task_id)
-
-
-def remove_runner(task_id: str) -> None:
-    """Remove a runner after execution completes."""
-    _runner_registry.pop(task_id, None)
-
-
-# ---------------------------------------------------------------------------
-# CeleryTaskProxy — lightweight proxy used inside the Celery worker
-# ---------------------------------------------------------------------------
 
 class CeleryTaskProxy:
-    """Minimal Task-like object for the Celery worker.
+    """Minimal Task-like object used inside a Celery worker.
 
     Exposes *id*, *input_stream* and *output_stream* — the subset that
     ``TaskRunner.run()`` needs.
@@ -63,8 +41,9 @@ class CeleryTaskProxy:
 class CeleryTask(Task):
     """Task whose execution is dispatched to a Celery worker."""
 
-    def __init__(self, task_id: str):
+    def __init__(self, task_id: str, context: dict):
         self._id = task_id
+        self._context = context
         self._celery_result = None
         self._input_stream = RedisStreamQueue(f"task:input:{task_id}")
         self._output_stream = RedisStreamQueue(f"task:output:{task_id}")
@@ -95,7 +74,7 @@ class CeleryTask(Task):
         app = get_celery_app()
         self._celery_result = app.send_task(
             "manus.execute_agent_task",
-            args=[self._id],
+            args=[self._id, self._context],
         )
         logger.info("Task %s dispatched to Celery worker", self._id)
 
@@ -117,19 +96,21 @@ class CeleryTask(Task):
 class CeleryTaskBackend(TaskBackend):
     """Celery-based :class:`TaskBackend`.
 
-    Stores runners in a module-level registry so that an embedded
-    (same-process) Celery worker can look them up directly — no
-    serialisation or factory reconstruction needed.
+    Dispatches ``context`` (e.g. ``{"session_id": "…"}``) to a Celery
+    worker.  The worker uses :meth:`AgentService.create_runner` to
+    build the runner from the same code path as the API process —
+    no factory or runner reconstruction needed here.
     """
 
     def __init__(self):
         self._tasks: Dict[str, CeleryTask] = {}
+        self._runners: Dict[str, TaskRunner] = {}
 
-    async def submit(self, runner: TaskRunner) -> Task:
+    async def submit(self, runner: TaskRunner, context: dict | None = None) -> Task:
         task_id = str(uuid.uuid4())
-        _runner_registry[task_id] = runner
-        task = CeleryTask(task_id)
+        task = CeleryTask(task_id, context or {})
         self._tasks[task_id] = task
+        self._runners[task_id] = runner
         logger.info("Task %s registered (celery)", task_id)
         return task
 
@@ -139,8 +120,9 @@ class CeleryTaskBackend(TaskBackend):
     async def shutdown(self) -> None:
         for task_id, task in list(self._tasks.items()):
             task.cancel()
-            runner = _runner_registry.pop(task_id, None)
+            runner = self._runners.pop(task_id, None)
             if runner:
                 await runner.destroy()
         self._tasks.clear()
+        self._runners.clear()
         logger.info("CeleryTaskBackend shutdown complete")

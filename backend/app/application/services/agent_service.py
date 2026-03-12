@@ -15,7 +15,7 @@ from app.domain.external.sandbox import Sandbox
 from app.domain.external.search import SearchEngine
 from app.domain.external.file import FileStorage
 from app.domain.repositories.agent_repository import AgentRepository
-from app.domain.external.task import TaskBackend
+from app.domain.external.task import TaskBackend, TaskRunner
 from app.domain.models.file import FileInfo
 from app.core.config import get_settings
 from app.domain.repositories.mcp_repository import MCPRepository
@@ -136,6 +136,10 @@ class AgentService:
         logger.info(f"Clearing unread message count for session {session_id} for user {user_id}")
         await self._session_repository.update_unread_message_count(session_id, 0)
         logger.info(f"Unread message count cleared for session {session_id}")
+
+    async def create_runner(self, session_id: str) -> TaskRunner:
+        """Create a TaskRunner for a session (used by Celery workers)."""
+        return await self._agent_domain_service.create_runner(session_id)
 
     async def shutdown(self):
         logger.info("Closing all agents and cleaning up resources")

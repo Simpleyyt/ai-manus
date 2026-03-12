@@ -47,24 +47,9 @@ class AgentDomainService:
         await self._task_backend.shutdown()
         logger.info("All agents closed successfully")
 
-    async def _create_task(self, session: Session) -> Task:
-        """Create a new agent task"""
-        sandbox = None
-        sandbox_id = session.sandbox_id
-        if sandbox_id:
-            sandbox = await self._sandbox_cls.get(sandbox_id)
-        if not sandbox:
-            sandbox = await self._sandbox_cls.create()
-            session.sandbox_id = sandbox.id
-            await self._session_repository.save(session)
-        browser = await sandbox.get_browser()
-        if not browser:
-            logger.error(f"Failed to get browser for Sandbox {sandbox_id}")
-            raise RuntimeError(f"Failed to get browser for Sandbox {sandbox_id}")
-        
-        await self._session_repository.save(session)
-
-        task_runner = AgentTaskRunner(
+    def _build_runner(self, session: Session, sandbox: Sandbox, browser) -> AgentTaskRunner:
+        """Construct an AgentTaskRunner — single source of truth."""
+        return AgentTaskRunner(
             session_id=session.id,
             agent_id=session.agent_id,
             user_id=session.user_id,
@@ -77,7 +62,46 @@ class AgentDomainService:
             mcp_repository=self._mcp_repository,
         )
 
-        task = await self._task_backend.submit(task_runner)
+    async def create_runner(self, session_id: str) -> AgentTaskRunner:
+        """Create a runner from a session ID.
+
+        Reusable by both the API process and remote Celery workers so
+        the construction logic is never duplicated.
+        """
+        session = await self._session_repository.find_by_id(session_id)
+        if not session:
+            raise RuntimeError(f"Session {session_id} not found")
+        if not session.sandbox_id:
+            raise RuntimeError(f"Session {session_id} has no sandbox")
+        sandbox = await self._sandbox_cls.get(session.sandbox_id)
+        if not sandbox:
+            raise RuntimeError(f"Sandbox {session.sandbox_id} not found")
+        browser = await sandbox.get_browser()
+        if not browser:
+            raise RuntimeError(f"Browser unavailable for sandbox {session.sandbox_id}")
+        return self._build_runner(session, sandbox, browser)
+
+    async def _create_task(self, session: Session) -> Task:
+        """Create a new agent task"""
+        sandbox = None
+        sandbox_id = session.sandbox_id
+        if sandbox_id:
+            sandbox = await self._sandbox_cls.get(sandbox_id)
+        if not sandbox:
+            sandbox = await self._sandbox_cls.create()
+            session.sandbox_id = sandbox.id
+        browser = await sandbox.get_browser()
+        if not browser:
+            logger.error(f"Failed to get browser for Sandbox {sandbox_id}")
+            raise RuntimeError(f"Failed to get browser for Sandbox {sandbox_id}")
+
+        await self._session_repository.save(session)
+
+        task_runner = self._build_runner(session, sandbox, browser)
+
+        task = await self._task_backend.submit(
+            task_runner, context={"session_id": session.id}
+        )
         session.task_id = task.id
         await self._session_repository.save(session)
 

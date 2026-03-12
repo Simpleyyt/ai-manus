@@ -67,14 +67,6 @@ class TaskRunner(ABC):
         """Called when the task finishes (success, failure, or cancellation)."""
         ...
 
-    def get_context(self) -> dict:
-        """Return a JSON-serialisable dict that a remote worker can use to
-        reconstruct an equivalent ``TaskRunner``.
-
-        The default returns an empty dict.  Override in subclasses that
-        support distributed execution.
-        """
-        return {}
 
 
 class TaskBackend(ABC):

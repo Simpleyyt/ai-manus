@@ -8,14 +8,34 @@ from app.infrastructure.external.message_queue.redis_stream_queue import RedisSt
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Module-level runner registry — shared between the API process and an
+# embedded (same-process) Celery worker so the runner created by the
+# domain service can be executed without reconstruction.
+# ---------------------------------------------------------------------------
+
+_runner_registry: Dict[str, TaskRunner] = {}
+
+
+def get_runner(task_id: str) -> Optional[TaskRunner]:
+    """Retrieve a runner stored during :meth:`CeleryTaskBackend.submit`."""
+    return _runner_registry.get(task_id)
+
+
+def remove_runner(task_id: str) -> None:
+    """Remove a runner after execution completes."""
+    _runner_registry.pop(task_id, None)
+
+
+# ---------------------------------------------------------------------------
+# CeleryTaskProxy — lightweight proxy used inside the Celery worker
+# ---------------------------------------------------------------------------
 
 class CeleryTaskProxy:
-    """Minimal Task-like object used inside a Celery worker.
+    """Minimal Task-like object for the Celery worker.
 
-    Only exposes *id*, *input_stream* and *output_stream* — the subset
-    that ``TaskRunner.run()`` actually needs.  Reconstructs Redis Stream
-    queues from the task ID so the worker can share the same streams as
-    the API process.
+    Exposes *id*, *input_stream* and *output_stream* — the subset that
+    ``TaskRunner.run()`` needs.
     """
 
     def __init__(self, task_id: str):
@@ -37,21 +57,15 @@ class CeleryTaskProxy:
 
 
 # ---------------------------------------------------------------------------
-# CeleryTask — API-side Task implementation
+# CeleryTask — API-side handle
 # ---------------------------------------------------------------------------
 
 class CeleryTask(Task):
-    """Task dispatched to a Celery worker.
+    """Task whose execution is dispatched to a Celery worker."""
 
-    Communication with the worker still happens via Redis Streams, so
-    the API process can read events in real time.
-    """
-
-    def __init__(self, task_id: str, context: dict):
+    def __init__(self, task_id: str):
         self._id = task_id
-        self._context = context
         self._celery_result = None
-
         self._input_stream = RedisStreamQueue(f"task:input:{task_id}")
         self._output_stream = RedisStreamQueue(f"task:output:{task_id}")
 
@@ -76,13 +90,12 @@ class CeleryTask(Task):
     async def run(self) -> None:
         if not self.done:
             return
-
         from app.infrastructure.external.task.celery_app import get_celery_app
 
         app = get_celery_app()
         self._celery_result = app.send_task(
             "manus.execute_agent_task",
-            args=[self._id, self._context],
+            args=[self._id],
         )
         logger.info("Task %s dispatched to Celery worker", self._id)
 
@@ -104,21 +117,19 @@ class CeleryTask(Task):
 class CeleryTaskBackend(TaskBackend):
     """Celery-based :class:`TaskBackend`.
 
-    Dispatches work to a named Celery task.  What the worker does with
-    the context is entirely the application layer's concern — this
-    backend only handles dispatch, tracking and shutdown.
+    Stores runners in a module-level registry so that an embedded
+    (same-process) Celery worker can look them up directly — no
+    serialisation or factory reconstruction needed.
     """
 
     def __init__(self):
         self._tasks: Dict[str, CeleryTask] = {}
-        self._runners: Dict[str, TaskRunner] = {}
 
     async def submit(self, runner: TaskRunner) -> Task:
-        context = runner.get_context()
         task_id = str(uuid.uuid4())
-        task = CeleryTask(task_id, context)
+        _runner_registry[task_id] = runner
+        task = CeleryTask(task_id)
         self._tasks[task_id] = task
-        self._runners[task_id] = runner
         logger.info("Task %s registered (celery)", task_id)
         return task
 
@@ -128,9 +139,8 @@ class CeleryTaskBackend(TaskBackend):
     async def shutdown(self) -> None:
         for task_id, task in list(self._tasks.items()):
             task.cancel()
-            runner = self._runners.get(task_id)
+            runner = _runner_registry.pop(task_id, None)
             if runner:
                 await runner.destroy()
         self._tasks.clear()
-        self._runners.clear()
         logger.info("CeleryTaskBackend shutdown complete")

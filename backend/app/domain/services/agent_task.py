@@ -27,7 +27,7 @@ from app.domain.external.browser import Browser
 from app.domain.external.search import SearchEngine
 from app.domain.external.file import FileStorage
 from app.domain.repositories.agent_repository import AgentRepository
-from app.domain.external.task import TaskRunner, Task
+from app.domain.external.task import Task
 from app.domain.repositories.session_repository import SessionRepository
 from app.domain.repositories.mcp_repository import MCPRepository
 from app.domain.models.session import SessionStatus
@@ -38,8 +38,14 @@ from app.domain.models.search import SearchResults
 
 logger = logging.getLogger(__name__)
 
-class AgentTaskRunner(TaskRunner):
-    """Agent task that can be cancelled"""
+
+class AgentTask(Task):
+    """Agent task — extends :class:`Task`, overrides ``run()``.
+
+    Like ``Thread.run()`` in Java: contains the business logic that
+    executes inside the task's process / thread.
+    """
+
     def __init__(
         self,
         session_id: str,
@@ -52,8 +58,9 @@ class AgentTaskRunner(TaskRunner):
         file_storage: FileStorage,
         mcp_repository: MCPRepository,
         search_engine: Optional[SearchEngine] = None,
+        task_id: str | None = None,
     ):
-        self._session_id = session_id
+        super().__init__(session_id, task_id)
         self._agent_id = agent_id
         self._user_id = user_id
         self._sandbox = sandbox
@@ -75,27 +82,91 @@ class AgentTaskRunner(TaskRunner):
             self._search_engine,
         )
 
-    async def _put_and_add_event(self, task: Task, event: AgentEvent) -> None:
-        event_id = await task.output_stream.put(event.model_dump_json())
+    # -- Task.run() — business logic ----------------------------------------
+
+    async def run(self) -> None:
+        try:
+            logger.info(f"Agent {self._agent_id} message processing task started")
+            await self._sandbox.ensure_sandbox()
+            await self._mcp_tool.initialized(await self._mcp_repository.get_mcp_config())
+            while not await self.input_stream.is_empty():
+                event = await self._pop_event()
+                message = ""
+                if isinstance(event, MessageEvent):
+                    message = event.message or ""
+                    await self._sync_message_attachments_to_sandbox(event)
+
+                logger.info(f"Agent {self._agent_id} received new message: {message[:50]}...")
+
+                message_obj = Message(message=message, attachments=[attachment.file_path for attachment in event.attachments])
+
+                async for event in self._run_flow(message_obj):
+                    await self._put_and_add_event(event)
+                    if isinstance(event, TitleEvent):
+                        await self._session_repository.update_title(self._session_id, event.title)
+                    elif isinstance(event, MessageEvent):
+                        await self._session_repository.update_latest_message(self._session_id, event.message, event.timestamp)
+                        await self._session_repository.increment_unread_message_count(self._session_id)
+                    elif isinstance(event, WaitEvent):
+                        await self._session_repository.update_status(self._session_id, SessionStatus.WAITING)
+                        return
+                    if not await self.input_stream.is_empty():
+                        break
+
+            await self._session_repository.update_status(self._session_id, SessionStatus.COMPLETED)
+        except asyncio.CancelledError:
+            logger.info(f"Agent {self._agent_id} task cancelled")
+            await self._put_and_add_event(DoneEvent())
+            await self._session_repository.update_status(self._session_id, SessionStatus.COMPLETED)
+        except Exception as e:
+            logger.exception(f"Agent {self._agent_id} task encountered exception: {str(e)}")
+
+            if debugpy.is_client_connected() or os.getenv('ENABLE_DEBUG_BREAK'):
+                logger.debug("Debugger detected, triggering breakpoint")
+                import traceback
+                traceback.print_exc()
+                debugpy.breakpoint()
+
+            await self._put_and_add_event(ErrorEvent(error=f"Task error: {str(e)}"))
+            await self._session_repository.update_status(self._session_id, SessionStatus.COMPLETED)
+
+    # -- Task lifecycle -----------------------------------------------------
+
+    async def on_complete(self) -> None:
+        logger.info(f"Agent {self._agent_id} task done")
+
+    async def destroy(self) -> None:
+        logger.info("Starting to destroy agent task")
+        if self._sandbox:
+            logger.debug(f"Destroying Agent {self._agent_id}'s sandbox environment")
+            await self._sandbox.destroy()
+        if self._mcp_tool:
+            logger.debug(f"Destroying Agent {self._agent_id}'s MCP tool")
+            await self._mcp_tool.cleanup()
+        logger.debug(f"Agent {self._agent_id} has been fully closed and resources cleared")
+
+    # -- internal helpers ---------------------------------------------------
+
+    async def _put_and_add_event(self, event: AgentEvent) -> None:
+        event_id = await self.output_stream.put(event.model_dump_json())
         event.id = event_id
         await self._session_repository.add_event(self._session_id, event)
-    
-    async def _pop_event(self, task: Task) -> AgentEvent:
-        event_id, event_str = await task.input_stream.pop()
+
+    async def _pop_event(self) -> AgentEvent:
+        event_id, event_str = await self.input_stream.pop()
         if event_str is None:
             logger.warning(f"Agent {self._agent_id} received empty message")
             return
         event = TypeAdapter(AgentEvent).validate_json(event_str)
         event.id = event_id
         return event
-    
+
     async def _get_browser_screenshot(self) -> str:
         screenshot = await self._browser.screenshot()
         result = await self._file_storage.upload_file(screenshot, "screenshot.png", self._user_id)
         return result.file_id
 
     async def _sync_file_to_storage(self, file_path: str) -> Optional[FileInfo]:
-        """Upload or update file and return FileInfo"""
         try:
             file_info = await self._session_repository.get_file_by_path(self._session_id, file_path)
             file_data = await self._sandbox.file_download(file_path)
@@ -108,9 +179,8 @@ class AgentTaskRunner(TaskRunner):
             return file_info
         except Exception as e:
             logger.exception(f"Agent {self._agent_id} failed to sync file: {e}")
-    
+
     async def _sync_file_to_sandbox(self, file_id: str) -> Optional[FileInfo]:
-        """Download file from storage to sandbox"""
         try:
             file_data, file_info = await self._file_storage.download_file(file_id, self._user_id)
             file_path = "/home/ubuntu/upload/" + file_info.filename
@@ -122,7 +192,6 @@ class AgentTaskRunner(TaskRunner):
             logger.exception(f"Agent {self._agent_id} failed to sync file: {e}")
 
     async def _sync_message_attachments_to_storage(self, event: MessageEvent) -> None:
-        """Sync message attachments and update event attachments"""
         attachments: List[FileInfo] = []
         try:
             if event.attachments:
@@ -133,9 +202,8 @@ class AgentTaskRunner(TaskRunner):
             event.attachments = attachments
         except Exception as e:
             logger.exception(f"Agent {self._agent_id} failed to sync attachments to storage: {e}")
-    
+
     async def _sync_message_attachments_to_sandbox(self, event: MessageEvent) -> None:
-        """Sync message attachments and update event attachments"""
         attachments: List[FileInfo] = []
         try:
             if event.attachments:
@@ -147,11 +215,9 @@ class AgentTaskRunner(TaskRunner):
             event.attachments = attachments
         except Exception as e:
             logger.exception(f"Agent {self._agent_id} failed to sync attachments to event: {e}")
-    
 
     # TODO: refactor this function
     async def _handle_tool_event(self, event: ToolEvent):
-        """Generate tool content"""
         try:
             if event.status == ToolStatus.CALLED:
                 if event.tool_name == "browser":
@@ -191,7 +257,7 @@ class AgentTaskRunner(TaskRunner):
                     else:
                         logger.warning("MCP tool: No function_result found")
                         event.tool_content = McpToolContent(result="No result available")
-                    
+
                     logger.debug(f"MCP tool_content set to: {event.tool_content}")
                     if event.tool_content:
                         logger.debug(f"MCP tool_content.result: {event.tool_content.result}")
@@ -201,57 +267,7 @@ class AgentTaskRunner(TaskRunner):
         except Exception as e:
             logger.exception(f"Agent {self._agent_id} failed to generate tool content: {e}")
 
-    async def run(self, task: Task) -> None:
-        """Process agent's message queue and run the agent's flow"""
-        try:
-            logger.info(f"Agent {self._agent_id} message processing task started")
-            await self._sandbox.ensure_sandbox()
-            await self._mcp_tool.initialized(await self._mcp_repository.get_mcp_config())
-            while not await task.input_stream.is_empty():
-                event = await self._pop_event(task)
-                message = ""
-                if isinstance(event, MessageEvent):
-                    message = event.message or ""
-                    await self._sync_message_attachments_to_sandbox(event)
-                    
-                logger.info(f"Agent {self._agent_id} received new message: {message[:50]}...")
-
-                message_obj = Message(message=message, attachments=[attachment.file_path for attachment in event.attachments])
-                
-                async for event in self._run_flow(message_obj):
-                    await self._put_and_add_event(task, event)
-                    if isinstance(event, TitleEvent):
-                        await self._session_repository.update_title(self._session_id, event.title)
-                    elif isinstance(event, MessageEvent):
-                        await self._session_repository.update_latest_message(self._session_id, event.message, event.timestamp)
-                        await self._session_repository.increment_unread_message_count(self._session_id)
-                    elif isinstance(event, WaitEvent):
-                        await self._session_repository.update_status(self._session_id, SessionStatus.WAITING)
-                        return
-                    if not await task.input_stream.is_empty():
-                        break
-
-            await self._session_repository.update_status(self._session_id, SessionStatus.COMPLETED)
-        except asyncio.CancelledError:
-            logger.info(f"Agent {self._agent_id} task cancelled")
-            await self._put_and_add_event(task, DoneEvent())
-            await self._session_repository.update_status(self._session_id, SessionStatus.COMPLETED)
-        except Exception as e:
-            logger.exception(f"Agent {self._agent_id} task encountered exception: {str(e)}")
-            
-            # If debugger is attached, trigger breakpoint for debugging
-            # You can also manually set ENABLE_DEBUG_BREAK=1 environment variable
-            if debugpy.is_client_connected() or os.getenv('ENABLE_DEBUG_BREAK'):
-                logger.debug("Debugger detected, triggering breakpoint")
-                import traceback
-                traceback.print_exc()
-                debugpy.breakpoint()  # This will pause execution if a debugger is attached
-            
-            await self._put_and_add_event(task, ErrorEvent(error=f"Task error: {str(e)}"))
-            await self._session_repository.update_status(self._session_id, SessionStatus.COMPLETED)
-    
     async def _run_flow(self, message: Message) -> AsyncGenerator[BaseEvent, None]:
-        """Process a single message through the agent's flow and yield events"""
         if not message.message:
             logger.warning(f"Agent {self._agent_id} received empty message")
             yield ErrorEvent(error="No message")
@@ -259,31 +275,9 @@ class AgentTaskRunner(TaskRunner):
 
         async for event in self._flow.run(message):
             if isinstance(event, ToolEvent):
-                # TODO: move to tool function
                 await self._handle_tool_event(event)
             elif isinstance(event, MessageEvent):
                 await self._sync_message_attachments_to_storage(event)
             yield event
 
         logger.info(f"Agent {self._agent_id} completed processing one message")
-
-    
-    async def on_done(self, task: Task) -> None:
-        """Called when the task is done"""
-        logger.info(f"Agent {self._agent_id} task done")
-
-
-    async def destroy(self) -> None:
-        """Destroy the task and release resources"""
-        logger.info("Starting to destroy agent task")
-        
-        # Destroy sandbox environment
-        if self._sandbox:
-            logger.debug(f"Destroying Agent {self._agent_id}'s sandbox environment")
-            await self._sandbox.destroy()
-        
-        if self._mcp_tool:
-            logger.debug(f"Destroying Agent {self._agent_id}'s MCP tool")
-            await self._mcp_tool.cleanup()
-        
-        logger.debug(f"Agent {self._agent_id} has been fully closed and resources cleared")

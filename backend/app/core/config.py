@@ -45,6 +45,13 @@ class Settings(BaseSettings):
     redis_db: int = 0
     redis_password: str | None = None
     
+    # Task backend configuration ("redis" or "celery")
+    task_backend: str = "redis"
+    
+    # Celery configuration (used when task_backend="celery")
+    celery_broker_url: str | None = None
+    celery_result_backend: str | None = None
+    
     # Sandbox configuration
     sandbox_address: str | None = None
     sandbox_image: str | None = None

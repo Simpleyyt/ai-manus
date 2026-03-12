@@ -7,6 +7,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.infrastructure.external.file.gridfsfile import get_file_storage
 from app.infrastructure.external.search import get_search_engine
 from app.domain.models.user import User, UserRole
+from app.domain.external.task import TaskRunner
 from app.application.errors.exceptions import UnauthorizedError
 from app.core.config import get_settings
 
@@ -30,6 +31,70 @@ from app.infrastructure.repositories.user_repository import MongoUserRepository
 # Configure logging
 logger = logging.getLogger(__name__)
 
+
+# ---------------------------------------------------------------------------
+# TaskRunner factory for Celery workers (DI assembly logic)
+# ---------------------------------------------------------------------------
+
+_worker_infra_ready = False
+
+
+async def _ensure_worker_infrastructure() -> None:
+    """Lazy-init MongoDB / Beanie / Redis for Celery worker processes."""
+    global _worker_infra_ready
+    if _worker_infra_ready:
+        return
+
+    from app.infrastructure.storage.mongodb import get_mongodb
+    from app.infrastructure.storage.redis import get_redis
+    from app.infrastructure.models.documents import (
+        AgentDocument, SessionDocument, UserDocument,
+    )
+    from beanie import init_beanie
+
+    settings = get_settings()
+    await get_mongodb().initialize()
+    await init_beanie(
+        database=get_mongodb().client[settings.mongodb_database],
+        document_models=[AgentDocument, SessionDocument, UserDocument],
+    )
+    await get_redis().initialize()
+    _worker_infra_ready = True
+    logger.info("Worker infrastructure initialised")
+
+
+async def create_runner_from_context(context: dict) -> TaskRunner:
+    """Reconstruct an ``AgentTaskRunner`` from a serialisable *context* dict.
+
+    This is the ``TaskRunnerFactory`` passed to ``CeleryTaskBackend``
+    and used by Celery workers to create runners in a separate process.
+    """
+    from app.domain.services.agent_task_runner import AgentTaskRunner
+
+    await _ensure_worker_infrastructure()
+
+    sandbox_id = context["sandbox_id"]
+    sandbox = await DockerSandbox.get(sandbox_id)
+    if not sandbox:
+        raise RuntimeError(f"Sandbox {sandbox_id} not found")
+
+    browser = await sandbox.get_browser()
+    if not browser:
+        raise RuntimeError(f"Browser unavailable for sandbox {sandbox_id}")
+
+    return AgentTaskRunner(
+        session_id=context["session_id"],
+        agent_id=context["agent_id"],
+        user_id=context["user_id"],
+        sandbox=sandbox,
+        browser=browser,
+        agent_repository=MongoAgentRepository(),
+        session_repository=MongoSessionRepository(),
+        file_storage=get_file_storage(),
+        mcp_repository=FileMCPRepository(),
+        search_engine=get_search_engine(),
+    )
+
 # Security scheme - Bearer Token only
 security_bearer = HTTPBearer(auto_error=False)
 
@@ -50,7 +115,6 @@ def get_agent_service() -> AgentService:
     settings = get_settings()
     if settings.task_backend == "celery":
         from app.infrastructure.external.task.celery_task import CeleryTaskBackend
-        from app.infrastructure.external.task.task_runner_factory import create_runner_from_context
         task_backend = CeleryTaskBackend(runner_factory=create_runner_from_context)
     else:
         task_backend = RedisTaskBackend()

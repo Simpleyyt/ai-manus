@@ -1,7 +1,6 @@
 import logging
 from functools import lru_cache
 from celery import Celery
-from celery.signals import worker_init
 
 logger = logging.getLogger(__name__)
 
@@ -37,13 +36,3 @@ def get_celery_app() -> Celery:
 
     logger.info("Celery app configured with broker: %s", broker_url)
     return app
-
-
-@worker_init.connect
-def _on_worker_init(**kwargs):
-    """Register the runner factory when a Celery worker starts."""
-    from app.infrastructure.external.task.celery_task import set_runner_factory
-    from app.interfaces.dependencies import create_runner_from_context
-
-    set_runner_factory(create_runner_from_context)
-    logger.info("Celery worker: runner factory registered")

@@ -15,7 +15,7 @@ from app.domain.external.sandbox import Sandbox
 from app.domain.external.search import SearchEngine
 from app.domain.external.file import FileStorage
 from app.domain.repositories.agent_repository import AgentRepository
-from app.domain.external.task import Task
+from app.domain.external.task import TaskBackend
 from app.domain.models.file import FileInfo
 from app.core.config import get_settings
 from app.domain.repositories.mcp_repository import MCPRepository
@@ -30,7 +30,7 @@ class AgentService:
         agent_repository: AgentRepository,
         session_repository: SessionRepository,
         sandbox_cls: Type[Sandbox],
-        task_cls: Type[Task],
+        task_backend: TaskBackend,
         file_storage: FileStorage,
         mcp_repository: MCPRepository,
         search_engine: Optional[SearchEngine] = None,
@@ -43,7 +43,7 @@ class AgentService:
             self._agent_repository,
             self._session_repository,
             sandbox_cls,
-            task_cls,
+            task_backend,
             file_storage,
             mcp_repository,
             search_engine,

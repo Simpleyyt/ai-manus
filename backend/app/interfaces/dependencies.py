@@ -20,8 +20,7 @@ from app.infrastructure.external.cache import get_cache
 
 # Import all required dependencies for agent service
 from app.infrastructure.external.sandbox.docker_sandbox import DockerSandbox
-from app.infrastructure.external.task.redis_task import RedisStreamTask
-from app.infrastructure.external.task.celery_task import CeleryTask
+from app.infrastructure.external.task.redis_task import RedisTaskBackend
 from app.infrastructure.repositories.mongo_agent_repository import MongoAgentRepository
 from app.infrastructure.repositories.mongo_session_repository import MongoSessionRepository
 from app.infrastructure.repositories.file_mcp_repository import FileMCPRepository
@@ -50,11 +49,11 @@ def get_agent_service() -> AgentService:
     sandbox_cls = DockerSandbox
     settings = get_settings()
     if settings.task_backend == "celery":
+        from app.infrastructure.external.task.celery_task import CeleryTaskBackend
         from app.infrastructure.external.task.task_runner_factory import create_runner_from_context
-        CeleryTask.set_runner_factory(create_runner_from_context)
-        task_cls = CeleryTask
+        task_backend = CeleryTaskBackend(runner_factory=create_runner_from_context)
     else:
-        task_cls = RedisStreamTask
+        task_backend = RedisTaskBackend()
     file_storage = get_file_storage()
     search_engine = get_search_engine()
     mcp_repository = FileMCPRepository()
@@ -64,7 +63,7 @@ def get_agent_service() -> AgentService:
         agent_repository=agent_repository,
         session_repository=session_repository,
         sandbox_cls=sandbox_cls,
-        task_cls=task_cls,
+        task_backend=task_backend,
         file_storage=file_storage,
         search_engine=search_engine,
         mcp_repository=mcp_repository,

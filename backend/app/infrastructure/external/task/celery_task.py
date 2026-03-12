@@ -3,23 +3,42 @@ import uuid
 import logging
 from typing import Optional, Dict, Callable, Awaitable
 
-from app.domain.external.task import Task, TaskRunner
+from app.domain.external.task import Task, TaskRunner, TaskBackend
 from app.domain.external.message_queue import MessageQueue
 from app.infrastructure.external.message_queue.redis_stream_queue import RedisStreamQueue
 
 logger = logging.getLogger(__name__)
 
-# Type alias for the runner factory callable.
-# Accepts a context dict (from TaskRunner.get_context()) and returns a TaskRunner.
+# ---------------------------------------------------------------------------
+# Runner factory — module-level so both API and worker processes can access
+# ---------------------------------------------------------------------------
+
 TaskRunnerFactory = Callable[[dict], Awaitable[TaskRunner]]
 
+_runner_factory: Optional[TaskRunnerFactory] = None
+
+
+def set_runner_factory(factory: TaskRunnerFactory) -> None:
+    """Register the factory that Celery workers use to reconstruct a
+    ``TaskRunner`` from serialisable context."""
+    global _runner_factory
+    _runner_factory = factory
+
+
+def get_runner_factory() -> Optional[TaskRunnerFactory]:
+    return _runner_factory
+
+
+# ---------------------------------------------------------------------------
+# Worker-side proxy
+# ---------------------------------------------------------------------------
 
 class _CeleryTaskProxy:
-    """Lightweight proxy used inside the Celery worker to provide the Task
-    interface that ``TaskRunner.run()`` expects (input_stream /
-    output_stream).  The proxy reconstructs Redis Stream queues from the
-    task ID so the worker can read/write the same streams as the API
-    process."""
+    """Minimal Task-like object used inside the Celery worker.
+
+    Only exposes *input_stream* / *output_stream* — the subset that
+    ``TaskRunner.run()`` actually needs.
+    """
 
     def __init__(self, task_id: str):
         self._id = task_id
@@ -40,33 +59,32 @@ class _CeleryTaskProxy:
 
 
 # ---------------------------------------------------------------------------
-# Celery worker-side execution
+# Worker-side execution
 # ---------------------------------------------------------------------------
 
 async def _execute_in_worker(task_id: str, context: dict) -> None:
-    """Execute a task inside the Celery worker.
+    """Run inside a Celery worker process.
 
-    Uses the runner factory registered via
-    ``CeleryTask.set_runner_factory()`` to construct the ``TaskRunner``
-    from the serialisable *context*, keeping this module free of any
-    concrete infrastructure dependency.
+    Uses the registered :func:`get_runner_factory` to build a
+    ``TaskRunner`` from *context*, then executes it against a
+    :class:`_CeleryTaskProxy`.
     """
     from app.domain.models.event import ErrorEvent
 
     task_proxy = _CeleryTaskProxy(task_id)
 
-    factory = CeleryTask.get_runner_factory()
+    factory = get_runner_factory()
     if factory is None:
-        logger.error("CeleryTask runner factory not configured")
+        logger.error("Runner factory not configured for Celery worker")
         await task_proxy.output_stream.put(
-            ErrorEvent(error="CeleryTask runner factory not configured").model_dump_json()
+            ErrorEvent(error="Runner factory not configured").model_dump_json()
         )
         return
 
     try:
         runner = await factory(context)
     except Exception as e:
-        logger.exception("Failed to create TaskRunner from context for task %s", task_id)
+        logger.exception("Failed to create TaskRunner for task %s", task_id)
         await task_proxy.output_stream.put(
             ErrorEvent(error=f"Runner creation failed: {e}").model_dump_json()
         )
@@ -86,11 +104,6 @@ async def _execute_in_worker(task_id: str, context: dict) -> None:
 
 
 def _register_celery_tasks() -> None:
-    """Register the Celery task function with the Celery app.
-
-    Called lazily so that the Celery app is only created when actually
-    needed (i.e. when ``task_backend=celery``).
-    """
     from app.infrastructure.external.task.celery_app import get_celery_app
 
     app = get_celery_app()
@@ -116,48 +129,23 @@ def _ensure_celery_tasks_registered() -> None:
 
 
 # ---------------------------------------------------------------------------
-# CeleryTask – API-side class implementing the Task protocol
+# CeleryTask — API-side Task implementation
 # ---------------------------------------------------------------------------
 
 class CeleryTask(Task):
-    """Celery-based task implementation following the Task protocol.
+    """Task dispatched to a Celery worker.
 
-    Execution is dispatched to a Celery worker.  Input / output
-    communication still uses Redis Streams so the API process can
-    read events produced by the worker in real time.
-
-    Before dispatching tasks, a ``TaskRunnerFactory`` must be registered
-    via ``set_runner_factory()`` so the worker can reconstruct a
-    ``TaskRunner`` without depending on concrete implementations.
+    Communication with the worker still uses Redis Streams, so the API
+    process can read events in real time.
     """
 
-    _task_registry: Dict[str, "CeleryTask"] = {}
-    _runner_factory: Optional[TaskRunnerFactory] = None
-
-    def __init__(self, runner: TaskRunner):
-        self._runner = runner
-        self._id = str(uuid.uuid4())
+    def __init__(self, task_id: str, context: dict):
+        self._id = task_id
+        self._context = context
         self._celery_result = None
 
-        self._input_stream = RedisStreamQueue(f"task:input:{self._id}")
-        self._output_stream = RedisStreamQueue(f"task:output:{self._id}")
-
-        self._context: dict = runner.get_context()
-
-        CeleryTask._task_registry[self._id] = self
-
-    # -- Factory configuration ----------------------------------------------
-
-    @classmethod
-    def set_runner_factory(cls, factory: TaskRunnerFactory) -> None:
-        """Register the factory used by Celery workers to create TaskRunners."""
-        cls._runner_factory = factory
-
-    @classmethod
-    def get_runner_factory(cls) -> Optional[TaskRunnerFactory]:
-        return cls._runner_factory
-
-    # -- Task protocol properties -------------------------------------------
+        self._input_stream = RedisStreamQueue(f"task:input:{task_id}")
+        self._output_stream = RedisStreamQueue(f"task:output:{task_id}")
 
     @property
     def id(self) -> str:
@@ -177,10 +165,7 @@ class CeleryTask(Task):
     def output_stream(self) -> MessageQueue:
         return self._output_stream
 
-    # -- Task protocol methods ----------------------------------------------
-
     async def run(self) -> None:
-        """Dispatch execution to a Celery worker."""
         if not self.done:
             return
 
@@ -198,36 +183,49 @@ class CeleryTask(Task):
         if self._celery_result and not self.done:
             self._celery_result.revoke(terminate=True)
             logger.info("Task %s revoked", self._id)
-            self._cleanup_registry()
             return True
-
-        self._cleanup_registry()
         return False
-
-    # -- Class methods (Task protocol) --------------------------------------
-
-    @classmethod
-    def get(cls, task_id: str) -> Optional["CeleryTask"]:
-        return cls._task_registry.get(task_id)
-
-    @classmethod
-    def create(cls, runner: TaskRunner) -> "CeleryTask":
-        return cls(runner)
-
-    @classmethod
-    async def destroy(cls) -> None:
-        for task in list(cls._task_registry.values()):
-            task.cancel()
-            if task._runner:
-                await task._runner.destroy()
-        cls._task_registry.clear()
-
-    # -- Internal helpers ---------------------------------------------------
-
-    def _cleanup_registry(self) -> None:
-        if self._id in CeleryTask._task_registry:
-            del CeleryTask._task_registry[self._id]
-            logger.info("Task %s removed from registry", self._id)
 
     def __repr__(self) -> str:
         return f"CeleryTask(id={self._id}, done={self.done})"
+
+
+# ---------------------------------------------------------------------------
+# CeleryTaskBackend
+# ---------------------------------------------------------------------------
+
+class CeleryTaskBackend(TaskBackend):
+    """Celery-based :class:`TaskBackend`.
+
+    Requires a *runner_factory* that can reconstruct a ``TaskRunner``
+    from the serialisable context dict.  The factory is also registered
+    at the module level so that Celery workers (separate processes)
+    can access it.
+    """
+
+    def __init__(self, runner_factory: TaskRunnerFactory):
+        self._tasks: Dict[str, CeleryTask] = {}
+        self._runners: Dict[str, TaskRunner] = {}
+        set_runner_factory(runner_factory)
+
+    async def submit(self, runner: TaskRunner) -> Task:
+        context = runner.get_context()
+        task_id = str(uuid.uuid4())
+        task = CeleryTask(task_id, context)
+        self._tasks[task_id] = task
+        self._runners[task_id] = runner
+        logger.info("Task %s registered (celery)", task_id)
+        return task
+
+    def get(self, task_id: str) -> Optional[Task]:
+        return self._tasks.get(task_id)
+
+    async def shutdown(self) -> None:
+        for task_id, task in list(self._tasks.items()):
+            task.cancel()
+            runner = self._runners.get(task_id)
+            if runner:
+                await runner.destroy()
+        self._tasks.clear()
+        self._runners.clear()
+        logger.info("CeleryTaskBackend shutdown complete")

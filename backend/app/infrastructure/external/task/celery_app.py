@@ -42,8 +42,8 @@ def get_celery_app() -> Celery:
 @worker_init.connect
 def _on_worker_init(**kwargs):
     """Register the runner factory when a Celery worker starts."""
-    from app.infrastructure.external.task.celery_task import CeleryTask
+    from app.infrastructure.external.task.celery_task import set_runner_factory
     from app.infrastructure.external.task.task_runner_factory import create_runner_from_context
 
-    CeleryTask.set_runner_factory(create_runner_from_context)
+    set_runner_factory(create_runner_from_context)
     logger.info("Celery worker: runner factory registered")

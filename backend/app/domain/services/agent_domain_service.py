@@ -1,4 +1,4 @@
-from typing import Optional, AsyncGenerator, List
+from typing import Optional, AsyncGenerator, List, Type
 import logging
 from datetime import datetime
 from app.domain.models.session import Session, SessionStatus
@@ -9,8 +9,7 @@ from pydantic import TypeAdapter
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.repositories.session_repository import SessionRepository
 from app.domain.services.agent_task_runner import AgentTaskRunner
-from app.domain.external.task import Task
-from typing import Type
+from app.domain.external.task import Task, TaskBackend
 from app.domain.external.file import FileStorage
 from app.domain.models.file import FileInfo
 from app.domain.repositories.mcp_repository import MCPRepository
@@ -28,7 +27,7 @@ class AgentDomainService:
         agent_repository: AgentRepository,
         session_repository: SessionRepository,
         sandbox_cls: Type[Sandbox],
-        task_cls: Type[Task],
+        task_backend: TaskBackend,
         file_storage: FileStorage,
         mcp_repository: MCPRepository,
         search_engine: Optional[SearchEngine] = None,
@@ -37,7 +36,7 @@ class AgentDomainService:
         self._session_repository = session_repository
         self._sandbox_cls = sandbox_cls
         self._search_engine = search_engine
-        self._task_cls = task_cls
+        self._task_backend = task_backend
         self._file_storage = file_storage
         self._mcp_repository = mcp_repository
         logger.info("AgentDomainService initialization completed")
@@ -45,7 +44,7 @@ class AgentDomainService:
     async def shutdown(self) -> None:
         """Clean up all Agent's resources"""
         logger.info("Starting to close all Agents")
-        await self._task_cls.destroy()
+        await self._task_backend.shutdown()
         logger.info("All agents closed successfully")
 
     async def _create_task(self, session: Session) -> Task:
@@ -78,7 +77,7 @@ class AgentDomainService:
             mcp_repository=self._mcp_repository,
         )
 
-        task = self._task_cls.create(task_runner)
+        task = await self._task_backend.submit(task_runner)
         session.task_id = task.id
         await self._session_repository.save(session)
 
@@ -91,7 +90,7 @@ class AgentDomainService:
         if not task_id:
             return None
         
-        return self._task_cls.get(task_id)
+        return self._task_backend.get(task_id)
 
     async def stop_session(self, session_id: str) -> None:
         """Stop a session"""

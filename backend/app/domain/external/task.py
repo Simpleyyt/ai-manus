@@ -1,121 +1,105 @@
-from typing import Protocol, Any, Awaitable, Optional, Callable
+from typing import Protocol, Optional
 from abc import ABC, abstractmethod
 from app.domain.external.message_queue import MessageQueue
 
 
+class Task(Protocol):
+    """Execution container with communication channels.
+
+    A Task is a lightweight handle representing a running (or completed)
+    unit of work.  It exposes input/output message streams for
+    communication and basic lifecycle controls (run / cancel / done).
+
+    Task instances are created and managed by a :class:`TaskBackend`.
+    """
+
+    @property
+    def id(self) -> str:
+        """Unique task identifier."""
+        ...
+
+    @property
+    def done(self) -> bool:
+        """Whether the task has finished."""
+        ...
+
+    @property
+    def input_stream(self) -> MessageQueue:
+        """Stream for sending messages *into* the task."""
+        ...
+
+    @property
+    def output_stream(self) -> MessageQueue:
+        """Stream for reading messages *from* the task."""
+        ...
+
+    async def run(self) -> None:
+        """Start or resume task execution."""
+        ...
+
+    def cancel(self) -> bool:
+        """Cancel a running task.
+
+        Returns ``True`` if the task was actually cancelled.
+        """
+        ...
+
+
 class TaskRunner(ABC):
-    """Abstract base class defining the interface for task runners.
-    
-    This interface defines two essential lifecycle methods:
-    - run: Main task execution logic
-    - on_stop: Called when task execution needs to stop
+    """Business logic executed inside a :class:`Task`.
+
+    Implementations contain the core processing loop (reading from the
+    task's input stream, writing to its output stream, etc.).
     """
 
     @abstractmethod
-    async def run(self, task: "Task") -> None:
-        """Main task execution logic.
-        
-        This method contains the core functionality of the task.
-        Implementations should handle setup, execution, and cleanup.
-        """
+    async def run(self, task: Task) -> None:
+        """Main execution logic."""
         ...
-    
+
     @abstractmethod
     async def destroy(self) -> None:
-        """Destroy the task and release resources.
-        
-        Called when the task needs to be destroyed.
-        This method is responsible for cleaning up and releasing all resources used by the task,
-        including but not limited to:
-        - Closing network connections
-        - Freeing memory
-        - Cleaning up temporary files
-        - Stopping background processes etc.
-        """
+        """Release all resources held by this runner."""
+        ...
+
+    @abstractmethod
+    async def on_done(self, task: Task) -> None:
+        """Called when the task finishes (success, failure, or cancellation)."""
         ...
 
     def get_context(self) -> dict:
-        """Return serializable context for distributed task reconstruction.
-        
-        Override this in subclasses to provide the parameters a remote
-        worker needs to recreate an equivalent TaskRunner instance.
-        The default implementation returns an empty dict.
+        """Return a JSON-serialisable dict that a remote worker can use to
+        reconstruct an equivalent ``TaskRunner``.
+
+        The default returns an empty dict.  Override in subclasses that
+        support distributed execution.
         """
         return {}
 
+
+class TaskBackend(ABC):
+    """Manages the full lifecycle of tasks: creation, lookup, and shutdown.
+
+    Different backends (in-process asyncio, Celery, …) provide their
+    own implementations while the domain layer only depends on this
+    interface.
+    """
+
     @abstractmethod
-    async def on_done(self, task: "Task") -> None:
-        """Called when task execution is done.
-        
-        Use this method to handle graceful shutdown and cleanup.
-        This method should ensure all resources are properly released.
+    async def submit(self, runner: TaskRunner) -> Task:
+        """Create a new :class:`Task` backed by *runner* and register it.
+
+        The task is **not** started automatically — the caller should
+        invoke ``task.run()`` when ready.
         """
         ...
 
-class Task(Protocol):
-    """Protocol defining the interface for task management operations."""
-    
-    async def run(self) -> None:
-        """Run a task."""
-        ...
-    
-    def cancel(self) -> bool:
-        """Cancel a task.
-
-        Returns:
-            bool: True if the task is cancelled, False otherwise
-        """
-        ...
-    
-    @property
-    def input_stream(self) -> MessageQueue:
-        """Input stream."""
-        ...
-    
-    @property
-    def output_stream(self) -> MessageQueue:
-        """Output stream."""
-        ...
-    
-    @property
-    def id(self) -> str:
-        """Task ID."""
-        ...
-    
-    @property
-    def done(self) -> bool:
-        """Check if the task is done.
-
-        Returns:
-            bool: True if the task is done, False otherwise
-        """
-        ...
-    
-    @classmethod
-    def get(cls, task_id: str) -> Optional["Task"]:
-        """Get a task by its ID.
-
-        Returns:
-            Optional[Task]: Task instance if found, None otherwise
-        """
-        ...
-    
-    @classmethod
-    def create(cls, runner: TaskRunner) -> "Task":
-        """Create a new task instance with the specified task runner.
-
-        Args:
-            runner (TaskRunner): The task runner that will execute this task
-
-        Returns:
-            Task: New task instance
-        """
+    @abstractmethod
+    def get(self, task_id: str) -> Optional[Task]:
+        """Retrieve a previously submitted task, or ``None``."""
         ...
 
-    @classmethod
-    async def destroy(cls) -> None:
-        """Destroy all task instances.
-        
-        Cleans up all running tasks and releases associated resources.
-        """
+    @abstractmethod
+    async def shutdown(self) -> None:
+        """Cancel all running tasks and release resources."""
         ...

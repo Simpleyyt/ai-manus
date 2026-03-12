@@ -8,7 +8,7 @@ from app.domain.models.event import BaseEvent, ErrorEvent, DoneEvent, MessageEve
 from pydantic import TypeAdapter
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.repositories.session_repository import SessionRepository
-from app.domain.services.agent_task_runner import AgentTaskRunner
+from app.domain.services.agent_task import AgentTask
 from app.domain.external.task import Task, TaskBackend
 from app.domain.external.file import FileStorage
 from app.domain.models.file import FileInfo
@@ -39,6 +39,8 @@ class AgentDomainService:
         self._task_backend = task_backend
         self._file_storage = file_storage
         self._mcp_repository = mcp_repository
+
+        self._task_backend.set_task_creator(self.create_task)
         logger.info("AgentDomainService initialization completed")
             
     async def shutdown(self) -> None:
@@ -47,26 +49,11 @@ class AgentDomainService:
         await self._task_backend.shutdown()
         logger.info("All agents closed successfully")
 
-    def _build_runner(self, session: Session, sandbox: Sandbox, browser) -> AgentTaskRunner:
-        """Construct an AgentTaskRunner — single source of truth."""
-        return AgentTaskRunner(
-            session_id=session.id,
-            agent_id=session.agent_id,
-            user_id=session.user_id,
-            sandbox=sandbox,
-            browser=browser,
-            file_storage=self._file_storage,
-            search_engine=self._search_engine,
-            session_repository=self._session_repository,
-            agent_repository=self._repository,
-            mcp_repository=self._mcp_repository,
-        )
+    async def create_task(self, session_id: str, task_id: str | None = None) -> AgentTask:
+        """Create an :class:`AgentTask` from a session ID.
 
-    async def create_runner(self, session_id: str) -> AgentTaskRunner:
-        """Create a runner from a session ID.
-
-        Reusable by both the API process and remote Celery workers so
-        the construction logic is never duplicated.
+        Single source of truth — used by both the in-process Redis
+        backend and remote Celery workers.
         """
         session = await self._session_repository.find_by_id(session_id)
         if not session:
@@ -79,29 +66,38 @@ class AgentDomainService:
         browser = await sandbox.get_browser()
         if not browser:
             raise RuntimeError(f"Browser unavailable for sandbox {session.sandbox_id}")
-        return self._build_runner(session, sandbox, browser)
+        return AgentTask(
+            session_id=session.id,
+            agent_id=session.agent_id,
+            user_id=session.user_id,
+            sandbox=sandbox,
+            browser=browser,
+            agent_repository=self._repository,
+            session_repository=self._session_repository,
+            file_storage=self._file_storage,
+            mcp_repository=self._mcp_repository,
+            search_engine=self._search_engine,
+            task_id=task_id,
+        )
 
-    async def _create_task(self, session: Session) -> Task:
-        """Create a new agent task"""
+    async def _ensure_sandbox(self, session: Session) -> None:
+        """Ensure the session has a running sandbox."""
         sandbox = None
-        sandbox_id = session.sandbox_id
-        if sandbox_id:
-            sandbox = await self._sandbox_cls.get(sandbox_id)
+        if session.sandbox_id:
+            sandbox = await self._sandbox_cls.get(session.sandbox_id)
         if not sandbox:
             sandbox = await self._sandbox_cls.create()
             session.sandbox_id = sandbox.id
         browser = await sandbox.get_browser()
         if not browser:
-            logger.error(f"Failed to get browser for Sandbox {sandbox_id}")
-            raise RuntimeError(f"Failed to get browser for Sandbox {sandbox_id}")
-
+            raise RuntimeError(f"Failed to get browser for Sandbox {session.sandbox_id}")
         await self._session_repository.save(session)
 
-        task_runner = self._build_runner(session, sandbox, browser)
+    async def _create_task(self, session: Session) -> Task:
+        """Create a new agent task"""
+        await self._ensure_sandbox(session)
 
-        task = await self._task_backend.submit(
-            task_runner, context={"session_id": session.id}
-        )
+        task = await self._task_backend.submit(session.id)
         session.task_id = task.id
         await self._session_repository.save(session)
 
@@ -167,7 +163,7 @@ class AgentDomainService:
                 message_event.id = event_id
                 await self._session_repository.add_event(session_id, message_event)
                 
-                await task.run()
+                await task.start()
                 logger.debug(f"Put message into Session {session_id}'s event queue: {message[:50]}...")
             
             logger.info(f"Session {session_id} started")

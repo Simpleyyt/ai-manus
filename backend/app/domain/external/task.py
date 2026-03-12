@@ -1,101 +1,100 @@
-from typing import Protocol, Optional
+from __future__ import annotations
+
+from typing import Optional, Callable, Awaitable
 from abc import ABC, abstractmethod
 from app.domain.external.message_queue import MessageQueue
+from app.infrastructure.external.message_queue.redis_stream_queue import RedisStreamQueue
+import uuid
 
 
-class Task(Protocol):
-    """Execution container with communication channels.
+class TaskExecutor(ABC):
+    """Strategy that controls *how* a Task runs (asyncio / Celery / …)."""
 
-    A Task is a lightweight handle representing a running (or completed)
-    unit of work.  It exposes input/output message streams for
-    communication and basic lifecycle controls (run / cancel / done).
+    @abstractmethod
+    async def start(self, task: Task) -> None: ...
 
-    Task instances are created and managed by a :class:`TaskBackend`.
+    @abstractmethod
+    def is_done(self) -> bool: ...
+
+    @abstractmethod
+    def cancel(self) -> bool: ...
+
+
+class Task(ABC):
+    """Base task — like Java's ``Thread``.
+
+    Subclass and override :meth:`run`.  Call :meth:`start` to begin
+    execution in whatever backend is configured.
+
+    * ``run()``   — business logic, executed in the task's process/thread
+    * ``start()`` — dispatches execution (set by the backend via ``_executor``)
+    * ``done``    — whether execution has finished
+    * ``cancel()``— request cancellation
     """
 
-    @property
-    def id(self) -> str:
-        """Unique task identifier."""
+    def __init__(self, session_id: str, task_id: str | None = None):
+        self._id = task_id or str(uuid.uuid4())
+        self._session_id = session_id
+        self._executor: TaskExecutor | None = None
+        self._input_stream = RedisStreamQueue(f"task:input:{self._id}")
+        self._output_stream = RedisStreamQueue(f"task:output:{self._id}")
+
+    # -- abstract: subclass must implement ----------------------------------
+
+    @abstractmethod
+    async def run(self) -> None:
+        """Business logic. Runs in the task's execution context."""
         ...
+
+    async def destroy(self) -> None:
+        """Release resources (sandbox, MCP, …)."""
+
+    async def on_complete(self) -> None:
+        """Called after ``run()`` finishes (success or failure)."""
+
+    # -- lifecycle (delegated to executor) ----------------------------------
+
+    async def start(self) -> None:
+        if self._executor:
+            await self._executor.start(self)
 
     @property
     def done(self) -> bool:
-        """Whether the task has finished."""
-        ...
+        return self._executor.is_done() if self._executor else True
+
+    def cancel(self) -> bool:
+        return self._executor.cancel() if self._executor else False
+
+    # -- properties ---------------------------------------------------------
+
+    @property
+    def id(self) -> str:
+        return self._id
+
+    @property
+    def session_id(self) -> str:
+        return self._session_id
 
     @property
     def input_stream(self) -> MessageQueue:
-        """Stream for sending messages *into* the task."""
-        ...
+        return self._input_stream
 
     @property
     def output_stream(self) -> MessageQueue:
-        """Stream for reading messages *from* the task."""
-        ...
-
-    async def run(self) -> None:
-        """Start or resume task execution."""
-        ...
-
-    def cancel(self) -> bool:
-        """Cancel a running task.
-
-        Returns ``True`` if the task was actually cancelled.
-        """
-        ...
-
-
-class TaskRunner(ABC):
-    """Business logic executed inside a :class:`Task`.
-
-    Implementations contain the core processing loop (reading from the
-    task's input stream, writing to its output stream, etc.).
-    """
-
-    @abstractmethod
-    async def run(self, task: Task) -> None:
-        """Main execution logic."""
-        ...
-
-    @abstractmethod
-    async def destroy(self) -> None:
-        """Release all resources held by this runner."""
-        ...
-
-    @abstractmethod
-    async def on_done(self, task: Task) -> None:
-        """Called when the task finishes (success, failure, or cancellation)."""
-        ...
-
+        return self._output_stream
 
 
 class TaskBackend(ABC):
-    """Manages the full lifecycle of tasks: creation, lookup, and shutdown.
+    """Creates and manages tasks."""
 
-    Different backends (in-process asyncio, Celery, …) provide their
-    own implementations while the domain layer only depends on this
-    interface.
-    """
+    def set_task_creator(self, fn: Callable[[str, str | None], Awaitable[Task]]) -> None:
+        """Inject ``async (session_id, task_id?) -> Task`` after construction."""
 
     @abstractmethod
-    async def submit(self, runner: TaskRunner, context: dict | None = None) -> Task:
-        """Create a new :class:`Task` backed by *runner* and register it.
-
-        *context* is an optional JSON-serialisable dict forwarded to
-        remote workers (e.g. ``{"session_id": "…"}``).  Backends that
-        execute in-process may ignore it.
-
-        The task is **not** started automatically — the caller should
-        invoke ``task.run()`` when ready.
-        """
-        ...
+    async def submit(self, session_id: str) -> Task: ...
 
     @abstractmethod
-    def get(self, task_id: str) -> Optional[Task]:
-        """Retrieve a previously submitted task, or ``None``."""
-        ...
+    def get(self, task_id: str) -> Optional[Task]: ...
 
     @abstractmethod
-    async def shutdown(self) -> None:
-        """Cancel all running tasks and release resources."""
-        ...
+    async def shutdown(self) -> None: ...

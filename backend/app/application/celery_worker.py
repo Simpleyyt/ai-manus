@@ -4,16 +4,15 @@ Start with::
 
     celery -A app.application.celery_worker worker --loglevel=info
 
-The worker receives a ``session_id`` via *context* and calls
-:meth:`AgentService.create_runner` — the **same** code path the API
-process uses — so runner construction logic is never duplicated.
+The worker receives ``(task_id, session_id)`` and calls
+``AgentService.create_task(session_id, task_id)`` — the **same**
+``AgentTask`` construction path the API process uses.
 """
 
 import asyncio
 import logging
 
 from app.infrastructure.external.task.celery_app import get_celery_app
-from app.infrastructure.external.task.celery_task import CeleryTaskProxy
 
 logger = logging.getLogger(__name__)
 
@@ -56,29 +55,27 @@ async def _ensure_infrastructure() -> None:
 # Celery task
 # ---------------------------------------------------------------------------
 
-async def _execute(task_id: str, context: dict) -> None:
+async def _execute(task_id: str, session_id: str) -> None:
     await _ensure_infrastructure()
 
     from app.interfaces.dependencies import get_agent_service
 
-    session_id = context.get("session_id", "")
     service = get_agent_service()
-    runner = await service.create_runner(session_id)
+    task = await service.create_task(session_id, task_id=task_id)
 
-    proxy = CeleryTaskProxy(task_id)
     try:
-        await runner.run(proxy)
+        await task.run()
     except Exception:
         logger.exception("Task %s failed", task_id)
     finally:
-        await runner.on_done(proxy)
+        await task.on_complete()
 
 
 @app.task(name="manus.execute_agent_task", bind=True)
-def execute_agent_task(self, task_id: str, context: dict):
+def execute_agent_task(self, task_id: str, session_id: str):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        loop.run_until_complete(_execute(task_id, context))
+        loop.run_until_complete(_execute(task_id, session_id))
     finally:
         loop.close()

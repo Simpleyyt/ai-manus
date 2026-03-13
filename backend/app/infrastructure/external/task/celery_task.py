@@ -1,11 +1,12 @@
 import asyncio
 import uuid
 import logging
-from typing import Optional, Dict
+from typing import Any, Optional, Dict
 
 from celery import Task as CeleryBaseTask
 from celery.result import AsyncResult
 
+from app.core.reflection import import_string
 from app.domain.external.task import Task, TaskRunner
 from app.domain.external.message_queue import MessageQueue
 from app.infrastructure.external.message_queue.redis_stream_queue import RedisStreamQueue
@@ -45,17 +46,48 @@ class _WorkerTaskProxy:
 
 
 # ---------------------------------------------------------------------------
+# Default worker initialiser — bootstraps MongoDB / Beanie / Redis.
+# Pulled out as a standalone coroutine so it can be swapped via the
+# component registry without touching AgentExecutionTask itself.
+# ---------------------------------------------------------------------------
+
+async def _default_worker_init() -> None:
+    from app.core.config import get_settings
+
+    mongodb = import_string("app.infrastructure.storage.mongodb.get_mongodb")()
+    redis = import_string("app.infrastructure.storage.redis.get_redis")()
+    init_beanie = import_string("beanie.init_beanie")
+    documents = [
+        import_string(path)
+        for path in (
+            "app.infrastructure.models.documents.AgentDocument",
+            "app.infrastructure.models.documents.SessionDocument",
+            "app.infrastructure.models.documents.UserDocument",
+        )
+    ]
+
+    settings = get_settings()
+    await mongodb.initialize()
+    await init_beanie(
+        database=mongodb.client[settings.mongodb_database],
+        document_models=documents,
+    )
+    await redis.initialize()
+
+
+# ---------------------------------------------------------------------------
 # Worker-side: OOP-style Celery Task with lazy-loaded shared resources.
-# Resources are initialized once per worker process and reused across
-# subsequent task invocations, following the pattern recommended by Celery.
+# All concrete classes are referenced as dotted-path strings in
+# COMPONENT_REGISTRY and resolved at runtime via import_string(),
+# so this module has zero direct imports of infrastructure implementations.
 # ---------------------------------------------------------------------------
 
 class AgentExecutionTask(CeleryBaseTask):
     """Celery OOP Task responsible for executing agent workflows in a worker.
 
-    Shared infrastructure (DB connections, repositories, storage) is lazily
-    initialised on first use and then reused for every subsequent task that
-    lands on the same worker process.
+    Every component the worker needs is declared as a dotted-path string in
+    ``COMPONENT_REGISTRY``.  Override the registry (e.g. in a subclass or via
+    configuration) to swap any implementation without touching this file.
     """
 
     name = "manus.agent.execute"
@@ -63,14 +95,39 @@ class AgentExecutionTask(CeleryBaseTask):
     track_started = True
     max_retries = 0
 
-    # ---- per-worker-process state (class-level, shared across invocations) ----
+    COMPONENT_REGISTRY: Dict[str, str] = {
+        "worker_initializer": "app.infrastructure.external.task.celery_task._default_worker_init",
+        "sandbox_cls": "app.infrastructure.external.sandbox.docker_sandbox.DockerSandbox",
+        "task_runner_cls": "app.domain.services.agent_task_runner.AgentTaskRunner",
+        "agent_repository": "app.infrastructure.repositories.mongo_agent_repository.MongoAgentRepository",
+        "session_repository": "app.infrastructure.repositories.mongo_session_repository.MongoSessionRepository",
+        "file_storage": "app.infrastructure.external.file.gridfsfile.get_file_storage",
+        "search_engine": "app.infrastructure.external.search.get_search_engine",
+        "mcp_repository": "app.infrastructure.repositories.file_mcp_repository.FileMCPRepository",
+    }
+
+    # ---- per-worker-process caches (class-level) ----
     _loop: Optional[asyncio.AbstractEventLoop] = None
     _initialized: bool = False
-    _agent_repo = None
-    _session_repo = None
-    _file_storage = None
-    _search_engine = None
-    _mcp_repository = None
+    _resolved_classes: Dict[str, Any] = {}
+    _singletons: Dict[str, Any] = {}
+
+    # -- reflection helpers --------------------------------------------------
+
+    def _resolve(self, key: str) -> Any:
+        """Resolve a class / callable from the registry (cached per worker)."""
+        if key not in self.__class__._resolved_classes:
+            self.__class__._resolved_classes[key] = import_string(
+                self.COMPONENT_REGISTRY[key]
+            )
+        return self.__class__._resolved_classes[key]
+
+    def _singleton(self, key: str) -> Any:
+        """Resolve, instantiate, and cache a component (once per worker)."""
+        if key not in self.__class__._singletons:
+            factory = self._resolve(key)
+            self.__class__._singletons[key] = factory()
+        return self.__class__._singletons[key]
 
     # -- event loop ----------------------------------------------------------
 
@@ -81,66 +138,13 @@ class AgentExecutionTask(CeleryBaseTask):
             asyncio.set_event_loop(self.__class__._loop)
         return self.__class__._loop
 
-    # -- lazy resource properties --------------------------------------------
-
-    @property
-    def agent_repository(self):
-        if self.__class__._agent_repo is None:
-            from app.infrastructure.repositories.mongo_agent_repository import MongoAgentRepository
-            self.__class__._agent_repo = MongoAgentRepository()
-        return self.__class__._agent_repo
-
-    @property
-    def session_repository(self):
-        if self.__class__._session_repo is None:
-            from app.infrastructure.repositories.mongo_session_repository import MongoSessionRepository
-            self.__class__._session_repo = MongoSessionRepository()
-        return self.__class__._session_repo
-
-    @property
-    def file_storage(self):
-        if self.__class__._file_storage is None:
-            from app.infrastructure.external.file.gridfsfile import get_file_storage
-            self.__class__._file_storage = get_file_storage()
-        return self.__class__._file_storage
-
-    @property
-    def search_engine(self):
-        if self.__class__._search_engine is None:
-            from app.infrastructure.external.search import get_search_engine
-            self.__class__._search_engine = get_search_engine()
-        return self.__class__._search_engine
-
-    @property
-    def mcp_repository(self):
-        if self.__class__._mcp_repository is None:
-            from app.infrastructure.repositories.file_mcp_repository import FileMCPRepository
-            self.__class__._mcp_repository = FileMCPRepository()
-        return self.__class__._mcp_repository
-
     # -- async infrastructure bootstrap (once per worker) --------------------
 
     async def _ensure_initialized(self) -> None:
         if self.__class__._initialized:
             return
-
-        from app.infrastructure.storage.mongodb import get_mongodb
-        from app.infrastructure.storage.redis import get_redis
-        from app.infrastructure.models.documents import (
-            AgentDocument, SessionDocument, UserDocument,
-        )
-        from beanie import init_beanie
-        from app.core.config import get_settings
-
-        settings = get_settings()
-
-        await get_mongodb().initialize()
-        await init_beanie(
-            database=get_mongodb().client[settings.mongodb_database],
-            document_models=[AgentDocument, SessionDocument, UserDocument],
-        )
-        await get_redis().initialize()
-
+        initializer = self._resolve("worker_initializer")
+        await initializer()
         self.__class__._initialized = True
         logger.info("Celery worker infrastructure initialized")
 
@@ -173,10 +177,10 @@ class AgentExecutionTask(CeleryBaseTask):
     ) -> dict:
         await self._ensure_initialized()
 
-        from app.infrastructure.external.sandbox.docker_sandbox import DockerSandbox
-        from app.domain.services.agent_task_runner import AgentTaskRunner
+        sandbox_cls = self._resolve("sandbox_cls")
+        task_runner_cls = self._resolve("task_runner_cls")
 
-        sandbox = await DockerSandbox.get(sandbox_id)
+        sandbox = await sandbox_cls.get(sandbox_id)
         if not sandbox:
             raise RuntimeError(f"Sandbox {sandbox_id} not found")
 
@@ -184,17 +188,17 @@ class AgentExecutionTask(CeleryBaseTask):
         if not browser:
             raise RuntimeError(f"Failed to get browser for sandbox {sandbox_id}")
 
-        runner = AgentTaskRunner(
+        runner = task_runner_cls(
             session_id=session_id,
             agent_id=agent_id,
             user_id=user_id,
             sandbox=sandbox,
             browser=browser,
-            agent_repository=self.agent_repository,
-            session_repository=self.session_repository,
-            file_storage=self.file_storage,
-            search_engine=self.search_engine,
-            mcp_repository=self.mcp_repository,
+            agent_repository=self._singleton("agent_repository"),
+            session_repository=self._singleton("session_repository"),
+            file_storage=self._singleton("file_storage"),
+            search_engine=self._singleton("search_engine"),
+            mcp_repository=self._singleton("mcp_repository"),
         )
 
         proxy = _WorkerTaskProxy(task_id)
@@ -230,6 +234,13 @@ class CeleryStreamTask(Task):
     """
 
     _task_registry: Dict[str, "CeleryStreamTask"] = {}
+
+    META_ATTRIBUTES: Dict[str, str] = {
+        "session_id": "_session_id",
+        "agent_id": "_agent_id",
+        "user_id": "_user_id",
+    }
+    SANDBOX_ATTR: str = "_sandbox"
 
     def __init__(self, runner: TaskRunner):
         self._runner = runner
@@ -311,16 +322,16 @@ class CeleryStreamTask(Task):
             del CeleryStreamTask._task_registry[self._id]
             logger.info(f"Task {self._id} removed from registry")
 
-    @staticmethod
-    def _extract_runner_meta(runner: TaskRunner) -> dict:
-        """Extract serialisable metadata from the runner for Celery dispatch."""
-        sandbox = getattr(runner, "_sandbox", None)
-        return {
-            "session_id": getattr(runner, "_session_id", None),
-            "agent_id": getattr(runner, "_agent_id", None),
-            "user_id": getattr(runner, "_user_id", None),
-            "sandbox_id": getattr(sandbox, "id", None) if sandbox else None,
+    @classmethod
+    def _extract_runner_meta(cls, runner: TaskRunner) -> dict:
+        """Extract serialisable metadata from the runner via reflection."""
+        meta = {
+            key: getattr(runner, attr, None)
+            for key, attr in cls.META_ATTRIBUTES.items()
         }
+        sandbox = getattr(runner, cls.SANDBOX_ATTR, None)
+        meta["sandbox_id"] = getattr(sandbox, "id", None) if sandbox else None
+        return meta
 
     def __repr__(self) -> str:
         celery_id = self._celery_result.id if self._celery_result else None

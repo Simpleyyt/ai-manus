@@ -45,8 +45,8 @@ class Settings(BaseSettings):
     redis_db: int = 0
     redis_password: str | None = None
     
-    # Task backend configuration ("redis" or "celery")
-    task_backend: str = "redis"
+    # Task class (full dotted path, loaded via reflection)
+    task_class: str = "app.infrastructure.external.task.redis_task.RedisStreamTask"
     
     # Celery configuration
     celery_broker_url: str | None = None

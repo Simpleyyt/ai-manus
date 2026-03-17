@@ -9,7 +9,7 @@ export interface FileInfo {
   file_id: string;
   filename: string;
   content_type?: string;
-  size: number;
+  size?: number;
   upload_date: string;
   metadata?: Record<string, any>;
   file_url?: string;

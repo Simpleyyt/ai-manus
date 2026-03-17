@@ -1,4 +1,4 @@
-from typing import Optional, AsyncGenerator, List
+from typing import Optional, AsyncGenerator, List, Type
 import logging
 from datetime import datetime
 from app.domain.models.session import Session, SessionStatus
@@ -8,9 +8,8 @@ from app.domain.models.event import BaseEvent, ErrorEvent, DoneEvent, MessageEve
 from pydantic import TypeAdapter
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.repositories.session_repository import SessionRepository
-from app.domain.services.agent_task_runner import AgentTaskRunner
-from app.domain.external.task import Task
-from typing import Type
+from app.domain.services.agent_task import AgentTask
+from app.domain.external.task import Task, TaskBackend
 from app.domain.external.file import FileStorage
 from app.domain.models.file import FileInfo
 from app.domain.repositories.mcp_repository import MCPRepository
@@ -28,7 +27,7 @@ class AgentDomainService:
         agent_repository: AgentRepository,
         session_repository: SessionRepository,
         sandbox_cls: Type[Sandbox],
-        task_cls: Type[Task],
+        task_backend: TaskBackend,
         file_storage: FileStorage,
         mcp_repository: MCPRepository,
         search_engine: Optional[SearchEngine] = None,
@@ -37,48 +36,68 @@ class AgentDomainService:
         self._session_repository = session_repository
         self._sandbox_cls = sandbox_cls
         self._search_engine = search_engine
-        self._task_cls = task_cls
+        self._task_backend = task_backend
         self._file_storage = file_storage
         self._mcp_repository = mcp_repository
+
+        self._task_backend.set_task_creator(self.create_task)
         logger.info("AgentDomainService initialization completed")
             
     async def shutdown(self) -> None:
         """Clean up all Agent's resources"""
         logger.info("Starting to close all Agents")
-        await self._task_cls.destroy()
+        await self._task_backend.shutdown()
         logger.info("All agents closed successfully")
 
-    async def _create_task(self, session: Session) -> Task:
-        """Create a new agent task"""
-        sandbox = None
-        sandbox_id = session.sandbox_id
-        if sandbox_id:
-            sandbox = await self._sandbox_cls.get(sandbox_id)
+    async def create_task(self, session_id: str, task_id: str | None = None) -> AgentTask:
+        """Create an :class:`AgentTask` from a session ID.
+
+        Single source of truth — used by both the in-process Redis
+        backend and remote Celery workers.
+        """
+        session = await self._session_repository.find_by_id(session_id)
+        if not session:
+            raise RuntimeError(f"Session {session_id} not found")
+        if not session.sandbox_id:
+            raise RuntimeError(f"Session {session_id} has no sandbox")
+        sandbox = await self._sandbox_cls.get(session.sandbox_id)
         if not sandbox:
-            sandbox = await self._sandbox_cls.create()
-            session.sandbox_id = sandbox.id
-            await self._session_repository.save(session)
+            raise RuntimeError(f"Sandbox {session.sandbox_id} not found")
         browser = await sandbox.get_browser()
         if not browser:
-            logger.error(f"Failed to get browser for Sandbox {sandbox_id}")
-            raise RuntimeError(f"Failed to get browser for Sandbox {sandbox_id}")
-        
-        await self._session_repository.save(session)
-
-        task_runner = AgentTaskRunner(
+            raise RuntimeError(f"Browser unavailable for sandbox {session.sandbox_id}")
+        return AgentTask(
             session_id=session.id,
             agent_id=session.agent_id,
             user_id=session.user_id,
             sandbox=sandbox,
             browser=browser,
-            file_storage=self._file_storage,
-            search_engine=self._search_engine,
-            session_repository=self._session_repository,
             agent_repository=self._repository,
+            session_repository=self._session_repository,
+            file_storage=self._file_storage,
             mcp_repository=self._mcp_repository,
+            search_engine=self._search_engine,
+            task_id=task_id,
         )
 
-        task = self._task_cls.create(task_runner)
+    async def _ensure_sandbox(self, session: Session) -> None:
+        """Ensure the session has a running sandbox."""
+        sandbox = None
+        if session.sandbox_id:
+            sandbox = await self._sandbox_cls.get(session.sandbox_id)
+        if not sandbox:
+            sandbox = await self._sandbox_cls.create()
+            session.sandbox_id = sandbox.id
+        browser = await sandbox.get_browser()
+        if not browser:
+            raise RuntimeError(f"Failed to get browser for Sandbox {session.sandbox_id}")
+        await self._session_repository.save(session)
+
+    async def _create_task(self, session: Session) -> Task:
+        """Create a new agent task"""
+        await self._ensure_sandbox(session)
+
+        task = await self._task_backend.submit(session.id)
         session.task_id = task.id
         await self._session_repository.save(session)
 
@@ -91,7 +110,7 @@ class AgentDomainService:
         if not task_id:
             return None
         
-        return self._task_cls.get(task_id)
+        return self._task_backend.get(task_id)
 
     async def stop_session(self, session_id: str) -> None:
         """Stop a session"""
@@ -144,7 +163,7 @@ class AgentDomainService:
                 message_event.id = event_id
                 await self._session_repository.add_event(session_id, message_event)
                 
-                await task.run()
+                await task.start()
                 logger.debug(f"Put message into Session {session_id}'s event queue: {message[:50]}...")
             
             logger.info(f"Session {session_id} started")

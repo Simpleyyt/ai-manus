@@ -1,140 +1,74 @@
 import asyncio
-import uuid
 import logging
-from typing import Optional, Dict
+from typing import Optional, Dict, Callable, Awaitable
 
-from app.domain.external.task import Task, TaskRunner
-from app.infrastructure.external.message_queue.redis_stream_queue import RedisStreamQueue, MessageQueue
+from app.domain.external.task import Task, TaskExecutor, TaskBackend
 
 logger = logging.getLogger(__name__)
 
 
-class RedisStreamTask(Task):
-    """Redis Stream-based task implementation following the Task protocol."""
-    
-    _task_registry: Dict[str, 'RedisStreamTask'] = {}
-    
-    def __init__(self, runner: TaskRunner):
-        """Initialize Redis Stream task with a task runner.
-        
-        Args:
-            runner: The TaskRunner instance that will execute this task
-        """
-        self._runner = runner
-        self._id = str(uuid.uuid4())
-        self._execution_task: Optional[asyncio.Task] = None
-        
-        # Create input/output streams based on task ID
-        input_stream_name = f"task:input:{self._id}"
-        output_stream_name = f"task:output:{self._id}"
-        self._input_stream = RedisStreamQueue(input_stream_name)
-        self._output_stream = RedisStreamQueue(output_stream_name)
-        
-        # Register task instance
-        RedisStreamTask._task_registry[self._id] = self
-        
-    @property
-    def id(self) -> str:
-        """Task ID."""
-        return self._id
-    
-    @property
-    def done(self) -> bool:
-        """Check if the task is done.
+class AsyncExecutor(TaskExecutor):
+    """Runs ``Task.run()`` in-process via :func:`asyncio.create_task`."""
 
-        Returns:
-            bool: True if the task is done, False otherwise
-        """
-        if self._execution_task is None:
-            return True
-        return self._execution_task.done()
-    
-    async def run(self) -> None:
-        """Run the task using the provided TaskRunner."""
-        if self.done:
-            self._execution_task = asyncio.create_task(self._execute_task())
-            logger.info(f"Task {self._id} execution started")
-    
+    def __init__(self, on_complete: Callable[[str], None] | None = None):
+        self._asyncio_task: asyncio.Task | None = None
+        self._on_complete = on_complete
+
+    async def start(self, task: Task) -> None:
+        if self.is_done():
+            self._asyncio_task = asyncio.create_task(self._execute(task))
+            logger.info("Task %s execution started", task.id)
+
+    def is_done(self) -> bool:
+        return self._asyncio_task is None or self._asyncio_task.done()
+
     def cancel(self) -> bool:
-        """Cancel the task.
-
-        Returns:
-            bool: True if the task is cancelled, False otherwise
-        """
-        if not self.done:
-            self._execution_task.cancel()
-            logger.info(f"Task {self._id} cancelled")
-            self._cleanup_registry()
+        if self._asyncio_task and not self._asyncio_task.done():
+            self._asyncio_task.cancel()
+            logger.info("Task %s cancelled", "?")
             return True
-        
-        self._cleanup_registry()
         return False
-    
-    @property
-    def input_stream(self) -> MessageQueue:
-        """Input stream."""
-        return self._input_stream
-    
-    @property
-    def output_stream(self) -> MessageQueue:
-        """Output stream."""
-        return self._output_stream
-    
-    def _on_task_done(self) -> None:
-        """Called when the task is done."""
-        self._task_done = True
-        if self._runner:
-            asyncio.create_task(self._runner.on_done(self))
-        self._cleanup_registry()
-    
-    def _cleanup_registry(self) -> None:
-        """Remove this task from the registry."""
-        if self._id in RedisStreamTask._task_registry:
-            del RedisStreamTask._task_registry[self._id]
-            logger.info(f"Task {self._id} removed from registry")
-    
-    async def _execute_task(self):
-        """Execute the task using the TaskRunner."""
+
+    async def _execute(self, task: Task) -> None:
         try:
-            await self._runner.run(self)
+            await task.run()
         except asyncio.CancelledError:
-            logger.info(f"Task {self._id} execution cancelled")
+            logger.info("Task %s execution cancelled", task.id)
         except Exception as e:
-            logger.error(f"Task {self._id} execution failed: {str(e)}")
+            logger.error("Task %s execution failed: %s", task.id, e)
         finally:
-            self._on_task_done()
-    
-    @classmethod
-    def get(cls, task_id: str) -> Optional['RedisStreamTask']:
-        """Get a task by its ID.
+            await task.on_complete()
+            if self._on_complete:
+                self._on_complete(task.id)
 
-        Returns:
-            Optional[RedisStreamTask]: Task instance if found, None otherwise
-        """
-        return cls._task_registry.get(task_id)
-    
-    @classmethod
-    def create(cls, runner: TaskRunner) -> "RedisStreamTask":
-        """Create a new task instance with the specified TaskRunner.
 
-        Args:
-            runner: The TaskRunner that will execute this task
+class RedisTaskBackend(TaskBackend):
+    """In-process :class:`TaskBackend` using asyncio + Redis Streams."""
 
-        Returns:
-            RedisStreamTask: New task instance
-        """
-        return cls(runner)
+    def __init__(self):
+        self._tasks: Dict[str, Task] = {}
+        self._create_task: Callable[[str, str | None], Awaitable[Task]] | None = None
 
-    @classmethod
-    async def destroy(cls) -> None:
-        """Destroy all task instances."""
-        for task_id in cls._task_registry:
-            task = cls._task_registry[task_id]
+    def set_task_creator(self, fn: Callable[[str, str | None], Awaitable[Task]]) -> None:
+        self._create_task = fn
+
+    async def submit(self, session_id: str) -> Task:
+        task = await self._create_task(session_id, None)
+        task._executor = AsyncExecutor(on_complete=self._remove)
+        self._tasks[task.id] = task
+        logger.info("Task %s registered (redis)", task.id)
+        return task
+
+    def get(self, task_id: str) -> Optional[Task]:
+        return self._tasks.get(task_id)
+
+    async def shutdown(self) -> None:
+        for task in list(self._tasks.values()):
             task.cancel()
-            if task._runner:
-                await task._runner.destroy()
-        cls._task_registry.clear()
-    
-    def __repr__(self) -> str:
-        """String representation of the task."""
-        return f"RedisStreamTask(id={self._id}, done={self.done})"
+            await task.destroy()
+        self._tasks.clear()
+        logger.info("RedisTaskBackend shutdown complete")
+
+    def _remove(self, task_id: str) -> None:
+        if self._tasks.pop(task_id, None):
+            logger.info("Task %s removed from registry", task_id)

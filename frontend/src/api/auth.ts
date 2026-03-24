@@ -97,6 +97,15 @@ export interface AuthStatusResponse {
 }
 
 /**
+ * Frontend auth and feature config response type
+ */
+export interface AuthConfigResponse {
+  auth_provider: string;
+  show_github_button: boolean;
+  github_repository_url: string;
+}
+
+/**
  * Resource access token request type
  */
 export interface AccessTokenRequest {
@@ -159,6 +168,15 @@ export async function register(request: RegisterRequest): Promise<RegisterRespon
  */
 export async function getAuthStatus(): Promise<AuthStatusResponse> {
   const response = await apiClient.get<ApiResponse<AuthStatusResponse>>('/auth/status');
+  return response.data.data;
+}
+
+/**
+ * Get frontend auth and feature configuration
+ * @returns Auth provider and GitHub button feature configuration
+ */
+export async function getAuthConfig(): Promise<AuthConfigResponse> {
+  const response = await apiClient.get<ApiResponse<AuthConfigResponse>>('/auth/config');
   return response.data.data;
 }
 
@@ -331,26 +349,38 @@ export function initializeAuth(): void {
 // Auth provider cache
 let authProviderCache: string | null = null
 let isAuthProviderLoaded = false
+let authConfigCache: AuthConfigResponse | null = null
+let isAuthConfigLoaded = false
+
+/**
+ * Get auth and feature configuration (cached after first call)
+ * @returns Auth config object or null if failed to load
+ */
+export async function getCachedAuthConfig(): Promise<AuthConfigResponse | null> {
+  // Return cached value if already loaded
+  if (isAuthConfigLoaded) {
+    return authConfigCache
+  }
+
+  // Load auth and feature configuration
+  try {
+    authConfigCache = await getAuthConfig()
+    authProviderCache = authConfigCache.auth_provider
+    isAuthConfigLoaded = true
+    isAuthProviderLoaded = true
+    return authConfigCache
+  } catch (error) {
+    console.warn('Failed to load auth and feature configuration:', error)
+    // Don't set loaded flags on error, allow retry
+    return null
+  }
+}
 
 /**
  * Get auth provider configuration (cached after first call)
  * @returns Auth provider string or null if failed to load
  */
 export async function getCachedAuthProvider(): Promise<string | null> {
-  // Return cached value if already loaded
-  if (isAuthProviderLoaded) {
-    return authProviderCache
-  }
-  
-  // Load auth provider configuration
-  try {
-    const authStatus = await getAuthStatus()
-    authProviderCache = authStatus.auth_provider
-    isAuthProviderLoaded = true
-    return authProviderCache
-  } catch (error) {
-    console.warn('Failed to load auth provider configuration:', error)
-    // Don't set isAuthProviderLoaded to true on error, allow retry
-    return null
-  }
+  const authConfig = await getCachedAuthConfig()
+  return authConfig?.auth_provider || null
 } 

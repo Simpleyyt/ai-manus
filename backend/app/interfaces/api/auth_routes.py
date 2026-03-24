@@ -15,7 +15,7 @@ from app.interfaces.schemas.base import APIResponse
 from app.interfaces.schemas.auth import (
     LoginRequest, RegisterRequest, ChangePasswordRequest, ChangeFullnameRequest, RefreshTokenRequest,
     SendVerificationCodeRequest, ResetPasswordRequest,
-    LoginResponse, RegisterResponse, AuthStatusResponse, RefreshTokenResponse,
+    LoginResponse, RegisterResponse, AuthStatusResponse, AuthConfigResponse, RefreshTokenResponse,
     UserResponse
 )
 from app.core.config import get_settings
@@ -80,6 +80,18 @@ async def get_auth_status(
     
     return APIResponse.success(AuthStatusResponse(
         auth_provider=settings.auth_provider
+    ))
+
+
+@router.get("/config", response_model=APIResponse[AuthConfigResponse])
+async def get_auth_config() -> APIResponse[AuthConfigResponse]:
+    """Get frontend authentication and feature configuration"""
+    settings = get_settings()
+
+    return APIResponse.success(AuthConfigResponse(
+        auth_provider=settings.auth_provider,
+        show_github_button=settings.show_github_button,
+        github_repository_url=settings.github_repository_url
     ))
 
 

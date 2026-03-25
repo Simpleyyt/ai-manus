@@ -83,7 +83,7 @@ import type { FileInfo } from '../api/file';
 import { useLeftPanel } from '../composables/useLeftPanel';
 import { useFilePanel } from '../composables/useFilePanel';
 import { useAuth } from '../composables/useAuth';
-import { getCachedAuthConfig } from '../api/auth';
+import { getCachedClientConfig } from '../api/config';
 import UserMenu from '../components/UserMenu.vue';
 
 const { t } = useI18n();
@@ -127,10 +127,10 @@ onMounted(() => {
 })
 
 onMounted(async () => {
-  const authConfig = await getCachedAuthConfig();
-  if (authConfig) {
-    showGithubButton.value = authConfig.show_github_button;
-    githubRepositoryUrl.value = authConfig.github_repository_url;
+  const clientConfig = await getCachedClientConfig();
+  if (clientConfig) {
+    showGithubButton.value = clientConfig.show_github_button;
+    githubRepositoryUrl.value = clientConfig.github_repository_url;
   }
 });
 

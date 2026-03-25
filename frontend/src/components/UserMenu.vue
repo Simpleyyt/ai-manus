@@ -65,7 +65,7 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAuth } from '../composables/useAuth';
 import { useSettingsDialog } from '../composables/useSettingsDialog';
-import { getCachedAuthProvider } from '../api/auth';
+import { getCachedAuthProvider } from '../api/config';
 import { LogOut, User, Settings2 } from 'lucide-vue-next';
 
 const router = useRouter();

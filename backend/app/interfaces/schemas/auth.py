@@ -185,13 +185,6 @@ class AuthStatusResponse(BaseModel):
     auth_provider: str
 
 
-class AuthConfigResponse(BaseModel):
-    """Frontend authentication and feature configuration response schema"""
-    auth_provider: str
-    show_github_button: bool
-    github_repository_url: str
-
-
 class RefreshTokenResponse(BaseModel):
     """Refresh token response schema"""
     access_token: str

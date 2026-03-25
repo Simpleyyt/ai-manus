@@ -12,13 +12,13 @@ import {
   getStoredToken,
   getStoredRefreshToken,
   clearStoredTokens,
-  getCachedAuthProvider,
   type User,
   type LoginRequest,
   type RegisterRequest,
   type LoginResponse,
   type RegisterResponse
 } from '../api/auth'
+import { getCachedAuthProvider } from '../api/config'
 
 // Global auth state
 const currentUser = ref<User | null>(null)

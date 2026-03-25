@@ -5,7 +5,8 @@ import './assets/global.css'
 import './assets/theme.css'
 import './utils/toast'
 import i18n from './composables/useI18n'
-import { getStoredToken, getCachedAuthProvider } from './api/auth'
+import { getStoredToken } from './api/auth'
+import { getCachedClientConfig } from './api/config'
 
 // Import page components
 import HomePage from './pages/HomePage.vue'
@@ -65,7 +66,8 @@ router.beforeEach(async (to, _, next) => {
   const hasToken = !!getStoredToken()
   
   if (requiresAuth) {
-    const authProvider = await getCachedAuthProvider()
+    const clientConfig = await getCachedClientConfig()
+    const authProvider = clientConfig?.auth_provider ?? null
     
     if (authProvider === 'none') {
       next()
@@ -87,6 +89,9 @@ router.beforeEach(async (to, _, next) => {
     next()
   }
 })
+
+// Preload client runtime config once on app bootstrap.
+void getCachedClientConfig()
 
 const app = createApp(App)
 

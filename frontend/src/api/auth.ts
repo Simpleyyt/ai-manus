@@ -328,29 +328,4 @@ export function initializeAuth(): void {
   }
 }
 
-// Auth provider cache
-let authProviderCache: string | null = null
-let isAuthProviderLoaded = false
-
-/**
- * Get auth provider configuration (cached after first call)
- * @returns Auth provider string or null if failed to load
- */
-export async function getCachedAuthProvider(): Promise<string | null> {
-  // Return cached value if already loaded
-  if (isAuthProviderLoaded) {
-    return authProviderCache
-  }
-  
-  // Load auth provider configuration
-  try {
-    const authStatus = await getAuthStatus()
-    authProviderCache = authStatus.auth_provider
-    isAuthProviderLoaded = true
-    return authProviderCache
-  } catch (error) {
-    console.warn('Failed to load auth provider configuration:', error)
-    // Don't set isAuthProviderLoaded to true on error, allow retry
-    return null
-  }
-} 
+ 

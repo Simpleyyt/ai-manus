@@ -91,7 +91,7 @@ import { Eye, EyeOff, LoaderCircle } from 'lucide-vue-next'
 import { useAuth } from '@/api'
 import { validateUserInput } from '@/utils/auth'
 import { showErrorToast, showSuccessToast } from '@/utils/toast'
-import { getCachedAuthProvider } from '@/api/auth'
+import { getCachedAuthProvider } from '@/api/config'
 
 const { t } = useI18n()
 

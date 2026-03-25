@@ -17,8 +17,10 @@
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <a href="https://github.com/simpleyyt/ai-manus" 
+            <a v-if="showGithubButton"
+               :href="githubRepositoryUrl"
                target="_blank"
+               rel="noopener noreferrer"
                class="items-center justify-center whitespace-nowrap font-medium transition-colors hover:opacity-90 active:opacity-80 px-[12px] gap-[6px] text-sm min-w-16 outline outline-1 -outline-offset-1 hover:bg-[var(--fill-tsp-white-light)] text-[var(--text-primary)] outline-[var(--border-btn-main)] bg-transparent clickable hidden sm:flex rounded-[100px] relative h-[32px] group"
                title="Visit GitHub Repository">
               <Github class="size-[18px]" />
@@ -81,6 +83,7 @@ import type { FileInfo } from '../api/file';
 import { useLeftPanel } from '../composables/useLeftPanel';
 import { useFilePanel } from '../composables/useFilePanel';
 import { useAuth } from '../composables/useAuth';
+import { getCachedClientConfig } from '../api/config';
 import UserMenu from '../components/UserMenu.vue';
 
 const { t } = useI18n();
@@ -91,6 +94,8 @@ const attachments = ref<FileInfo[]>([]);
 const { toggleLeftPanel, isLeftPanelShow } = useLeftPanel();
 const { hideFilePanel } = useFilePanel();
 const { currentUser } = useAuth();
+const showGithubButton = ref(false);
+const githubRepositoryUrl = ref('https://github.com/simpleyyt/ai-manus');
 
 // Get first letter of user's fullname for avatar display
 const avatarLetter = computed(() => {
@@ -120,6 +125,14 @@ const handleUserMenuLeave = () => {
 onMounted(() => {
   hideFilePanel();
 })
+
+onMounted(async () => {
+  const clientConfig = await getCachedClientConfig();
+  if (clientConfig) {
+    showGithubButton.value = clientConfig.show_github_button;
+    githubRepositoryUrl.value = clientConfig.github_repository_url;
+  }
+});
 
 const handleSubmit = async () => {
   if (message.value.trim() && !isSubmitting.value) {

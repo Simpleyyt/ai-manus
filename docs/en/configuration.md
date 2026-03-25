@@ -102,6 +102,8 @@ Used only when `SEARCH_PROVIDER=tavily`:
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
 | `AUTH_PROVIDER` | `password` | No | Authentication provider (`password`, `none`, or `local`) |
+| `SHOW_GITHUB_BUTTON` | `true` | No | Whether to show the GitHub button in the top bar |
+| `GITHUB_REPOSITORY_URL` | `https://github.com/simpleyyt/ai-manus` | No | GitHub button target URL |
 
 #### Password Authentication Configuration
 
@@ -120,6 +122,18 @@ Used only when `AUTH_PROVIDER=local`:
 |---------------|---------------|----------|-------------|
 | `LOCAL_AUTH_EMAIL` | `admin@example.com` | No | Local admin email |
 | `LOCAL_AUTH_PASSWORD` | `admin` | No | Local admin password |
+
+### Frontend Runtime Config API
+
+Frontend fetches runtime config from an independent config domain endpoint:
+
+- `GET /api/v1/config/frontend`
+- response fields:
+  - `auth_provider`
+  - `show_github_button`
+  - `github_repository_url`
+
+This endpoint is independent from `/api/v1/auth/*` and is used for frontend runtime behavior and feature toggles.
 
 ### JWT Configuration
 

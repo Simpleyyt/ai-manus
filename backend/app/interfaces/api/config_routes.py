@@ -7,9 +7,9 @@ from app.interfaces.schemas.config import ClientConfigResponse
 router = APIRouter(prefix="/config", tags=["config"])
 
 
-@router.get("/client", response_model=APIResponse[ClientConfigResponse])
-async def get_client_config() -> APIResponse[ClientConfigResponse]:
-    """Get client runtime config."""
+@router.get("/frontend", response_model=APIResponse[ClientConfigResponse])
+async def get_frontend_config() -> APIResponse[ClientConfigResponse]:
+    """Get frontend runtime config."""
     settings = get_settings()
 
     return APIResponse.success(

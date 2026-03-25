@@ -13,7 +13,7 @@ let isClientConfigLoaded = false
  * Get client runtime configuration.
  */
 export async function getClientConfig(): Promise<ClientConfigResponse> {
-  const response = await apiClient.get<ApiResponse<ClientConfigResponse>>('/config/client')
+  const response = await apiClient.get<ApiResponse<ClientConfigResponse>>('/config/frontend')
   return response.data.data
 }
 

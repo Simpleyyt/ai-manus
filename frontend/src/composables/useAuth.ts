@@ -18,24 +18,27 @@ import {
   type LoginResponse,
   type RegisterResponse
 } from '../api/auth'
-import { getCachedAuthProvider } from '../api/config'
+import { getAuthProvider } from '../api/config'
 
 // Global auth state
 const currentUser = ref<User | null>(null)
 const isAuthenticated = ref<boolean>(false)
 const isLoading = ref<boolean>(false)
 const authError = ref<string | null>(null)
+let authInitialized = false
 
 export function useAuth() {
   /**
-   * Initialize authentication state
+   * Initialize authentication state.
+   * Uses the synchronously cached auth provider (already loaded before app mount).
    */
   const initAuth = async () => {
-    // Get auth provider configuration (cached after first call)
-    const authProvider = await getCachedAuthProvider()
+    if (authInitialized) return
+    authInitialized = true
+
+    const authProvider = getAuthProvider()
     
     if (authProvider === 'none') {
-      // No authentication required, set as authenticated with anonymous user
       currentUser.value = {
         id: 'anonymous',
         fullname: 'Anonymous User',
@@ -49,7 +52,6 @@ export function useAuth() {
       return
     }
     
-    // For other auth providers, check token
     const token = getStoredToken()
     if (token) {
       setAuthToken(token)

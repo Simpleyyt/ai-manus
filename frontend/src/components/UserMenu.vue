@@ -60,19 +60,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAuth } from '../composables/useAuth';
 import { useSettingsDialog } from '../composables/useSettingsDialog';
-import { getCachedAuthProvider } from '../api/config';
+import { getAuthProvider } from '../api/config';
 import { LogOut, User, Settings2 } from 'lucide-vue-next';
 
 const router = useRouter();
 const { t } = useI18n();
 const { currentUser, logout } = useAuth();
 const { openSettingsDialog } = useSettingsDialog();
-const authProvider = ref<string | null>(null);
+const authProvider = computed(() => getAuthProvider());
 
 // Get first letter of user's fullname for avatar display
 const avatarLetter = computed(() => {
@@ -99,7 +99,5 @@ const handleLogout = async () => {
     }
 };
 
-onMounted(async () => {
-    authProvider.value = await getCachedAuthProvider();
-});
+
 </script>

@@ -6,7 +6,7 @@ import './assets/theme.css'
 import './utils/toast'
 import i18n from './composables/useI18n'
 import { getStoredToken } from './api/auth'
-import { getCachedClientConfig } from './api/config'
+import { getCachedClientConfig, getAuthProvider } from './api/config'
 
 // Import page components
 import HomePage from './pages/HomePage.vue'
@@ -18,7 +18,7 @@ import SharePage from './pages/SharePage.vue';
 import ShareLayout from './pages/ShareLayout.vue';
 
 configure({
-  tagId: 'G-XCRZ3HH31S' // Replace with your own Google Analytics tag ID
+  tagId: 'G-XCRZ3HH31S'
 })
 
 // Create router
@@ -60,20 +60,18 @@ export const router = createRouter({
   ]
 })
 
-// Global route guard
-router.beforeEach(async (to, _, next) => {
+// Global route guard — uses synchronously cached auth provider (loaded once at startup).
+router.beforeEach((to, _, next) => {
   const requiresAuth = to.matched.some((record: any) => record.meta?.requiresAuth)
+  const authProvider = getAuthProvider()
   const hasToken = !!getStoredToken()
-  
+
   if (requiresAuth) {
-    const clientConfig = await getCachedClientConfig()
-    const authProvider = clientConfig?.auth_provider ?? null
-    
     if (authProvider === 'none') {
       next()
       return
     }
-    
+
     if (!hasToken) {
       next({
         path: '/login',
@@ -82,19 +80,27 @@ router.beforeEach(async (to, _, next) => {
       return
     }
   }
-  
-  if (to.path === '/login' && hasToken) {
-    next('/')
-  } else {
-    next()
+
+  // Redirect away from /login when auth is not needed or user already has a token
+  if (to.path === '/login') {
+    if (authProvider === 'none' || hasToken) {
+      next('/')
+      return
+    }
   }
+
+  next()
 })
 
-// Preload client runtime config once on app bootstrap.
-void getCachedClientConfig()
+async function bootstrap() {
+  // Load client config once before the app mounts so the route guard
+  // and all components can read it synchronously.
+  await getCachedClientConfig()
 
-const app = createApp(App)
+  const app = createApp(App)
+  app.use(router)
+  app.use(i18n)
+  app.mount('#app')
+}
 
-app.use(router)
-app.use(i18n)
-app.mount('#app') 
+bootstrap() 

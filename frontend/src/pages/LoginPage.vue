@@ -49,6 +49,7 @@ import LoginForm from '@/components/login/LoginForm.vue'
 import RegisterForm from '@/components/login/RegisterForm.vue'
 import ResetPasswordForm from '@/components/login/ResetPasswordForm.vue'
 import { useAuth } from '@/api'
+import { getAuthProvider } from '@/api/config'
 
 const { t } = useI18n()
 
@@ -90,9 +91,8 @@ watch(isAuthenticated, (authenticated) => {
   }
 })
 
-// Check if already logged in when page loads
 onMounted(() => {
-  if (isAuthenticated.value) {
+  if (getAuthProvider() === 'none' || isAuthenticated.value) {
     router.push('/')
   }
 })

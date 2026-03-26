@@ -31,17 +31,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { UserCog, LogOut } from 'lucide-vue-next';
 import { useAuth } from '../../composables/useAuth';
-import { getCachedAuthProvider } from '../../api/config';
+import { getAuthProvider } from '../../api/config';
 
 const router = useRouter();
 const { t } = useI18n();
 const { currentUser, logout } = useAuth();
-const authProvider = ref<string | null>(null);
+const authProvider = computed(() => getAuthProvider());
 
 // Emit events for parent components
 const emit = defineEmits<{
@@ -68,7 +68,5 @@ const handleLogout = async () => {
   }
 };
 
-onMounted(async () => {
-   authProvider.value = await getCachedAuthProvider();
-});
+
 </script>

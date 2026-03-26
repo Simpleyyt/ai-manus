@@ -83,7 +83,7 @@ import type { FileInfo } from '../api/file';
 import { useLeftPanel } from '../composables/useLeftPanel';
 import { useFilePanel } from '../composables/useFilePanel';
 import { useAuth } from '../composables/useAuth';
-import { getCachedClientConfig } from '../api/config';
+import { getClientConfigSync } from '../api/config';
 import UserMenu from '../components/UserMenu.vue';
 
 const { t } = useI18n();
@@ -126,8 +126,8 @@ onMounted(() => {
   hideFilePanel();
 })
 
-onMounted(async () => {
-  const clientConfig = await getCachedClientConfig();
+onMounted(() => {
+  const clientConfig = getClientConfigSync();
   if (clientConfig) {
     showGithubButton.value = clientConfig.show_github_button;
     githubRepositoryUrl.value = clientConfig.github_repository_url;

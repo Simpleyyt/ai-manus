@@ -7,10 +7,10 @@ export interface ClientConfigResponse {
 }
 
 let clientConfigCache: ClientConfigResponse | null = null
-let isClientConfigLoaded = false
+let clientConfigPromise: Promise<ClientConfigResponse | null> | null = null
 
 /**
- * Get client runtime configuration.
+ * Fetch client runtime configuration from the server (no caching).
  */
 export async function getClientConfig(): Promise<ClientConfigResponse> {
   const response = await apiClient.get<ApiResponse<ClientConfigResponse>>('/config/frontend')
@@ -18,25 +18,48 @@ export async function getClientConfig(): Promise<ClientConfigResponse> {
 }
 
 /**
- * Get client runtime configuration (cached after first call).
+ * Load and cache client runtime configuration.
+ * Concurrent calls share a single in-flight request.
+ * On failure the promise is cleared so the next call retries.
  */
 export async function getCachedClientConfig(): Promise<ClientConfigResponse | null> {
-  if (isClientConfigLoaded) {
+  if (clientConfigCache) {
     return clientConfigCache
   }
 
-  try {
-    clientConfigCache = await getClientConfig()
-    isClientConfigLoaded = true
-    return clientConfigCache
-  } catch (error) {
-    console.warn('Failed to load client runtime configuration:', error)
-    return null
+  if (!clientConfigPromise) {
+    clientConfigPromise = getClientConfig()
+      .then(config => {
+        clientConfigCache = config
+        return config
+      })
+      .catch(error => {
+        console.warn('Failed to load client runtime configuration:', error)
+        clientConfigPromise = null
+        return null
+      })
   }
+
+  return clientConfigPromise
 }
 
 /**
- * Read auth provider from client configuration.
+ * Synchronous read of the cached auth provider value.
+ * Returns null when the config has not been loaded yet.
+ */
+export function getAuthProvider(): string | null {
+  return clientConfigCache?.auth_provider ?? null
+}
+
+/**
+ * Synchronous read of the full cached client config.
+ */
+export function getClientConfigSync(): ClientConfigResponse | null {
+  return clientConfigCache
+}
+
+/**
+ * Read auth provider from client configuration (async, triggers fetch if needed).
  */
 export async function getCachedAuthProvider(): Promise<string | null> {
   const clientConfig = await getCachedClientConfig()

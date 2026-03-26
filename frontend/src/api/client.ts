@@ -3,6 +3,7 @@ import axios, { AxiosError } from 'axios';
 import { fetchEventSource, EventSourceMessage } from '@microsoft/fetch-event-source';
 import { router } from '@/main';
 import { clearStoredTokens, getStoredToken, getStoredRefreshToken, storeToken } from './auth';
+import { getAuthProvider } from './config';
 
 // API configuration
 export const API_CONFIG = {
@@ -72,16 +73,19 @@ const processQueue = (error: any, token: string | null = null) => {
 };
 
 /**
- * Redirect to login page using Vue Router
+ * Redirect to login page using Vue Router.
+ * Skipped entirely when auth_provider is 'none' (no login required).
  */
 const redirectToLogin = () => {
-  // Check if we're already on the login page
-  if (window.location.pathname === LOGIN_ROUTE || 
-      router.currentRoute.value.path === LOGIN_ROUTE) {
-    return; // Already on login page, no need to redirect
+  if (getAuthProvider() === 'none') {
+    return;
   }
 
-  // Use Vue Router to navigate to login page
+  if (window.location.pathname === LOGIN_ROUTE || 
+      router.currentRoute.value.path === LOGIN_ROUTE) {
+    return;
+  }
+
   setTimeout(() => {
     window.location.href = LOGIN_ROUTE;
   }, 100);

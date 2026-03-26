@@ -85,13 +85,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Eye, EyeOff, LoaderCircle } from 'lucide-vue-next'
 import { useAuth } from '@/api'
 import { validateUserInput } from '@/utils/auth'
 import { showErrorToast, showSuccessToast } from '@/utils/toast'
-import { getCachedAuthProvider } from '@/api/config'
+import { getAuthProvider } from '@/api/config'
 
 const { t } = useI18n()
 
@@ -103,7 +103,7 @@ const emits = defineEmits<{
 }>()
 
 const { login, isLoading, authError } = useAuth()
-const hasRegister = ref(false)
+const hasRegister = computed(() => getAuthProvider() === 'password')
 
 // Form state
 const showPassword = ref(false)
@@ -198,11 +198,6 @@ const handleSubmit = async () => {
     showErrorToast(authError.value || t('Login failed, please try again'))
   }
 }
-
-onMounted(async () => {
-  const authProvider = await getCachedAuthProvider()
-  hasRegister.value = authProvider === 'password'
-})
 
 // Expose clearForm method for parent component
 defineExpose({

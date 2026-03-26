@@ -64,7 +64,7 @@ router.beforeEach(async (to, _, next) => {
   const authProvider = clientConfig?.auth_provider ?? null
 
   if (requiresAuth) {
-    if (authProvider === 'none') {
+    if (authProvider === 'none' || authProvider === null) {
       next()
       return
     }

@@ -7,19 +7,15 @@ import './utils/toast'
 import i18n from './composables/useI18n'
 import { getStoredToken } from './api/auth'
 import { getCachedClientConfig } from './api/config'
+import { configure } from "vue-gtag"
 
 // Import page components
 import HomePage from './pages/HomePage.vue'
 import ChatPage from './pages/ChatPage.vue'
 import LoginPage from './pages/LoginPage.vue'
 import MainLayout from './pages/MainLayout.vue'
-import { configure } from "vue-gtag";
-import SharePage from './pages/SharePage.vue';
-import ShareLayout from './pages/ShareLayout.vue';
-
-configure({
-  tagId: 'G-XCRZ3HH31S' // Replace with your own Google Analytics tag ID
-})
+import SharePage from './pages/SharePage.vue'
+import ShareLayout from './pages/ShareLayout.vue'
 
 // Create router
 export const router = createRouter({
@@ -64,11 +60,10 @@ export const router = createRouter({
 router.beforeEach(async (to, _, next) => {
   const requiresAuth = to.matched.some((record: any) => record.meta?.requiresAuth)
   const hasToken = !!getStoredToken()
-  
+  const clientConfig = await getCachedClientConfig()
+  const authProvider = clientConfig?.auth_provider ?? null
+
   if (requiresAuth) {
-    const clientConfig = await getCachedClientConfig()
-    const authProvider = clientConfig?.auth_provider ?? null
-    
     if (authProvider === 'none') {
       next()
       return
@@ -83,15 +78,26 @@ router.beforeEach(async (to, _, next) => {
     }
   }
   
-  if (to.path === '/login' && hasToken) {
-    next('/')
-  } else {
-    next()
+  if (to.path === '/login') {
+    if (authProvider === 'none') {
+      next('/')
+      return
+    }
+    if (hasToken) {
+      next('/')
+      return
+    }
   }
+
+  next()
 })
 
-// Preload client runtime config once on app bootstrap.
-void getCachedClientConfig()
+// Preload client runtime config and initialize Google Analytics.
+void getCachedClientConfig().then((config) => {
+  if (config?.google_analytics_id) {
+    configure({ tagId: config.google_analytics_id })
+  }
+})
 
 const app = createApp(App)
 

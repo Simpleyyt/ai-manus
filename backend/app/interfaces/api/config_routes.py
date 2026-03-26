@@ -16,6 +16,7 @@ async def get_frontend_config() -> APIResponse[ClientConfigResponse]:
         ClientConfigResponse(
             auth_provider=settings.auth_provider,
             show_github_button=settings.show_github_button,
-            github_repository_url=settings.github_repository_url
+            github_repository_url=settings.github_repository_url,
+            google_analytics_id=settings.google_analytics_id,
         )
     )

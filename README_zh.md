@@ -69,6 +69,29 @@ https://github.com/user-attachments/assets/5cb2240b-0984-4db0-8818-a24f81624b04
 
 ## 部署指南
 
+### 一键部署
+
+提供了 `setup.sh` 脚本，支持交互式配置和一键启动：
+
+```bash
+git clone https://github.com/simpleyyt/ai-manus.git
+cd ai-manus
+./setup.sh
+```
+
+脚本会引导你完成 LLM 配置、认证方式选择、搜索引擎配置等，并自动启动所有服务。
+
+更多选项：
+
+```bash
+./setup.sh --build-from-source    # 从源码构建镜像
+./setup.sh --skip-config          # 跳过配置，使用已有 .env
+```
+
+> 详细说明请参阅 [本地部署文档](https://docs.ai-manus.com/#/local_deployment)。
+
+### 手动部署
+
 推荐使用Docker Compose进行部署：
 
 <!-- docker-compose-example.yml -->
@@ -148,12 +171,20 @@ services:
       #- SANDBOX_NO_PROXY=
       
       # Search engine configuration
-      # Options: baidu, google, bing
-      - SEARCH_PROVIDER=bing
+      # Options: baidu, google, bing, bing_web, tavily
+      # bing: uses the official Bing Web Search API (requires BING_SEARCH_API_KEY)
+      # bing_web: scrapes Bing search results directly (no API key needed)
+      - SEARCH_PROVIDER=bing_web
+
+      # Bing search configuration, only used when SEARCH_PROVIDER=bing
+      #- BING_SEARCH_API_KEY=
 
       # Google search configuration, only used when SEARCH_PROVIDER=google
       #- GOOGLE_SEARCH_API_KEY=
       #- GOOGLE_SEARCH_ENGINE_ID=
+
+      # Tavily search configuration, only used when SEARCH_PROVIDER=tavily
+      #- TAVILY_API_KEY=
 
       # Auth configuration
       # Options: password, none, local
@@ -310,13 +341,35 @@ SANDBOX_NETWORK=manus-network
 #SANDBOX_HTTP_PROXY=
 #SANDBOX_NO_PROXY=
 
+# Browser engine configuration
+# Options: playwright (default), browser_use
+# - playwright:   uses Playwright directly via CDP (stable, well-tested)
+# - browser_use:  uses the browser_use library's BrowserSession via CDP
+#                 (richer DOM state extraction via AI-friendly selector map)
+#BROWSER_ENGINE=playwright
+
 # Search engine configuration
-# Options: baidu, google, bing
-SEARCH_PROVIDER=bing
+# Options: baidu, baidu_web, google, bing, bing_web, tavily
+# baidu: uses the Baidu Qianfan AI Search API (requires BAIDU_SEARCH_API_KEY)
+# baidu_web: scrapes Baidu search results with browser impersonation (no API key needed)
+# bing: uses the official Bing Web Search API (requires BING_SEARCH_API_KEY)
+# bing_web: scrapes Bing search results directly (no API key needed)
+SEARCH_PROVIDER=bing_web
+
+# Baidu search configuration, only used when SEARCH_PROVIDER=baidu
+# Get your API key from https://console.bce.baidu.com/qianfan/ais/console/onlineService
+#BAIDU_SEARCH_API_KEY=
+
+# Bing search configuration, only used when SEARCH_PROVIDER=bing
+# Get your API key from https://www.microsoft.com/en-us/bing/apis/bing-web-search-api
+#BING_SEARCH_API_KEY=
 
 # Google search configuration, only used when SEARCH_PROVIDER=google
 #GOOGLE_SEARCH_API_KEY=
 #GOOGLE_SEARCH_ENGINE_ID=
+
+# Tavily search configuration, only used when SEARCH_PROVIDER=tavily
+#TAVILY_API_KEY=
 
 # Auth configuration
 # Options: password, none, local
@@ -343,6 +396,9 @@ JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
 #EMAIL_USERNAME=your-email@gmail.com
 #EMAIL_PASSWORD=your-password
 #EMAIL_FROM=your-email@gmail.com
+
+# Extra headers for LLM API requests (JSON format)
+#EXTRA_HEADERS={"X-Custom-Header": "value"}
 
 # MCP configuration
 #MCP_CONFIG_PATH=/etc/mcp.json

@@ -6,7 +6,7 @@ import './assets/theme.css'
 import './utils/toast'
 import i18n from './composables/useI18n'
 import { getStoredToken } from './api/auth'
-import { getCachedClientConfig, isConfigLoadFailed } from './api/config'
+import { getCachedClientConfig } from './api/config'
 import { configure } from "vue-gtag"
 
 // Import page components
@@ -62,26 +62,6 @@ router.beforeEach(async (to, _, next) => {
   const hasToken = !!getStoredToken()
   const clientConfig = await getCachedClientConfig()
   const authProvider = clientConfig?.auth_provider ?? null
-  const configFailed = isConfigLoadFailed()
-
-  // When server is down (config unavailable), fall back to token-only checks
-  // and never redirect to /login to avoid redirect loops.
-  if (configFailed) {
-    if (to.path === '/login') {
-      if (hasToken) {
-        next('/')
-        return
-      }
-      next()
-      return
-    }
-    if (requiresAuth && !hasToken) {
-      next({ path: '/login', query: { redirect: to.fullPath } })
-      return
-    }
-    next()
-    return
-  }
 
   if (requiresAuth) {
     if (authProvider === 'none') {

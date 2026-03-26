@@ -9,7 +9,6 @@ export interface ClientConfigResponse {
 
 let clientConfigCache: ClientConfigResponse | null = null
 let isClientConfigLoaded = false
-let configLoadFailed = false
 
 /**
  * Get client runtime configuration.
@@ -31,30 +30,12 @@ export async function getCachedClientConfig(): Promise<ClientConfigResponse | nu
   try {
     clientConfigCache = await getClientConfig()
     isClientConfigLoaded = true
-    configLoadFailed = false
     return clientConfigCache
   } catch (error) {
     console.warn('Failed to load client runtime configuration:', error)
     isClientConfigLoaded = true
-    configLoadFailed = true
     return null
   }
-}
-
-/**
- * Whether the config load has failed (server unreachable, etc.).
- */
-export function isConfigLoadFailed(): boolean {
-  return configLoadFailed
-}
-
-/**
- * Reset cached config so the next call re-fetches from server.
- */
-export function resetCachedClientConfig(): void {
-  clientConfigCache = null
-  isClientConfigLoaded = false
-  configLoadFailed = false
 }
 
 /**

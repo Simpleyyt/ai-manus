@@ -96,6 +96,15 @@ class Settings(BaseSettings):
     # Extra headers for LLM requests (parsed from EXTRA_HEADERS env var, JSON)
     extra_headers: dict | None = None
     
+    # Claw (OpenClaw) configuration
+    claw_enabled: bool = True
+    claw_image: str = "manus-claw:latest"
+    claw_name_prefix: str = "manus-claw"
+    claw_ttl_seconds: int = 3600
+    claw_address: str | None = None  # If set, use this fixed host instead of creating Docker containers
+    claw_api_key: str | None = None  # Static API key accepted by the LLM proxy (for dev/fixed container)
+    manus_api_base_url: str = "http://backend:8000"  # URL of this backend accessible from claw containers
+
     # MCP configuration
     mcp_config_path: str = "/etc/mcp.json"
     

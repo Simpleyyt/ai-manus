@@ -21,13 +21,13 @@
                     </button>
                 </div>
                 <div class="flex gap-2">
-                    <button v-if="!isRunning || sendEnabled"
+                    <button v-if="!isRunning || sendEnabled || hideStopButton"
                         class="whitespace-nowrap text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 text-primary-foreground hover:bg-primary/90 p-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:opacity-90"
                         :class="!sendEnabled ? 'cursor-not-allowed bg-[var(--fill-tsp-white-dark)]' : 'cursor-pointer bg-[var(--Button-primary-black)]'"
                         @click="handleSubmit">
                         <SendIcon :disabled="!sendEnabled" />
                     </button>
-                    <button v-else @click="handleStop"
+                    <button v-else-if="!hideStopButton" @click="handleStop"
                         class="inline-flex items-center justify-center whitespace-nowrap text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring bg-[var(--Button-primary-black)] text-[var(--text-onblack)] gap-[4px] hover:opacity-90 rounded-full p-0 w-8 h-8">
                         <div class="w-[10px] h-[10px] bg-[var(--icon-onblack)] rounded-[2px]">
                         </div>
@@ -56,10 +56,17 @@ const props = defineProps<{
     rows: number;
     isRunning: boolean;
     attachments: FileInfo[];
+    hideStopButton?: boolean;
+    allowSendFilesOnly?: boolean;
 }>();
 
 const sendEnabled = computed(() => {
-    return chatBoxFileListRef.value?.isAllUploaded && hasTextInput.value;
+    const hasFiles = (props.attachments?.length ?? 0) > 0;
+    const allUploaded = chatBoxFileListRef.value?.isAllUploaded ?? true;
+    if (props.allowSendFilesOnly) {
+        return hasTextInput.value || (hasFiles && allUploaded);
+    }
+    return hasTextInput.value && (!hasFiles || allUploaded);
 });
 
 const emit = defineEmits<{

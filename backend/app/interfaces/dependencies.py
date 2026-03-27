@@ -25,6 +25,8 @@ from app.infrastructure.repositories.mongo_agent_repository import MongoAgentRep
 from app.infrastructure.repositories.mongo_session_repository import MongoSessionRepository
 from app.infrastructure.repositories.file_mcp_repository import FileMCPRepository
 from app.infrastructure.repositories.user_repository import MongoUserRepository
+from app.infrastructure.repositories.claw_repository import ClawRepository
+from app.application.services.claw_service import ClawService
 
 
 # Configure logging
@@ -108,6 +110,30 @@ def get_token_service() -> TokenService:
     """Get token service instance"""
     logger.info("Creating TokenService instance")
     return TokenService()
+
+
+@lru_cache()
+def get_claw_service() -> ClawService:
+    """Get claw service instance"""
+    logger.info("Creating ClawService instance")
+    settings = get_settings()
+    claw_repository = ClawRepository()
+
+    if settings.claw_address:
+        from app.infrastructure.external.claw.fixed_claw_runtime import FixedClawRuntime
+        claw_runtime = FixedClawRuntime(address=settings.claw_address)
+    else:
+        from app.infrastructure.external.claw.docker_claw_runtime import DockerClawRuntime
+        claw_runtime = DockerClawRuntime()
+
+    from app.infrastructure.external.claw.http_claw_client import HttpClawClient
+    claw_client = HttpClawClient()
+
+    return ClawService(
+        claw_repository=claw_repository,
+        claw_runtime=claw_runtime,
+        claw_client=claw_client,
+    )
 
 
 @lru_cache()

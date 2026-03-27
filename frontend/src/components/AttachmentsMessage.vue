@@ -50,7 +50,7 @@
           <Eye class="size-5 w-4 h-4 text-[var(--icon-secondary)]" />
         </div>
       </div>
-      <button @click="showAllFiles"
+      <button v-if="!props.hideAllFilesButton" @click="showAllFiles"
         class="h-[54px] pl-4 pr-1.5 flex items-center justify-center gap-1.5 w-[280px] rounded-[12px] border-[0.5px] border-[var(--border-dark)] bg-[var(--background-menu-white)] hover:bg-[var(--background-tsp-menu-white)]">
         <FileSearch :size="16" />
         <span class="text-sm text-[var(--icon-secondary)]">{{ t('View all files in this task') }}</span>
@@ -72,8 +72,9 @@ const { t } = useI18n();
 const { showFilePanel } = useFilePanel();
 const { showSessionFileList } = useSessionFileList();
 
-defineProps<{
+const props = defineProps<{
   content: AttachmentsContent;
+  hideAllFilesButton?: boolean;
 }>();
 
 const showAllFiles = () => {

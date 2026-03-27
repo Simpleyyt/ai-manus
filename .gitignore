@@ -124,3 +124,4 @@ mcp.json
 !frontend/src/lib/
 
 uv.lock
+specs

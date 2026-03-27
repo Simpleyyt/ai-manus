@@ -35,3 +35,11 @@ export interface AttachmentsContent extends BaseContent {
   role: "user" | "assistant";
   attachments: FileInfo[];
 }
+
+export function isConsecutiveAssistant(messages: Message[], index: number): boolean {
+  if (index <= 0) return false;
+  const isAst = (m: Message) =>
+    m.type === 'assistant' ||
+    (m.type === 'attachments' && (m.content as AttachmentsContent).role === 'assistant');
+  return isAst(messages[index]) && isAst(messages[index - 1]);
+}

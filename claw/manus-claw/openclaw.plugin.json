@@ -1,0 +1,66 @@
+{
+  "id": "manus-claw",
+  "name": "manus-claw",
+  "description": "Connector plugin that bridges manus backend with the local OpenClaw Gateway via HTTP server.",
+  "version": "0.1.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": true,
+    "properties": {
+      "gateway": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
+          },
+          "agentId": {
+            "type": "string"
+          }
+        }
+      },
+      "server": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "port": {
+            "type": "number"
+          },
+          "host": {
+            "type": "string"
+          }
+        }
+      },
+      "retry": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "baseMs": {
+            "type": "number"
+          },
+          "maxMs": {
+            "type": "number"
+          },
+          "maxAttempts": {
+            "type": "number"
+          }
+        }
+      },
+      "log": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "verbose": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

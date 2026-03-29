@@ -3,7 +3,7 @@ import io
 from typing import BinaryIO, Optional, Dict, Any, Tuple
 from datetime import datetime
 from bson import ObjectId
-from motor.motor_asyncio import AsyncIOMotorGridFSBucket
+from gridfs import AsyncGridFSBucket
 
 from app.domain.external.file import FileStorage
 from app.domain.models.file import FileInfo
@@ -29,14 +29,14 @@ class GridFSFileStorage(FileStorage):
         self.bucket_name = bucket_name
         self.settings = get_settings()
     
-    def _get_gridfs_bucket(self) -> AsyncIOMotorGridFSBucket:
+    def _get_gridfs_bucket(self) -> AsyncGridFSBucket:
         """Get async GridFS Bucket instance"""
         if not self.mongodb.client:
             raise RuntimeError("MongoDB client not initialized")
         
         # Use database name from configuration
         database = self.mongodb.client[self.settings.mongodb_database]
-        return AsyncIOMotorGridFSBucket(database, bucket_name=self.bucket_name)
+        return AsyncGridFSBucket(database, bucket_name=self.bucket_name)
     
     def _get_files_collection(self):
         """Get files collection for querying file metadata"""

@@ -106,12 +106,20 @@ services:
       #- SANDBOX_NO_PROXY=
       
       # Search engine configuration
-      # Options: baidu, google, bing
-      - SEARCH_PROVIDER=bing
+      # Options: baidu, google, bing, bing_web, tavily
+      # bing: uses the official Bing Web Search API (requires BING_SEARCH_API_KEY)
+      # bing_web: scrapes Bing search results directly (no API key needed)
+      - SEARCH_PROVIDER=bing_web
+
+      # Bing search configuration, only used when SEARCH_PROVIDER=bing
+      #- BING_SEARCH_API_KEY=
 
       # Google search configuration, only used when SEARCH_PROVIDER=google
       #- GOOGLE_SEARCH_API_KEY=
       #- GOOGLE_SEARCH_ENGINE_ID=
+
+      # Tavily search configuration, only used when SEARCH_PROVIDER=tavily
+      #- TAVILY_API_KEY=
 
       # Auth configuration
       # Options: password, none, local

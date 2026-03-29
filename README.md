@@ -87,6 +87,29 @@ Deepseek and GPT models are recommended.
 
 ## Deployment Guide
 
+### One-Click Setup
+
+Use the `setup.sh` script for interactive configuration and one-click deployment:
+
+```bash
+git clone https://github.com/simpleyyt/ai-manus.git
+cd ai-manus
+./setup.sh
+```
+
+The script guides you through LLM configuration, authentication setup, search engine selection, and automatically starts all services.
+
+More options:
+
+```bash
+./setup.sh --build-from-source    # Build images from source
+./setup.sh --skip-config          # Skip config, use existing .env
+```
+
+> For detailed instructions, see the [Local Deployment Guide](https://docs.ai-manus.com/#/en/local_deployment).
+
+### Manual Deployment
+
 Docker Compose is recommended for deployment:
 
 <!-- docker-compose-example.yml -->
@@ -166,12 +189,20 @@ services:
       #- SANDBOX_NO_PROXY=
       
       # Search engine configuration
-      # Options: baidu, google, bing
-      - SEARCH_PROVIDER=bing
+      # Options: baidu, google, bing, bing_web, tavily
+      # bing: uses the official Bing Web Search API (requires BING_SEARCH_API_KEY)
+      # bing_web: scrapes Bing search results directly (no API key needed)
+      - SEARCH_PROVIDER=bing_web
+
+      # Bing search configuration, only used when SEARCH_PROVIDER=bing
+      #- BING_SEARCH_API_KEY=
 
       # Google search configuration, only used when SEARCH_PROVIDER=google
       #- GOOGLE_SEARCH_API_KEY=
       #- GOOGLE_SEARCH_ENGINE_ID=
+
+      # Tavily search configuration, only used when SEARCH_PROVIDER=tavily
+      #- TAVILY_API_KEY=
 
       # Auth configuration
       # Options: password, none, local
@@ -309,13 +340,35 @@ SANDBOX_NETWORK=manus-network
 #SANDBOX_HTTP_PROXY=
 #SANDBOX_NO_PROXY=
 
+# Browser engine configuration
+# Options: playwright (default), browser_use
+# - playwright:   uses Playwright directly via CDP (stable, well-tested)
+# - browser_use:  uses the browser_use library's BrowserSession via CDP
+#                 (richer DOM state extraction via AI-friendly selector map)
+#BROWSER_ENGINE=playwright
+
 # Search engine configuration
-# Options: baidu, google, bing
-SEARCH_PROVIDER=bing
+# Options: baidu, baidu_web, google, bing, bing_web, tavily
+# baidu: uses the Baidu Qianfan AI Search API (requires BAIDU_SEARCH_API_KEY)
+# baidu_web: scrapes Baidu search results with browser impersonation (no API key needed)
+# bing: uses the official Bing Web Search API (requires BING_SEARCH_API_KEY)
+# bing_web: scrapes Bing search results directly (no API key needed)
+SEARCH_PROVIDER=bing_web
+
+# Baidu search configuration, only used when SEARCH_PROVIDER=baidu
+# Get your API key from https://console.bce.baidu.com/qianfan/ais/console/onlineService
+#BAIDU_SEARCH_API_KEY=
+
+# Bing search configuration, only used when SEARCH_PROVIDER=bing
+# Get your API key from https://www.microsoft.com/en-us/bing/apis/bing-web-search-api
+#BING_SEARCH_API_KEY=
 
 # Google search configuration, only used when SEARCH_PROVIDER=google
 #GOOGLE_SEARCH_API_KEY=
 #GOOGLE_SEARCH_ENGINE_ID=
+
+# Tavily search configuration, only used when SEARCH_PROVIDER=tavily
+#TAVILY_API_KEY=
 
 # Auth configuration
 # Options: password, none, local
@@ -342,6 +395,9 @@ JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
 #EMAIL_USERNAME=your-email@gmail.com
 #EMAIL_PASSWORD=your-password
 #EMAIL_FROM=your-email@gmail.com
+
+# Extra headers for LLM API requests (JSON format)
+#EXTRA_HEADERS={"X-Custom-Header": "value"}
 
 # MCP configuration
 #MCP_CONFIG_PATH=/etc/mcp.json

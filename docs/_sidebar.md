@@ -1,6 +1,7 @@
 
  * [🤖 AI Manus 开源通用智能体](README.md)
  * [🚀 快速上手](quick_start.md)
+ * [🏠 本地部署](local_deployment.md)
  * [📅 开发计划](roadmap.md)
  * 🛠️ 功能使用
    * [✨ 场景演示](demo.md)

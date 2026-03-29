@@ -29,6 +29,7 @@ services:
           - linux/arm64
     depends_on:
       - sandbox
+      - claw
       - mongodb
       - redis
     restart: unless-stopped
@@ -50,6 +51,20 @@ services:
           - linux/amd64
           - linux/arm64
     command: /bin/sh -c "exit 0"  # prevent sandbox from starting, ensure image is pulled
+    restart: "no"
+    networks:
+      - manus-network
+
+  claw:
+    image: ${IMAGE_REGISTRY:-simpleyyt}/manus-claw:${IMAGE_TAG:-latest}
+    build:
+      context: ./claw
+      dockerfile: Dockerfile
+      x-bake:
+        platforms:
+          - linux/amd64
+          - linux/arm64
+    command: /bin/sh -c "exit 0"  # prevent claw from starting, ensure image is pulled
     restart: "no"
     networks:
       - manus-network

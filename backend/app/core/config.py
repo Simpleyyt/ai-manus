@@ -98,7 +98,7 @@ class Settings(BaseSettings):
     
     # Claw (OpenClaw) configuration
     claw_enabled: bool = True
-    claw_image: str = "manus-claw:latest"
+    claw_image: str = "simpleyyt/manus-claw"
     claw_name_prefix: str = "manus-claw"
     claw_ttl_seconds: int = 3600
     claw_address: str | None = None  # If set, use this fixed host instead of creating Docker containers

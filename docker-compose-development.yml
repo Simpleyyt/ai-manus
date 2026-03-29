@@ -60,10 +60,9 @@ services:
       - .env
     environment:
       - SANDBOX_ADDRESS=sandbox # Use single container as sandbox
-      #- CLAW_ADDRESS=claw       # Use single fixed claw container in development
+      - CLAW_ADDRESS=claw       # Use single fixed claw container in development
       - MANUS_API_BASE_URL=http://backend:8000
       - CLAW_API_KEY=${CLAW_DEV_API_KEY:-manus-dev-api-key-changeme}
-      - CLAW_IMAGE=ai-manus-claw:latest
 
   sandbox:
     build:

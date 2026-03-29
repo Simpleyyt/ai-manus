@@ -59,9 +59,9 @@
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
 | `CLAW_ENABLED` | `true` | 否 | 是否启用 Claw 功能，设为 `false` 关闭左侧面板入口 |
-| `CLAW_IMAGE` | `manus-claw:latest` | 否 | Claw Docker 镜像名称 |
+| `CLAW_IMAGE` | `simpleyyt/manus-claw` | 否 | Claw Docker 镜像名称 |
 | `CLAW_NAME_PREFIX` | `manus-claw` | 否 | Claw 容器名称前缀 |
-| `CLAW_TTL_SECONDS` | `3600` | 否 | Claw 容器生存时间（秒） |
+| `CLAW_TTL_SECONDS` | `3600` | 否 | Claw 容器生存时间（秒），设为 `0` 表示不限时 |
 | `CLAW_ADDRESS` | - | 否 | 固定 Claw 地址（开发环境使用，设置后跳过 Docker 容器创建） |
 | `CLAW_API_KEY` | - | 否 | 静态 API 密钥（开发环境 / 固定容器使用） |
 | `MANUS_API_BASE_URL` | `http://backend:8000` | 否 | 后端 API 地址，供 Claw 容器回调使用 |

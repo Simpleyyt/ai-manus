@@ -41,6 +41,7 @@ https://github.com/user-attachments/assets/5cb2240b-0984-4db0-8818-a24f81624b04
 
  * 部署：最小只需要一个 LLM 服务即可完成部署，不需要依赖其它外部服务。
  * 工具：支持 Terminal、Browser、File、Web Search、消息工具，并支持实查看和接管，支持外部 MCP 工具集成。
+ * Claw：集成 [OpenClaw](https://github.com/anthropics/openclaw) AI 助手，一键部署、用户隔离容器、自动过期倒计时、完整聊天历史。
  * 沙盒：每个 Task 会分配单独的一个沙盒，沙盒在本地 Dock 环境里面运行。
  * 任务会话：通过 Mongo/Redis 对会话历史进行管理，支持后台任务。
  * 对话：支持停止与打断，支持文件上传与下载。
@@ -90,6 +91,7 @@ services:
     image: simpleyyt/manus-backend
     depends_on:
       - sandbox
+      - claw
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -147,13 +149,31 @@ services:
       # No proxy hosts for sandbox (optional)
       #- SANDBOX_NO_PROXY=
       
+      # Claw (OpenClaw) configuration
+      # Enable or disable Claw feature (hides sidebar entry when false)
+      #- CLAW_ENABLED=true
+      # Docker image used for Claw containers
+      #- CLAW_IMAGE=manus-claw:latest
+      # Prefix for Claw container names
+      #- CLAW_NAME_PREFIX=manus-claw
+      # Time-to-live for Claw containers in seconds (0 = unlimited)
+      #- CLAW_TTL_SECONDS=3600
+      # Backend API URL used by Claw containers for callbacks
+      #- MANUS_API_BASE_URL=http://backend:8000
+
       # Search engine configuration
-      # Options: baidu, google, bing
-      - SEARCH_PROVIDER=bing
+      # Options: baidu, google, bing, bing_web, tavily
+      - SEARCH_PROVIDER=bing_web
+
+      # Bing search configuration, only used when SEARCH_PROVIDER=bing
+      #- BING_SEARCH_API_KEY=
 
       # Google search configuration, only used when SEARCH_PROVIDER=google
       #- GOOGLE_SEARCH_API_KEY=
       #- GOOGLE_SEARCH_ENGINE_ID=
+
+      # Tavily search configuration, only used when SEARCH_PROVIDER=tavily
+      #- TAVILY_API_KEY=
 
       # Auth configuration
       # Options: password, none, local
@@ -190,6 +210,13 @@ services:
   sandbox:
     image: simpleyyt/manus-sandbox
     command: /bin/sh -c "exit 0"  # prevent sandbox from starting, ensure image is pulled
+    restart: "no"
+    networks:
+      - manus-network
+
+  claw:
+    image: simpleyyt/manus-claw
+    command: /bin/sh -c "exit 0"  # prevent claw from starting, ensure image is pulled
     restart: "no"
     networks:
       - manus-network
@@ -310,13 +337,38 @@ SANDBOX_NETWORK=manus-network
 #SANDBOX_HTTP_PROXY=
 #SANDBOX_NO_PROXY=
 
+# Claw (OpenClaw) configuration
+# Enable or disable Claw feature (hides sidebar entry when false)
+#CLAW_ENABLED=true
+# Docker image used for Claw containers
+#CLAW_IMAGE=simpleyyt/manus-claw
+# Prefix for Claw container names
+#CLAW_NAME_PREFIX=manus-claw
+# Time-to-live for Claw containers in seconds (0 = unlimited)
+#CLAW_TTL_SECONDS=3600
+# Fixed Claw address (for development; skips Docker container creation)
+#CLAW_ADDRESS=
+# Static API key for Claw (for development / fixed container)
+#CLAW_API_KEY=
+# Backend API URL used by Claw containers for callbacks
+#MANUS_API_BASE_URL=http://backend:8000
+
 # Search engine configuration
-# Options: baidu, google, bing
-SEARCH_PROVIDER=bing
+# Options: baidu, baidu_web, google, bing, bing_web, tavily
+SEARCH_PROVIDER=bing_web
+
+# Baidu search configuration, only used when SEARCH_PROVIDER=baidu
+#BAIDU_SEARCH_API_KEY=
+
+# Bing search configuration, only used when SEARCH_PROVIDER=bing
+#BING_SEARCH_API_KEY=
 
 # Google search configuration, only used when SEARCH_PROVIDER=google
 #GOOGLE_SEARCH_API_KEY=
 #GOOGLE_SEARCH_ENGINE_ID=
+
+# Tavily search configuration, only used when SEARCH_PROVIDER=tavily
+#TAVILY_API_KEY=
 
 # Auth configuration
 # Options: password, none, local
@@ -343,6 +395,9 @@ JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
 #EMAIL_USERNAME=your-email@gmail.com
 #EMAIL_PASSWORD=your-password
 #EMAIL_FROM=your-email@gmail.com
+
+# Extra headers for LLM API requests (JSON format)
+#EXTRA_HEADERS={"X-Custom-Header": "value"}
 
 # MCP configuration
 #MCP_CONFIG_PATH=/etc/mcp.json

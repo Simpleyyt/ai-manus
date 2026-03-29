@@ -67,6 +67,9 @@ class Settings(BaseSettings):
     google_search_engine_id: str | None = None
     tavily_api_key: str | None = None
     
+    # Google Analytics configuration
+    google_analytics_id: str | None = None
+
     # Auth configuration
     auth_provider: str = "password"  # "password", "none", "local"
     show_github_button: bool = True

@@ -4,6 +4,7 @@ export interface ClientConfigResponse {
   auth_provider: string
   show_github_button: boolean
   github_repository_url: string
+  google_analytics_id: string | null
 }
 
 let clientConfigCache: ClientConfigResponse | null = null
@@ -19,6 +20,7 @@ export async function getClientConfig(): Promise<ClientConfigResponse> {
 
 /**
  * Get client runtime configuration (cached after first call).
+ * Returns null when config has not been fetched yet or fetch failed.
  */
 export async function getCachedClientConfig(): Promise<ClientConfigResponse | null> {
   if (isClientConfigLoaded) {
@@ -31,6 +33,7 @@ export async function getCachedClientConfig(): Promise<ClientConfigResponse | nu
     return clientConfigCache
   } catch (error) {
     console.warn('Failed to load client runtime configuration:', error)
+    isClientConfigLoaded = true
     return null
   }
 }

@@ -48,6 +48,7 @@ services:
     image: simpleyyt/manus-backend
     depends_on:
       - sandbox
+      - claw
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -105,13 +106,31 @@ services:
       # No proxy hosts for sandbox (optional)
       #- SANDBOX_NO_PROXY=
       
+      # Claw (OpenClaw) configuration
+      # Enable or disable Claw feature (hides sidebar entry when false)
+      #- CLAW_ENABLED=true
+      # Docker image used for Claw containers
+      #- CLAW_IMAGE=simpleyyt/manus-claw
+      # Prefix for Claw container names
+      #- CLAW_NAME_PREFIX=manus-claw
+      # Time-to-live for Claw containers in seconds (0 = unlimited)
+      #- CLAW_TTL_SECONDS=3600
+      # Backend API URL used by Claw containers for callbacks
+      #- MANUS_API_BASE_URL=http://backend:8000
+
       # Search engine configuration
-      # Options: baidu, google, bing
-      - SEARCH_PROVIDER=bing
+      # Options: baidu, google, bing, bing_web, tavily
+      - SEARCH_PROVIDER=bing_web
+
+      # Bing search configuration, only used when SEARCH_PROVIDER=bing
+      #- BING_SEARCH_API_KEY=
 
       # Google search configuration, only used when SEARCH_PROVIDER=google
       #- GOOGLE_SEARCH_API_KEY=
       #- GOOGLE_SEARCH_ENGINE_ID=
+
+      # Tavily search configuration, only used when SEARCH_PROVIDER=tavily
+      #- TAVILY_API_KEY=
 
       # Auth configuration
       # Options: password, none, local
@@ -148,6 +167,13 @@ services:
   sandbox:
     image: simpleyyt/manus-sandbox
     command: /bin/sh -c "exit 0"  # prevent sandbox from starting, ensure image is pulled
+    restart: "no"
+    networks:
+      - manus-network
+
+  claw:
+    image: simpleyyt/manus-claw
+    command: /bin/sh -c "exit 0"  # prevent claw from starting, ensure image is pulled
     restart: "no"
     networks:
       - manus-network

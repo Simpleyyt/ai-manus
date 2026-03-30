@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        component: [frontend, backend, sandbox]
+        component: [frontend, backend, sandbox, claw]
     
     steps:
       - name: Checkout code

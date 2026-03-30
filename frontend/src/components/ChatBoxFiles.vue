@@ -94,6 +94,10 @@ const files = ref<ExtendedFileInfo[]>(props.attachments);
 const fileInput = ref<HTMLInputElement>();
 const scrollContainer = ref<HTMLElement>();
 
+watch(() => props.attachments, (newVal) => {
+    files.value = newVal;
+});
+
 // Scroll state
 const canScrollLeft = ref(false);
 const canScrollRight = ref(false);

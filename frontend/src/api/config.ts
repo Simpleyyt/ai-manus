@@ -5,6 +5,7 @@ export interface ClientConfigResponse {
   show_github_button: boolean
   github_repository_url: string
   google_analytics_id: string | null
+  claw_enabled: boolean
 }
 
 let clientConfigCache: ClientConfigResponse | null = null

@@ -41,6 +41,7 @@ https://github.com/user-attachments/assets/37060a09-c647-4bcb-920c-959f7fa73ebe
 
  * Deployment: Minimal deployment requires only an LLM service, with no dependency on other external services.
  * Tools: Supports Terminal, Browser, File, Web Search, and messaging tools with real-time viewing and takeover capabilities, supports external MCP tool integration.
+ * Claw: Integrated [OpenClaw](https://github.com/anthropics/openclaw) AI assistant with one-click deployment, per-user isolated containers, auto-expiry countdown, and full chat history.
  * Sandbox: Each task is allocated a separate sandbox that runs in a local Docker environment.
  * Task Sessions: Session history is managed through MongoDB/Redis, supporting background tasks.
  * Conversations: Supports stopping and interrupting, file upload and download.
@@ -108,6 +109,7 @@ services:
     image: simpleyyt/manus-backend
     depends_on:
       - sandbox
+      - claw
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -165,13 +167,31 @@ services:
       # No proxy hosts for sandbox (optional)
       #- SANDBOX_NO_PROXY=
       
+      # Claw (OpenClaw) configuration
+      # Enable or disable Claw feature (hides sidebar entry when false)
+      #- CLAW_ENABLED=true
+      # Docker image used for Claw containers
+      #- CLAW_IMAGE=manus-claw:latest
+      # Prefix for Claw container names
+      #- CLAW_NAME_PREFIX=manus-claw
+      # Time-to-live for Claw containers in seconds (0 = unlimited)
+      #- CLAW_TTL_SECONDS=3600
+      # Backend API URL used by Claw containers for callbacks
+      #- MANUS_API_BASE_URL=http://backend:8000
+
       # Search engine configuration
-      # Options: baidu, google, bing
-      - SEARCH_PROVIDER=bing
+      # Options: baidu, google, bing, bing_web, tavily
+      - SEARCH_PROVIDER=bing_web
+
+      # Bing search configuration, only used when SEARCH_PROVIDER=bing
+      #- BING_SEARCH_API_KEY=
 
       # Google search configuration, only used when SEARCH_PROVIDER=google
       #- GOOGLE_SEARCH_API_KEY=
       #- GOOGLE_SEARCH_ENGINE_ID=
+
+      # Tavily search configuration, only used when SEARCH_PROVIDER=tavily
+      #- TAVILY_API_KEY=
 
       # Auth configuration
       # Options: password, none, local
@@ -208,6 +228,13 @@ services:
   sandbox:
     image: simpleyyt/manus-sandbox
     command: /bin/sh -c "exit 0"  # prevent sandbox from starting, ensure image is pulled
+    restart: "no"
+    networks:
+      - manus-network
+
+  claw:
+    image: simpleyyt/manus-claw
+    command: /bin/sh -c "exit 0"  # prevent claw from starting, ensure image is pulled
     restart: "no"
     networks:
       - manus-network
@@ -309,13 +336,38 @@ SANDBOX_NETWORK=manus-network
 #SANDBOX_HTTP_PROXY=
 #SANDBOX_NO_PROXY=
 
+# Claw (OpenClaw) configuration
+# Enable or disable Claw feature (hides sidebar entry when false)
+#CLAW_ENABLED=true
+# Docker image used for Claw containers
+#CLAW_IMAGE=simpleyyt/manus-claw
+# Prefix for Claw container names
+#CLAW_NAME_PREFIX=manus-claw
+# Time-to-live for Claw containers in seconds (0 = unlimited)
+#CLAW_TTL_SECONDS=3600
+# Fixed Claw address (for development; skips Docker container creation)
+#CLAW_ADDRESS=
+# Static API key for Claw (for development / fixed container)
+#CLAW_API_KEY=
+# Backend API URL used by Claw containers for callbacks
+#MANUS_API_BASE_URL=http://backend:8000
+
 # Search engine configuration
-# Options: baidu, google, bing
-SEARCH_PROVIDER=bing
+# Options: baidu, baidu_web, google, bing, bing_web, tavily
+SEARCH_PROVIDER=bing_web
+
+# Baidu search configuration, only used when SEARCH_PROVIDER=baidu
+#BAIDU_SEARCH_API_KEY=
+
+# Bing search configuration, only used when SEARCH_PROVIDER=bing
+#BING_SEARCH_API_KEY=
 
 # Google search configuration, only used when SEARCH_PROVIDER=google
 #GOOGLE_SEARCH_API_KEY=
 #GOOGLE_SEARCH_ENGINE_ID=
+
+# Tavily search configuration, only used when SEARCH_PROVIDER=tavily
+#TAVILY_API_KEY=
 
 # Auth configuration
 # Options: password, none, local
@@ -342,6 +394,9 @@ JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
 #EMAIL_USERNAME=your-email@gmail.com
 #EMAIL_PASSWORD=your-password
 #EMAIL_FROM=your-email@gmail.com
+
+# Extra headers for LLM API requests (JSON format)
+#EXTRA_HEADERS={"X-Custom-Header": "value"}
 
 # MCP configuration
 #MCP_CONFIG_PATH=/etc/mcp.json

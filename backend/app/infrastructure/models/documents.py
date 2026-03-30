@@ -1,13 +1,14 @@
 from typing import Dict, Optional, List, Type, TypeVar, Generic, get_args, Self
 from datetime import datetime, timezone, UTC
 from beanie import Document
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from app.domain.models.agent import Agent
 from app.domain.models.memory import Memory
 from app.domain.models.event import AgentEvent
 from app.domain.models.session import Session, SessionStatus
 from app.domain.models.file import FileInfo
 from app.domain.models.user import User, UserRole
+from app.domain.models.claw import Claw, ClawStatus, ClawMessage
 from pymongo import IndexModel, ASCENDING
 
 T = TypeVar('T', bound=BaseModel)
@@ -102,4 +103,26 @@ class SessionDocument(BaseDocument[Session], id_field="session_id", domain_model
         indexes = [
             "session_id",
             "user_id",  # Add index for user_id for efficient queries
+        ]
+
+
+class ClawDocument(BaseDocument[Claw], id_field="claw_id", domain_model_class=Claw):
+    """MongoDB document for Claw instance"""
+    claw_id: str
+    user_id: str
+    container_name: Optional[str] = None
+    container_ip: Optional[str] = None
+    api_key: str
+    status: ClawStatus = ClawStatus.CREATING
+    error_message: Optional[str] = None
+    expires_at: Optional[datetime] = None
+    messages: List[ClawMessage] = []
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    class Settings:
+        name = "claws"
+        indexes = [
+            "claw_id",
+            IndexModel([("user_id", ASCENDING)], unique=True),  # One claw per user
         ]

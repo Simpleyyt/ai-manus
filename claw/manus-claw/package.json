@@ -1,0 +1,22 @@
+{
+  "name": "manus-claw",
+  "version": "0.1.0",
+  "description": "OpenClaw plugin that bridges manus backend with the local OpenClaw Gateway.",
+  "type": "module",
+  "main": "src/index.js",
+  "files": [
+    "src/",
+    "openclaw.plugin.json"
+  ],
+  "openclaw": {
+    "extensions": [
+      "./src/index.js"
+    ]
+  },
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

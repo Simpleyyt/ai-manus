@@ -14,11 +14,13 @@
       </div>
     </div>
   </div>
-  <div v-else-if="message.type === 'assistant'" class="flex flex-col gap-2 w-full group mt-3">
-    <div class="flex items-center justify-between h-7 group">
+  <div v-else-if="message.type === 'assistant'" class="flex flex-col gap-2 w-full group" :class="hideAssistantHeader ? 'mt-0' : 'mt-3'">
+    <div v-if="!hideAssistantHeader" class="flex items-center justify-between h-7 group">
       <div class="flex items-center gap-[3px]">
-        <Bot :size="24" class="w-6 h-6" />
-        <ManusTextIcon />
+        <component v-if="assistantIcon" :is="assistantIcon" :size="24" class="w-6 h-6" />
+        <Bot v-else :size="24" class="w-6 h-6" />
+        <span v-if="assistantName" class="text-base text-[var(--text-primary)] tracking-tight leading-none ml-0.5">{{ assistantName }}</span>
+        <ManusTextIcon v-else-if="!assistantIcon" />
       </div>
       <div class="flex items-center gap-[2px] invisible group-hover:visible">
         <div class="float-right transition text-[12px] text-[var(--text-tertiary)] invisible group-hover:visible">
@@ -70,7 +72,23 @@
       </div>
     </div>
   </div>
-  <AttachmentsMessage v-else-if="message.type === 'attachments'" :content="attachmentsContent"/>
+  <div v-else-if="message.type === 'attachments' && attachmentsContent.role === 'assistant'" class="flex flex-col gap-2 w-full group" :class="hideAssistantHeader ? 'mt-0' : 'mt-3'">
+    <div v-if="!hideAssistantHeader" class="flex items-center justify-between h-7 group">
+      <div class="flex items-center gap-[3px]">
+        <component v-if="assistantIcon" :is="assistantIcon" :size="24" class="w-6 h-6" />
+        <Bot v-else :size="24" class="w-6 h-6" />
+        <span v-if="assistantName" class="text-base text-[var(--text-primary)] tracking-tight leading-none ml-0.5">{{ assistantName }}</span>
+        <ManusTextIcon v-else-if="!assistantIcon" />
+      </div>
+      <div class="flex items-center gap-[2px] invisible group-hover:visible">
+        <div class="float-right transition text-[12px] text-[var(--text-tertiary)] invisible group-hover:visible">
+          {{ relativeTime(attachmentsContent.timestamp) }}
+        </div>
+      </div>
+    </div>
+    <AttachmentsMessage :content="attachmentsContent" :hideAllFilesButton="hideAllFilesButton"/>
+  </div>
+  <AttachmentsMessage v-else-if="message.type === 'attachments'" :content="attachmentsContent" :hideAllFilesButton="hideAllFilesButton"/>
 </template>
 
 <script setup lang="ts">
@@ -80,7 +98,7 @@ import ToolUse from './ToolUse.vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { CheckIcon } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, ref, type Component } from 'vue';
 import { ToolContent, StepContent } from '../types/message';
 import { useRelativeTime } from '../composables/useTime';
 import { Bot } from 'lucide-vue-next';
@@ -90,7 +108,13 @@ import AttachmentsMessage from './AttachmentsMessage.vue';
 const props = defineProps<{
   message: Message;
   sessionId?: string;
+  assistantIcon?: Component;
+  assistantName?: string;
+  hideAllFilesButton?: boolean;
+  hideHeader?: boolean;
 }>();
+
+const hideAssistantHeader = computed(() => props.hideHeader ?? false);
 
 const emit = defineEmits<{
   (e: 'toolClick', tool: ToolContent): void;
@@ -111,11 +135,16 @@ const isExpanded = ref(true);
 
 const { relativeTime } = useRelativeTime();
 
-// Render Markdown to HTML and sanitize
+const renderer = new marked.Renderer();
+renderer.link = ({ href, title, text }: { href: string; title?: string | null; text: string }) => {
+  const titleAttr = title ? ` title="${title}"` : '';
+  return `<a href="${href}" target="_blank" rel="noopener noreferrer"${titleAttr}>${text}</a>`;
+};
+
 const renderMarkdown = (text: string) => {
   if (typeof text !== 'string') return '';
-  const html = marked(text) as string;
-  return DOMPurify.sanitize(html);
+  const html = marked(text, { renderer }) as string;
+  return DOMPurify.sanitize(html, { ADD_ATTR: ['target'] });
 };
 </script>
 

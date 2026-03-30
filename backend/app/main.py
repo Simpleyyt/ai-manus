@@ -9,9 +9,10 @@ from app.infrastructure.storage.mongodb import get_mongodb
 from app.infrastructure.storage.redis import get_redis
 from app.interfaces.dependencies import get_agent_service
 from app.interfaces.api.routes import router
+from app.interfaces.api.openai_routes import router as openai_router
 from app.infrastructure.logging import setup_logging
 from app.interfaces.errors.exception_handlers import register_exception_handlers
-from app.infrastructure.models.documents import AgentDocument, SessionDocument, UserDocument
+from app.infrastructure.models.documents import AgentDocument, SessionDocument, UserDocument, ClawDocument
 from beanie import init_beanie
 
 # Initialize logging system
@@ -34,7 +35,7 @@ async def lifespan(app: FastAPI):
     # Initialize Beanie
     await init_beanie(
         database=get_mongodb().client[settings.mongodb_database],
-        document_models=[AgentDocument, SessionDocument, UserDocument]
+        document_models=[AgentDocument, SessionDocument, UserDocument, ClawDocument]
     )
     logger.info("Successfully initialized Beanie")
     
@@ -77,3 +78,5 @@ register_exception_handlers(app)
 
 # Register routes
 app.include_router(router, prefix="/api/v1")
+# OpenAI-compatible proxy (used by OpenClaw containers for LLM requests)
+app.include_router(openai_router)

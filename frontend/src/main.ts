@@ -14,6 +14,7 @@ import HomePage from './pages/HomePage.vue'
 import ChatPage from './pages/ChatPage.vue'
 import LoginPage from './pages/LoginPage.vue'
 import MainLayout from './pages/MainLayout.vue'
+import ClawPage from './pages/ClawPage.vue'
 import SharePage from './pages/SharePage.vue'
 import ShareLayout from './pages/ShareLayout.vue'
 
@@ -30,6 +31,11 @@ export const router = createRouter({
           path: '', 
           component: HomePage, 
           alias: ['/', '/home'],
+          meta: { requiresAuth: true }
+        },
+        {
+          path: 'claw',
+          component: ClawPage,
           meta: { requiresAuth: true }
         },
         { 

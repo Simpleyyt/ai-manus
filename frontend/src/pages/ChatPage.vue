@@ -103,6 +103,7 @@
       <div class="mx-auto w-full max-w-full sm:max-w-[768px] sm:min-w-[390px] flex flex-col flex-1">
         <div class="flex flex-col w-full gap-[12px] pb-[80px] pt-[12px] flex-1 overflow-y-auto">
           <ChatMessage v-for="(message, index) in messages" :key="index" :message="message"
+            :hideHeader="isConsecutiveAssistant(messages, index)"
             @toolClick="handleToolClick" />
 
           <!-- Loading indicator -->
@@ -134,7 +135,7 @@ import { useI18n } from 'vue-i18n';
 import ChatBox from '../components/ChatBox.vue';
 import ChatMessage from '../components/ChatMessage.vue';
 import * as agentApi from '../api/agent';
-import { Message, MessageContent, ToolContent, StepContent, AttachmentsContent } from '../types/message';
+import { Message, MessageContent, ToolContent, StepContent, AttachmentsContent, isConsecutiveAssistant } from '../types/message';
 import {
   StepEventData,
   ToolEventData,
@@ -388,8 +389,9 @@ const chat = async (message: string = '', files: FileInfo[] = []) => {
   // Automatically enable follow mode when sending message
   follow.value = true;
 
-  // Clear input field
+  // Clear input field and attachments
   inputMessage.value = '';
+  attachments.value = [];
   isLoading.value = true;
 
   try {

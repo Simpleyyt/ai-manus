@@ -5,6 +5,7 @@ from typing import Optional
 import httpx
 
 from app.domain.external.claw import ClawInstanceInfo
+from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ class FixedClawRuntime:
 
     def __init__(self, address: str):
         self._address = address
+        self.settings = get_settings()
 
     async def create(self, claw_id: str, api_key: str) -> ClawInstanceInfo:
         return ClawInstanceInfo(address=self._address)
@@ -27,9 +29,10 @@ class FixedClawRuntime:
     async def destroy(self, instance_name: Optional[str]) -> None:
         pass
 
-    async def wait_for_ready(
-        self, base_url: str, max_retries: int = 30, interval: float = 2.0,
-    ) -> bool:
+    async def wait_for_ready(self, base_url: str) -> bool:
+        timeout = self.settings.claw_ready_timeout
+        interval = 2.0
+        max_retries = int(timeout / interval)
         async with httpx.AsyncClient(timeout=5.0) as client:
             for _ in range(max_retries):
                 try:
@@ -40,5 +43,5 @@ class FixedClawRuntime:
                 except Exception:
                     pass
                 await asyncio.sleep(interval)
-        logger.warning(f"Fixed claw instance not ready after {max_retries} attempts: {base_url}")
+        logger.warning(f"Fixed claw instance not ready after {timeout}s: {base_url}")
         return False

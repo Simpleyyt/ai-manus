@@ -22,7 +22,7 @@ class DockerClawRuntime:
         import docker
         docker_client = docker.from_env()
 
-        sandbox_network = self.settings.sandbox_network
+        claw_network = self.settings.claw_network
         manus_api_base_url = self.settings.manus_api_base_url
         container_name = f"{self.settings.claw_name_prefix}-{claw_id[:8]}"
 
@@ -37,8 +37,8 @@ class DockerClawRuntime:
                 "MANUS_API_BASE_URL": manus_api_base_url,
             },
         }
-        if sandbox_network:
-            container_config["network"] = sandbox_network
+        if claw_network:
+            container_config["network"] = claw_network
 
         container = docker_client.containers.run(**container_config)
         container.reload()
@@ -65,9 +65,10 @@ class DockerClawRuntime:
         except Exception as e:
             logger.warning(f"Failed to remove container {instance_name}: {e}")
 
-    async def wait_for_ready(
-        self, base_url: str, max_retries: int = 30, interval: float = 2.0,
-    ) -> bool:
+    async def wait_for_ready(self, base_url: str) -> bool:
+        timeout = self.settings.claw_ready_timeout
+        interval = 2.0
+        max_retries = int(timeout / interval)
         async with httpx.AsyncClient(timeout=5.0) as client:
             for _ in range(max_retries):
                 try:
@@ -79,6 +80,6 @@ class DockerClawRuntime:
                     pass
                 await asyncio.sleep(interval)
         logger.warning(
-            f"Claw instance did not become ready after {max_retries} attempts: {base_url}"
+            f"Claw instance did not become ready after {timeout}s: {base_url}"
         )
         return False

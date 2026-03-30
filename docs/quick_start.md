@@ -116,6 +116,10 @@ services:
       #- CLAW_NAME_PREFIX=manus-claw
       # Time-to-live for Claw containers in seconds (0 = unlimited)
       #- CLAW_TTL_SECONDS=3600
+      # Docker network for Claw containers
+      #- CLAW_NETWORK=manus-network
+      # Max seconds to wait for Claw container to become ready (default 5 minutes)
+      #- CLAW_READY_TIMEOUT=300
       # Backend API URL used by Claw containers for callbacks
       #- MANUS_API_BASE_URL=http://backend:8000
 

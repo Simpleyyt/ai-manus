@@ -77,7 +77,7 @@ services:
 
   claw:
     image: simpleyyt/manus-claw
-    command: /bin/sh -c "exit 0"  # prevent claw from starting, ensure image is pulled
+    entrypoint: /bin/sh -c "exit 0"  # prevent claw from starting, ensure image is pulled
     restart: "no"
     networks:
       - manus-network

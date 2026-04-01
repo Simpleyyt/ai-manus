@@ -64,7 +64,7 @@ services:
         platforms:
           - linux/amd64
           - linux/arm64
-    command: /bin/sh -c "exit 0"  # prevent claw from starting, ensure image is pulled
+    entrypoint: /bin/sh -c "exit 0"  # prevent claw from starting, ensure image is pulled
     restart: "no"
     networks:
       - manus-network

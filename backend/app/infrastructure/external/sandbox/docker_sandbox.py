@@ -486,11 +486,11 @@ class DockerSandbox(Sandbox):
 
         Returns a browser implementation connected to the sandbox's Chrome via CDP.
         The concrete implementation is selected by the BROWSER_ENGINE setting:
-          - "playwright"   → PlaywrightBrowser  (default)
-          - "browser_use"  → BrowserUseBrowser
+          - "playwright"   → PlaywrightBrowser
+          - "browser_use"  → BrowserUseBrowser  (default)
         """
         settings = get_settings()
-        engine = (settings.browser_engine or "playwright").lower().strip()
+        engine = (settings.browser_engine or "browser_use").lower().strip()
         if engine == "browser_use":
             logger.info("Using BrowserUseBrowser engine for CDP URL: %s", self.cdp_url)
             return BrowserUseBrowser(self.cdp_url)

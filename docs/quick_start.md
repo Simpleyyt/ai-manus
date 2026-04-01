@@ -67,6 +67,7 @@ services:
       #- TEMPERATURE=0.7
       # Maximum tokens for LLM response
       #- MAX_TOKENS=2000
+      # More configuration options: https://docs.ai-manus.com/#/configuration
 
   sandbox:
     image: simpleyyt/manus-sandbox

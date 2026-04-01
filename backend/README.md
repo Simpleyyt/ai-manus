@@ -1,8 +1,8 @@
-# AI Manus Backend Service
+# AI Manus × Claw Backend Service
 
 English | [中文](README_zh.md)
 
-AI Manus is an intelligent conversation agent system based on FastAPI and LangChain chat models. The backend adopts Domain-Driven Design (DDD) architecture, supporting intelligent dialogue, file operations, Shell command execution, and browser automation.
+AI Manus × Claw is an intelligent conversation agent system based on FastAPI and LangChain chat models. The backend adopts Domain-Driven Design (DDD) architecture, supporting intelligent dialogue, file operations, Shell command execution, browser automation, and integrated [OpenClaw](https://github.com/anthropics/openclaw) AI assistant management (Claw).
 
 ## Project Architecture
 
@@ -40,6 +40,7 @@ backend/
    - Web search integration
 4. **Sandbox Environment**: Use Docker containers to provide isolated execution environments
 5. **VNC Visualization**: Support remote viewing of the sandbox environment via WebSocket connection
+6. **Claw (Manus × Claw)**: Per-user OpenClaw container lifecycle management, chat history merge (MongoDB + OpenClaw `.jsonl` sessions), WebSocket real-time messaging, file upload/resolve, and OpenAI-compatible LLM proxy for Claw containers
 
 ## Requirements
 

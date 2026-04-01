@@ -2,6 +2,15 @@
 
 > Currently under development: Settings
 
+## Claw (Manus × Claw)
+
+ * [x] Integrated [OpenClaw](https://github.com/anthropics/openclaw) AI assistant
+ * [x] One-click deployment with per-user isolated containers
+ * [x] Auto-expiry countdown
+ * [x] Full chat history (MongoDB + OpenClaw session merge)
+ * [x] File upload and download
+ * [x] OpenAI-compatible LLM proxy
+
 ## Tools
 
  * [x] Support browser takeover

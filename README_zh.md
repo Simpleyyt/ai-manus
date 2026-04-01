@@ -1,4 +1,4 @@
-# AI Manus
+# AI Manus × Claw
 
 [English](README.md) | 中文 | [官方网站](https://ai-manus.com) | [文档](https://docs.ai-manus.com)
 
@@ -6,9 +6,9 @@
 &ensp;
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-AI Manus 是一个通用的 AI Agent 系统，支持在沙盒环境中运行各种工具和操作。
+AI Manus 是一个通用的 AI Agent 系统，支持在沙盒环境中运行各种工具和操作。现已深度集成 **Claw** —— 基于 [OpenClaw](https://github.com/anthropics/openclaw) 的 AI 助手，一键部署、用户隔离容器、无缝聊天历史，为 Manus 生态带来全新体验。
 
-用 AI Manus 开启你的智能体之旅吧！
+用 AI Manus × Claw 开启你的智能体之旅吧！
 
 👏 欢迎加入 [QQ群(1005477581)](https://qun.qq.com/universal-share/share?ac=1&authKey=p4X3Da5iMpR4liAenxwvhs7IValPKiCFtUevRlJouz9qSTSZsMnPJc3hzsJjgQYv&busi_data=eyJncm91cENvZGUiOiIxMDA1NDc3NTgxIiwidG9rZW4iOiJNZmUrTmQ0UzNDZDNqNDFVdjVPS1VCRkJGRWVlV0R3RFJSRVFoZDAwRjFDeUdUM0t6aUIyczlVdzRjV1BYN09IIiwidWluIjoiMzQyMjExODE1In0%3D&data=C3B-E6BlEbailV32co77iXL5vxPIhtD9y_itWLSq50hKqosO_55_isOZym2Faaq4hs9-517tUY8GSWaDwPom-A&svctype=4&tempid=h5_group_info)
 
@@ -266,11 +266,12 @@ docker compose up -d
 
 ### 项目结构
 
-本项目由三个独立的子项目组成：
+本项目由四个独立的子项目组成：
 
-* `frontend`: manus 前端
+* `frontend`: Manus 前端
 * `backend`: Manus 后端
 * `sandbox`: Manus 沙盒
+* `claw`: Manus Claw —— OpenClaw 插件与容器镜像，桥接 OpenClaw Gateway 与 Manus 后端
 
 ### 整体设计
 

@@ -1,4 +1,4 @@
-# 🤖 AI Manus 开源通用智能体
+# 🤖 AI Manus × Claw 开源通用智能体
 
 官网地址：<https://ai-manus.com>
 
@@ -10,7 +10,7 @@ GitHub：<https://github.com/simpleyyt/ai-manus> | Demo：<https://app.ai-manus.
 
 ---
 
-AI Manus 是一个通用的 AI Agent 系统，可以完全私有部署，支持在沙盒环境中运行各种工具和操作。
+AI Manus 是一个通用的 AI Agent 系统，可以完全私有部署，支持在沙盒环境中运行各种工具和操作。现已深度集成 **Claw**（基于 [OpenClaw](https://github.com/anthropics/openclaw)），实现 Manus × Claw 联合体验：一键部署 AI 助手、用户隔离容器、自动过期倒计时与完整聊天历史。
 
 AI Manus 项目目标是希望成为可完全私有部署的企业级 Manus 应用。垂类 Manus 的应用有多种重复性的工程化工作，这个项目希望把这部分统一，让大家可以像搭积木一下建立起一个垂类 Manus 应用。
 

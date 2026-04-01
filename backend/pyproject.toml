@@ -1,7 +1,7 @@
 [project]
 name = "backend"
 version = "0.1.0"
-description = "Backend for AI Manus"
+description = "Backend for AI Manus × Claw — general-purpose AI Agent system with integrated OpenClaw assistant"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

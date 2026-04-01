@@ -1,13 +1,14 @@
-# AI Manus 前端
+# AI Manus × Claw 前端
 
 [English](README.md) | 中文
 
-这是一个使用 Vue 3 + TypeScript + Vite 构建的 AI 聊天机器人应用。该项目是从 React 版本移植过来的，保持了同样的功能和界面设计。
+这是 AI Manus × Claw 的前端，使用 Vue 3 + TypeScript + Vite 构建。
 
 ## 特性
 
-- 聊天界面
+- 聊天界面与任务会话
 - 工具面板（搜索、文件、终端、浏览器）
+- **Claw 页面** —— 集成 [OpenClaw](https://github.com/anthropics/openclaw) 聊天体验，支持 WebSocket 实时通信、自动过期倒计时、文件上传与下载
 
 ## 安装
 

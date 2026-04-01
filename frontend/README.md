@@ -1,13 +1,14 @@
-# AI Manus Frontend
+# AI Manus × Claw Frontend
 
 English | [中文](README_zh.md)
 
-This is an AI chatbot application built with Vue 3 + TypeScript + Vite. This project is ported from the React version, maintaining the same functionality and interface design.
+This is the frontend for AI Manus × Claw, built with Vue 3 + TypeScript + Vite.
 
 ## Features
 
-- Chat interface
+- Chat interface with task sessions
 - Tool panels (Search, Files, Terminal, Browser)
+- **Claw page** — integrated [OpenClaw](https://github.com/anthropics/openclaw) chat experience with real-time WebSocket messaging, auto-expiry countdown, and file upload/download
 
 ## Installation
 

@@ -137,19 +137,6 @@ Used only when `AUTH_PROVIDER=local`:
 | `LOCAL_AUTH_EMAIL` | `admin@example.com` | No | Local admin email |
 | `LOCAL_AUTH_PASSWORD` | `admin` | No | Local admin password |
 
-### Frontend Runtime Config API
-
-Frontend fetches runtime config from an independent config domain endpoint:
-
-- `GET /api/v1/config/frontend`
-- response fields:
-  - `auth_provider`
-  - `show_github_button`
-  - `github_repository_url`
-  - `claw_enabled`
-
-This endpoint is independent from `/api/v1/auth/*` and is used for frontend runtime behavior and feature toggles.
-
 ### JWT Configuration
 
 | Configuration | Default Value | Required | Description |

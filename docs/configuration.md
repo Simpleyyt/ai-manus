@@ -118,20 +118,6 @@
 | `AUTH_PROVIDER` | `password` | 否 | 认证提供商 (`password`、`none` 或 `local`) |
 | `SHOW_GITHUB_BUTTON` | `true` | 否 | 是否在前端显示 GitHub 按钮 |
 | `GITHUB_REPOSITORY_URL` | `https://github.com/simpleyyt/ai-manus` | 否 | 前端 GitHub 按钮跳转地址 |
-
-#### 前端运行时配置接口
-
-前端在页面加载时会请求以下接口获取运行时配置（并在单次页面生命周期内缓存）：
-
-- `GET /api/v1/config/frontend`
-
-返回字段示例：
-
-- `auth_provider`
-- `show_github_button`
-- `github_repository_url`
-- `claw_enabled`
-
 #### 密码认证配置
 
 仅当 `AUTH_PROVIDER=password` 时使用：

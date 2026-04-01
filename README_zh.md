@@ -105,111 +105,10 @@ services:
       - API_KEY=sk-xxxx
       # LLM model name
       - MODEL_NAME=gpt-4o
-      # LLM model provider
-      - MODEL_PROVIDER=openai
       # LLM temperature parameter, controls randomness
-      - TEMPERATURE=0.7
+      #- TEMPERATURE=0.7
       # Maximum tokens for LLM response
-      - MAX_TOKENS=2000
-
-      # MongoDB connection URI
-      #- MONGODB_URI=mongodb://mongodb:27017
-      # MongoDB database name
-      #- MONGODB_DATABASE=manus
-      # MongoDB username (optional)
-      #- MONGODB_USERNAME=
-      # MongoDB password (optional)
-      #- MONGODB_PASSWORD=
-
-      # Redis server hostname
-      #- REDIS_HOST=redis
-      # Redis server port
-      #- REDIS_PORT=6379
-      # Redis database number
-      #- REDIS_DB=0
-      # Redis password (optional)
-      #- REDIS_PASSWORD=
-
-      # Sandbox server address (optional)
-      #- SANDBOX_ADDRESS=
-      # Docker image used for the sandbox
-      - SANDBOX_IMAGE=simpleyyt/manus-sandbox
-      # Prefix for sandbox container names
-      - SANDBOX_NAME_PREFIX=sandbox
-      # Time-to-live for sandbox containers in minutes
-      - SANDBOX_TTL_MINUTES=30
-      # Docker network for sandbox containers
-      - SANDBOX_NETWORK=manus-network
-      # Chrome browser arguments for sandbox (optional)
-      #- SANDBOX_CHROME_ARGS=
-      # HTTPS proxy for sandbox (optional)
-      #- SANDBOX_HTTPS_PROXY=
-      # HTTP proxy for sandbox (optional)
-      #- SANDBOX_HTTP_PROXY=
-      # No proxy hosts for sandbox (optional)
-      #- SANDBOX_NO_PROXY=
-      
-      # Claw (OpenClaw) configuration
-      # Enable or disable Claw feature (hides sidebar entry when false)
-      #- CLAW_ENABLED=true
-      # Docker image used for Claw containers
-      #- CLAW_IMAGE=manus-claw:latest
-      # Prefix for Claw container names
-      #- CLAW_NAME_PREFIX=manus-claw
-      # Time-to-live for Claw containers in seconds (0 = unlimited)
-      #- CLAW_TTL_SECONDS=3600
-      # Docker network for Claw containers
-      #- CLAW_NETWORK=manus-network
-      # Max seconds to wait for Claw container to become ready (default 5 minutes)
-      #- CLAW_READY_TIMEOUT=300
-      # Backend API URL used by Claw containers for callbacks
-      #- MANUS_API_BASE_URL=http://backend:8000
-
-      # Search engine configuration
-      # Options: baidu, google, bing, bing_web, tavily
-      - SEARCH_PROVIDER=bing_web
-
-      # Bing search configuration, only used when SEARCH_PROVIDER=bing
-      #- BING_SEARCH_API_KEY=
-
-      # Google search configuration, only used when SEARCH_PROVIDER=google
-      #- GOOGLE_SEARCH_API_KEY=
-      #- GOOGLE_SEARCH_ENGINE_ID=
-
-      # Tavily search configuration, only used when SEARCH_PROVIDER=tavily
-      #- TAVILY_API_KEY=
-
-      # Auth configuration
-      # Options: password, none, local
-      - AUTH_PROVIDER=password
-
-      # Password auth configuration, only used when AUTH_PROVIDER=password
-      - PASSWORD_SALT=
-      - PASSWORD_HASH_ROUNDS=10
-
-      # Local auth configuration, only used when AUTH_PROVIDER=local
-      #- LOCAL_AUTH_EMAIL=admin@example.com
-      #- LOCAL_AUTH_PASSWORD=admin
-
-      # JWT configuration
-      - JWT_SECRET_KEY=your-secret-key-here
-      - JWT_ALGORITHM=HS256
-      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
-      - JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
-
-      # Email configuration
-      # Only used when AUTH_PROVIDER=password
-      #- EMAIL_HOST=smtp.gmail.com
-      #- EMAIL_PORT=587
-      #- EMAIL_USERNAME=your-email@gmail.com
-      #- EMAIL_PASSWORD=your-password
-      #- EMAIL_FROM=your-email@gmail.com
-
-      # MCP configuration file path
-      #- MCP_CONFIG_PATH=/etc/mcp.json
-
-      # Application log level
-      - LOG_LEVEL=INFO
+      #- MAX_TOKENS=2000
 
   sandbox:
     image: simpleyyt/manus-sandbox
@@ -260,18 +159,19 @@ docker compose up -d
 
 > 注意：如果提示`sandbox-1 exited with code 0`，这是正常的，这是为了让 sandbox 镜像成功拉取到本地。
 
-打开浏览器访问<http://localhost:5173>即可访问 Manus。
+打开浏览器访问<http://localhost:5173>即可访问 Manus。更多配置见：https://docs.ai-manus.com/#/configuration
 
 ## 开发指南
 
 ### 项目结构
 
-本项目由四个独立的子项目组成：
+本项目由以下子项目组成：
 
 * `frontend`: Manus 前端
 * `backend`: Manus 后端
 * `sandbox`: Manus 沙盒
 * `claw`: Manus Claw —— OpenClaw 插件与容器镜像，桥接 OpenClaw Gateway 与 Manus 后端
+* `mockserver`: 模拟 LLM 服务（开发/测试用）
 
 ### 整体设计
 
@@ -305,116 +205,13 @@ cd ai-manus
 cp .env.example .env
 ```
 
-3. 修改配置文件：
+3. 修改配置文件，至少设置 `API_KEY`，完整配置项见 [.env.example](https://github.com/simpleyyt/ai-manus/blob/main/.env.example) 或[配置说明](https://docs.ai-manus.com/#/configuration)：
 
-<!-- .env.example -->
-```env
-# Model provider configuration
-API_KEY=
-API_BASE=http://mockserver:8090/v1
-
-# Model configuration
-MODEL_NAME=deepseek-chat
-MODEL_PROVIDER=openai
-TEMPERATURE=0.7
-MAX_TOKENS=2000
-
-# MongoDB configuration
-#MONGODB_URI=mongodb://mongodb:27017
-#MONGODB_DATABASE=manus
-#MONGODB_USERNAME=
-#MONGODB_PASSWORD=
-
-# Redis configuration
-#REDIS_HOST=redis
-#REDIS_PORT=6379
-#REDIS_DB=0
-#REDIS_PASSWORD=
-
-# Sandbox configuration
-#SANDBOX_ADDRESS=
-SANDBOX_IMAGE=simpleyyt/manus-sandbox
-SANDBOX_NAME_PREFIX=sandbox
-SANDBOX_TTL_MINUTES=30
-SANDBOX_NETWORK=manus-network
-#SANDBOX_CHROME_ARGS=
-#SANDBOX_HTTPS_PROXY=
-#SANDBOX_HTTP_PROXY=
-#SANDBOX_NO_PROXY=
-
-# Claw (OpenClaw) configuration
-# Enable or disable Claw feature (hides sidebar entry when false)
-#CLAW_ENABLED=true
-# Docker image used for Claw containers
-#CLAW_IMAGE=simpleyyt/manus-claw
-# Prefix for Claw container names
-#CLAW_NAME_PREFIX=manus-claw
-# Time-to-live for Claw containers in seconds (0 = unlimited)
-#CLAW_TTL_SECONDS=3600
-# Docker network bridge name for Claw containers
-#CLAW_NETWORK=manus-network
-# Max seconds to wait for Claw container to become ready
-#CLAW_READY_TIMEOUT=300
-# Fixed Claw address (for development; skips Docker container creation)
-#CLAW_ADDRESS=
-# Static API key for Claw (for development / fixed container)
-#CLAW_API_KEY=
-# Backend API URL used by Claw containers for callbacks
-#MANUS_API_BASE_URL=http://backend:8000
-
-# Search engine configuration
-# Options: baidu, baidu_web, google, bing, bing_web, tavily
-SEARCH_PROVIDER=bing_web
-
-# Baidu search configuration, only used when SEARCH_PROVIDER=baidu
-#BAIDU_SEARCH_API_KEY=
-
-# Bing search configuration, only used when SEARCH_PROVIDER=bing
-#BING_SEARCH_API_KEY=
-
-# Google search configuration, only used when SEARCH_PROVIDER=google
-#GOOGLE_SEARCH_API_KEY=
-#GOOGLE_SEARCH_ENGINE_ID=
-
-# Tavily search configuration, only used when SEARCH_PROVIDER=tavily
-#TAVILY_API_KEY=
-
-# Auth configuration
-# Options: password, none, local
-AUTH_PROVIDER=password
-
-# Password auth configuration, only used when AUTH_PROVIDER=password
-PASSWORD_SALT=
-PASSWORD_HASH_ROUNDS=10
-
-# Local auth configuration, only used when AUTH_PROVIDER=local
-#LOCAL_AUTH_EMAIL=admin@example.com
-#LOCAL_AUTH_PASSWORD=admin
-
-# JWT configuration
-JWT_SECRET_KEY=your-secret-key-here
-JWT_ALGORITHM=HS256
-JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
-JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
-
-# Email configuration
-# Only used when AUTH_PROVIDER=password
-#EMAIL_HOST=smtp.gmail.com
-#EMAIL_PORT=587
-#EMAIL_USERNAME=your-email@gmail.com
-#EMAIL_PASSWORD=your-password
-#EMAIL_FROM=your-email@gmail.com
-
-# Extra headers for LLM API requests (JSON format)
-#EXTRA_HEADERS={"X-Custom-Header": "value"}
-
-# MCP configuration
-#MCP_CONFIG_PATH=/etc/mcp.json
-
-# Log configuration
-LOG_LEVEL=INFO
+```ini
+API_KEY=sk-xxxx
+API_BASE=https://api.openai.com/v1
+MODEL_NAME=gpt-4o
 ```
-<!-- /.env.example -->
 
 ### 开发调试
 

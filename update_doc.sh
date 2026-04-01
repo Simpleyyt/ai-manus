@@ -13,7 +13,7 @@
 # Files to sync (format: "filename:code_type")
 FILES_TO_SYNC=(
     "docker-compose-example.yml:yaml"
-    ".env.example:env"
+    ".env.example:ini"
     # Add more files, uncomment and modify the following examples:
     # "package.json:json"
     # "requirements.txt:text"

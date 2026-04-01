@@ -1,8 +1,8 @@
-# AI Manus 后端服务
+# AI Manus × Claw 后端服务
 
 [English](README.md) | 中文
 
-AI Manus 是一个基于 FastAPI 和 LangChain Chat Model 的智能对话代理系统。该后端采用领域驱动设计(DDD)架构，支持智能对话、文件操作、Shell命令执行以及浏览器自动化等功能。
+AI Manus × Claw 是一个基于 FastAPI 和 LangChain Chat Model 的智能对话代理系统。该后端采用领域驱动设计(DDD)架构，支持智能对话、文件操作、Shell命令执行、浏览器自动化，以及集成 [OpenClaw](https://github.com/anthropics/openclaw) AI 助手管理（Claw）等功能。
 
 ## 项目架构
 
@@ -40,6 +40,7 @@ backend/
    - 网络搜索集成
 4. **沙盒环境**：使用Docker容器提供隔离的执行环境
 5. **VNC可视化**：通过WebSocket连接支持远程查看沙盒环境
+6. **Claw（Manus × Claw）**：为每个用户管理 OpenClaw 容器生命周期，合并聊天历史（MongoDB + OpenClaw `.jsonl` 会话），WebSocket 实时通信，文件上传/解析，以及为 Claw 容器提供 OpenAI 兼容 LLM 代理
 
 ## 环境要求
 

@@ -1,4 +1,4 @@
-# 🤖 AI Manus Open Source General AI Agent
+# 🤖 AI Manus × Claw Open Source General AI Agent
 
 Official Site: <https://ai-manus.com>
 
@@ -10,7 +10,7 @@ Join our community: [QQ Group (1005477581)](https://qun.qq.com/universal-share/s
 
 ---
 
-AI Manus is a general-purpose AI Agent system that can be fully privately deployed and supports running various tools and operations in a sandbox environment.
+AI Manus is a general-purpose AI Agent system that can be fully privately deployed and supports running various tools and operations in a sandbox environment. Now with deep **Claw** integration (powered by [OpenClaw](https://github.com/anthropics/openclaw)), delivering the Manus × Claw experience: one-click AI assistant deployment, per-user isolated containers, auto-expiry countdown, and full chat history.
 
 The goal of AI Manus project is to become a fully privately deployable enterprise-level Manus application. Vertical Manus applications have many repetitive engineering tasks, and this project hopes to unify this part, allowing everyone to build vertical Manus applications like building blocks.
 

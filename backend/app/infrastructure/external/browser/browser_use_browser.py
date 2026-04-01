@@ -94,26 +94,115 @@ class BrowserUseBrowser:
         session = await self._ensure_session()
         return await session.get_or_create_cdp_session()
 
+    # Map from CSS icon-font class keywords → human-readable symbol.
+    # Covers Layui icons used by the leaftools.net calculator (and similar sites).
+    _ICON_CLASS_SYMBOLS: dict = {
+        "layui-icon-addition": "+",
+        "layui-icon-subtraction": "-",
+        "layui-icon-close": "×",
+        "layui-icon-search": "🔍",
+        "layui-icon-refresh": "↻",
+        "layui-icon-left": "←",
+        "layui-icon-right": "→",
+        "layui-icon-up": "↑",
+        "layui-icon-down": "↓",
+        "bi-backspace": "⌫",
+        "bi-plus-slash-minus": "±",
+        # generic fallbacks
+        "addition": "+",
+        "subtraction": "-",
+        "multiply": "×",
+        "divide": "÷",
+        "equals": "=",
+        "backspace": "⌫",
+        "clear": "C",
+    }
+
+    @staticmethod
+    def _get_node_hint(node) -> str:
+        """Return a human-readable hint for a node whose visible text is empty.
+
+        Priority order:
+        1. ``data-key`` / ``data-val`` attribute on the node itself (e.g. calculator buttons)
+        2. AX accessibility tree ``name`` field
+        3. CSS icon-font class keywords on the node's child <i> / <span> / <svg>
+        """
+        attrs: dict = getattr(node, "attributes", None) or {}
+
+        # 1. data-key / data-val (most reliable for widget buttons)
+        for attr in ("data-key", "data-val", "data-value"):
+            val = attrs.get(attr, "").strip()
+            if val:
+                return val
+
+        # 2. AX name
+        ax_node = getattr(node, "ax_node", None)
+        if ax_node:
+            ax_name = getattr(ax_node, "name", None) or ""
+            if ax_name.strip():
+                return ax_name.strip()
+
+        # 3. Icon-font class on child elements
+        children = getattr(node, "children_nodes", None) or []
+        for child in children:
+            child_tag = (getattr(child, "tag_name", "") or "").lower()
+            if child_tag not in ("i", "span", "em", "svg", "use"):
+                continue
+            child_attrs: dict = getattr(child, "attributes", None) or {}
+            class_str = child_attrs.get("class", "").lower()
+            for keyword, symbol in BrowserUseBrowser._ICON_CLASS_SYMBOLS.items():
+                if keyword in class_str:
+                    return symbol
+
+        return ""
+
+    @staticmethod
+    def _format_selector_map(selector_map: dict) -> List[str]:
+        """Format a selector map dict into the standard index:<tag>text</tag> list."""
+        formatted: List[str] = []
+        for idx, node in sorted(selector_map.items()):
+            tag = node.tag_name or "element"
+            text = node.get_meaningful_text_for_llm() if hasattr(node, "get_meaningful_text_for_llm") else ""
+
+            # Fallback: explicit HTML attributes (placeholder / aria-label / title)
+            if not text and node.attributes:
+                text = (
+                    node.attributes.get("placeholder", "")
+                    or node.attributes.get("aria-label", "")
+                    or node.attributes.get("title", "")
+                    or ""
+                )
+
+            # Fallback: data-key / AX name / icon-font class
+            if not text:
+                text = BrowserUseBrowser._get_node_hint(node)
+
+            if len(text) > 100:
+                text = text[:97] + "..."
+            formatted.append(f"{idx}:<{tag}>{text}</{tag}>")
+        return formatted
+
     async def _get_interactive_elements(self) -> List[str]:
-        """Return a formatted list of interactive elements from the DOM selector map."""
+        """Return a formatted list of interactive elements from the DOM selector map.
+
+        browser_use's get_selector_map() only returns populated data after
+        get_browser_state_summary() has been called (which triggers the DOM
+        serialisation event).  If the cached map is empty we trigger a fresh
+        state summary to ensure the selector map is populated.
+        """
         try:
             session = await self._ensure_session()
             selector_map: dict[int, EnhancedDOMTreeNode] = await session.get_selector_map()
-            formatted: List[str] = []
-            for idx, node in sorted(selector_map.items()):
-                tag = node.tag_name or "element"
-                text = node.get_meaningful_text_for_llm() if hasattr(node, "get_meaningful_text_for_llm") else ""
-                if not text and node.attributes:
-                    text = (
-                        node.attributes.get("placeholder", "")
-                        or node.attributes.get("aria-label", "")
-                        or node.attributes.get("title", "")
-                        or ""
-                    )
-                if len(text) > 100:
-                    text = text[:97] + "..."
-                formatted.append(f"{idx}:<{tag}>{text}</{tag}>")
-            return formatted
+
+            if not selector_map:
+                logger.debug(
+                    "Selector map is empty – triggering get_browser_state_summary to populate DOM cache"
+                )
+                state = await session.get_browser_state_summary(include_screenshot=False)
+                if state.dom_state is not None:
+                    selector_map = state.dom_state.selector_map or {}
+
+            return self._format_selector_map(selector_map)
         except Exception as exc:
             logger.warning("Failed to get interactive elements: %s", exc)
             return []
@@ -150,11 +239,12 @@ class BrowserUseBrowser:
             session = await self._ensure_session()
             state = await session.get_browser_state_summary(include_screenshot=False)
 
-            interactive_elements = await self._get_interactive_elements()
-
             content = ""
+            interactive_elements: List[str] = []
             if state.dom_state is not None:
                 content = state.dom_state.llm_representation()
+                selector_map = state.dom_state.selector_map or {}
+                interactive_elements = self._format_selector_map(selector_map)
 
             return ToolResult(
                 success=True,
@@ -171,7 +261,15 @@ class BrowserUseBrowser:
         try:
             session = await self._ensure_session()
             await session.navigate_to(url)
-            interactive_elements = await self._get_interactive_elements()
+            # navigate_to() completes before the DOM watchdog has serialised the new page,
+            # so _cached_selector_map is empty at this point.  Calling
+            # get_browser_state_summary() triggers DOM serialisation and populates the
+            # selector map so the caller immediately receives the correct element list.
+            state = await session.get_browser_state_summary(include_screenshot=False)
+            interactive_elements: List[str] = []
+            if state.dom_state is not None:
+                selector_map = state.dom_state.selector_map or {}
+                interactive_elements = self._format_selector_map(selector_map)
             return ToolResult(
                 success=True,
                 data={"interactive_elements": interactive_elements},
@@ -193,9 +291,13 @@ class BrowserUseBrowser:
         """Click an element by DOM index or by screen coordinates."""
         try:
             if coordinate_x is not None and coordinate_y is not None:
+                # Move mouse to target before pressing to trigger hover/focus events
+                await self._dispatch_mouse_event("mouseMoved", coordinate_x, coordinate_y)
+                await asyncio.sleep(0.05)
                 await self._dispatch_mouse_event(
                     "mousePressed", coordinate_x, coordinate_y, "left", 1
                 )
+                await asyncio.sleep(0.08)
                 await self._dispatch_mouse_event(
                     "mouseReleased", coordinate_x, coordinate_y, "left", 1
                 )

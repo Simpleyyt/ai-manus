@@ -90,17 +90,17 @@ async def get_all_sessions(
     current_user: User = Depends(get_current_user),
     agent_service: AgentService = Depends(get_agent_service)
 ) -> APIResponse[ListSessionResponse]:
-    sessions = await agent_service.get_all_sessions(current_user.id)
+    summaries = await agent_service.get_all_sessions(current_user.id)
     session_items = [
         ListSessionItem(
-            session_id=session.id,
-            title=session.title,
-            status=session.status,
-            unread_message_count=session.unread_message_count,
-            latest_message=session.latest_message,
-            latest_message_at=int(session.latest_message_at.timestamp()) if session.latest_message_at else None,
-            is_shared=session.is_shared
-        ) for session in sessions
+            session_id=s.id,
+            title=s.title,
+            status=s.status,
+            unread_message_count=s.unread_message_count,
+            latest_message=s.latest_message,
+            latest_message_at=int(s.latest_message_at.timestamp()) if s.latest_message_at else None,
+            is_shared=s.is_shared
+        ) for s in summaries
     ]
     return APIResponse.success(ListSessionResponse(sessions=session_items))
 
@@ -111,17 +111,17 @@ async def stream_sessions(
 ) -> EventSourceResponse:
     async def event_generator() -> AsyncGenerator[ServerSentEvent, None]:
         while True:
-            sessions = await agent_service.get_all_sessions(current_user.id)
+            summaries = await agent_service.get_all_sessions(current_user.id)
             session_items = [
                 ListSessionItem(
-                    session_id=session.id,
-                    title=session.title,
-                    status=session.status,
-                    unread_message_count=session.unread_message_count,
-                    latest_message=session.latest_message,
-                    latest_message_at=int(session.latest_message_at.timestamp()) if session.latest_message_at else None,
-                    is_shared=session.is_shared
-                ) for session in sessions
+                    session_id=s.id,
+                    title=s.title,
+                    status=s.status,
+                    unread_message_count=s.unread_message_count,
+                    latest_message=s.latest_message,
+                    latest_message_at=int(s.latest_message_at.timestamp()) if s.latest_message_at else None,
+                    is_shared=s.is_shared
+                ) for s in summaries
             ]
             yield ServerSentEvent(
                 event="sessions",

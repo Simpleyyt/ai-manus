@@ -55,7 +55,7 @@ class MongoSessionRepository(SessionRepository):
 
     async def find_summaries_by_user_id(self, user_id: str) -> List[SessionSummary]:
         """Find lightweight session summaries for a user (excludes events/files)"""
-        collection = SessionDocument.get_motor_collection()
+        collection = SessionDocument.get_pymongo_collection()
         cursor = collection.find(
             {"user_id": user_id},
             SESSION_LIST_PROJECTION,

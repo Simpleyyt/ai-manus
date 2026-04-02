@@ -1,6 +1,6 @@
 from typing import Optional, Protocol, List
 from datetime import datetime
-from app.domain.models.session import Session, SessionStatus
+from app.domain.models.session import Session, SessionStatus, SessionSummary
 from app.domain.models.file import FileInfo
 from app.domain.models.event import BaseEvent
 
@@ -17,6 +17,10 @@ class SessionRepository(Protocol):
     
     async def find_by_user_id(self, user_id: str) -> List[Session]:
         """Find all sessions for a specific user"""
+        ...
+    
+    async def find_summaries_by_user_id(self, user_id: str) -> List[SessionSummary]:
+        """Find lightweight session summaries for a user (excludes events/files)"""
         ...
     
     async def find_by_id_and_user_id(self, session_id: str, user_id: str) -> Optional[Session]:

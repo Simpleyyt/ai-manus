@@ -9,7 +9,7 @@ from app.domain.models.session import Session, SessionStatus
 from app.domain.models.file import FileInfo
 from app.domain.models.user import User, UserRole
 from app.domain.models.claw import Claw, ClawStatus, ClawMessage
-from pymongo import IndexModel, ASCENDING
+from pymongo import IndexModel, ASCENDING, DESCENDING
 
 T = TypeVar('T', bound=BaseModel)
 
@@ -102,7 +102,11 @@ class SessionDocument(BaseDocument[Session], id_field="session_id", domain_model
         name = "sessions"
         indexes = [
             "session_id",
-            "user_id",  # Add index for user_id for efficient queries
+            "user_id",
+            IndexModel(
+                [("user_id", ASCENDING), ("latest_message_at", DESCENDING)],
+                name="user_id_latest_message_at",
+            ),
         ]
 
 

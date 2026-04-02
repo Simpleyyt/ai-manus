@@ -1,6 +1,6 @@
 from typing import Optional, List
 from datetime import datetime, UTC
-from app.domain.models.session import Session, SessionStatus
+from app.domain.models.session import Session, SessionStatus, SessionSummary
 from app.domain.models.file import FileInfo
 from app.domain.repositories.session_repository import SessionRepository
 from app.domain.models.event import BaseEvent
@@ -8,6 +8,17 @@ from app.infrastructure.models.documents import SessionDocument
 import logging
 
 logger = logging.getLogger(__name__)
+
+SESSION_LIST_PROJECTION = {
+    "session_id": 1,
+    "user_id": 1,
+    "title": 1,
+    "unread_message_count": 1,
+    "latest_message": 1,
+    "latest_message_at": 1,
+    "status": 1,
+    "is_shared": 1,
+}
 
 class MongoSessionRepository(SessionRepository):
     """MongoDB implementation of SessionRepository"""
@@ -41,6 +52,27 @@ class MongoSessionRepository(SessionRepository):
             SessionDocument.user_id == user_id
         ).sort("-latest_message_at").to_list()
         return [mongo_session.to_domain() for mongo_session in mongo_sessions]
+
+    async def find_summaries_by_user_id(self, user_id: str) -> List[SessionSummary]:
+        """Find lightweight session summaries for a user (excludes events/files)"""
+        collection = SessionDocument.get_pymongo_collection()
+        cursor = collection.find(
+            {"user_id": user_id},
+            SESSION_LIST_PROJECTION,
+        ).sort("latest_message_at", -1)
+        summaries = []
+        async for doc in cursor:
+            summaries.append(SessionSummary(
+                id=doc["session_id"],
+                user_id=doc["user_id"],
+                title=doc.get("title"),
+                unread_message_count=doc.get("unread_message_count", 0),
+                latest_message=doc.get("latest_message"),
+                latest_message_at=doc.get("latest_message_at"),
+                status=doc.get("status", SessionStatus.PENDING),
+                is_shared=doc.get("is_shared", False),
+            ))
+        return summaries
     
     async def find_by_id_and_user_id(self, session_id: str, user_id: str) -> Optional[Session]:
         """Find a session by ID and user ID (for authorization)"""

@@ -1,7 +1,7 @@
 from typing import AsyncGenerator, Optional, List
 import logging
 from datetime import datetime
-from app.domain.models.session import Session
+from app.domain.models.session import Session, SessionSummary
 from app.domain.repositories.session_repository import SessionRepository
 
 from app.interfaces.schemas.session import ShellViewResponse
@@ -103,10 +103,10 @@ class AgentService:
             logger.error(f"Session {session_id} not found for user {user_id}")
         return session
     
-    async def get_all_sessions(self, user_id: str) -> List[Session]:
-        """Get all sessions for a specific user"""
+    async def get_all_sessions(self, user_id: str) -> List[SessionSummary]:
+        """Get all sessions for a specific user (lightweight summaries)"""
         logger.info(f"Getting all sessions for user {user_id}")
-        return await self._session_repository.find_by_user_id(user_id)
+        return await self._session_repository.find_summaries_by_user_id(user_id)
 
     async def delete_session(self, session_id: str, user_id: str) -> None:
         """Delete a session, ensuring it belongs to the user"""

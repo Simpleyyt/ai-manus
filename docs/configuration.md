@@ -72,7 +72,7 @@
 
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
-| `SEARCH_PROVIDER` | `bing_web` | 否 | 搜索引擎提供商 (`baidu`、`baidu_web`、`google`、`bing`、`bing_web` 或 `tavily`) |
+| `SEARCH_PROVIDER` | `bing_web` | 否 | 搜索引擎提供商（`baidu`、`baidu_web`、`google`、`bing`、`bing_web`、`tavily`、`serper` 或 `custom`） |
 
 #### 百度搜索配置
 
@@ -109,7 +109,67 @@
 
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
-| `TAVILY_API_KEY` | - | 是 | Tavily 搜索 API 密钥 |
+| `TAVILY_API_KEY` | - | 是 | Tavily 搜索 API 密钥，从 [tavily.com](https://tavily.com) 获取 |
+
+#### Serper.dev 搜索配置
+
+仅当 `SEARCH_PROVIDER=serper` 时使用。Serper.dev 返回可靠的 Google 搜索结果，推荐作为默认搜索提供商：
+
+| 配置项 | 默认值 | 是否必需 | 说明 |
+|--------|--------|----------|------|
+| `SERPER_API_KEY` | - | 是 | Serper.dev API 密钥，从 [serper.dev](https://serper.dev) 获取（提供免费额度） |
+
+#### 自定义搜索 API 配置
+
+仅当 `SEARCH_PROVIDER=custom` 时使用。可对接任意第三方搜索 REST API，只需配置接口地址、密钥和字段映射即可：
+
+| 配置项 | 默认值 | 是否必需 | 说明 |
+|--------|--------|----------|------|
+| `SEARCH_API_URL` | - | 是 | 搜索接口的完整 URL |
+| `SEARCH_API_KEY` | - | 否 | 接口 API 密钥 |
+| `SEARCH_API_KEY_HEADER` | `Authorization` | 否 | 传递密钥的 HTTP Header 名称（如 `X-API-KEY`） |
+| `SEARCH_API_KEY_HEADER_PREFIX` | `Bearer ` | 否 | Header 值的前缀（含空格时请保留，如 `Bearer `；若 Header 直接是 key 则设为空） |
+| `SEARCH_API_KEY_PARAM` | - | 否 | 将密钥作为 URL 查询参数传递时的参数名（设置后优先于 Header 方式） |
+| `SEARCH_API_METHOD` | `POST` | 否 | HTTP 请求方式（`POST` 或 `GET`） |
+| `SEARCH_QUERY_FIELD` | `q` | 否 | 请求体 / 查询参数中搜索词的字段名 |
+| `SEARCH_RESULT_FIELD` | `results` | 否 | 响应 JSON 中结果数组的字段路径（支持点分隔的嵌套路径，如 `web.results`） |
+| `SEARCH_TITLE_FIELD` | `title` | 否 | 每条结果中标题的字段名 |
+| `SEARCH_LINK_FIELD` | `link` | 否 | 每条结果中 URL 的字段名 |
+| `SEARCH_SNIPPET_FIELD` | `snippet` | 否 | 每条结果中摘要的字段名 |
+
+**典型对接示例：**
+
+- **Serper.dev（POST）**
+  ```env
+  SEARCH_PROVIDER=custom
+  SEARCH_API_URL=https://google.serper.dev/search
+  SEARCH_API_KEY=your-serper-key
+  SEARCH_API_KEY_HEADER=X-API-KEY
+  SEARCH_API_KEY_HEADER_PREFIX=
+  SEARCH_RESULT_FIELD=organic
+  ```
+
+- **SerpAPI（GET）**
+  ```env
+  SEARCH_PROVIDER=custom
+  SEARCH_API_URL=https://serpapi.com/search
+  SEARCH_API_KEY=your-serpapi-key
+  SEARCH_API_KEY_PARAM=api_key
+  SEARCH_API_METHOD=GET
+  SEARCH_RESULT_FIELD=organic_results
+  ```
+
+- **Brave Search API（GET）**
+  ```env
+  SEARCH_PROVIDER=custom
+  SEARCH_API_URL=https://api.search.brave.com/res/v1/web/search
+  SEARCH_API_KEY=your-brave-key
+  SEARCH_API_KEY_HEADER=X-Subscription-Token
+  SEARCH_API_KEY_HEADER_PREFIX=
+  SEARCH_API_METHOD=GET
+  SEARCH_RESULT_FIELD=web.results
+  SEARCH_SNIPPET_FIELD=description
+  ```
 
 ### 认证配置
 

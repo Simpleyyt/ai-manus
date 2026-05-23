@@ -60,12 +60,26 @@ class Settings(BaseSettings):
     browser_engine: str = "browser_use"  # "playwright" or "browser_use"
     
     # Search engine configuration
-    search_provider: str | None = "bing_web"  # "baidu", "baidu_web", "google", "bing", "bing_web", "tavily"
+    search_provider: str | None = "bing_web"  # "baidu", "baidu_web", "google", "bing", "bing_web", "tavily", "serper", "custom"
     baidu_search_api_key: str | None = None
     bing_search_api_key: str | None = None
     google_search_api_key: str | None = None
     google_search_engine_id: str | None = None
     tavily_api_key: str | None = None
+    # Serper.dev search configuration (SEARCH_PROVIDER=serper)
+    serper_api_key: str | None = None
+    # Custom search API configuration (SEARCH_PROVIDER=custom)
+    search_api_url: str | None = None
+    search_api_key: str | None = None
+    search_api_key_header: str = "Authorization"
+    search_api_key_header_prefix: str = "Bearer "
+    search_api_key_param: str = ""
+    search_api_method: str = "POST"
+    search_query_field: str = "q"
+    search_result_field: str = "results"
+    search_title_field: str = "title"
+    search_link_field: str = "link"
+    search_snippet_field: str = "snippet"
     
     # Google Analytics configuration
     google_analytics_id: str | None = None

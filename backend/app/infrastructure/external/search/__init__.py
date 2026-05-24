@@ -16,7 +16,9 @@ def get_search_engine() -> Optional[SearchEngine]:
     from app.infrastructure.external.search.bing_search import BingSearchEngine
     from app.infrastructure.external.search.bing_web_search import BingWebSearchEngine
     from app.infrastructure.external.search.tavily_search import TavilySearchEngine
-    
+    from app.infrastructure.external.search.serper_search import SerperSearchEngine
+    from app.infrastructure.external.search.custom_search import CustomSearchEngine
+
     settings = get_settings()
     if settings.search_provider == "google":
         if settings.google_search_api_key and settings.google_search_engine_id:
@@ -50,8 +52,32 @@ def get_search_engine() -> Optional[SearchEngine]:
             logger.info("Initializing Tavily Search Engine")
             return TavilySearchEngine(api_key=settings.tavily_api_key)
         else:
-            logger.warning("Tavily Search Engine not initialized: missing API key")
+            logger.warning("Tavily Search Engine not initialized: missing API key (TAVILY_API_KEY)")
+    elif settings.search_provider == "serper":
+        if settings.serper_api_key:
+            logger.info("Initializing Serper Search Engine")
+            return SerperSearchEngine(api_key=settings.serper_api_key)
+        else:
+            logger.warning("Serper Search Engine not initialized: missing API key (SERPER_API_KEY)")
+    elif settings.search_provider == "custom":
+        if settings.search_api_url:
+            logger.info(f"Initializing Custom Search Engine (url={settings.search_api_url})")
+            return CustomSearchEngine(
+                api_url=settings.search_api_url,
+                api_key=settings.search_api_key or "",
+                api_key_header=settings.search_api_key_header,
+                api_key_header_prefix=settings.search_api_key_header_prefix,
+                api_key_param=settings.search_api_key_param,
+                method=settings.search_api_method,
+                query_field=settings.search_query_field,
+                result_field=settings.search_result_field,
+                title_field=settings.search_title_field,
+                link_field=settings.search_link_field,
+                snippet_field=settings.search_snippet_field,
+            )
+        else:
+            logger.warning("Custom Search Engine not initialized: missing SEARCH_API_URL")
     else:
         logger.warning(f"Unknown search provider: {settings.search_provider}")
-    
-    return None 
+
+    return None

@@ -72,7 +72,7 @@
 
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
-| `SEARCH_PROVIDER` | `bing_web` | No | Search engine provider (`baidu`, `baidu_web`, `google`, `bing`, `bing_web`, or `tavily`) |
+| `SEARCH_PROVIDER` | `bing_web` | No | Search engine provider (`baidu`, `baidu_web`, `google`, `bing`, `bing_web`, `tavily`, `serper`, or `custom`) |
 
 #### Baidu Search Configuration
 
@@ -109,7 +109,67 @@ Used only when `SEARCH_PROVIDER=tavily`:
 
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
-| `TAVILY_API_KEY` | - | Yes | Tavily Search API key |
+| `TAVILY_API_KEY` | - | Yes | Tavily Search API key, get from [tavily.com](https://tavily.com) |
+
+#### Serper.dev Search Configuration
+
+Used only when `SEARCH_PROVIDER=serper`. Serper.dev delivers reliable Google search results and is recommended as the default provider:
+
+| Configuration | Default Value | Required | Description |
+|---------------|---------------|----------|-------------|
+| `SERPER_API_KEY` | - | Yes | Serper.dev API key, get from [serper.dev](https://serper.dev) (free tier available) |
+
+#### Custom Search API Configuration
+
+Used only when `SEARCH_PROVIDER=custom`. Integrate any third-party search REST API by configuring the endpoint, credentials, and field mapping:
+
+| Configuration | Default Value | Required | Description |
+|---------------|---------------|----------|-------------|
+| `SEARCH_API_URL` | - | Yes | Full URL of the search endpoint |
+| `SEARCH_API_KEY` | - | No | API key for the endpoint |
+| `SEARCH_API_KEY_HEADER` | `Authorization` | No | HTTP header name used to send the key (e.g. `X-API-KEY`) |
+| `SEARCH_API_KEY_HEADER_PREFIX` | `Bearer ` | No | Prefix placed before the key value in the header (include trailing space, e.g. `Bearer `; set empty if the header value is the key itself) |
+| `SEARCH_API_KEY_PARAM` | - | No | URL query parameter name for the key (alternative to header auth) |
+| `SEARCH_API_METHOD` | `POST` | No | HTTP method: `POST` or `GET` |
+| `SEARCH_QUERY_FIELD` | `q` | No | Field name for the search query in the request body / params |
+| `SEARCH_RESULT_FIELD` | `results` | No | Dot-separated path to the results array in the JSON response (e.g. `web.results`) |
+| `SEARCH_TITLE_FIELD` | `title` | No | Field name for the result title |
+| `SEARCH_LINK_FIELD` | `link` | No | Field name for the result URL |
+| `SEARCH_SNIPPET_FIELD` | `snippet` | No | Field name for the result snippet / description |
+
+**Common integration examples:**
+
+- **Serper.dev (POST)**
+  ```env
+  SEARCH_PROVIDER=custom
+  SEARCH_API_URL=https://google.serper.dev/search
+  SEARCH_API_KEY=your-serper-key
+  SEARCH_API_KEY_HEADER=X-API-KEY
+  SEARCH_API_KEY_HEADER_PREFIX=
+  SEARCH_RESULT_FIELD=organic
+  ```
+
+- **SerpAPI (GET)**
+  ```env
+  SEARCH_PROVIDER=custom
+  SEARCH_API_URL=https://serpapi.com/search
+  SEARCH_API_KEY=your-serpapi-key
+  SEARCH_API_KEY_PARAM=api_key
+  SEARCH_API_METHOD=GET
+  SEARCH_RESULT_FIELD=organic_results
+  ```
+
+- **Brave Search API (GET)**
+  ```env
+  SEARCH_PROVIDER=custom
+  SEARCH_API_URL=https://api.search.brave.com/res/v1/web/search
+  SEARCH_API_KEY=your-brave-key
+  SEARCH_API_KEY_HEADER=X-Subscription-Token
+  SEARCH_API_KEY_HEADER_PREFIX=
+  SEARCH_API_METHOD=GET
+  SEARCH_RESULT_FIELD=web.results
+  SEARCH_SNIPPET_FIELD=description
+  ```
 
 ### Authentication Configuration
 

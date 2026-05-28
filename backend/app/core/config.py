@@ -111,7 +111,7 @@ class Settings(BaseSettings):
     extra_headers: dict | None = None
     
     # Claw (OpenClaw) configuration
-    claw_enabled: bool = True
+    claw_enabled: bool = False
     claw_image: str = "simpleyyt/manus-claw"
     claw_name_prefix: str = "manus-claw"
     claw_ttl_seconds: int = 3600

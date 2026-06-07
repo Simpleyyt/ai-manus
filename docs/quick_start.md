@@ -160,11 +160,14 @@ SANDBOX_NETWORK=manus-network
 #BROWSER_ENGINE=browser_use
 
 # Search engine configuration
-# Options: baidu, baidu_web, google, bing, bing_web, tavily
-# baidu: uses the Baidu Qianfan AI Search API (requires BAIDU_SEARCH_API_KEY)
+# Options: baidu, baidu_web, google, bing, bing_web, tavily, serper, custom
+# baidu:    uses the Baidu Qianfan AI Search API (requires BAIDU_SEARCH_API_KEY)
 # baidu_web: scrapes Baidu search results with browser impersonation (no API key needed)
-# bing: uses the official Bing Web Search API (requires BING_SEARCH_API_KEY)
+# bing:     uses the official Bing Web Search API (requires BING_SEARCH_API_KEY)
 # bing_web: scrapes Bing search results directly (no API key needed)
+# tavily:   uses the Tavily Search API (requires TAVILY_API_KEY)
+# serper:   uses the Serper.dev Google Search API (requires SERPER_API_KEY)
+# custom:   calls any third-party search REST API via SEARCH_API_URL + SEARCH_API_KEY
 SEARCH_PROVIDER=bing_web
 
 # Baidu search configuration, only used when SEARCH_PROVIDER=baidu
@@ -180,7 +183,54 @@ SEARCH_PROVIDER=bing_web
 #GOOGLE_SEARCH_ENGINE_ID=
 
 # Tavily search configuration, only used when SEARCH_PROVIDER=tavily
+# Get your API key from https://tavily.com
 #TAVILY_API_KEY=
+
+# Serper.dev search configuration, only used when SEARCH_PROVIDER=serper
+# Returns reliable Google results. Get your API key from https://serper.dev
+#SERPER_API_KEY=
+
+# Custom search API configuration, only used when SEARCH_PROVIDER=custom
+# Allows integration with any third-party search REST API.
+#
+# Minimal setup (POST + Bearer token, e.g. a custom internal API):
+#   SEARCH_API_URL=https://your-search-api.example.com/search
+#   SEARCH_API_KEY=your-api-key
+#
+# Serper.dev via custom provider:
+#   SEARCH_API_URL=https://google.serper.dev/search
+#   SEARCH_API_KEY=your-serper-key
+#   SEARCH_API_KEY_HEADER=X-API-KEY
+#   SEARCH_API_KEY_HEADER_PREFIX=
+#   SEARCH_RESULT_FIELD=organic
+#
+# SerpAPI via custom provider:
+#   SEARCH_API_URL=https://serpapi.com/search
+#   SEARCH_API_KEY=your-serpapi-key
+#   SEARCH_API_KEY_PARAM=api_key
+#   SEARCH_API_METHOD=GET
+#   SEARCH_RESULT_FIELD=organic_results
+#
+# Brave Search API via custom provider:
+#   SEARCH_API_URL=https://api.search.brave.com/res/v1/web/search
+#   SEARCH_API_KEY=your-brave-key
+#   SEARCH_API_KEY_HEADER=X-Subscription-Token
+#   SEARCH_API_KEY_HEADER_PREFIX=
+#   SEARCH_API_METHOD=GET
+#   SEARCH_RESULT_FIELD=web.results
+#   SEARCH_SNIPPET_FIELD=description
+#
+#SEARCH_API_URL=
+#SEARCH_API_KEY=
+#SEARCH_API_KEY_HEADER=Authorization
+#SEARCH_API_KEY_HEADER_PREFIX=Bearer
+#SEARCH_API_KEY_PARAM=
+#SEARCH_API_METHOD=POST
+#SEARCH_QUERY_FIELD=q
+#SEARCH_RESULT_FIELD=results
+#SEARCH_TITLE_FIELD=title
+#SEARCH_LINK_FIELD=link
+#SEARCH_SNIPPET_FIELD=snippet
 
 # Google Analytics configuration
 # Set your Google Analytics Measurement ID (e.g. G-XXXXXXXXXX)
@@ -214,7 +264,7 @@ JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
 
 # Claw (OpenClaw) configuration
 # Enable or disable Claw feature (hides sidebar entry when false)
-#CLAW_ENABLED=true
+#CLAW_ENABLED=false
 # Docker image used for Claw containers
 #CLAW_IMAGE=simpleyyt/manus-claw
 # Prefix for Claw container names

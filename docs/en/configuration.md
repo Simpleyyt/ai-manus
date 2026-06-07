@@ -58,7 +58,7 @@
 
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
-| `CLAW_ENABLED` | `true` | No | Enable Claw feature; set to `false` to hide the sidebar entry |
+| `CLAW_ENABLED` | `false` | No | Enable Claw feature; set to `true` to show the sidebar entry |
 | `CLAW_IMAGE` | `simpleyyt/manus-claw` | No | Claw Docker image name |
 | `CLAW_NAME_PREFIX` | `manus-claw` | No | Claw container name prefix |
 | `CLAW_TTL_SECONDS` | `3600` | No | Claw container time-to-live in seconds; set to `0` for unlimited |

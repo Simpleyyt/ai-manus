@@ -6,17 +6,17 @@
 
 ## Project Overview
 
-AI Manus × Claw is a general-purpose AI Agent system with an integrated [OpenClaw](https://github.com/anthropics/openclaw) AI assistant, comprising five services:
+AI Manus × Claw is a general-purpose AI Agent system with an integrated [OpenClaw](https://github.com/anthropics/openclaw) AI assistant. A user message drives a **plan-and-execute agent loop** in the backend, which runs tools (shell, browser, file, search, MCP) inside a **per-session Docker sandbox** and streams every event back to the browser over **SSE**. It is a monorepo of five cooperating services:
 
 | Service | Stack | Port (dev) | Entry Point |
 |---|---|---|---|
-| **Frontend** | Vue 3 + TypeScript, Vite 4, Tailwind CSS | 5173 | `frontend/src/main.ts` |
-| **Backend** | Python 3.12, FastAPI, LangChain, Beanie/Motor | 8000 | `backend/app/main.py` |
-| **Sandbox** | Python 3.10, FastAPI, Xvfb/Chrome/VNC | 8080 (API), 5900 (VNC) | `sandbox/app/main.py` |
+| **Frontend** | Vue 3 + TypeScript, Vite 4, Tailwind CSS, reka-ui | 5173 | `frontend/src/main.ts` |
+| **Backend** | Python 3.12, FastAPI, LangChain, Beanie/Motor | 8000 (debugpy 5678) | `backend/app/main.py` |
+| **Sandbox** | Python 3.10, FastAPI, Xvfb/Chrome/VNC under supervisord | 8080 (API), 5900 (VNC), 9222 (CDP) | `sandbox/app/main.py` |
 | **Claw** | Node.js, OpenClaw Gateway, manus-claw plugin | 18788 | `claw/entrypoint.sh` |
-| **Mockserver** | Python, FastAPI | 8090 | `mockserver/main.py` |
+| **Mockserver** | Python, FastAPI (canned LLM responses) | 8090 | `mockserver/main.py` |
 
-Infrastructure: **MongoDB 7.0**, **Redis 7.0**, **Docker** (sandbox & Claw orchestration).
+Infrastructure: **MongoDB 7.0** (sessions, agents, users), **Redis 7.0** (cache + message queues), **Docker** (sandbox & Claw orchestration). The backend talks to `/var/run/docker.sock` to spawn sandbox and Claw containers.
 
 ---
 
@@ -46,6 +46,45 @@ ai-manus/
 ├── docker-compose.yml                # Production compose
 └── docker-compose-development.yml    # Development compose (hot-reload)
 ```
+
+---
+
+## Architecture
+
+### Backend (the part worth understanding)
+
+The backend follows **Domain-Driven Design** with strict layer dependencies pointing inward: `interfaces/` → `application/` → `domain/` ← `infrastructure/`.
+
+- **`domain/`** — pure business logic, no framework/IO. The `domain/external/` files are **Protocol interfaces** (`Sandbox`, `Browser`, `LLM`, `SearchEngine`, `FileStorage`, `Task`, `Cache`, `MessageQueue`); concrete implementations live in `infrastructure/external/`. When adding a capability, define the Protocol in `domain/external/` first, implement it in `infrastructure/`, and wire it in `interfaces/dependencies.py`.
+- **`application/services/`** — orchestrators (`agent_service`, `auth_service`, `file_service`, `token_service`, `email_service`, `claw_service`) that the API layer calls.
+- **`infrastructure/`** — Beanie ODM documents (`infrastructure/models/documents.py`), Mongo/Redis repositories, and the concrete externals (e.g. `external/sandbox/docker_sandbox.py`, `external/browser`, `external/search`, `external/claw`).
+- **`interfaces/`** — FastAPI routers (`api/*_routes.py`), Pydantic request/response schemas, error handlers, and `dependencies.py` (the manual DI container — this is where everything is composed).
+
+### The agent loop
+
+This is the heart of the system; understanding it requires reading several files together:
+
+1. **`domain/services/flows/plan_act.py`** — `PlanActFlow.run()` is a state machine: `IDLE → PLANNING → EXECUTING → UPDATING → (repeat) → SUMMARIZING → COMPLETED`. It constructs the toolkit list (Shell, Browser, File, Message, MCP, optional Search) and drives two agents.
+2. **`domain/services/agents/`** — `PlannerAgent` (`planner.py`) creates/updates the plan; `ExecutionAgent` (`execution.py`) runs each step. Both extend `BaseAgent` (`base.py`), which wraps LangChain's `init_chat_model`, handles tool-call parsing with retry/repair (`domain/utils/robust_json_parser.py`), memory compaction, and iteration limits.
+3. **`domain/services/agent_task_runner.py`** — `AgentTaskRunner` runs the flow as a cancellable background `Task`, so sessions can be stopped/resumed. `AgentDomainService` (`agent_domain_service.py`) coordinates: it lazily creates a sandbox per session (`session.sandbox_id`) and manages task lifecycle.
+4. **Events & streaming** — every step yields typed events (`domain/models/event.py`: `PlanEvent`, `MessageEvent`, `ToolEvent`, `TitleEvent`, `DoneEvent`, `WaitEvent`, …). These flow through Redis message queues out to the frontend as **SSE**. Tool output content types (`FileToolContent`, `ShellToolContent`, `BrowserToolContent`, …) let the UI render rich tool views.
+
+Session state lives in MongoDB; `SessionStatus` (`PENDING`/`RUNNING`/`WAITING`/etc.) is what lets the flow resume or roll back a message on reconnect.
+
+### Tools
+
+Each toolkit in `domain/services/tools/` (shell, browser, file, search, message, mcp) extends `BaseToolkit` and exposes methods decorated as `Tool`s. Shell/file tools call the **sandbox** API; browser tools drive the sandbox's headless Chrome (viewable via VNC→websockify→NoVNC); `mcp.py` loads external MCP servers from a mounted `mcp.json` (see `mcp.json.example`).
+
+### Sandbox & Claw
+
+- **Sandbox** (`sandbox/app/`) is a thin FastAPI service (`api/v1/{shell,file,supervisor}.py`) running inside an Ubuntu container managed by supervisord (Chrome, Xvfb, x11vnc, websockify, the API). One sandbox is spawned per session in production.
+- **Claw** (`claw/`) bridges [OpenClaw](https://github.com/anthropics/openclaw) into Manus via the `manus-claw` plugin, giving per-user isolated containers. Backend integration is under `application/services/claw_service.py` + `infrastructure/external/claw/`. Debug help in `.cursor/skills/debug-claw/SKILL.md`.
+
+### Frontend
+
+- Vue 3 Composition API, `<script setup lang="ts">` throughout; path alias `@/` → `src/`.
+- API layer in `src/api/` (axios + `@microsoft/fetch-event-source` for SSE consumption); pages in `src/pages/`; reusable logic in `src/composables/`; rich tool renderers in `src/components/toolViews/`.
+- i18n via vue-i18n (Chinese + English) in `src/locales/`. Add keys to both locales.
 
 ---
 
@@ -196,6 +235,12 @@ curl -X POST http://localhost:8090/v1/chat/completions \
 - **FastAPI** service exposing shell, file, and supervisor APIs
 - Runs inside Docker with **supervisord** managing Chrome, Xvfb, VNC, and the API
 - Dependency management: **uv** + `pyproject.toml`
+
+### Gotchas
+
+- Config is centralized in `backend/app/core/config.py` (Pydantic `Settings`, `@lru_cache`d `get_settings()`); env vars come from `.env`. For dev, point `API_BASE` at `http://mockserver:8090/v1` and set `AUTH_PROVIDER=none` to skip both real LLM and login.
+- In dev mode only **one** global sandbox container is started (set via `SANDBOX_ADDRESS=sandbox`).
+- Docs site is Docsify under `docs/`; `update_doc.sh` and `.cursor/skills/update-docs/SKILL.md` regenerate snippets embedded from compose files.
 
 ---
 

@@ -75,6 +75,11 @@ class AgentTaskRunner(TaskRunner):
             self._search_engine,
         )
 
+    @property
+    def session_id(self) -> str:
+        """Session id this runner belongs to."""
+        return self._session_id
+
     async def _put_and_add_event(self, task: Task, event: AgentEvent) -> None:
         event_id = await task.output_stream.put(event.model_dump_json())
         event.id = event_id

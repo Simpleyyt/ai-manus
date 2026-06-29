@@ -5,15 +5,12 @@ import logging
 import asyncio
 
 from app.core.config import get_settings
-from app.infrastructure.storage.mongodb import get_mongodb
-from app.infrastructure.storage.redis import get_redis
+from app.infrastructure.storage.bootstrap import init_storage, shutdown_storage
 from app.interfaces.dependencies import get_agent_service
 from app.interfaces.api.routes import router
 from app.interfaces.api.openai_routes import router as openai_router
 from app.infrastructure.logging import setup_logging
 from app.interfaces.errors.exception_handlers import register_exception_handlers
-from app.infrastructure.models.documents import AgentDocument, SessionDocument, UserDocument, ClawDocument
-from beanie import init_beanie
 
 # Initialize logging system
 setup_logging()
@@ -28,30 +25,17 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     # Code executed on startup
     logger.info("Application startup - Manus AI Agent initializing")
-    
-    # Initialize MongoDB and Beanie
-    await get_mongodb().initialize()
 
-    # Initialize Beanie
-    await init_beanie(
-        database=get_mongodb().client[settings.mongodb_database],
-        document_models=[AgentDocument, SessionDocument, UserDocument, ClawDocument]
-    )
-    logger.info("Successfully initialized Beanie")
-    
-    # Initialize Redis
-    await get_redis().initialize()
-    
+    # Initialize MongoDB + Beanie and Redis
+    await init_storage()
+
     try:
         yield
     finally:
         # Code executed on shutdown
         logger.info("Application shutdown - Manus AI Agent terminating")
-        # Disconnect from MongoDB
-        await get_mongodb().shutdown()
-        # Disconnect from Redis
-        await get_redis().shutdown()
-
+        # Disconnect from MongoDB and Redis
+        await shutdown_storage()
 
         logger.info("Cleaning up AgentService instance")
         try:

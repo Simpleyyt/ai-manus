@@ -64,6 +64,45 @@ services:
       - MANUS_API_BASE_URL=http://backend:8000
       - CLAW_API_KEY=${CLAW_DEV_API_KEY:-manus-dev-api-key-changeme}
 
+  # Celery worker that executes agent tasks when TASK_RUNNER=celery.
+  # Harmless to leave running with TASK_RUNNER=local (it simply stays idle).
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command:
+      [
+        "uv", "run",
+        "celery", "-A", "app.infrastructure.external.task.celery_app",
+        "worker", "--loglevel=info", "--concurrency=4"
+      ]
+    volumes:
+      - ./backend:/app  # Mount source code directory
+      #- ./mcp.json:/etc/mcp.json # Mount MCP servers directory
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /app/__pycache__  # Avoid overwriting cache files
+      - /app/.venv  # Avoid overwriting virtual environment
+    depends_on:
+      sandbox:
+        condition: service_started
+        required: false
+      mongodb:
+        condition: service_started
+        required: true
+      redis:
+        condition: service_started
+        required: true
+    restart: unless-stopped
+    networks:
+      - manus-network
+    env_file:
+      - .env
+    environment:
+      - SANDBOX_ADDRESS=sandbox # Use single container as sandbox
+      - CLAW_ADDRESS=claw       # Use single fixed claw container in development
+      - MANUS_API_BASE_URL=http://backend:8000
+      - CLAW_API_KEY=${CLAW_DEV_API_KEY:-manus-dev-api-key-changeme}
+
   sandbox:
     build:
       context: ./sandbox

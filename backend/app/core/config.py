@@ -44,6 +44,15 @@ class Settings(BaseSettings):
     redis_port: int = 6379
     redis_db: int = 0
     redis_password: str | None = None
+
+    # Task runner configuration
+    # "local"  -> run the agent task in-process via asyncio (RedisStreamTask)
+    # "celery" -> dispatch the agent task to a Celery worker (CeleryStreamTask)
+    task_runner: str = "local"
+    # Celery broker / result backend. When empty they default to the Redis
+    # instance configured above (see redis_url / celery_broker_url helpers).
+    celery_broker_url: str | None = None
+    celery_result_backend: str | None = None
     
     # Sandbox configuration
     sandbox_address: str | None = None
@@ -131,6 +140,22 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
         
+    @property
+    def redis_url(self) -> str:
+        """Build a redis:// URL from the discrete Redis settings."""
+        auth = f":{self.redis_password}@" if self.redis_password else ""
+        return f"redis://{auth}{self.redis_host}:{self.redis_port}/{self.redis_db}"
+
+    @property
+    def celery_broker(self) -> str:
+        """Effective Celery broker URL (defaults to Redis)."""
+        return self.celery_broker_url or self.redis_url
+
+    @property
+    def celery_backend(self) -> str:
+        """Effective Celery result backend URL (defaults to Redis)."""
+        return self.celery_result_backend or self.redis_url
+
     def validate(self):
         """Validate configuration settings"""
         if not self.api_key:

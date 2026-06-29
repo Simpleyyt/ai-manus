@@ -40,6 +40,16 @@
 
 > **Note**: Redis configuration items are currently commented out, indicating they may be optional features or not fully implemented yet.
 
+### Task Runner Configuration
+
+| Configuration | Default Value | Required | Description |
+|---------------|---------------|----------|-------------|
+| `TASK_RUNNER` | `local` | No | `local` runs the agent task in-process; `celery` dispatches it to a Celery worker |
+| `CELERY_BROKER_URL` | - | No | Celery broker URL; defaults to the Redis configuration above |
+| `CELERY_RESULT_BACKEND` | - | No | Celery result backend URL; defaults to the Redis configuration above |
+
+> **Note**: When `TASK_RUNNER=celery`, start the `celery-worker` service (production: `docker compose --profile celery up -d`) so agent tasks have a worker to run on.
+
 ### Sandbox Configuration
 
 | Configuration | Default Value | Required | Description |

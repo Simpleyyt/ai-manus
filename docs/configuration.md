@@ -40,6 +40,16 @@
 
 > **注意**: Redis 配置项当前被注释，表示可能是可选功能或尚未完全实现。
 
+### 任务运行器配置
+
+| 配置项 | 默认值 | 是否必需 | 说明 |
+|--------|--------|----------|------|
+| `TASK_RUNNER` | `local` | 否 | `local` 在进程内运行 Agent 任务；`celery` 将任务分发到 Celery Worker |
+| `CELERY_BROKER_URL` | - | 否 | Celery broker 地址，默认复用上面的 Redis 配置 |
+| `CELERY_RESULT_BACKEND` | - | 否 | Celery 结果后端地址，默认复用上面的 Redis 配置 |
+
+> **注意**: 当 `TASK_RUNNER=celery` 时，需要启动 `celery-worker` 服务（生产环境：`docker compose --profile celery up -d`），Agent 任务才有 Worker 可以执行。
+
 ### 沙箱配置
 
 | 配置项 | 默认值 | 是否必需 | 说明 |

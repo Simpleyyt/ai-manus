@@ -1,86 +1,93 @@
-from typing import List, Callable
+"""Framework-agnostic tool layer.
+
+Replaces LangChain's ``@tool`` / ``BaseTool`` / ``BaseToolkit`` with a small
+domain-owned equivalent so the domain layer carries no framework dependency.
+
+- ``@tool`` marks an (async) toolkit method as a callable tool.
+- ``Tool`` wraps one callable: it exposes an OpenAI function schema
+  (``to_schema()``) for the LLM and an ``invoke(args)`` coroutine for execution.
+- ``BaseToolkit`` collects the decorated methods of a subclass into ``Tool``s.
+"""
+from typing import Any, Awaitable, Callable, Dict, List, Optional
+
+from app.domain.services.tools.schema import build_tool_schema
+
 import inspect
-import copy
-
-from langchain_core.tools.structured import StructuredTool
-from langchain.tools import BaseTool
-from langchain.messages import ToolMessage
-from langchain.messages import ToolCall
-from langchain_core.tools.base import BaseToolkit as LangchainBaseToolkit, ArgsSchema
-from typing import Any, Optional
-from pydantic import BaseModel, create_model, ConfigDict
 
 
-def create_model_without_fields(model_class: type[BaseModel], exclude_fields: set[str]) -> type[BaseModel]:
-    fields = {}
-    for field_name, field_info in model_class.model_fields.items():
-        if field_name not in exclude_fields:
-            fields[field_name] = (field_info.annotation, field_info)
-    return create_model(model_class.__name__, **fields)
+def tool(func: Optional[Callable] = None, *, parse_docstring: bool = True, name: Optional[str] = None):
+    """Mark a toolkit method as a tool.
 
-class Tool(BaseTool):
-    
+    Usable as ``@tool``, ``@tool()`` or ``@tool(parse_docstring=True)``. The
+    decorated method stays a normal coroutine; metadata is attached for
+    ``BaseToolkit`` to discover.
+    """
+    def decorator(f: Callable) -> Callable:
+        f._tool_meta = {"name": name or f.__name__}
+        return f
+
+    if func is not None and callable(func):
+        return decorator(func)
+    return decorator
+
+
+class Tool:
+    """A single invocable tool with an OpenAI-format schema."""
+
+    def __init__(
+        self,
+        toolkit: "BaseToolkit",
+        name: str,
+        schema: Dict[str, Any],
+        invoke_fn: Callable[[Dict[str, Any]], Awaitable[Any]],
+    ):
+        self.toolkit = toolkit
+        self.name = name
+        self._schema = schema
+        self._invoke_fn = invoke_fn
+
+    @property
+    def description(self) -> str:
+        return self._schema.get("function", {}).get("description", "")
+
+    def to_schema(self) -> Dict[str, Any]:
+        """Return the OpenAI function-call schema for this tool."""
+        return self._schema
+
+    async def invoke(self, args: Optional[Dict[str, Any]] = None) -> Any:
+        """Invoke the tool and return its raw result."""
+        return await self._invoke_fn(args or {})
+
+
+class BaseToolkit:
+    """Base toolset class, providing common tool calling methods."""
+
     name: str = ""
-    description: str = ""
-    args_schema: ArgsSchema | None = None
-    toolkit: 'BaseToolkit' = None
-
-    def __init__(self, tool: StructuredTool, **kwargs: Any):
-        super().__init__(**kwargs)
-        self.name = tool.name
-        self.description = tool.description
-        self.args_schema = create_model_without_fields(tool.args_schema, {'self'})
-        self._tool = tool
-
-    def _run(self, **kwargs: Any) -> Any:
-        return self._tool.func(self.toolkit, **kwargs)
-
-    async def _arun(self, **kwargs: Any) -> Any:
-        return await self._tool.coroutine(self.toolkit, **kwargs)
-
-    async def ainvoke(self, input: Any, config: Any = None, **kwargs: Any) -> ToolMessage:
-        """Invoke tool and return a ToolMessage with the raw result stored in artifact."""
-        args = input.get("args", {}) if isinstance(input, dict) else {}
-        tool_call_id = input.get("id", "") if isinstance(input, dict) else ""
-        raw_result = await self._arun(**args)
-        content = raw_result.model_dump_json() if hasattr(raw_result, "model_dump_json") else str(raw_result)
-        return ToolMessage(tool_call_id=tool_call_id, name=self.name, content=content, artifact=raw_result)
-
-
-class BaseToolkit(LangchainBaseToolkit):
-    """Base toolset class, providing common tool calling methods"""
-
-    name: str = ""
-    tools: List[Tool] = []
-    model_config = ConfigDict(ignored_types=(BaseTool,), extra='allow')
 
     def __init__(self):
-        super().__init__()
-        self.tools = []
-
-        for _, tool in inspect.getmembers(self, lambda x: isinstance(x, BaseTool)):
-            self.tools.append(Tool(tool, toolkit=self))
-        
-    
+        self.tools: List[Tool] = []
+        for _, member in inspect.getmembers(self):
+            meta = getattr(member, "_tool_meta", None)
+            if not meta:
+                continue
+            tool_name = meta["name"]
+            schema = build_tool_schema(member, tool_name)
+            self.tools.append(
+                Tool(
+                    toolkit=self,
+                    name=tool_name,
+                    schema=schema,
+                    invoke_fn=lambda args, _m=member: _m(**args),
+                )
+            )
 
     def get_tools(self) -> List[Tool]:
-        """Get all registered tools
-        
-        Returns:
-            List of tools
-        """
+        """Get all registered tools."""
         return self.tools
-    
+
     def get_tool(self, tool_name: str) -> Optional[Tool]:
-        """Get specified tool
-        
-        Args:
-            tool_name: Tool name
-            
-        Returns:
-            Tool
-        """
-        for tool in self.tools:
-            if tool.name == tool_name:
-                return tool
+        """Get the tool with the given name, or None."""
+        for tool_obj in self.tools:
+            if tool_obj.name == tool_name:
+                return tool_obj
         return None

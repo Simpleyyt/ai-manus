@@ -17,6 +17,7 @@ from app.domain.services.agents.execution import ExecutionAgent
 from app.domain.external.sandbox import Sandbox
 from app.domain.external.browser import Browser
 from app.domain.external.search import SearchEngine
+from app.domain.external.llm import LLM
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.repositories.session_repository import SessionRepository
 from app.domain.models.session import SessionStatus
@@ -47,10 +48,12 @@ class PlanActFlow(BaseFlow):
         sandbox: Sandbox,
         browser: Browser,
         mcp_tool: MCPToolkit,
+        llm: LLM,
         search_engine: Optional[SearchEngine] = None,
     ):
         self._agent_id = agent_id
         self._repository = agent_repository
+        self._llm = llm
         self._session_id = session_id
         self._session_repository = session_repository
         self.status = AgentStatus.IDLE
@@ -72,13 +75,15 @@ class PlanActFlow(BaseFlow):
         self.planner = PlannerAgent(
             agent_id=self._agent_id,
             agent_repository=self._repository,
+            llm=self._llm,
             tools=tools,
         )
         logger.debug(f"Created planner agent for Agent {self._agent_id}")
-            
+
         self.executor = ExecutionAgent(
             agent_id=self._agent_id,
             agent_repository=self._repository,
+            llm=self._llm,
             tools=tools,
         )
         logger.debug(f"Created execution agent for Agent {self._agent_id}")

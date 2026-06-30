@@ -1,8 +1,7 @@
 from typing import Optional
 from app.domain.external.browser import Browser
-from app.domain.services.tools.base import BaseToolkit
+from app.domain.services.tools.base import BaseToolkit, tool
 from app.domain.models.tool_result import ToolResult
-from langchain.tools import tool
 
 class BrowserToolkit(BaseToolkit):
     """Browser tool class, providing browser interaction functions"""

@@ -25,6 +25,7 @@ from app.domain.services.flows.plan_act import PlanActFlow
 from app.domain.external.sandbox import Sandbox
 from app.domain.external.browser import Browser
 from app.domain.external.search import SearchEngine
+from app.domain.external.llm import LLM
 from app.domain.external.file import FileStorage
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.external.task import TaskRunner, Task
@@ -51,6 +52,7 @@ class AgentTaskRunner(TaskRunner):
         session_repository: SessionRepository,
         file_storage: FileStorage,
         mcp_repository: MCPRepository,
+        llm: LLM,
         search_engine: Optional[SearchEngine] = None,
     ):
         self._session_id = session_id
@@ -58,6 +60,7 @@ class AgentTaskRunner(TaskRunner):
         self._user_id = user_id
         self._sandbox = sandbox
         self._browser = browser
+        self._llm = llm
         self._search_engine = search_engine
         self._repository = agent_repository
         self._session_repository = session_repository
@@ -72,6 +75,7 @@ class AgentTaskRunner(TaskRunner):
             self._sandbox,
             self._browser,
             self._mcp_tool,
+            self._llm,
             self._search_engine,
         )
 

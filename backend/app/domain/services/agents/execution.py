@@ -3,6 +3,7 @@ from app.domain.models.plan import Plan, Step, ExecutionStatus
 from app.domain.models.file import FileInfo
 from app.domain.models.message import Message
 from app.domain.services.agents.base import BaseAgent
+from app.domain.external.llm import LLM
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.services.prompts.system import SYSTEM_PROMPT
 from app.domain.services.prompts.execution import EXECUTION_SYSTEM_PROMPT, EXECUTION_PROMPT, SUMMARIZE_PROMPT
@@ -36,11 +37,13 @@ class ExecutionAgent(BaseAgent):
         self,
         agent_id: str,
         agent_repository: AgentRepository,
+        llm: LLM,
         tools: List[BaseToolkit],
     ):
         super().__init__(
             agent_id=agent_id,
             agent_repository=agent_repository,
+            llm=llm,
             tools=tools
         )
     

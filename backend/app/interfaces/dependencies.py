@@ -6,6 +6,7 @@ from starlette.websockets import WebSocket
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.infrastructure.external.file.gridfsfile import get_file_storage
 from app.infrastructure.external.search import get_search_engine
+from app.infrastructure.external.llm import get_llm
 from app.domain.models.user import User, UserRole
 from app.application.errors.exceptions import UnauthorizedError
 from app.core.config import get_settings
@@ -54,7 +55,8 @@ def get_agent_service() -> AgentService:
     file_storage = get_file_storage()
     search_engine = get_search_engine()
     mcp_repository = FileMCPRepository()
-    
+    llm = get_llm()
+
     # Create AgentService instance
     return AgentService(
         agent_repository=agent_repository,
@@ -64,6 +66,7 @@ def get_agent_service() -> AgentService:
         file_storage=file_storage,
         search_engine=search_engine,
         mcp_repository=mcp_repository,
+        llm=llm,
     )
 
 

@@ -9,7 +9,7 @@ from mcp.client.sse import sse_client
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.types import Tool as MCPToolkit
 
-from app.domain.services.tools.base import BaseToolkit
+from app.domain.services.tools.base import BaseToolkit, Tool
 from app.domain.models.tool_result import ToolResult
 from app.domain.models.mcp_config import MCPConfig, MCPServerConfig
 
@@ -314,39 +314,33 @@ class MCPClientManager:
 
 class MCPToolkit(BaseToolkit):
     """MCP 工具类"""
-    
+
     name: str = "mcp"
-    
+
     def __init__(self):
         super().__init__()
         self._initialized = False
-        self._tools = []
-    
+        self.manager: Optional[MCPClientManager] = None
+
     async def initialized(self, config: Optional[MCPConfig] = None):
-        """确保管理器已初始化"""
+        """确保管理器已初始化，并把 MCP 工具包装成统一的 Tool 对象"""
         if not self._initialized:
             self.manager = MCPClientManager(config)
             await self.manager.initialize()
-            self._tools = await self.manager.get_all_tools()
+            schemas = await self.manager.get_all_tools()
+            self.tools = [self._build_tool(schema) for schema in schemas]
             self._initialized = True
 
-    def get_tools(self) -> List[Dict[str, Any]]:
-        """获取同步工具定义（基础工具）"""
-        return self._tools
+    def _build_tool(self, schema: Dict[str, Any]) -> Tool:
+        """把一个 OpenAI function schema 包装成可调用的 Tool。"""
+        tool_name = schema["function"]["name"]
 
-    def has_function(self, function_name: str) -> bool:
-        """检查指定函数是否存在（包括动态 MCP 工具）"""
-        # 检查是否是 MCP 工具
-        for tool in self._tools:
-            if tool['function']['name'] == function_name:
-                return True
-        return False
-    
-    async def invoke_function(self, function_name: str, **kwargs) -> ToolResult:
-        """调用工具函数"""
-        return await self.manager.call_tool(function_name, kwargs)
-    
+        async def _invoke(args: Dict[str, Any], _name: str = tool_name) -> ToolResult:
+            return await self.manager.call_tool(_name, args)
+
+        return Tool(toolkit=self, name=tool_name, schema=schema, invoke_fn=_invoke)
+
     async def cleanup(self):
         """清理资源"""
         if self.manager:
-            await self.manager.cleanup() 
+            await self.manager.cleanup()

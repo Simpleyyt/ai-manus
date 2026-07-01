@@ -13,10 +13,66 @@
 
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
-| `MODEL_PROVIDER` | `openai` | 否 | 模型提供商（如 `openai`、`anthropic`、`google_genai`、`ollama`） |
+| `MODEL_PROVIDER` | `openai` | 否 | 模型提供商，决定底层使用哪个 LLM 集成（如 `openai`、`deepseek`、`anthropic`、`ollama`） |
 | `MODEL_NAME` | `deepseek-chat` | 是 | 要使用的模型名称 |
 | `TEMPERATURE` | `0.7` | 否 | 模型响应的随机性程度，范围 0-1 |
 | `MAX_TOKENS` | `2000` | 否 | 模型响应的最大 token 数量 |
+| `EXTRA_HEADERS` | - | 否 | 为模型请求附加的自定义 HTTP 头，JSON 对象字符串（如 `{"X-Api-Key":"xxx"}`），部分网关鉴权时需要 |
+
+### 配置不同的模型 / 提供商
+
+后端底层通过 **LangChain 的 [`init_chat_model`](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html)** 调用大模型，因此**只需通过环境变量即可切换不同的模型提供商，无需改动任何代码**：`MODEL_PROVIDER` 决定使用哪个集成，`MODEL_NAME` 指定具体模型，`API_KEY` / `API_BASE` 提供凭证与端点，`EXTRA_HEADERS` 可附加自定义请求头。
+
+以下提供商已内置（对应的 LangChain 集成包已预装在 `backend/pyproject.toml` 中）：
+
+| `MODEL_PROVIDER` | 说明 | 集成包 |
+|------------------|------|--------|
+| `openai` | OpenAI 及**所有 OpenAI 兼容端点**（DeepSeek、Moonshot、通义千问、vLLM、OneAPI、本地网关等），通过 `API_BASE` 指定端点 | `langchain-openai` |
+| `deepseek` | DeepSeek 原生集成 | `langchain-deepseek` |
+| `anthropic` | Anthropic Claude | `langchain-anthropic` |
+| `ollama` | 本地 Ollama 运行的开源模型 | `langchain-ollama` |
+
+**配置示例：**
+
+- **OpenAI**
+  ```env
+  MODEL_PROVIDER=openai
+  MODEL_NAME=gpt-4o
+  API_KEY=sk-...
+  # API_BASE 可省略以使用官方默认端点
+  ```
+
+- **OpenAI 兼容端点**（DeepSeek 官方 API / OneAPI / vLLM 等，最常见的接入方式）
+  ```env
+  MODEL_PROVIDER=openai
+  MODEL_NAME=deepseek-chat
+  API_BASE=https://api.deepseek.com/v1
+  API_KEY=sk-...
+  ```
+
+- **DeepSeek 原生集成**
+  ```env
+  MODEL_PROVIDER=deepseek
+  MODEL_NAME=deepseek-chat
+  API_KEY=sk-...
+  ```
+
+- **Anthropic Claude**
+  ```env
+  MODEL_PROVIDER=anthropic
+  MODEL_NAME=claude-3-5-sonnet-latest
+  API_KEY=sk-ant-...
+  ```
+
+- **Ollama（本地）**
+  ```env
+  MODEL_PROVIDER=ollama
+  MODEL_NAME=llama3.1
+  API_BASE=http://host.docker.internal:11434
+  API_KEY=ollama   # Ollama 无需真实密钥，但 API_KEY 必须非空以通过校验
+  ```
+
+> **接入更多提供商**：`init_chat_model` 还支持 Google Gemini、AWS Bedrock、Azure OpenAI、Mistral 等更多提供商。只需在 `backend/pyproject.toml` 增加对应的 `langchain-xxx` 集成包（如 `langchain-google-genai`）并重新构建镜像（`./build.sh` 或 `./dev.sh build`），再将 `MODEL_PROVIDER` 设为对应值即可。完整的提供商列表与命名参见 [LangChain `init_chat_model` 文档](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html)。
 
 ### MongoDB 配置
 

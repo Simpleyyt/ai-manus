@@ -13,10 +13,66 @@
 
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
-| `MODEL_PROVIDER` | `openai` | No | Model provider (e.g. `openai`, `anthropic`, `google_genai`, `ollama`) |
+| `MODEL_PROVIDER` | `openai` | No | Model provider that selects the underlying LLM integration (e.g. `openai`, `deepseek`, `anthropic`, `ollama`) |
 | `MODEL_NAME` | `deepseek-chat` | Yes | Name of the model to use |
 | `TEMPERATURE` | `0.7` | No | Randomness level of model responses, range 0-1 |
 | `MAX_TOKENS` | `2000` | No | Maximum number of tokens in model response |
+| `EXTRA_HEADERS` | - | No | Extra HTTP headers for model requests, as a JSON object string (e.g. `{"X-Api-Key":"xxx"}`); required by some gateways |
+
+### Configuring Different Models / Providers
+
+The backend calls the LLM through **LangChain's [`init_chat_model`](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html)**, so you can **switch model providers entirely via environment variables — no code changes required**: `MODEL_PROVIDER` selects the integration, `MODEL_NAME` picks the specific model, `API_KEY` / `API_BASE` supply the credentials and endpoint, and `EXTRA_HEADERS` can add custom request headers.
+
+The following providers are built in (their LangChain integration packages are pre-installed in `backend/pyproject.toml`):
+
+| `MODEL_PROVIDER` | Description | Integration package |
+|------------------|-------------|----------------------|
+| `openai` | OpenAI and **any OpenAI-compatible endpoint** (DeepSeek, Moonshot, Qwen, vLLM, OneAPI, local gateways, …), pointed at via `API_BASE` | `langchain-openai` |
+| `deepseek` | Native DeepSeek integration | `langchain-deepseek` |
+| `anthropic` | Anthropic Claude | `langchain-anthropic` |
+| `ollama` | Open-source models served locally by Ollama | `langchain-ollama` |
+
+**Examples:**
+
+- **OpenAI**
+  ```env
+  MODEL_PROVIDER=openai
+  MODEL_NAME=gpt-4o
+  API_KEY=sk-...
+  # API_BASE can be omitted to use the official default endpoint
+  ```
+
+- **OpenAI-compatible endpoint** (DeepSeek official API / OneAPI / vLLM, the most common setup)
+  ```env
+  MODEL_PROVIDER=openai
+  MODEL_NAME=deepseek-chat
+  API_BASE=https://api.deepseek.com/v1
+  API_KEY=sk-...
+  ```
+
+- **DeepSeek native integration**
+  ```env
+  MODEL_PROVIDER=deepseek
+  MODEL_NAME=deepseek-chat
+  API_KEY=sk-...
+  ```
+
+- **Anthropic Claude**
+  ```env
+  MODEL_PROVIDER=anthropic
+  MODEL_NAME=claude-3-5-sonnet-latest
+  API_KEY=sk-ant-...
+  ```
+
+- **Ollama (local)**
+  ```env
+  MODEL_PROVIDER=ollama
+  MODEL_NAME=llama3.1
+  API_BASE=http://host.docker.internal:11434
+  API_KEY=ollama   # Ollama needs no real key, but API_KEY must be non-empty to pass validation
+  ```
+
+> **Adding more providers**: `init_chat_model` also supports Google Gemini, AWS Bedrock, Azure OpenAI, Mistral and many more. Just add the matching `langchain-xxx` integration package (e.g. `langchain-google-genai`) to `backend/pyproject.toml`, rebuild the images (`./build.sh` or `./dev.sh build`), and set `MODEL_PROVIDER` accordingly. See the [LangChain `init_chat_model` docs](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html) for the full list of providers and names.
 
 ### MongoDB Configuration
 

@@ -330,8 +330,12 @@ class MCPToolkit(BaseToolkit):
             self._tools = await self.manager.get_all_tools()
             self._initialized = True
 
-    def get_tools(self) -> List[Dict[str, Any]]:
-        """获取同步工具定义（基础工具）"""
+    def get_tools(self) -> List[Any]:
+        """MCP tools are dynamic schemas, not invocable domain Tool objects."""
+        return []
+
+    def get_tool_schemas(self) -> List[Dict[str, Any]]:
+        """Return OpenAI function schemas for the dynamic MCP tools."""
         return self._tools
 
     def has_function(self, function_name: str) -> bool:

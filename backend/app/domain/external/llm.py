@@ -1,38 +1,36 @@
-from typing import List, Dict, Any, Optional, Protocol
+from typing import Any, Dict, List, Optional, Protocol
+from app.domain.models.message import LLMMessage
+
 
 class LLM(Protocol):
-    """AI service gateway interface for interacting with AI services"""
-    
+    """LLM gateway interface.
+
+    Abstracts the underlying model framework (LangChain, raw SDK, …) away from
+    the domain. Implementations live in ``infrastructure/external/llm`` and are
+    responsible for translating :class:`LLMMessage` to/from framework types,
+    tool binding, JSON repair and retries.
+    """
+
     async def ask(
         self,
-        messages: List[Dict[str, str]],
+        messages: List[LLMMessage],
         tools: Optional[List[Dict[str, Any]]] = None,
-        response_format: Optional[Dict[str, Any]] = None,
-        tool_choice: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """Send chat request to AI service
-        
+        response_format: Optional[str] = None,
+        tool_choice: Optional[str] = None,
+    ) -> LLMMessage:
+        """Send a chat request and return the assistant message.
+
         Args:
-            messages: List of messages, including conversation history
-            tools: Optional list of tools for function calling
-            response_format: Optional response format configuration
-            tool_choice: Optional tool choice configuration
+            messages: Full conversation context as domain messages.
+            tools: Optional OpenAI-style function schemas for tool calling.
+            response_format: Optional response format hint (e.g. ``json_object``).
+            tool_choice: Optional tool choice directive (e.g. ``none``).
+
         Returns:
-            Response message from AI service
+            The assistant :class:`LLMMessage`, with any tool calls parsed.
         """
-        ... 
-
-    @property
-    def model_name(self) -> str:
-        """Get the model name"""
-        ...
-    
-    @property
-    def temperature(self) -> float:
-        """Get the temperature"""
         ...
 
-    @property
-    def max_tokens(self) -> int:
-        """Get the max tokens"""
+    async def parse_json(self, text: str) -> Dict[str, Any]:
+        """Extract/repair a JSON object from raw model output."""
         ...

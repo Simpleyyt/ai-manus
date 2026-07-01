@@ -12,6 +12,7 @@ from app.domain.services.agent_task_runner import AgentTaskRunner
 from app.domain.external.task import Task
 from typing import Type
 from app.domain.external.file import FileStorage
+from app.domain.external.llm import LLM
 from app.domain.models.file import FileInfo
 from app.domain.repositories.mcp_repository import MCPRepository
 
@@ -31,6 +32,7 @@ class AgentDomainService:
         task_cls: Type[Task],
         file_storage: FileStorage,
         mcp_repository: MCPRepository,
+        llm: LLM,
         search_engine: Optional[SearchEngine] = None,
     ):
         self._repository = agent_repository
@@ -40,6 +42,7 @@ class AgentDomainService:
         self._task_cls = task_cls
         self._file_storage = file_storage
         self._mcp_repository = mcp_repository
+        self._llm = llm
         logger.info("AgentDomainService initialization completed")
             
     async def shutdown(self) -> None:
@@ -76,6 +79,7 @@ class AgentDomainService:
             session_repository=self._session_repository,
             agent_repository=self._repository,
             mcp_repository=self._mcp_repository,
+            llm=self._llm,
         )
 
         task = self._task_cls.create(task_runner)

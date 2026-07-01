@@ -14,6 +14,7 @@ from app.domain.models.agent import Agent
 from app.domain.external.sandbox import Sandbox
 from app.domain.external.search import SearchEngine
 from app.domain.external.file import FileStorage
+from app.domain.external.llm import LLM
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.external.task import Task
 from app.domain.models.file import FileInfo
@@ -33,6 +34,7 @@ class AgentService:
         task_cls: Type[Task],
         file_storage: FileStorage,
         mcp_repository: MCPRepository,
+        llm: LLM,
         search_engine: Optional[SearchEngine] = None,
     ):
         logger.info("Initializing AgentService")
@@ -46,6 +48,7 @@ class AgentService:
             task_cls,
             file_storage,
             mcp_repository,
+            llm,
             search_engine,
         )
         self._search_engine = search_engine

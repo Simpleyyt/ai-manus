@@ -16,7 +16,7 @@ from app.domain.models.event import (
     MessageEvent,
 )
 from app.domain.services.tools.base import BaseToolkit
-from app.domain.external.agent_engine import AgentEngine
+from app.domain.external.agent_engine import AgentEngine, ResponseFormat
 from app.domain.repositories.agent_repository import AgentRepository
 
 logger = logging.getLogger(__name__)
@@ -28,8 +28,8 @@ class PlannerAgent(BaseAgent):
 
     name: str = "planner"
     system_prompt: str = SYSTEM_PROMPT + PLANNER_SYSTEM_PROMPT
-    format: Optional[str] = "json_object"
-    tool_choice: Optional[str] = "none"
+    format: ResponseFormat = ResponseFormat.JSON
+    allow_tools: bool = False
 
     def __init__(
         self,
@@ -54,7 +54,7 @@ class PlannerAgent(BaseAgent):
         async for event in self.execute(message):
             if isinstance(event, MessageEvent):
                 logger.info(event.message)
-                parsed_response = await self._parse_json(event.message)
+                parsed_response = self._parse_json(event.message)
                 plan = Plan.model_validate(parsed_response)
                 yield PlanEvent(status=PlanStatus.CREATED, plan=plan)
             else:
@@ -65,7 +65,7 @@ class PlannerAgent(BaseAgent):
         async for event in self.execute(message):
             if isinstance(event, MessageEvent):
                 logger.debug(f"Planner agent update plan: {event.message}")
-                parsed_response = await self._parse_json(event.message)
+                parsed_response = self._parse_json(event.message)
                 updated_plan = Plan.model_validate(parsed_response)
                 new_steps = [Step.model_validate(step) for step in updated_plan.steps]
                 

@@ -14,9 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import pytest
-
-from app.domain.external.agent_engine import AgentEngine, AgentRunRequest
+from app.domain.external.agent_engine import ResponseFormat
 from app.domain.models.conversation import ChatMessage, Role, ToolCall
 from app.domain.models.memory import Memory
 from app.domain.models.message import Message
@@ -31,8 +29,6 @@ from app.domain.models.event import (
     PlanStatus,
     StepEvent,
     StepStatus,
-    TitleEvent,
-    DoneEvent,
 )
 from app.infrastructure.external.llm.langchain_agent_engine import LangChainAgentEngine
 
@@ -70,28 +66,23 @@ class FakeSessionRepository:
         self.session.status = status
 
 
-class ScriptedFakeEngine(AgentEngine):
+class ScriptedFakeEngine:
     """An AgentEngine that returns pre-scripted assistant content per call.
 
-    Mimics what a real engine does at the seam: appends system/user/assistant
-    messages to the working memory, invokes the persistence hook, and yields a
-    final MessageEvent. It does not call any LLM or tool, which is exactly what
-    lets us test the plan-act orchestration in isolation.
+    Mimics the seam contract: it appends the assistant message to the passed-in
+    conversation and yields a final MessageEvent. It calls no LLM and no tool,
+    which is exactly what lets us test the plan-act orchestration in isolation.
     """
 
     def __init__(self, scripted_contents):
         self._scripted = list(scripted_contents)
-        self.calls = []
+        self.inputs = []
 
-    async def run(self, request: AgentRunRequest):
-        self.calls.append(request.user_input)
-        if request.memory.empty:
-            request.memory.add_message(ChatMessage(role=Role.SYSTEM, content=request.system_prompt))
-        request.memory.add_message(ChatMessage(role=Role.USER, content=request.user_input))
+    async def run(self, conversation, *, tools=(), response_format=ResponseFormat.TEXT, allow_tools=True):
+        users = [m for m in conversation.get_messages() if m.role == Role.USER]
+        self.inputs.append(users[-1].content if users else None)
         content = self._scripted.pop(0)
-        request.memory.add_message(ChatMessage(role=Role.ASSISTANT, content=content))
-        if request.on_progress:
-            await request.on_progress()
+        conversation.add_message(ChatMessage(role=Role.ASSISTANT, content=content))
         yield MessageEvent(message=content)
 
 
@@ -103,7 +94,11 @@ def _make_engine_without_model():
     """Build a LangChainAgentEngine without constructing a real chat model."""
     engine = LangChainAgentEngine.__new__(LangChainAgentEngine)
     engine._model = None
-    engine._config = None
+    engine._max_iterations = 100
+    engine._max_retries = 3
+    engine._retry_interval = 0.0
+    # Skip real tool binding; `_ask` is faked and ignores the chain.
+    engine._bind = lambda tools, response_format, allow_tools: None
     return engine
 
 
@@ -111,10 +106,17 @@ def _scripted_ask(messages):
     """Return a fake `_ask` that pops neutral ChatMessages in order."""
     queue = list(messages)
 
-    async def fake_ask(memory, lc_tools, response_format, tool_choice, max_retries):
+    async def fake_ask(chain, conversation):
         return queue.pop(0)
 
     return fake_ask
+
+
+def _conversation(*users):
+    memory = Memory(messages=[ChatMessage(role=Role.SYSTEM, content="SYS")])
+    for text in users:
+        memory.add_message(ChatMessage(role=Role.USER, content=text))
+    return memory
 
 
 async def test_engine_runs_tool_then_finishes():
@@ -126,13 +128,9 @@ async def test_engine_runs_tool_then_finishes():
         received_args.update(args)
         return ToolResult(success=True, data={"echo": args})
 
-    spec = ToolSpec(
-        name="shell",
-        description="run shell",
-        parameters={"type": "object", "properties": {}},
-        handler=handler,
-        toolkit_name="shell",
-    )
+    spec = ToolSpec(name="shell", description="run shell",
+                    parameters={"type": "object", "properties": {}},
+                    handler=handler, toolkit_name="shell")
 
     engine._ask = _scripted_ask([
         ChatMessage(role=Role.ASSISTANT, content="",
@@ -140,40 +138,21 @@ async def test_engine_runs_tool_then_finishes():
         ChatMessage(role=Role.ASSISTANT, content='{"done": true}'),
     ])
 
-    memory = Memory(messages=[])
-    progress_calls = []
+    conversation = _conversation("please run")
+    events = [e async for e in engine.run(conversation, tools=[spec],
+                                          response_format=ResponseFormat.JSON)]
 
-    async def on_progress():
-        progress_calls.append(len(memory.messages))
-
-    request = AgentRunRequest(
-        system_prompt="SYS",
-        memory=memory,
-        user_input="please run",
-        tools=[spec],
-        response_format="json_object",
-        on_progress=on_progress,
-    )
-
-    events = [e async for e in engine.run(request)]
-
-    # Event stream: tool CALLING -> tool CALLED -> final MessageEvent
     assert isinstance(events[0], ToolEvent) and events[0].status == ToolStatus.CALLING
     assert events[0].tool_name == "shell" and events[0].function_name == "shell"
     assert isinstance(events[1], ToolEvent) and events[1].status == ToolStatus.CALLED
     assert isinstance(events[1].function_result, ToolResult)
     assert isinstance(events[-1], MessageEvent) and events[-1].message == '{"done": true}'
 
-    # Tool handler actually invoked with the parsed args.
     assert received_args == {"id": "s1"}
 
-    # Memory: SYSTEM, USER, ASSISTANT(tool_call), TOOL(result), ASSISTANT(final)
-    roles = [m.role for m in memory.get_messages()]
+    roles = [m.role for m in conversation.get_messages()]
     assert roles == [Role.SYSTEM, Role.USER, Role.ASSISTANT, Role.TOOL, Role.ASSISTANT]
-    assert memory.messages[3].tool_call_id == "c1"
-
-    # Persistence hook fired after each mutation.
-    assert len(progress_calls) >= 4
+    assert conversation.messages[3].tool_call_id == "c1"
 
 
 async def test_engine_unknown_tool_yields_error():
@@ -183,16 +162,14 @@ async def test_engine_unknown_tool_yields_error():
                     tool_calls=[ToolCall(id="c1", name="ghost", arguments={})]),
         ChatMessage(role=Role.ASSISTANT, content="final"),
     ])
-    request = AgentRunRequest(
-        system_prompt="SYS", memory=Memory(messages=[]), user_input="x", tools=[],
-    )
-    events = [e async for e in engine.run(request)]
+    events = [e async for e in engine.run(_conversation("x"), tools=[])]
     assert any(isinstance(e, ErrorEvent) and "Unknown tool: ghost" in e.error for e in events)
     assert isinstance(events[-1], MessageEvent)
 
 
 async def test_engine_max_iterations_yields_error():
     engine = _make_engine_without_model()
+    engine._max_iterations = 1
 
     async def handler(args):
         return ToolResult(success=True, data="ok")
@@ -200,23 +177,19 @@ async def test_engine_max_iterations_yields_error():
     spec = ToolSpec(name="shell", description="d", parameters={"type": "object", "properties": {}},
                     handler=handler, toolkit_name="shell")
 
-    # Both model responses keep requesting tools, so max_iterations is hit.
     engine._ask = _scripted_ask([
         ChatMessage(role=Role.ASSISTANT, content="",
                     tool_calls=[ToolCall(id="c1", name="shell", arguments={})]),
         ChatMessage(role=Role.ASSISTANT, content="",
                     tool_calls=[ToolCall(id="c2", name="shell", arguments={})]),
     ])
-    request = AgentRunRequest(
-        system_prompt="SYS", memory=Memory(messages=[]), user_input="x",
-        tools=[spec], max_iterations=1,
-    )
-    events = [e async for e in engine.run(request)]
+    events = [e async for e in engine.run(_conversation("x"), tools=[spec])]
     assert any(isinstance(e, ErrorEvent) and "Maximum iteration" in e.error for e in events)
 
 
 async def test_engine_tool_failure_returns_error_content():
     engine = _make_engine_without_model()
+    engine._max_retries = 0
 
     async def handler(args):
         raise RuntimeError("boom")
@@ -229,15 +202,11 @@ async def test_engine_tool_failure_returns_error_content():
                     tool_calls=[ToolCall(id="c1", name="shell", arguments={})]),
         ChatMessage(role=Role.ASSISTANT, content="done"),
     ])
-    request = AgentRunRequest(
-        system_prompt="SYS", memory=Memory(messages=[]), user_input="x",
-        tools=[spec], max_retries=0,
-    )
-    events = [e async for e in engine.run(request)]
+    conversation = _conversation("x")
+    events = [e async for e in engine.run(conversation, tools=[spec])]
     called = [e for e in events if isinstance(e, ToolEvent) and e.status == ToolStatus.CALLED]
     assert called and called[0].function_result is None
-    # The tool result message content carries the error string.
-    tool_msgs = [m for m in request.memory.get_messages() if m.role == Role.TOOL]
+    tool_msgs = [m for m in conversation.get_messages() if m.role == Role.TOOL]
     assert tool_msgs and "boom" in tool_msgs[0].content
 
 
@@ -282,13 +251,9 @@ async def test_plan_act_flow_full_cycle_with_fake_engine():
     )
 
     events = [e async for e in flow.run(Message(message="do X"))]
-
     kinds = [type(e).__name__ for e in events]
 
-    # The plan-act cycle drove all four engine turns.
-    assert len(engine.calls) == 4
-
-    # Expected orchestration event sequence is preserved.
+    assert len(engine.inputs) == 4
     assert kinds == [
         "TitleEvent",
         "MessageEvent",   # plan.message
@@ -310,10 +275,8 @@ async def test_plan_act_flow_full_cycle_with_fake_engine():
     assert step_events[0].status == StepStatus.STARTED
     assert step_events[1].status == StepStatus.COMPLETED
 
-    # Session was moved to RUNNING by the flow.
     assert SessionStatus.RUNNING in session_repo.status_updates
 
-    # Both agents persisted neutral (framework-free) conversations.
     planner_mem = agent_repo.memories[(agent_id, "planner")]
     exec_mem = agent_repo.memories[(agent_id, "execution")]
     assert all(isinstance(m, ChatMessage) for m in planner_mem.messages)
@@ -348,10 +311,8 @@ async def test_mcp_toolkit_produces_invocable_tool_specs():
 
     specs = toolkit.to_tool_specs()
     assert len(specs) == 1
-    spec = specs[0]
-    assert spec.name == "mcp_echo"
-    assert spec.toolkit_name == "mcp"
+    assert specs[0].name == "mcp_echo" and specs[0].toolkit_name == "mcp"
 
-    result = await spec.handler({"text": "hi"})
+    result = await specs[0].handler({"text": "hi"})
     assert isinstance(result, ToolResult)
     assert invoked == {"name": "mcp_echo", "kwargs": {"text": "hi"}}

@@ -7,7 +7,7 @@ from app.domain.models.event import BaseEvent
 from app.domain.models.tool_spec import ToolSpec
 from app.domain.services.tools.base import BaseToolkit
 from app.domain.repositories.agent_repository import AgentRepository
-from app.domain.external.agent_engine import AgentEngine, AgentRunRequest
+from app.domain.external.agent_engine import AgentEngine, ResponseFormat
 from app.domain.utils.json_parse import parse_json_lenient
 
 
@@ -27,11 +27,8 @@ class BaseAgent(ABC):
 
     name: str = ""
     system_prompt: str = ""
-    format: Optional[str] = None
-    max_iterations: int = 100
-    max_retries: int = 3
-    retry_interval: float = 1.0
-    tool_choice: Optional[str] = None
+    format: ResponseFormat = ResponseFormat.TEXT
+    allow_tools: bool = True
 
     def __init__(
         self,
@@ -49,28 +46,27 @@ class BaseAgent(ABC):
         ]
         self.memory = None
 
-    async def _parse_json(self, text: str) -> dict:
+    def _parse_json(self, text: str) -> dict:
         """Parse JSON from an assistant's final structured output."""
         return parse_json_lenient(text)
 
-    async def execute(self, request: str, format: Optional[str] = None) -> AsyncGenerator[BaseEvent, None]:
-        """Run one agent turn via the engine, persisting memory as it changes."""
+    async def execute(self, request: str) -> AsyncGenerator[BaseEvent, None]:
+        """Run one agent turn: assemble the conversation, stream engine events,
+        and persist the conversation as it changes."""
         await self._ensure_memory()
-        run_request = AgentRunRequest(
-            system_prompt=self.system_prompt,
-            memory=self.memory,
-            user_input=request,
-            tools=self._tool_specs,
-            response_format=format or self.format,
-            tool_choice=self.tool_choice,
-            max_iterations=self.max_iterations,
-            max_retries=self.max_retries,
-            retry_interval=self.retry_interval,
-            on_progress=self._save_memory,
-        )
+        if self.memory.empty:
+            self.memory.add_message(ChatMessage(role=Role.SYSTEM, content=self.system_prompt))
+        self.memory.add_message(ChatMessage(role=Role.USER, content=request))
+        await self._save_memory()
         try:
-            async for event in self._engine.run(run_request):
+            async for event in self._engine.run(
+                self.memory,
+                tools=self._tool_specs,
+                response_format=self.format,
+                allow_tools=self.allow_tools,
+            ):
                 yield event
+                await self._save_memory()
         finally:
             await self._save_memory()
 

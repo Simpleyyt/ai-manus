@@ -1,28 +1,21 @@
-from dataclasses import dataclass, field
-from typing import (
-    Any,
-    AsyncGenerator,
-    Awaitable,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Protocol,
-    runtime_checkable,
-)
+from dataclasses import dataclass
+from enum import Enum
+from typing import AsyncIterator, Dict, Optional, Protocol, Sequence, runtime_checkable
 
-from app.domain.models.event import BaseEvent
+from app.domain.models.event import AgentEvent
 from app.domain.models.memory import Memory
 from app.domain.models.tool_spec import ToolSpec
 
 
-@dataclass
-class LLMConfig:
-    """Framework-neutral LLM configuration.
+class ResponseFormat(str, Enum):
+    """How the model should shape its final answer."""
+    TEXT = "text"
+    JSON = "json_object"
 
-    Read from settings in the composition root and injected into the engine, so
-    the domain never reads global configuration itself.
-    """
+
+@dataclass(frozen=True)
+class LLMConfig:
+    """LLM configuration, read from settings in the composition root."""
     model_name: str
     model_provider: str = "openai"
     temperature: float = 0.7
@@ -31,44 +24,26 @@ class LLMConfig:
     extra_headers: Optional[Dict[str, str]] = None
 
 
-@dataclass
-class AgentRunRequest:
-    """Everything an engine needs to run a single agent turn.
-
-    ``memory`` is the working conversation; the engine appends every message it
-    produces (assistant + tool results) to it in place. ``on_progress`` is an
-    optional persistence hook the engine invokes after each memory mutation so
-    durability/resume semantics can be preserved by the caller without coupling
-    the engine to a repository.
-    """
-    system_prompt: str
-    memory: Memory
-    user_input: str
-    tools: List[ToolSpec] = field(default_factory=list)
-    response_format: Optional[str] = None
-    tool_choice: Optional[str] = None
-    max_iterations: int = 100
-    max_retries: int = 3
-    retry_interval: float = 1.0
-    on_progress: Optional[Callable[[], Awaitable[None]]] = None
-
-
 @runtime_checkable
 class AgentEngine(Protocol):
     """Port for a single-agent runtime (one "turn").
 
-    Given a system prompt, prior conversation (memory), the new user input, and
-    the available tools, an engine runs the full model + tool-call loop
-    internally, appends every produced message to ``request.memory``, and
-    streams framework-neutral domain events (``ToolEvent`` / ``MessageEvent`` /
-    ``ErrorEvent``). The final ``MessageEvent`` carries the assistant's final
-    content.
+    Given a ready ``conversation`` (system prompt + prior messages + the new
+    user turn already appended) and the available ``tools``, an engine runs the
+    full model + tool-call loop, **appends every message it produces to
+    ``conversation`` in place**, and streams framework-neutral domain events.
 
-    The plan-act orchestration (:class:`PlanActFlow`) and the planner/executor
-    agents stay in the domain and are unaware of which concrete engine runs a
-    turn, so swapping the underlying agent framework only means providing a new
-    adapter that implements this Protocol.
+    The caller owns persistence: it simply saves ``conversation`` as it iterates
+    the stream. Swapping the underlying agent framework means providing another
+    adapter that implements this Protocol; ``PlanActFlow`` never changes.
     """
 
-    async def run(self, request: AgentRunRequest) -> AsyncGenerator[BaseEvent, None]:
+    def run(
+        self,
+        conversation: Memory,
+        *,
+        tools: Sequence[ToolSpec] = (),
+        response_format: ResponseFormat = ResponseFormat.TEXT,
+        allow_tools: bool = True,
+    ) -> AsyncIterator[AgentEvent]:
         ...

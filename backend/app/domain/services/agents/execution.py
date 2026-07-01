@@ -18,7 +18,7 @@ from app.domain.models.event import (
     WaitEvent,
 )
 from app.domain.services.tools.base import BaseToolkit
-from app.domain.external.agent_engine import AgentEngine
+from app.domain.external.agent_engine import AgentEngine, ResponseFormat
 import logging
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ class ExecutionAgent(BaseAgent):
 
     name: str = "execution"
     system_prompt: str = SYSTEM_PROMPT + EXECUTION_SYSTEM_PROMPT
-    format: str = "json_object"
+    format: ResponseFormat = ResponseFormat.JSON
 
     def __init__(
         self,
@@ -63,7 +63,7 @@ class ExecutionAgent(BaseAgent):
                 yield StepEvent(status=StepStatus.FAILED, step=step)
             elif isinstance(event, MessageEvent):
                 step.status = ExecutionStatus.COMPLETED
-                parsed_response = await self._parse_json(event.message)
+                parsed_response = self._parse_json(event.message)
                 new_step = Step.model_validate(parsed_response)
                 step.success = new_step.success
                 step.result = new_step.result
@@ -88,7 +88,7 @@ class ExecutionAgent(BaseAgent):
         async for event in self.execute(message):
             if isinstance(event, MessageEvent):
                 logger.debug(f"Execution agent summary: {event.message}")
-                parsed_response = await self._parse_json(event.message)
+                parsed_response = self._parse_json(event.message)
                 message = Message.model_validate(parsed_response)
                 attachments = [FileInfo(file_path=file_path) for file_path in message.attachments]
                 yield MessageEvent(message=message.message, attachments=attachments)

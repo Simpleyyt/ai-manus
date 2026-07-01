@@ -9,7 +9,7 @@ adding another adapter alongside this one.
 import asyncio
 import logging
 import uuid
-from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
+from typing import Any, AsyncIterator, Dict, List, Optional, Sequence, Tuple
 
 from langchain.chat_models import init_chat_model
 from langchain.messages import (
@@ -20,15 +20,16 @@ from langchain.messages import (
 )
 from langchain_core.messages.tool import tool_call as create_tool_call
 
-from app.domain.external.agent_engine import AgentEngine, AgentRunRequest, LLMConfig
+from app.domain.external.agent_engine import AgentEngine, LLMConfig, ResponseFormat
 from app.domain.models.conversation import ChatMessage, Role, ToolCall
 from app.domain.models.event import (
-    BaseEvent,
+    AgentEvent,
     ErrorEvent,
     MessageEvent,
     ToolEvent,
     ToolStatus,
 )
+from app.domain.models.memory import Memory
 from app.domain.models.tool_spec import ToolSpec
 from app.infrastructure.external.llm.robust_json_parser import (
     RobustJsonParser,
@@ -41,8 +42,18 @@ logger = logging.getLogger(__name__)
 class LangChainAgentEngine(AgentEngine):
     """Runs a single agent turn (model call + tool-call loop) via LangChain."""
 
-    def __init__(self, config: LLMConfig):
-        self._config = config
+    def __init__(
+        self,
+        config: LLMConfig,
+        *,
+        max_iterations: int = 100,
+        max_retries: int = 3,
+        retry_interval: float = 1.0,
+    ):
+        self._max_iterations = max_iterations
+        self._max_retries = max_retries
+        self._retry_interval = retry_interval
+
         kwargs: Dict[str, Any] = dict(
             model=config.model_name,
             model_provider=config.model_provider,
@@ -54,148 +65,113 @@ class LangChainAgentEngine(AgentEngine):
             kwargs["default_headers"] = config.extra_headers
         self._model = init_chat_model(**kwargs)
 
-    async def run(self, request: AgentRunRequest) -> AsyncGenerator[BaseEvent, None]:
-        memory = request.memory
-        if memory.empty:
-            memory.add_message(ChatMessage(role=Role.SYSTEM, content=request.system_prompt))
-        memory.add_message(ChatMessage(role=Role.USER, content=request.user_input))
-        await self._progress(request)
+    async def run(
+        self,
+        conversation: Memory,
+        *,
+        tools: Sequence[ToolSpec] = (),
+        response_format: ResponseFormat = ResponseFormat.TEXT,
+        allow_tools: bool = True,
+    ) -> AsyncIterator[AgentEvent]:
+        bound = self._bind(tools, response_format, allow_tools)
+        tools_by_name = {spec.name: spec for spec in tools}
 
-        lc_tools = self._build_tools(request.tools)
-        tools_by_name = {spec.name: spec for spec in request.tools}
-        response_format = {"type": request.response_format} if request.response_format else None
+        message = await self._ask(bound, conversation)
+        conversation.add_message(message)
 
-        ai_message = await self._ask(memory, lc_tools, response_format, request.tool_choice, request.max_retries)
-        memory.add_message(ai_message)
-        await self._progress(request)
-
-        for _ in range(request.max_iterations):
-            if not ai_message.tool_calls:
+        for _ in range(self._max_iterations):
+            if not message.tool_calls:
                 break
 
-            tool_messages: List[ChatMessage] = []
-            for tool_call in ai_message.tool_calls:
-                tool_call.id = tool_call.id or str(uuid.uuid4())
-                spec = tools_by_name.get(tool_call.name)
+            tool_results: List[ChatMessage] = []
+            for call in message.tool_calls:
+                call.id = call.id or str(uuid.uuid4())
+                spec = tools_by_name.get(call.name)
                 if not spec:
-                    yield ErrorEvent(error=f"Unknown tool: {tool_call.name}")
+                    yield ErrorEvent(error=f"Unknown tool: {call.name}")
                     continue
 
-                yield ToolEvent(
-                    status=ToolStatus.CALLING,
-                    tool_call_id=tool_call.id,
-                    tool_name=spec.toolkit_name,
-                    function_name=tool_call.name,
-                    function_args=tool_call.arguments,
-                )
+                yield self._tool_event(ToolStatus.CALLING, call, spec)
+                result, content = await self._invoke(spec, call.arguments)
+                yield self._tool_event(ToolStatus.CALLED, call, spec, result)
 
-                result, content = await self._invoke(spec, tool_call.arguments, request)
-
-                yield ToolEvent(
-                    status=ToolStatus.CALLED,
-                    tool_call_id=tool_call.id,
-                    tool_name=spec.toolkit_name,
-                    function_name=tool_call.name,
-                    function_args=tool_call.arguments,
-                    function_result=result,
-                )
-
-                tool_messages.append(ChatMessage(
+                tool_results.append(ChatMessage(
                     role=Role.TOOL,
-                    tool_call_id=tool_call.id,
-                    name=tool_call.name,
+                    tool_call_id=call.id,
+                    name=call.name,
                     content=content,
                 ))
 
-            memory.add_messages(tool_messages)
-            await self._progress(request)
-
-            ai_message = await self._ask(memory, lc_tools, response_format, request.tool_choice, request.max_retries)
-            memory.add_message(ai_message)
-            await self._progress(request)
+            conversation.add_messages(tool_results)
+            message = await self._ask(bound, conversation)
+            conversation.add_message(message)
         else:
             yield ErrorEvent(error="Maximum iteration count reached, failed to complete the task")
 
-        yield MessageEvent(message=ai_message.content)
+        yield MessageEvent(message=message.content)
 
     # ------------------------------------------------------------------
     # Model call (with layered tool-call JSON repair, stages 4-5)
     # ------------------------------------------------------------------
 
-    async def _ask(
-        self,
-        memory,
-        lc_tools: List[Dict[str, Any]],
-        response_format: Optional[Dict[str, str]],
-        tool_choice: Optional[str],
-        max_retries: int,
-    ) -> ChatMessage:
-        chain = (
-            self._model
-            .bind(response_format=response_format, tool_choice=tool_choice)
-            .bind_tools(lc_tools)
-            | RobustJsonParser.from_llm(self._model)
+    def _bind(self, tools: Sequence[ToolSpec], response_format: ResponseFormat, allow_tools: bool):
+        model = self._model.bind(
+            response_format={"type": response_format.value} if response_format is ResponseFormat.JSON else None,
+            tool_choice=None if allow_tools else "none",
         )
+        return model.bind_tools(self._build_tools(tools)) | RobustJsonParser.from_llm(self._model)
 
-        context = [self._to_lc(message) for message in memory.get_messages()]
+    async def _ask(self, chain, conversation: Memory) -> ChatMessage:
+        context = [self._to_lc(message) for message in conversation.get_messages()]
         message: Optional[AIMessage] = None
-        for attempt in range(max_retries):
+        for attempt in range(self._max_retries):
             try:
                 message = await chain.ainvoke(context)
                 break
             except ToolCallParseError as e:
-                if attempt == max_retries - 1:
+                if attempt == self._max_retries - 1:
                     raise
-                logger.warning(
-                    "Attempt %d/%d: tool call JSON repair failed, retrying model",
-                    attempt + 1, max_retries,
-                )
-                if attempt == 0:
-                    # Stage 4: silent retry, same context.
-                    pass
-                else:
-                    # Stage 5: add error feedback to context.
+                logger.warning("Attempt %d/%d: tool call JSON repair failed, retrying model",
+                               attempt + 1, self._max_retries)
+                # Stage 4 (attempt 0): silent retry. Stage 5: add error feedback.
+                if attempt > 0:
                     context = e.make_retry_context(context)
-        logger.debug(f"Response from model: {message}")
         return self._from_lc_ai(message)
 
-    async def _invoke(
-        self,
-        spec: ToolSpec,
-        args: Dict[str, Any],
-        request: AgentRunRequest,
-    ) -> Tuple[Any, str]:
+    async def _invoke(self, spec: ToolSpec, args: Dict[str, Any]) -> Tuple[Any, str]:
         """Invoke a tool with retries.
 
-        Returns ``(raw_result, content)`` on success, or ``(None, error)`` when
+        Returns ``(raw_result, content)`` on success, or ``(None, error)`` once
         all retries are exhausted.
         """
-        retries = 0
-        last_error = ""
-        while retries <= request.max_retries:
+        for attempt in range(self._max_retries + 1):
             try:
                 raw = await spec.handler(args)
                 content = raw.model_dump_json() if hasattr(raw, "model_dump_json") else str(raw)
                 return raw, content
             except Exception as e:
-                last_error = str(e)
-                retries += 1
-                if retries <= request.max_retries:
-                    await asyncio.sleep(request.retry_interval)
-                else:
+                if attempt >= self._max_retries:
                     logger.exception(f"Tool execution failed, {spec.name}, {args}")
-        return None, last_error
+                    return None, str(e)
+                await asyncio.sleep(self._retry_interval)
 
-    async def _progress(self, request: AgentRunRequest) -> None:
-        if request.on_progress:
-            await request.on_progress()
+    @staticmethod
+    def _tool_event(status: ToolStatus, call: ToolCall, spec: ToolSpec, result: Any = None) -> ToolEvent:
+        return ToolEvent(
+            status=status,
+            tool_call_id=call.id,
+            tool_name=spec.toolkit_name,
+            function_name=call.name,
+            function_args=call.arguments,
+            function_result=result,
+        )
 
     # ------------------------------------------------------------------
     # Neutral <-> LangChain conversions
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _build_tools(specs: List[ToolSpec]) -> List[Dict[str, Any]]:
+    def _build_tools(specs: Sequence[ToolSpec]) -> List[Dict[str, Any]]:
         return [
             {
                 "type": "function",
@@ -220,7 +196,6 @@ class LangChainAgentEngine(AgentEngine):
                 tool_call_id=message.tool_call_id or "",
                 name=message.name or "",
             )
-        # Assistant
         tool_calls = [
             create_tool_call(name=tc.name, args=tc.arguments, id=tc.id or None)
             for tc in message.tool_calls

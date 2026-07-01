@@ -334,6 +334,35 @@ class MCPToolkit(BaseToolkit):
         """获取同步工具定义（基础工具）"""
         return self._tools
 
+    def to_tool_specs(self) -> List["ToolSpec"]:
+        """Expose dynamically discovered MCP tools as neutral ToolSpecs.
+
+        This routes MCP tool execution through the same ``handler`` path as all
+        other toolkits (via ``invoke_function``), so the engine can actually run
+        MCP tools instead of failing with "Unknown tool".
+        """
+        from app.domain.models.tool_spec import ToolSpec
+
+        specs: List[ToolSpec] = []
+        for tool in self._tools:
+            function = tool.get("function", {})
+            name = function.get("name")
+            if not name:
+                continue
+            specs.append(ToolSpec(
+                name=name,
+                description=function.get("description", ""),
+                parameters=function.get("parameters", {"type": "object", "properties": {}}),
+                handler=self._make_mcp_handler(name),
+                toolkit_name=self.name,
+            ))
+        return specs
+
+    def _make_mcp_handler(self, function_name: str) -> Any:
+        async def handler(args: Dict[str, Any]) -> Any:
+            return await self.invoke_function(function_name, **args)
+        return handler
+
     def has_function(self, function_name: str) -> bool:
         """检查指定函数是否存在（包括动态 MCP 工具）"""
         # 检查是否是 MCP 工具

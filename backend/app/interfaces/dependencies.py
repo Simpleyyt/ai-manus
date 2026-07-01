@@ -28,6 +28,8 @@ from app.infrastructure.repositories.user_repository import MongoUserRepository
 from app.infrastructure.repositories.claw_repository import ClawRepository as MongoClawRepository
 from app.application.services.claw_service import ClawService
 from app.domain.services.claw_domain_service import ClawDomainService
+from app.domain.external.agent_engine import LLMConfig
+from app.infrastructure.external.llm import LangChainAgentEngine
 
 
 # Configure logging
@@ -54,6 +56,7 @@ def get_agent_service() -> AgentService:
     file_storage = get_file_storage()
     search_engine = get_search_engine()
     mcp_repository = FileMCPRepository()
+    engine = get_agent_engine()
     
     # Create AgentService instance
     return AgentService(
@@ -64,7 +67,27 @@ def get_agent_service() -> AgentService:
         file_storage=file_storage,
         search_engine=search_engine,
         mcp_repository=mcp_repository,
+        engine=engine,
     )
+
+
+@lru_cache()
+def get_agent_engine() -> LangChainAgentEngine:
+    """Build the agent engine from settings.
+
+    The composition root is the only place that reads LLM configuration and
+    picks a concrete engine implementation, keeping the domain framework-neutral.
+    """
+    settings = get_settings()
+    config = LLMConfig(
+        model_name=settings.model_name,
+        model_provider=settings.model_provider,
+        temperature=settings.temperature,
+        max_tokens=settings.max_tokens,
+        api_base=settings.api_base,
+        extra_headers=settings.extra_headers,
+    )
+    return LangChainAgentEngine(config)
 
 
 @lru_cache()

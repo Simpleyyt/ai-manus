@@ -1,10 +1,8 @@
-from typing import Dict, Any, List, AsyncGenerator, Optional
-import json
+from typing import List, AsyncGenerator, Optional
 import logging
 from app.domain.models.plan import Plan, Step
 from app.domain.models.message import Message
 from app.domain.services.agents.base import BaseAgent
-from app.domain.models.memory import Memory
 from app.domain.services.prompts.system import SYSTEM_PROMPT
 from app.domain.services.prompts.planner import (
     CREATE_PLAN_PROMPT, 
@@ -15,14 +13,10 @@ from app.domain.models.event import (
     BaseEvent,
     PlanEvent,
     PlanStatus,
-    ErrorEvent,
     MessageEvent,
-    DoneEvent,
 )
-from app.domain.external.sandbox import Sandbox
 from app.domain.services.tools.base import BaseToolkit
-from app.domain.services.tools.file import FileToolkit
-from app.domain.services.tools.shell import ShellToolkit
+from app.domain.external.agent_engine import AgentEngine
 from app.domain.repositories.agent_repository import AgentRepository
 
 logger = logging.getLogger(__name__)
@@ -41,11 +35,13 @@ class PlannerAgent(BaseAgent):
         self,
         agent_id: str,
         agent_repository: AgentRepository,
+        engine: AgentEngine,
         tools: List[BaseToolkit],
     ):
         super().__init__(
             agent_id=agent_id,
             agent_repository=agent_repository,
+            engine=engine,
             tools=tools,
         )
 

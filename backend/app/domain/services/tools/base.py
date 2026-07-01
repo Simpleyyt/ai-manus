@@ -7,8 +7,10 @@ from langchain.tools import BaseTool
 from langchain.messages import ToolMessage
 from langchain.messages import ToolCall
 from langchain_core.tools.base import BaseToolkit as LangchainBaseToolkit, ArgsSchema
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 from pydantic import BaseModel, create_model, ConfigDict
+
+from app.domain.models.tool_spec import ToolSpec
 
 
 def create_model_without_fields(model_class: type[BaseModel], exclude_fields: set[str]) -> type[BaseModel]:
@@ -84,3 +86,36 @@ class BaseToolkit(LangchainBaseToolkit):
             if tool.name == tool_name:
                 return tool
         return None
+
+    def to_tool_specs(self) -> List[ToolSpec]:
+        """Expose this toolkit's tools as framework-neutral ToolSpecs.
+
+        The ``@tool`` decorator is used only to derive the JSON schema and the
+        callable here; the resulting ToolSpec carries no framework type, so any
+        engine adapter can bind it.
+        """
+        specs: List[ToolSpec] = []
+        for tool in self.tools:
+            specs.append(ToolSpec(
+                name=tool.name,
+                description=tool.description,
+                parameters=self._schema_for(tool),
+                handler=self._make_handler(tool),
+                toolkit_name=self.name,
+            ))
+        return specs
+
+    @staticmethod
+    def _schema_for(tool: Tool) -> Dict[str, Any]:
+        if tool.args_schema is not None:
+            try:
+                return tool.args_schema.model_json_schema()
+            except Exception:
+                pass
+        return {"type": "object", "properties": {}}
+
+    @staticmethod
+    def _make_handler(tool: Tool) -> Callable:
+        async def handler(args: Dict[str, Any]) -> Any:
+            return await tool._arun(**args)
+        return handler

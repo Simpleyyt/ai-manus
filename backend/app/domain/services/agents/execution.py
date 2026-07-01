@@ -18,6 +18,7 @@ from app.domain.models.event import (
     WaitEvent,
 )
 from app.domain.services.tools.base import BaseToolkit
+from app.domain.external.agent_engine import AgentEngine
 import logging
 
 logger = logging.getLogger(__name__)
@@ -36,11 +37,13 @@ class ExecutionAgent(BaseAgent):
         self,
         agent_id: str,
         agent_repository: AgentRepository,
+        engine: AgentEngine,
         tools: List[BaseToolkit],
     ):
         super().__init__(
             agent_id=agent_id,
             agent_repository=agent_repository,
+            engine=engine,
             tools=tools
         )
     

@@ -13,6 +13,7 @@ from typing import Type
 from app.domain.models.agent import Agent
 from app.domain.external.sandbox import Sandbox
 from app.domain.external.search import SearchEngine
+from app.domain.external.agent_engine import AgentEngine
 from app.domain.external.file import FileStorage
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.external.task import Task
@@ -33,6 +34,7 @@ class AgentService:
         task_cls: Type[Task],
         file_storage: FileStorage,
         mcp_repository: MCPRepository,
+        engine: AgentEngine,
         search_engine: Optional[SearchEngine] = None,
     ):
         logger.info("Initializing AgentService")
@@ -46,6 +48,7 @@ class AgentService:
             task_cls,
             file_storage,
             mcp_repository,
+            engine,
             search_engine,
         )
         self._search_engine = search_engine

@@ -29,7 +29,7 @@ from app.infrastructure.repositories.claw_repository import ClawRepository as Mo
 from app.application.services.claw_service import ClawService
 from app.domain.services.claw_domain_service import ClawDomainService
 from app.domain.external.agent_engine import LLMConfig
-from app.infrastructure.external.llm import LangChainAgentEngine
+from app.infrastructure.external.agent_engine import LangChainAgentEngine
 
 
 # Configure logging

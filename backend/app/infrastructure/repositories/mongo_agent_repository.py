@@ -1,7 +1,7 @@
-from typing import Optional, List
+from typing import Optional
 from datetime import datetime, UTC
 from app.domain.models.agent import Agent
-from app.domain.models.memory import Memory
+from app.domain.models.conversation import Conversation
 from app.domain.repositories.agent_repository import AgentRepository
 from app.infrastructure.models.documents import AgentDocument
 import logging
@@ -34,33 +34,21 @@ class MongoAgentRepository(AgentRepository):
         )
         return mongo_agent.to_domain() if mongo_agent else None
 
-    async def add_memory(self, agent_id: str,
-                          name: str,
-                          memory: Memory) -> None:
-        """Add or update a memory for an agent"""
-        result = await AgentDocument.find_one(
-            AgentDocument.agent_id == agent_id
-        ).update(
-            {"$set": {f"memories.{name}": memory, "updated_at": datetime.now(UTC)}}
-        )
-        if not result:
-            raise ValueError(f"Agent {agent_id} not found")
-
-    async def get_memory(self, agent_id: str, name: str) -> Memory:
-        """Get memory by name from agent, create if not exists"""
+    async def get_conversation(self, agent_id: str, name: str) -> Conversation:
+        """Get a named conversation for an agent, creating an empty one if absent"""
         mongo_agent = await AgentDocument.find_one(
             AgentDocument.agent_id == agent_id
         )
         if not mongo_agent:
             raise ValueError(f"Agent {agent_id} not found")
-        return mongo_agent.memories.get(name, Memory(messages=[]))
-    
-    async def save_memory(self, agent_id: str, name: str, memory: Memory) -> None:
-        """Update the messages of a memory"""
+        return mongo_agent.conversations.get(name, Conversation(messages=[]))
+
+    async def save_conversation(self, agent_id: str, name: str, conversation: Conversation) -> None:
+        """Save a named conversation for an agent"""
         result = await AgentDocument.find_one(
             AgentDocument.agent_id == agent_id
         ).update(
-            {"$set": {f"memories.{name}": memory, "updated_at": datetime.now(UTC)}}
+            {"$set": {f"conversations.{name}": conversation, "updated_at": datetime.now(UTC)}}
         )
         if not result:
             raise ValueError(f"Agent {agent_id} not found")

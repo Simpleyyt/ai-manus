@@ -15,8 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.domain.external.agent_engine import ResponseFormat
-from app.domain.models.conversation import ChatMessage, Role, ToolCall
-from app.domain.models.memory import Memory
+from app.domain.models.conversation import ChatMessage, Conversation, Role, ToolCall
 from app.domain.models.message import Message
 from app.domain.models.tool_result import ToolResult
 from app.domain.models.tool_spec import ToolSpec
@@ -30,7 +29,7 @@ from app.domain.models.event import (
     StepEvent,
     StepStatus,
 )
-from app.infrastructure.external.llm.langchain_agent_engine import LangChainAgentEngine
+from app.infrastructure.external.agent_engine.langchain import LangChainAgentEngine
 
 
 # --------------------------------------------------------------------------
@@ -41,16 +40,13 @@ class FakeAgentRepository:
     """In-memory AgentRepository (only the memory methods are used)."""
 
     def __init__(self):
-        self.memories = {}
+        self.conversations = {}
 
-    async def get_memory(self, agent_id, name):
-        return self.memories.setdefault((agent_id, name), Memory(messages=[]))
+    async def get_conversation(self, agent_id, name):
+        return self.conversations.setdefault((agent_id, name), Conversation(messages=[]))
 
-    async def save_memory(self, agent_id, name, memory):
-        self.memories[(agent_id, name)] = memory
-
-    async def add_memory(self, agent_id, name, memory):
-        self.memories[(agent_id, name)] = memory
+    async def save_conversation(self, agent_id, name, conversation):
+        self.conversations[(agent_id, name)] = conversation
 
 
 class FakeSessionRepository:
@@ -113,10 +109,10 @@ def _scripted_ask(messages):
 
 
 def _conversation(*users):
-    memory = Memory(messages=[ChatMessage(role=Role.SYSTEM, content="SYS")])
+    conversation = Conversation(messages=[ChatMessage(role=Role.SYSTEM, content="SYS")])
     for text in users:
-        memory.add_message(ChatMessage(role=Role.USER, content=text))
-    return memory
+        conversation.add_message(ChatMessage(role=Role.USER, content=text))
+    return conversation
 
 
 async def test_engine_runs_tool_then_finishes():
@@ -277,10 +273,10 @@ async def test_plan_act_flow_full_cycle_with_fake_engine():
 
     assert SessionStatus.RUNNING in session_repo.status_updates
 
-    planner_mem = agent_repo.memories[(agent_id, "planner")]
-    exec_mem = agent_repo.memories[(agent_id, "execution")]
-    assert all(isinstance(m, ChatMessage) for m in planner_mem.messages)
-    assert all(isinstance(m, ChatMessage) for m in exec_mem.messages)
+    planner_conv = agent_repo.conversations[(agent_id, "planner")]
+    exec_conv = agent_repo.conversations[(agent_id, "execution")]
+    assert all(isinstance(m, ChatMessage) for m in planner_conv.messages)
+    assert all(isinstance(m, ChatMessage) for m in exec_conv.messages)
 
 
 # --------------------------------------------------------------------------

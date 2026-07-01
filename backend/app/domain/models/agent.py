@@ -1,16 +1,16 @@
 from typing import Optional, Dict
 from datetime import datetime, UTC
 from pydantic import BaseModel, Field, field_validator
-from app.domain.models.memory import Memory
+from app.domain.models.conversation import Conversation
 import uuid
 
 class Agent(BaseModel):
     """
     Agent aggregate root that manages the lifecycle and state of an AI agent
-    Including its execution context, memory, and current plan
+    Including its execution context, conversations, and current plan
     """
     id: str = Field(default_factory=lambda: uuid.uuid4().hex[:16])
-    memories: Dict[str, Memory] = Field(default_factory=dict)
+    conversations: Dict[str, Conversation] = Field(default_factory=dict)
     model_name: str = Field(default="")
     temperature: float = Field(default=0.7)
     max_tokens: int = Field(default=2000)

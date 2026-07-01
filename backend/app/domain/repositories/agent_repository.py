@@ -1,7 +1,6 @@
-from typing import Optional, List, Protocol
+from typing import Optional, Protocol
 from app.domain.models.agent import Agent
-from app.domain.models.plan import Plan
-from app.domain.models.memory import Memory
+from app.domain.models.conversation import Conversation
 
 class AgentRepository(Protocol):
     """Repository interface for Agent aggregate"""
@@ -13,17 +12,11 @@ class AgentRepository(Protocol):
     async def find_by_id(self, agent_id: str) -> Optional[Agent]:
         """Find an agent by its ID"""
         ...
-    
-    async def add_memory(self, agent_id: str,
-                        name: str,
-                        memory: Memory) -> None:
-        """Add or update a memory for an agent"""
+
+    async def get_conversation(self, agent_id: str, name: str) -> Conversation:
+        """Get a named conversation for an agent, creating an empty one if absent"""
         ...
 
-    async def get_memory(self, agent_id: str, name: str) -> Memory:
-        """Get memory by name from agent, create if not exists"""
+    async def save_conversation(self, agent_id: str, name: str, conversation: Conversation) -> None:
+        """Save a named conversation for an agent"""
         ...
-
-    async def save_memory(self, agent_id: str, name: str, memory: Memory) -> None:
-        """Update the messages of a memory"""
-        ... 

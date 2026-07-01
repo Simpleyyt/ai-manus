@@ -3,7 +3,7 @@ from datetime import datetime, timezone, UTC
 from beanie import Document
 from pydantic import BaseModel, Field
 from app.domain.models.agent import Agent
-from app.domain.models.memory import Memory
+from app.domain.models.conversation import Conversation
 from app.domain.models.event import AgentEvent
 from app.domain.models.session import Session, SessionStatus
 from app.domain.models.file import FileInfo
@@ -70,7 +70,7 @@ class AgentDocument(BaseDocument[Agent], id_field="agent_id", domain_model_class
     model_name: str
     temperature: float
     max_tokens: int
-    memories: Dict[str, Memory] = {}
+    conversations: Dict[str, Conversation] = {}
     created_at: datetime = datetime.now(timezone.utc)
     updated_at: datetime = datetime.now(timezone.utc)
 

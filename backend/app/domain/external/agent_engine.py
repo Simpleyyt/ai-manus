@@ -3,7 +3,7 @@ from enum import Enum
 from typing import AsyncIterator, Dict, Optional, Protocol, Sequence, runtime_checkable
 
 from app.domain.models.event import AgentEvent
-from app.domain.models.memory import Memory
+from app.domain.models.conversation import Conversation
 from app.domain.models.tool_spec import ToolSpec
 
 
@@ -40,7 +40,7 @@ class AgentEngine(Protocol):
 
     def run(
         self,
-        conversation: Memory,
+        conversation: Conversation,
         *,
         tools: Sequence[ToolSpec] = (),
         response_format: ResponseFormat = ResponseFormat.TEXT,

@@ -44,7 +44,7 @@ class BaseAgent(ABC):
         self._tool_specs: List[ToolSpec] = [
             spec for toolkit in tools for spec in toolkit.to_tool_specs()
         ]
-        self.memory = None
+        self.conversation = None
 
     def _parse_json(self, text: str) -> dict:
         """Parse JSON from an assistant's final structured output."""
@@ -53,33 +53,33 @@ class BaseAgent(ABC):
     async def execute(self, request: str) -> AsyncGenerator[BaseEvent, None]:
         """Run one agent turn: assemble the conversation, stream engine events,
         and persist the conversation as it changes."""
-        await self._ensure_memory()
-        if self.memory.empty:
-            self.memory.add_message(ChatMessage(role=Role.SYSTEM, content=self.system_prompt))
-        self.memory.add_message(ChatMessage(role=Role.USER, content=request))
-        await self._save_memory()
+        await self._ensure_conversation()
+        if self.conversation.empty:
+            self.conversation.add_message(ChatMessage(role=Role.SYSTEM, content=self.system_prompt))
+        self.conversation.add_message(ChatMessage(role=Role.USER, content=request))
+        await self._save_conversation()
         try:
             async for event in self._engine.run(
-                self.memory,
+                self.conversation,
                 tools=self._tool_specs,
                 response_format=self.format,
                 allow_tools=self.allow_tools,
             ):
                 yield event
-                await self._save_memory()
+                await self._save_conversation()
         finally:
-            await self._save_memory()
+            await self._save_conversation()
 
-    async def _ensure_memory(self):
-        if not self.memory:
-            self.memory = await self._repository.get_memory(self._agent_id, self.name)
+    async def _ensure_conversation(self):
+        if not self.conversation:
+            self.conversation = await self._repository.get_conversation(self._agent_id, self.name)
 
-    async def _save_memory(self) -> None:
-        await self._repository.save_memory(self._agent_id, self.name, self.memory)
+    async def _save_conversation(self) -> None:
+        await self._repository.save_conversation(self._agent_id, self.name, self.conversation)
 
     async def roll_back(self, message: Message):
-        await self._ensure_memory()
-        last_message = self.memory.get_last_message()
+        await self._ensure_conversation()
+        last_message = self.conversation.get_last_message()
         if not last_message:
             return
         if last_message.role != Role.ASSISTANT:
@@ -88,17 +88,17 @@ class BaseAgent(ABC):
             return
         tool_call = last_message.tool_calls[0]
         if tool_call.name == "message_ask_user":
-            self.memory.add_message(ChatMessage(
+            self.conversation.add_message(ChatMessage(
                 role=Role.TOOL,
                 tool_call_id=tool_call.id,
                 name=tool_call.name,
                 content=message.message,
             ))
         else:
-            self.memory.roll_back()
-        await self._save_memory()
+            self.conversation.roll_back()
+        await self._save_conversation()
 
-    async def compact_memory(self) -> None:
-        await self._ensure_memory()
-        self.memory.compact()
-        await self._save_memory()
+    async def compact_conversation(self) -> None:
+        await self._ensure_conversation()
+        self.conversation.compact()
+        await self._save_conversation()

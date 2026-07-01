@@ -21,7 +21,7 @@ from langchain.messages import (
 from langchain_core.messages.tool import tool_call as create_tool_call
 
 from app.domain.external.agent_engine import AgentEngine, LLMConfig, ResponseFormat
-from app.domain.models.conversation import ChatMessage, Role, ToolCall
+from app.domain.models.conversation import ChatMessage, Conversation, Role, ToolCall
 from app.domain.models.event import (
     AgentEvent,
     ErrorEvent,
@@ -29,9 +29,8 @@ from app.domain.models.event import (
     ToolEvent,
     ToolStatus,
 )
-from app.domain.models.memory import Memory
 from app.domain.models.tool_spec import ToolSpec
-from app.infrastructure.external.llm.robust_json_parser import (
+from app.infrastructure.external.agent_engine.robust_json_parser import (
     RobustJsonParser,
     ToolCallParseError,
 )
@@ -67,7 +66,7 @@ class LangChainAgentEngine(AgentEngine):
 
     async def run(
         self,
-        conversation: Memory,
+        conversation: Conversation,
         *,
         tools: Sequence[ToolSpec] = (),
         response_format: ResponseFormat = ResponseFormat.TEXT,
@@ -121,7 +120,7 @@ class LangChainAgentEngine(AgentEngine):
         )
         return model.bind_tools(self._build_tools(tools)) | RobustJsonParser.from_llm(self._model)
 
-    async def _ask(self, chain, conversation: Memory) -> ChatMessage:
+    async def _ask(self, chain, conversation: Conversation) -> ChatMessage:
         context = [self._to_lc(message) for message in conversation.get_messages()]
         message: Optional[AIMessage] = None
         for attempt in range(self._max_retries):

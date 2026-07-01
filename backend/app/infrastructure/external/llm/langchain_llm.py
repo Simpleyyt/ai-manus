@@ -101,7 +101,13 @@ class LangchainLLM:
             )
             for tc in (message.tool_calls or [])
         ]
-        content = message.content if isinstance(message.content, str) else str(message.content)
+        raw = message.content
+        if isinstance(raw, str):
+            content = raw
+        elif raw is None:
+            content = ""
+        else:
+            content = str(raw)
         return LLMMessage.assistant(content=content, tool_calls=tool_calls)
 
     # ------------------------------------------------------------------

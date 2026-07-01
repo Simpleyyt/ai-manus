@@ -1,8 +1,8 @@
-"""Unit tests for domain-native message types and legacy-format compatibility.
+"""Unit tests for domain-native message types.
 
-These tests guard the anti-corruption layer that lets the framework-agnostic
-``LLMMessage`` model read the two historical persisted shapes (LangChain
-``model_dump`` and the older OpenAI chat shape) as well as its own shape.
+The domain ``LLMMessage`` model is framework-agnostic and only understands its
+own native shape. Adapting historical persisted formats is the infrastructure
+layer's job and is tested separately in ``test_memory_serialization.py``.
 """
 from app.domain.models.message import LLMMessage, Role, ToolCall
 from app.domain.models.memory import Memory
@@ -27,68 +27,9 @@ class TestLLMMessageNative:
         assert m.artifact == {"big": "obj"}
         assert "artifact" not in m.model_dump()
 
-    def test_toolcall_string_args_parsed(self):
-        tc = ToolCall.model_validate({"id": "1", "name": "t", "args": '{"a": 1}'})
-        assert tc.args == {"a": 1}
-
-    def test_toolcall_invalid_string_args_defaults_empty(self):
-        tc = ToolCall.model_validate({"name": "t", "args": "not json"})
-        assert tc.args == {}
-
-
-class TestLegacyOpenAIFormat:
-    def test_openai_tool_call_and_tool_message(self):
-        data = {
-            "messages": [
-                {"role": "system", "content": "sys"},
-                {
-                    "role": "assistant",
-                    "content": None,
-                    "tool_calls": [
-                        {
-                            "id": None,
-                            "type": "function",
-                            "function": {"name": "shell_exec", "arguments": '{"cmd": "ls"}'},
-                        }
-                    ],
-                },
-                {"role": "tool", "function_name": "shell_exec", "tool_call_id": "abc", "content": "{}"},
-            ]
-        }
-        m = Memory.model_validate(data)
-        assert [x.role for x in m.messages] == [Role.SYSTEM, Role.ASSISTANT, Role.TOOL]
-        tc = m.messages[1].tool_calls[0]
-        assert tc.name == "shell_exec" and tc.args == {"cmd": "ls"}
-        # tool message name recovered from legacy "function_name"
-        assert m.messages[2].name == "shell_exec"
-
-
-class TestLegacyLangChainFormat:
-    def test_langchain_type_discriminator_mapped_to_role(self):
-        data = {
-            "messages": [
-                {"type": "system", "content": "sys", "name": None, "id": None},
-                {
-                    "type": "ai",
-                    "content": "",
-                    "tool_calls": [
-                        {"name": "shell_exec", "args": {"cmd": "ls"}, "id": "call_1", "type": "tool_call"}
-                    ],
-                    "invalid_tool_calls": [],
-                },
-                {"type": "tool", "content": "{}", "name": "shell_exec", "tool_call_id": "call_1", "status": "success"},
-            ]
-        }
-        m = Memory.model_validate(data)
-        assert [x.role for x in m.messages] == [Role.SYSTEM, Role.ASSISTANT, Role.TOOL]
-        tc = m.messages[1].tool_calls[0]
-        assert tc.name == "shell_exec" and tc.args == {"cmd": "ls"} and tc.id == "call_1"
-        # extra langchain-only fields (additional_kwargs, status, ...) are ignored
-        assert m.messages[2].name == "shell_exec"
-
-    def test_human_maps_to_user(self):
-        m = LLMMessage.model_validate({"type": "human", "content": "hi"})
-        assert m.role == Role.USER
+    def test_toolcall_native_shape(self):
+        tc = ToolCall(id="1", name="t", args={"a": 1})
+        assert tc.args == {"a": 1} and tc.name == "t" and tc.id == "1"
 
 
 class TestMemoryOperations:

@@ -1,10 +1,10 @@
-from typing import Dict, Optional, List, Type, TypeVar, Generic, get_args, Self
+from typing import Any, Dict, Optional, List, Type, TypeVar, Generic, get_args, Self
 from datetime import datetime, timezone, UTC
 from beanie import Document
 from pydantic import BaseModel, Field
 from app.domain.models.agent import Agent
-from app.domain.models.memory import Memory
 from app.domain.models.event import AgentEvent
+from app.infrastructure.models.memory_serialization import deserialize_memory, serialize_memory
 from app.domain.models.session import Session, SessionStatus
 from app.domain.models.file import FileInfo
 from app.domain.models.user import User, UserRole
@@ -70,7 +70,9 @@ class AgentDocument(BaseDocument[Agent], id_field="agent_id", domain_model_class
     model_name: str
     temperature: float
     max_tokens: int
-    memories: Dict[str, Memory] = {}
+    # Raw persisted memory blobs; conversion to/from the domain Memory model
+    # (including legacy-format upgrades) is handled by the memory serializer.
+    memories: Dict[str, Any] = {}
     created_at: datetime = datetime.now(timezone.utc)
     updated_at: datetime = datetime.now(timezone.utc)
 
@@ -79,6 +81,24 @@ class AgentDocument(BaseDocument[Agent], id_field="agent_id", domain_model_class
         indexes = [
             "agent_id",
         ]
+
+    def to_domain(self) -> Agent:
+        """Convert to the domain Agent, deserializing memory blobs safely."""
+        data = self.model_dump(exclude={'id', 'memories'})
+        data['id'] = data.pop(self._ID_FIELD)
+        data['memories'] = {
+            name: deserialize_memory(raw) for name, raw in (self.memories or {}).items()
+        }
+        return Agent.model_validate(data)
+
+    @classmethod
+    def from_domain(cls, agent: Agent) -> "AgentDocument":
+        """Create a document from the domain Agent, serializing memory."""
+        data = agent.model_dump(exclude={'memories'})
+        data[cls._ID_FIELD] = data.pop('id')
+        doc = cls.model_validate(data)
+        doc.memories = {name: serialize_memory(m) for name, m in agent.memories.items()}
+        return doc
 
 
 class SessionDocument(BaseDocument[Session], id_field="session_id", domain_model_class=Session):

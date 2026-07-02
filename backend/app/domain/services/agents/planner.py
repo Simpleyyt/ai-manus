@@ -20,6 +20,7 @@ from app.domain.models.event import (
     DoneEvent,
 )
 from app.domain.external.sandbox import Sandbox
+from app.domain.external.llm import LLM
 from app.domain.services.tools.base import BaseToolkit
 from app.domain.services.tools.file import FileToolkit
 from app.domain.services.tools.shell import ShellToolkit
@@ -41,11 +42,13 @@ class PlannerAgent(BaseAgent):
         self,
         agent_id: str,
         agent_repository: AgentRepository,
+        llm: LLM,
         tools: List[BaseToolkit],
     ):
         super().__init__(
             agent_id=agent_id,
             agent_repository=agent_repository,
+            llm=llm,
             tools=tools,
         )
 

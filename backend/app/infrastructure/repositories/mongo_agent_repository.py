@@ -4,6 +4,7 @@ from app.domain.models.agent import Agent
 from app.domain.models.memory import Memory
 from app.domain.repositories.agent_repository import AgentRepository
 from app.infrastructure.models.documents import AgentDocument
+from app.infrastructure.models.memory_serialization import deserialize_memory, serialize_memory
 import logging
 
 
@@ -41,7 +42,7 @@ class MongoAgentRepository(AgentRepository):
         result = await AgentDocument.find_one(
             AgentDocument.agent_id == agent_id
         ).update(
-            {"$set": {f"memories.{name}": memory, "updated_at": datetime.now(UTC)}}
+            {"$set": {f"memories.{name}": serialize_memory(memory), "updated_at": datetime.now(UTC)}}
         )
         if not result:
             raise ValueError(f"Agent {agent_id} not found")
@@ -53,14 +54,14 @@ class MongoAgentRepository(AgentRepository):
         )
         if not mongo_agent:
             raise ValueError(f"Agent {agent_id} not found")
-        return mongo_agent.memories.get(name, Memory(messages=[]))
+        return deserialize_memory(mongo_agent.memories.get(name))
     
     async def save_memory(self, agent_id: str, name: str, memory: Memory) -> None:
         """Update the messages of a memory"""
         result = await AgentDocument.find_one(
             AgentDocument.agent_id == agent_id
         ).update(
-            {"$set": {f"memories.{name}": memory, "updated_at": datetime.now(UTC)}}
+            {"$set": {f"memories.{name}": serialize_memory(memory), "updated_at": datetime.now(UTC)}}
         )
         if not result:
             raise ValueError(f"Agent {agent_id} not found")

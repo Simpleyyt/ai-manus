@@ -17,6 +17,7 @@ from app.application.services.auth_service import AuthService
 from app.application.services.token_service import TokenService
 from app.application.services.email_service import EmailService
 from app.infrastructure.external.cache import get_cache
+from app.infrastructure.external.llm import get_llm
 
 # Import all required dependencies for agent service
 from app.infrastructure.external.sandbox.docker_sandbox import DockerSandbox
@@ -54,6 +55,7 @@ def get_agent_service() -> AgentService:
     file_storage = get_file_storage()
     search_engine = get_search_engine()
     mcp_repository = FileMCPRepository()
+    llm = get_llm()
     
     # Create AgentService instance
     return AgentService(
@@ -64,6 +66,7 @@ def get_agent_service() -> AgentService:
         file_storage=file_storage,
         search_engine=search_engine,
         mcp_repository=mcp_repository,
+        llm=llm,
     )
 
 

@@ -133,6 +133,12 @@ MODEL_NAME=deepseek-chat
 TEMPERATURE=0.7
 MAX_TOKENS=2000
 
+# LLM gateway backend: langchain (default) or openai.
+# - langchain: uses init_chat_model, supports many providers via MODEL_PROVIDER.
+# - openai:    talks to OpenAI / OpenAI-compatible endpoints (API_BASE) directly
+#              via the official openai Python SDK (MODEL_PROVIDER is ignored).
+#LLM_BACKEND=langchain
+
 # MongoDB configuration
 #MONGODB_URI=mongodb://mongodb:27017
 #MONGODB_DATABASE=manus

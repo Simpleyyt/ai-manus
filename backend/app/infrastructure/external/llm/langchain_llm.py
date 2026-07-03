@@ -160,7 +160,7 @@ class LangchainLLM:
 
 
 @lru_cache()
-def get_llm() -> LangchainLLM:
+def get_langchain_llm() -> LangchainLLM:
     """Return a process-wide singleton LangChain LLM gateway."""
     logger.info("Creating LangchainLLM gateway")
     return LangchainLLM()

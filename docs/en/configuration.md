@@ -13,10 +13,11 @@
 
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
-| `MODEL_PROVIDER` | `openai` | No | Model provider that selects the underlying LLM integration (e.g. `openai`, `deepseek`, `anthropic`, `ollama`) |
+| `MODEL_PROVIDER` | `openai` | No | Model provider that selects the underlying LLM integration (e.g. `openai`, `deepseek`, `anthropic`, `ollama`); only used when `LLM_PROVIDER=langchain` |
 | `MODEL_NAME` | `deepseek-chat` | Yes | Name of the model to use |
 | `TEMPERATURE` | `0.7` | No | Randomness level of model responses, range 0-1 |
 | `MAX_TOKENS` | `2000` | No | Maximum number of tokens in model response |
+| `LLM_PROVIDER` | `langchain` | No | LLM gateway implementation: `langchain` (default, many providers via `init_chat_model`) or `openai` (direct OpenAI Python SDK for OpenAI / compatible endpoints) |
 | `EXTRA_HEADERS` | - | No | Extra HTTP headers for model requests, as a JSON object string (e.g. `{"X-Api-Key":"xxx"}`); required by some gateways |
 
 ### Configuring Different Models / Providers
@@ -73,6 +74,27 @@ The following providers are built in (their LangChain integration packages are p
   ```
 
 > **Adding more providers**: `init_chat_model` also supports Google Gemini, AWS Bedrock, Azure OpenAI, Mistral and many more. Just add the matching `langchain-xxx` integration package (e.g. `langchain-google-genai`) to `backend/pyproject.toml`, rebuild the images (`./build.sh` or `./dev.sh build`), and set `MODEL_PROVIDER` accordingly. See the [LangChain `init_chat_model` docs](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html) for the full list of providers and names.
+
+### Switching the LLM Gateway Provider (`LLM_PROVIDER`)
+
+The backend calls the LLM through a single domain `LLM` interface, whose concrete implementation is chosen by `LLM_PROVIDER`:
+
+| `LLM_PROVIDER` | Description | When to use |
+|---------------|-------------|-------------|
+| `langchain` (default) | Calls via LangChain `init_chat_model`; combined with `MODEL_PROVIDER` it supports OpenAI, DeepSeek, Anthropic, Ollama and more | When you need multiple providers or the LangChain ecosystem (JSON repair, retries, …) |
+| `openai` | Uses the official `openai` Python SDK directly to call OpenAI and **any OpenAI-compatible endpoint** (via `API_BASE`), without going through LangChain | When you only use OpenAI / compatible endpoints and want fewer dependencies / native SDK behavior |
+
+- Both implementations consume the same settings (`MODEL_NAME`, `API_KEY`, `API_BASE`, `TEMPERATURE`, `MAX_TOKENS`, `EXTRA_HEADERS`).
+- When `openai` is selected, `MODEL_PROVIDER` is ignored (this backend always uses the OpenAI SDK).
+
+**Example (OpenAI SDK talking directly to a DeepSeek-compatible endpoint):**
+
+```env
+LLM_PROVIDER=openai
+MODEL_NAME=deepseek-chat
+API_BASE=https://api.deepseek.com/v1
+API_KEY=sk-...
+```
 
 ### MongoDB Configuration
 

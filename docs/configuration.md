@@ -13,10 +13,11 @@
 
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
-| `MODEL_PROVIDER` | `openai` | 否 | 模型提供商，决定底层使用哪个 LLM 集成（如 `openai`、`deepseek`、`anthropic`、`ollama`） |
+| `MODEL_PROVIDER` | `openai` | 否 | 模型提供商，决定底层使用哪个 LLM 集成（如 `openai`、`deepseek`、`anthropic`、`ollama`），仅在 `LLM_PROVIDER=langchain` 时生效 |
 | `MODEL_NAME` | `deepseek-chat` | 是 | 要使用的模型名称 |
 | `TEMPERATURE` | `0.7` | 否 | 模型响应的随机性程度，范围 0-1 |
 | `MAX_TOKENS` | `2000` | 否 | 模型响应的最大 token 数量 |
+| `LLM_PROVIDER` | `langchain` | 否 | LLM 网关实现：`langchain`（默认，经 `init_chat_model` 支持多种提供商）或 `openai`（直接使用官方 `openai` Python SDK 调用 OpenAI / 兼容端点） |
 | `EXTRA_HEADERS` | - | 否 | 为模型请求附加的自定义 HTTP 头，JSON 对象字符串（如 `{"X-Api-Key":"xxx"}`），部分网关鉴权时需要 |
 
 ### 配置不同的模型 / 提供商
@@ -73,6 +74,27 @@
   ```
 
 > **接入更多提供商**：`init_chat_model` 还支持 Google Gemini、AWS Bedrock、Azure OpenAI、Mistral 等更多提供商。只需在 `backend/pyproject.toml` 增加对应的 `langchain-xxx` 集成包（如 `langchain-google-genai`）并重新构建镜像（`./build.sh` 或 `./dev.sh build`），再将 `MODEL_PROVIDER` 设为对应值即可。完整的提供商列表与命名参见 [LangChain `init_chat_model` 文档](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html)。
+
+### 切换 LLM 网关实现（`LLM_PROVIDER`）
+
+后端在领域层通过统一的 `LLM` 接口调用大模型，具体实现由 `LLM_PROVIDER` 选择：
+
+| `LLM_PROVIDER` | 说明 | 适用场景 |
+|---------------|------|----------|
+| `langchain`（默认） | 经 LangChain `init_chat_model` 调用，配合 `MODEL_PROVIDER` 支持 OpenAI、DeepSeek、Anthropic、Ollama 等多种提供商 | 需要多提供商、依赖 LangChain 生态（JSON 修复、重试等）时 |
+| `openai` | 直接使用官方 `openai` Python SDK 调用 OpenAI 及**所有 OpenAI 兼容端点**（通过 `API_BASE`），不经过 LangChain | 只用 OpenAI / 兼容端点、希望减少依赖、更贴近原生 SDK 行为时 |
+
+- 两种实现均消费同一套配置（`MODEL_NAME`、`API_KEY`、`API_BASE`、`TEMPERATURE`、`MAX_TOKENS`、`EXTRA_HEADERS`）。
+- 选择 `openai` 时，`MODEL_PROVIDER` 被忽略（该实现始终使用 OpenAI SDK）。
+
+**配置示例（使用 OpenAI SDK 直连 DeepSeek 兼容端点）：**
+
+```env
+LLM_PROVIDER=openai
+MODEL_NAME=deepseek-chat
+API_BASE=https://api.deepseek.com/v1
+API_KEY=sk-...
+```
 
 ### MongoDB 配置
 

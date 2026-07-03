@@ -26,6 +26,18 @@ class DockerClawRuntime:
         manus_api_base_url = self.settings.manus_api_base_url
         container_name = f"{self.settings.claw_name_prefix}-{claw_id[:8]}"
 
+        # Remove any stale container left over from a previous provisioning
+        # attempt with the same claw id, otherwise `run` fails with a name
+        # conflict and the old container lingers forever.
+        try:
+            stale = docker_client.containers.get(container_name)
+            logger.warning(f"Removing stale claw container: {container_name}")
+            stale.remove(force=True)
+        except docker.errors.NotFound:
+            pass
+        except Exception as e:
+            logger.warning(f"Failed to remove stale container {container_name}: {e}")
+
         container_config = {
             "image": self.settings.claw_image,
             "name": container_name,
@@ -60,7 +72,13 @@ class DockerClawRuntime:
         try:
             import docker
             docker_client = docker.from_env()
-            container = docker_client.containers.get(instance_name)
+            try:
+                container = docker_client.containers.get(instance_name)
+            except docker.errors.NotFound:
+                # Already gone (e.g. the container's TTL expired and it
+                # removed itself) — nothing to do.
+                return
+            logger.info(f"Removing claw container: {instance_name}")
             container.remove(force=True)
         except Exception as e:
             logger.warning(f"Failed to remove container {instance_name}: {e}")

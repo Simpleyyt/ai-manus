@@ -9,7 +9,7 @@ translation, tool binding, JSON repair and model-level retries — inside the
 infrastructure layer, so the domain agents depend only on the
 :class:`app.domain.external.llm.LLM` Protocol and domain message types.
 
-Selected via ``LLM_BACKEND=openai``.
+Selected via ``LLM_PROVIDER=openai``.
 """
 import json
 import logging

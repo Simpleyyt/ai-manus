@@ -33,10 +33,10 @@ class Settings(BaseSettings):
     temperature: float = 0.7
     max_tokens: int = 2000
 
-    # LLM gateway backend: "langchain" (default, supports many providers via
+    # LLM gateway provider: "langchain" (default, supports many providers via
     # init_chat_model) or "openai" (direct OpenAI Python SDK, for
     # OpenAI / OpenAI-compatible endpoints).
-    llm_backend: str = "langchain"
+    llm_provider: str = "langchain"
     
     # MongoDB configuration
     mongodb_uri: str = "mongodb://mongodb:27017"

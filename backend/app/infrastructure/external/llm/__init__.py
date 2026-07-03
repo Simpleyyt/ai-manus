@@ -1,7 +1,7 @@
-"""LLM gateway implementations and backend selection.
+"""LLM gateway implementations and provider selection.
 
 The concrete :class:`app.domain.external.llm.LLM` gateway is chosen at runtime
-from the ``LLM_BACKEND`` setting:
+from the ``LLM_PROVIDER`` setting:
 
 * ``langchain`` (default) — :class:`LangchainLLM`, supports many providers via
   ``init_chat_model``.
@@ -22,13 +22,13 @@ logger = logging.getLogger(__name__)
 
 
 def get_llm() -> LLM:
-    """Return the configured LLM gateway singleton (chosen by ``LLM_BACKEND``)."""
-    backend = (get_settings().llm_backend or "langchain").lower()
-    if backend == "openai":
+    """Return the configured LLM gateway singleton (chosen by ``LLM_PROVIDER``)."""
+    provider = (get_settings().llm_provider or "langchain").lower()
+    if provider == "openai":
         return get_openai_llm()
-    if backend != "langchain":
+    if provider != "langchain":
         logger.warning(
-            "Unknown LLM_BACKEND '%s', falling back to 'langchain'", backend
+            "Unknown LLM_PROVIDER '%s', falling back to 'langchain'", provider
         )
     return get_langchain_llm()
 

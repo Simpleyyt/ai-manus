@@ -63,6 +63,7 @@ class ClawDomainService:
             expires = claw.expires_at.replace(tzinfo=UTC) if claw.expires_at and claw.expires_at.tzinfo is None else claw.expires_at
             if expires and datetime.now(UTC) >= expires:
                 logger.info(f"[claw] expired for user={user_id}, auto-deleting")
+                await self.claw_runtime.destroy(claw.container_name)
                 await self.claw_repository.delete_by_user_id(user_id)
                 return None
             elif claw.http_base_url and not await self._health_check(claw.http_base_url):
@@ -119,6 +120,10 @@ class ClawDomainService:
         Intended to be called in a background task after ``prepare_claw_for_creation``.
         """
         try:
+            # Capture the start time before creating the instance so the DB
+            # expiry never lags behind the container's own TTL clock (the
+            # container starts counting down as soon as it boots).
+            started_at = datetime.now(UTC)
             info = await self.claw_runtime.create(claw.id, claw.api_key)
             claw.container_name = info.instance_name
             claw.container_ip = info.address
@@ -129,7 +134,7 @@ class ClawDomainService:
             logger.info(f"Claw created: id={claw.id} address={info.address}")
             claw.status = ClawStatus.RUNNING
             if ttl_seconds and ttl_seconds > 0:
-                claw.expires_at = datetime.now(UTC) + timedelta(seconds=ttl_seconds)
+                claw.expires_at = started_at + timedelta(seconds=ttl_seconds)
             await self.claw_repository.update(claw)
             await self.claw_repository.append_message(
                 claw.user_id, "assistant", "i18n:Claw is ready, let's chat!",
@@ -138,16 +143,25 @@ class ClawDomainService:
             logger.error(f"Failed to create claw instance: {e}")
             claw.status = ClawStatus.ERROR
             claw.error_message = str(e)
+            await self.claw_runtime.destroy(claw.container_name)
+            claw.container_name = None
+            claw.container_ip = None
             try:
                 await self.claw_repository.update(claw)
             except Exception:
                 pass
 
     async def delete_claw(self, user_id: str) -> bool:
-        """Delete the claw record from MongoDB but keep the container alive."""
+        """Delete the claw record from MongoDB and destroy its runtime instance.
+
+        ``ClawRuntime.destroy`` is best-effort: for the fixed runtime (dev) it is
+        a no-op, so the shared dev container stays alive and its native history
+        can be recovered on recreate.
+        """
         claw = await self.claw_repository.get_by_user_id(user_id)
         if not claw:
             return False
+        await self.claw_runtime.destroy(claw.container_name)
         return await self.claw_repository.delete_by_user_id(user_id)
 
     # ------------------------------------------------------------------

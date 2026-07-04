@@ -295,6 +295,15 @@ JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
 # Extra headers for LLM API requests (JSON format)
 #EXTRA_HEADERS={"X-Custom-Header": "value"}
 
+# Task backend configuration
+# local: run agent tasks in-process (default)
+# celery: run agent tasks on distributed Celery workers
+#         (start workers with the compose "celery" profile or
+#          `uv run celery -A app.worker.celery_app worker`)
+#TASK_BACKEND=local
+# Optional custom Celery broker URL (defaults to the Redis settings above)
+#CELERY_BROKER_URL=
+
 # MCP configuration
 #MCP_CONFIG_PATH=/etc/mcp.json
 

@@ -129,7 +129,9 @@ class Settings(BaseSettings):
     # Task backend configuration: "local" (in-process asyncio, default)
     # or "celery" (distributed Celery workers; requires running `app.worker`)
     task_backend: str = "local"
-    # Optional custom Celery broker URL; defaults to the Redis settings above
+    # Optional custom Celery broker URL, only used when TASK_BACKEND=celery.
+    # Defaults to the Redis settings above when unset.
+    # e.g. "redis://:password@redis:6379/0" or "amqp://user:pass@rabbitmq:5672//"
     celery_broker_url: str | None = None
 
     # MCP configuration

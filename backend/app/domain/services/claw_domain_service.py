@@ -127,6 +127,9 @@ class ClawDomainService:
             info = await self.claw_runtime.create(claw.id, claw.api_key)
             claw.container_name = info.instance_name
             claw.container_ip = info.address
+            # Persist container info right away so the container can still be
+            # cleaned up if the claw is deleted while provisioning is in flight.
+            await self.claw_repository.update(claw)
             if claw.http_base_url:
                 ready = await self.claw_runtime.wait_for_ready(claw.http_base_url)
                 if not ready:

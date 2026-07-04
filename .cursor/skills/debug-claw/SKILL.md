@@ -22,6 +22,8 @@ The backend merges MongoDB + .jsonl on every `/api/v1/claw/history` call.
 
 ## Dev Commands
 
+In development the `claw` compose service only **builds** the `ai-manus-claw:latest` image and exits immediately (same trick as production). The backend then creates one claw container per user dynamically (`manus-claw-<id>` via `DockerClawRuntime`, `CLAW_IMAGE=ai-manus-claw:latest`, `CLAW_NETWORK=manus-network`). Containers self-terminate after `CLAW_TTL_SECONDS` (default 3600) and are destroyed by the backend on expiry/delete.
+
 ```bash
 # Build & restart
 ./dev.sh build              # all containers
@@ -29,10 +31,13 @@ The backend merges MongoDB + .jsonl on every `/api/v1/claw/history` call.
 ./dev.sh up -d
 ./dev.sh up -d backend      # restart single container
 
+# Locate the dynamically created claw container and its IP
+CLAW=$(docker ps --filter name=manus-claw- --format '{{.Names}}' | head -1)
+CLAW_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$CLAW")
+
 # Logs
-./dev.sh log claw -n 30     # last 30 lines
 ./dev.sh log backend -n 30
-docker compose -f docker-compose-development.yml logs -f claw  # follow
+docker logs "$CLAW" -n 30   # dynamic claw container logs
 ```
 
 ## Checking Data Sources
@@ -54,8 +59,8 @@ if (!claw) { print("No claw found"); } else {
 ### 2. Claw .jsonl (raw session history from container)
 
 ```bash
-# Via manus-claw HTTP API (port 18788 on host)
-curl -s 'http://localhost:18788/history?session_id=default&limit=20' | python3 -m json.tool
+# Via manus-claw HTTP API (container IP, port 18788 — not published on the host)
+curl -s "http://${CLAW_IP}:18788/history?session_id=default&limit=20" | python3 -m json.tool
 ```
 
 ### 3. Merged result (what the frontend sees)
@@ -67,12 +72,13 @@ curl -s 'http://localhost:8000/api/v1/claw/history' | python3 -m json.tool
 ### Quick comparison script
 
 ```python
-import json, urllib.request, subprocess
+import json, os, urllib.request, subprocess
 
 API = 'http://localhost:8000/api/v1'
+CLAW_IP = os.environ['CLAW_IP']  # see "Dev Commands" above
 
 # Source 1: claw .jsonl
-claw = json.loads(urllib.request.urlopen('http://localhost:18788/history?session_id=default').read())
+claw = json.loads(urllib.request.urlopen(f'http://{CLAW_IP}:18788/history?session_id=default').read())
 claw_msgs = claw['messages']
 print(f"Claw: {len(claw_msgs)} messages")
 
@@ -128,7 +134,7 @@ asyncio.run(send_and_wait("创建一个 hello.txt 文件并发送给我"))
 Then verify:
 1. Check claw logs for `[manus_upload_file]` entries
 2. Check merged history for `attachments` role messages
-3. Check upload metadata cache: `docker exec ai-manus-claw-1 ls /home/node/.openclaw/plugins/manus-claw/upload_meta/`
+3. Check upload metadata cache: `docker exec "$CLAW" ls /home/node/.openclaw/plugins/manus-claw/upload_meta/`
 
 ## Testing File Download (User → Agent)
 
@@ -145,7 +151,7 @@ await ws.send(json.dumps({
 
 Then verify:
 1. Backend log: `[claw-ws] pushed {filename} to workspace`
-2. Claw workspace: `docker exec ai-manus-claw-1 ls /home/node/.openclaw/workspace/`
+2. Claw workspace: `docker exec "$CLAW" ls /home/node/.openclaw/workspace/`
 3. Message content should contain `<MANUS_FILE ... />` tags
 
 ## Testing History Merge (Dedup)
@@ -172,16 +178,16 @@ Key merge rules:
 ## Testing Delete → Recreate Flow
 
 ```bash
-# Delete (clears MongoDB, keeps container)
+# Delete (clears MongoDB AND destroys the claw container)
 curl -X DELETE http://localhost:8000/api/v1/claw
 
-# Recreate
+# Recreate — spawns a fresh container with a new name
 curl -X POST http://localhost:8000/api/v1/claw
 
-# History should recover text from .jsonl (attachments lost from MongoDB)
+# History starts empty: the .jsonl lived inside the destroyed container
 curl -s http://localhost:8000/api/v1/claw/history | python3 -c "
 import json,sys; msgs=json.load(sys.stdin)['data']['messages']
-print(f'Recovered: {len(msgs)} messages')
+print(f'Messages: {len(msgs)}')
 "
 ```
 
@@ -189,7 +195,7 @@ print(f'Recovered: {len(msgs)} messages')
 
 | Symptom | Check | Fix |
 |---------|-------|-----|
-| Claw won't start | `./dev.sh log claw` for config errors | Check `claw/entrypoint.sh`, `openclaw.json` |
+| Claw won't start | `docker logs "$CLAW"` for config errors | Check `claw/entrypoint.sh`, `openclaw.json` |
 | Gateway handshake failed | Claw log for `invalid connect params` | Verify gateway-client.js `connect` message format |
 | 500 on chat | Backend log for proxy errors | Check `OPENAI_API_KEY`, `OPENAI_BASE_URL` in env |
 | Files not displayed after refresh | Compare MongoDB vs .jsonl attachments | Check `HttpClawClient.get_history()` parses `toolResult` |

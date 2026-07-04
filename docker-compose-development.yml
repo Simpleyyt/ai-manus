@@ -60,7 +60,8 @@ services:
       - .env
     environment:
       - SANDBOX_ADDRESS=sandbox # Use single container as sandbox
-      - CLAW_ADDRESS=claw       # Use single fixed claw container in development
+      - CLAW_IMAGE=ai-manus-claw:latest # Dev-built image used for dynamic claw containers
+      - CLAW_NETWORK=manus-network      # Attach dynamic claw containers to the dev network
       - MANUS_API_BASE_URL=http://backend:8000
       - CLAW_API_KEY=${CLAW_DEV_API_KEY:-manus-dev-api-key-changeme}
 
@@ -87,17 +88,12 @@ services:
       - manus-network
 
   claw:
+    image: ai-manus-claw:latest
     build:
       context: ./claw
       dockerfile: Dockerfile
-    hostname: claw
-    ports:
-      - "18788:18788" # manus-claw HTTP server
-    environment:
-      - CLAW_TTL_SECONDS=0        # No TTL in development (0 = unlimited)
-      - MANUS_API_BASE_URL=http://backend:8000
-      - MANUS_API_KEY=${CLAW_DEV_API_KEY:-manus-dev-api-key-changeme}
-    restart: unless-stopped
+    entrypoint: /bin/sh -c "exit 0"  # prevent claw from starting, ensure image is built
+    restart: "no"
     networks:
       - manus-network
 

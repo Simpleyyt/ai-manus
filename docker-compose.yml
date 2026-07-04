@@ -41,29 +41,6 @@ services:
     env_file:
       - .env
 
-  # Celery worker for TASK_BACKEND=celery (start with: ./run.sh --profile celery up -d)
-  worker:
-    image: ${IMAGE_REGISTRY:-simpleyyt}/manus-backend:${IMAGE_TAG:-latest}
-    command:
-      [
-        "uv", "run",
-        "celery", "-A", "app.worker.celery_app", "worker",
-        "--loglevel=INFO", "--concurrency=4"
-      ]
-    profiles: ["celery"]
-    depends_on:
-      - mongodb
-      - redis
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - manus-network
-    env_file:
-      - .env
-    environment:
-      - TASK_BACKEND=celery
-
   sandbox:
     image: ${IMAGE_REGISTRY:-simpleyyt}/manus-sandbox:${IMAGE_TAG:-latest}
     build:

@@ -20,6 +20,8 @@ from app.infrastructure.external.cache import get_cache
 from app.infrastructure.external.llm import get_llm
 
 # Import all required dependencies for agent service
+from app.domain.external.task import Task
+from app.domain.services.agent_task_runner import AgentTaskRunnerFactory
 from app.infrastructure.external.sandbox.docker_sandbox import DockerSandbox
 from app.infrastructure.external.task.redis_task import RedisStreamTask
 from app.infrastructure.repositories.mongo_agent_repository import MongoAgentRepository
@@ -37,6 +39,19 @@ logger = logging.getLogger(__name__)
 # Security scheme - Bearer Token only
 security_bearer = HTTPBearer(auto_error=False)
 
+def _get_task_cls() -> type[Task]:
+    """Select the task backend implementation from the TASK_BACKEND setting."""
+    settings = get_settings()
+    backend = (settings.task_backend or "local").lower()
+    if backend == "celery":
+        from app.infrastructure.external.task.celery_task import CeleryTask
+        logger.info("Using Celery task backend")
+        return CeleryTask
+    if backend != "local":
+        logger.warning("Unknown TASK_BACKEND '%s', falling back to 'local'", backend)
+    return RedisStreamTask
+
+
 @lru_cache()
 def get_agent_service() -> AgentService:
     """
@@ -51,11 +66,24 @@ def get_agent_service() -> AgentService:
     agent_repository = MongoAgentRepository()
     session_repository = MongoSessionRepository()
     sandbox_cls = DockerSandbox
-    task_cls = RedisStreamTask
+    task_cls = _get_task_cls()
     file_storage = get_file_storage()
     search_engine = get_search_engine()
     mcp_repository = FileMCPRepository()
     llm = get_llm()
+    
+    # Register the factory used to rebuild task runners on the execution side.
+    # For the local backend the runner is rebuilt in this process; for the
+    # celery backend workers register their own factory (see app/worker.py).
+    task_cls.set_runner_factory(AgentTaskRunnerFactory(
+        agent_repository=agent_repository,
+        session_repository=session_repository,
+        sandbox_cls=sandbox_cls,
+        file_storage=file_storage,
+        mcp_repository=mcp_repository,
+        llm=llm,
+        search_engine=search_engine,
+    ))
     
     # Create AgentService instance
     return AgentService(

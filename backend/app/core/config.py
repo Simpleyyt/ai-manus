@@ -126,6 +126,12 @@ class Settings(BaseSettings):
     claw_api_key: str | None = None  # Static API key accepted by the LLM proxy (for dev/fixed container)
     manus_api_base_url: str = "http://backend:8000"  # URL of this backend accessible from claw containers
 
+    # Task backend configuration: "local" (in-process asyncio, default)
+    # or "celery" (distributed Celery workers; requires running `app.worker`)
+    task_backend: str = "local"
+    # Optional custom Celery broker URL; defaults to the Redis settings above
+    celery_broker_url: str | None = None
+
     # MCP configuration
     mcp_config_path: str = "/etc/mcp.json"
     

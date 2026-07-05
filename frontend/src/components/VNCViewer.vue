@@ -56,17 +56,14 @@ const initVNCConnection = async () => {
     //rfb.resizeSession = true;
 
     rfb.addEventListener('connect', () => {
-      console.log('VNC connection successful');
       emit('connected');
     });
 
     rfb.addEventListener('disconnect', (e: any) => {
-      console.log('VNC connection disconnected', e);
       emit('disconnected', e);
     });
 
     rfb.addEventListener('credentialsrequired', () => {
-      console.log('VNC credentials required');
       emit('credentialsRequired');
     });
   } catch (error) {
@@ -108,5 +105,3 @@ defineExpose({
 });
 </script>
 
-<style scoped>
-</style>

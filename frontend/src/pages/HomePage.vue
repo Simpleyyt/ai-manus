@@ -123,11 +123,8 @@ const handleUserMenuLeave = () => {
   }, 200); // 200ms delay to allow moving to menu
 };
 
-onMounted(() => {
-  hideFilePanel();
-})
-
 onMounted(async () => {
+  hideFilePanel();
   const clientConfig = await getCachedClientConfig();
   if (clientConfig) {
     showGithubButton.value = clientConfig.show_github_button;

@@ -77,8 +77,7 @@ const subPageConfigs: SubPageConfig[] = [
 ]
 
 // Handle tab change
-const onTabChange = (tabId: string) => {
-  console.log('Tab changed to:', tabId)
+const onTabChange = (_tabId: string) => {
   // Reset sub-page when changing tabs
   currentSubPage.value = null
 }

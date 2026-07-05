@@ -323,4 +323,3 @@ const handleCopyLink = async () => {
 }
 </script>
 
-<style scoped></style>

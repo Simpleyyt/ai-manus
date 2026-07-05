@@ -38,7 +38,7 @@ async def get_claw(
     claw = await claw_service.get_claw(current_user.id)
     if not claw:
         raise NotFoundError("No claw instance found")
-    return APIResponse.success(ClawResponse.from_claw(claw))
+    return APIResponse.success(ClawResponse.from_domain(claw))
 
 
 @router.post("", response_model=APIResponse[ClawResponse])
@@ -48,7 +48,7 @@ async def create_claw(
 ) -> APIResponse[ClawResponse]:
     """Create a new claw instance for the current user"""
     claw = await claw_service.create_claw(current_user.id)
-    return APIResponse.success(ClawResponse.from_claw(claw))
+    return APIResponse.success(ClawResponse.from_domain(claw))
 
 
 @router.delete("", response_model=APIResponse[dict])
@@ -90,7 +90,7 @@ async def upload_claw_file(
         user_id=user_id,
         content_type=file.content_type,
     )
-    return APIResponse.success(await FileInfoResponse.from_file_info(result))
+    return APIResponse.success(await FileInfoResponse.from_domain(result))
 
 
 @router.get("/files/{filename}")
@@ -128,7 +128,7 @@ async def resolve_claw_file_meta(
     file_info = await file_service.get_file_info(file_id)
     if not file_info:
         raise NotFoundError("File not found")
-    return APIResponse.success(await FileInfoResponse.from_file_info(file_info))
+    return APIResponse.success(await FileInfoResponse.from_domain(file_info))
 
 
 @router.get("/resolve/{file_id}/download")

@@ -26,7 +26,7 @@ class FileInfoResponse(BaseModel):
     file_url: Optional[str]
 
     @staticmethod
-    async def from_file_info(file_info: FileInfo) -> "FileInfoResponse":
+    async def from_domain(file_info: FileInfo) -> "FileInfoResponse":
         from app.interfaces.dependencies import get_file_service
         file_service = get_file_service()
         return FileInfoResponse(

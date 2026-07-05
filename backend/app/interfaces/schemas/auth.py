@@ -150,7 +150,7 @@ class UserResponse(BaseModel):
     last_login_at: Optional[datetime] = None
     
     @staticmethod
-    def from_user(user) -> 'UserResponse':
+    def from_domain(user) -> 'UserResponse':
         """Convert user domain model to response schema"""
         return UserResponse(
             id=user.id,

@@ -135,16 +135,9 @@ import { useI18n } from 'vue-i18n';
 import ChatBox from '../components/ChatBox.vue';
 import ChatMessage from '../components/ChatMessage.vue';
 import * as agentApi from '../api/agent';
-import { Message, MessageContent, ToolContent, StepContent, AttachmentsContent, isConsecutiveAssistant } from '../types/message';
-import {
-  StepEventData,
-  ToolEventData,
-  MessageEventData,
-  ErrorEventData,
-  TitleEventData,
-  PlanEventData,
-  AgentSSEEvent,
-} from '../types/event';
+import { Message, MessageContent, ToolContent, AttachmentsContent, isConsecutiveAssistant } from '../types/message';
+import { PlanEventData, AgentSSEEvent } from '../types/event';
+import { useAgentEvents } from '../composables/useAgentEvents';
 import ToolPanel from '../components/ToolPanel.vue'
 import PlanPanel from '../components/PlanPanel.vue';
 import { ArrowDown, FileSearch, PanelLeft, Lock, Globe, Link, Check } from 'lucide-vue-next';
@@ -217,6 +210,18 @@ const simpleBarRef = ref<InstanceType<typeof SimpleBar>>();
 const observerRef = ref<HTMLDivElement>();
 const chatContainerRef = ref<HTMLDivElement>();
 
+// Shared SSE event -> message list conversion
+const { handleEvent } = useAgentEvents(
+  { messages, title, plan, isLoading, lastEventId, lastTool, lastNoMessageTool },
+  {
+    onToolActivity: (tool: ToolContent) => {
+      if (realTime.value) {
+        toolPanel.value?.showToolPanel(tool, true);
+      }
+    },
+  }
+);
+
 // Reset all refs to their initial values
 const resetState = () => {
   // Cancel any existing chat connection
@@ -237,120 +242,6 @@ watch(messages, async () => {
 }, { deep: true });
 
 
-
-const getLastStep = (): StepContent | undefined => {
-  return messages.value.filter(message => message.type === 'step').pop()?.content as StepContent;
-}
-
-// Handle message event
-const handleMessageEvent = (messageData: MessageEventData) => {
-  messages.value.push({
-    type: messageData.role,
-    content: {
-      ...messageData
-    } as MessageContent,
-  });
-
-  if (messageData.attachments?.length > 0) {
-    messages.value.push({
-      type: 'attachments',
-      content: {
-        ...messageData
-      } as AttachmentsContent,
-    });
-  }
-}
-
-// Handle tool event
-const handleToolEvent = (toolData: ToolEventData) => {
-  const lastStep = getLastStep();
-  let toolContent: ToolContent = {
-    ...toolData
-  }
-  if (lastTool.value && lastTool.value.tool_call_id === toolContent.tool_call_id) {
-    Object.assign(lastTool.value, toolContent);
-  } else {
-    if (lastStep?.status === 'running') {
-      lastStep.tools.push(toolContent);
-    } else {
-      messages.value.push({
-        type: 'tool',
-        content: toolContent,
-      });
-    }
-    lastTool.value = toolContent;
-  }
-  if (toolContent.name !== 'message') {
-    lastNoMessageTool.value = toolContent;
-    if (realTime.value) {
-      toolPanel.value?.showToolPanel(toolContent, true);
-    }
-  }
-}
-
-// Handle step event
-const handleStepEvent = (stepData: StepEventData) => {
-  const lastStep = getLastStep();
-  if (stepData.status === 'running') {
-    messages.value.push({
-      type: 'step',
-      content: {
-        ...stepData,
-        tools: []
-      } as StepContent,
-    });
-  } else if (stepData.status === 'completed') {
-    if (lastStep) {
-      lastStep.status = stepData.status;
-    }
-  } else if (stepData.status === 'failed') {
-    isLoading.value = false;
-  }
-}
-
-// Handle error event
-const handleErrorEvent = (errorData: ErrorEventData) => {
-  isLoading.value = false;
-  messages.value.push({
-    type: 'assistant',
-    content: {
-      content: errorData.error,
-      timestamp: errorData.timestamp
-    } as MessageContent,
-  });
-}
-
-// Handle title event
-const handleTitleEvent = (titleData: TitleEventData) => {
-  title.value = titleData.title;
-}
-
-// Handle plan event
-const handlePlanEvent = (planData: PlanEventData) => {
-  plan.value = planData;
-}
-
-// Main event handler function
-const handleEvent = (event: AgentSSEEvent) => {
-  if (event.event === 'message') {
-    handleMessageEvent(event.data as MessageEventData);
-  } else if (event.event === 'tool') {
-    handleToolEvent(event.data as ToolEventData);
-  } else if (event.event === 'step') {
-    handleStepEvent(event.data as StepEventData);
-  } else if (event.event === 'done') {
-    //isLoading.value = false;
-  } else if (event.event === 'wait') {
-    // TODO: handle wait event
-  } else if (event.event === 'error') {
-    handleErrorEvent(event.data as ErrorEventData);
-  } else if (event.event === 'title') {
-    handleTitleEvent(event.data as TitleEventData);
-  } else if (event.event === 'plan') {
-    handlePlanEvent(event.data as PlanEventData);
-  }
-  lastEventId.value = event.data.event_id;
-}
 
 const handleSubmit = () => {
   chat(inputMessage.value, attachments.value);

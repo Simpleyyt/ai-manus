@@ -5,6 +5,8 @@ from app.domain.models.session import Session, SessionSummary
 from app.domain.repositories.session_repository import SessionRepository
 
 from app.application.dto.sandbox import FileViewDto, ShellViewDto
+from app.domain.models.sandbox.file import FileReadResult
+from app.domain.models.sandbox.shell import ShellViewResult
 from app.domain.models.agent import Agent
 from app.domain.services.agent_domain_service import AgentDomainService
 from app.domain.models.event import AgentEvent
@@ -162,7 +164,7 @@ class AgentService:
         
         result = await sandbox.view_shell(shell_session_id, console=True)
         if result.success:
-            return ShellViewDto.from_tool_data(result.data)
+            return ShellViewDto.from_result(ShellViewResult.model_validate(result.data))
         else:
             raise RuntimeError(f"Failed to get shell output: {result.message}")
 
@@ -203,7 +205,7 @@ class AgentService:
         
         result = await sandbox.file_read(file_path)
         if result.success:
-            return FileViewDto.from_tool_data(result.data)
+            return FileViewDto.from_result(FileReadResult.model_validate(result.data))
         else:
             raise RuntimeError(f"Failed to read file: {result.message}")
     

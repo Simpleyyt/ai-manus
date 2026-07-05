@@ -1,6 +1,9 @@
-from typing import Any, Mapping, Optional
+from typing import Optional
 
 from pydantic import BaseModel
+
+from app.domain.models.sandbox.file import FileReadResult
+from app.domain.models.sandbox.shell import ShellViewResult
 
 
 class ConsoleRecordDto(BaseModel):
@@ -17,16 +20,14 @@ class ShellViewDto(BaseModel):
     console: Optional[list[ConsoleRecordDto]] = None
 
     @classmethod
-    def from_tool_data(cls, data: Optional[Mapping[str, Any]]) -> "ShellViewDto":
-        """Build the DTO from a sandbox ToolResult payload.
+    def from_result(cls, result: ShellViewResult) -> "ShellViewDto":
+        """Build the DTO from the strongly-typed sandbox shell-view result.
 
-        Field names mirror the sandbox shell-view result, so Pydantic
-        validation handles the mapping (including the nested console
-        records) directly.
+        The dict-to-model boundary lives in ``ShellViewResult`` (the domain
+        anti-corruption layer for the sandbox wire format); this factory only
+        projects that domain value object onto the application DTO.
         """
-        if not data:
-            raise ValueError("shell view result is empty")
-        return cls.model_validate(data)
+        return cls.model_validate(result, from_attributes=True)
 
 
 class FileViewDto(BaseModel):
@@ -36,8 +37,6 @@ class FileViewDto(BaseModel):
     file: str
 
     @classmethod
-    def from_tool_data(cls, data: Optional[Mapping[str, Any]]) -> "FileViewDto":
-        """Build the DTO from a sandbox ToolResult payload."""
-        if not data:
-            raise ValueError("file view result is empty")
-        return cls.model_validate(data)
+    def from_result(cls, result: FileReadResult) -> "FileViewDto":
+        """Build the DTO from the strongly-typed sandbox file-read result."""
+        return cls.model_validate(result, from_attributes=True)

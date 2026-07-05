@@ -8,14 +8,10 @@ export function getParentElement(
   selector: string | HTMLElement | Element,
   parentSelector?: string
 ): HTMLElement | null {
-  let element: Element | null = null
-
   // Handle both string selector and HTMLElement/Element
-  if (typeof selector === 'string') {
-    element = document.querySelector(selector)
-  } else {
-    element = selector
-  }
+  const element: Element | null = typeof selector === 'string'
+    ? document.querySelector(selector)
+    : selector
 
   if (!element) {
     console.warn(`Could not find element: ${typeof selector === 'string' ? selector : 'provided element'}`)

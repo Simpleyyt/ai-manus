@@ -11,17 +11,13 @@ import { useI18n } from 'vue-i18n';
  * @returns Timestamp number in seconds
  */
 export const parseISODateTime = (isoString: string): number => {
-  try {
-    const date = new Date(isoString);
-    
-    if (isNaN(date.getTime())) {
-      throw new Error('Invalid ISO datetime string');
-    }
-    
-    return Math.floor(date.getTime() / 1000);
-  } catch (error) {
+  const date = new Date(isoString);
+
+  if (isNaN(date.getTime())) {
     throw new Error(`Failed to parse ISO datetime string: ${isoString}`);
   }
+
+  return Math.floor(date.getTime() / 1000);
 };
 
 /**

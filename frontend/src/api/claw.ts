@@ -60,7 +60,7 @@ export async function createClaw(): Promise<Claw> {
 }
 
 export async function deleteClaw(): Promise<void> {
-  await apiClient.delete<ApiResponse<{}>>('/claw');
+  await apiClient.delete<ApiResponse<Record<string, never>>>('/claw');
 }
 
 export async function getClawApiKey(): Promise<string> {

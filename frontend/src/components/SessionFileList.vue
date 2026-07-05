@@ -21,7 +21,7 @@
                 <div v-if="files.length > 0" class="flex-1 min-h-0 overflow-auto px-3 mt-4 pb-4">
                     <div class="flex flex-col gap-1 first:pt-0 pt-2">
                         <div class="">
-                            <div v-for="file in files" 
+                            <div v-for="file in files" :key="file.file_id"
                                 class="flex items-center gap-3 px-3 py-2.5 hover:bg-[var(--fill-tsp-gray-main)] transition-colors rounded-lg clickable">
                                 <div class="relative flex items-center justify-center">
                                     <component :is="getFileType(file.filename).icon" />
@@ -82,13 +82,9 @@ const fetchFiles = async (sessionId: string) => {
     if (!sessionId) {
         return;
     }
-    let response: FileInfo[] = [];
-    if (shared.value) {
-        response = await getSharedSessionFiles(sessionId);
-    } else {
-        response = await getSessionFiles(sessionId);
-    }
-    files.value = response;
+    files.value = shared.value
+        ? await getSharedSessionFiles(sessionId)
+        : await getSessionFiles(sessionId);
 }
 
 const downloadFile = async (fileInfo: FileInfo) => {

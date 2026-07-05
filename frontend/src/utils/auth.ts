@@ -69,7 +69,7 @@ export function formatUserDate(dateString: string): string {
       hour: '2-digit',
       minute: '2-digit'
     })
-  } catch (error) {
+  } catch {
     return 'Invalid date'
   }
 }

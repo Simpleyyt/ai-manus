@@ -2,7 +2,7 @@
   <!-- User messages (right-aligned) -->
   <div v-if="content.role === 'user'" class="flex flex-col flex-wrap gap-2 items-end justify-end">
     <div class="flex gap-2 flex-wrap max-w-[568px] justify-end">
-      <div v-for="attachment in content.attachments" @click="showFilePanel(attachment)"
+      <div v-for="attachment in content.attachments" :key="attachment.file_id" @click="showFilePanel(attachment)"
         class="flex items-center gap-1.5 p-2 pr-2.5 w-[280px] group/attach relative overflow-hidden cursor-pointer rounded-[12px] border-[0.5px] border-[var(--border-dark)] bg-[var(--background-menu-white)] hover:bg-[--background-tsp-menu-white]">
         <div class="flex items-center justify-center w-8 h-8 rounded-md">
           <div class="relative flex items-center justify-center">
@@ -29,7 +29,7 @@
   <!-- Assistant messages (left-aligned) -->
   <div v-else class="flex flex-col flex-wrap gap-2 justify-start">
     <div class="flex gap-2 flex-wrap max-w-[568px]">
-      <div v-for="attachment in content.attachments" @click="showFilePanel(attachment)"
+      <div v-for="attachment in content.attachments" :key="attachment.file_id" @click="showFilePanel(attachment)"
         class="flex items-center gap-1.5 p-2 pr-2.5 w-[280px] group/attach relative overflow-hidden cursor-pointer rounded-[12px] border-[0.5px] border-[var(--border-dark)] bg-[var(--background-menu-white)] hover:bg-[--background-tsp-menu-white]">
         <div class="flex items-center justify-center w-8 h-8 rounded-md">
           <div class="relative flex items-center justify-center">

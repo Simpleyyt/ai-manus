@@ -35,11 +35,9 @@ export interface ErrorEventData extends BaseEventData {
   error: string;
 }
 
-export interface DoneEventData extends BaseEventData {
-}
+export type DoneEventData = BaseEventData
 
-export interface WaitEventData extends BaseEventData {
-}
+export type WaitEventData = BaseEventData
 
 export interface TitleEventData extends BaseEventData {
   title: string;

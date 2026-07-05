@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "type-check": "vue-tsc",
+    "lint": "eslint src",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -32,13 +33,18 @@
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^24.0.13",
     "@vitejs/plugin-vue": "^4.2.3",
     "autoprefixer": "^10.4.14",
+    "eslint": "^10.6.0",
+    "eslint-plugin-vue": "^10.9.2",
+    "globals": "^17.7.0",
     "postcss": "^8.4.24",
     "tailwindcss": "^3.3.2",
     "typescript": "5.4.5",
+    "typescript-eslint": "^8.62.1",
     "vite": "^4.3.9",
     "vite-plugin-monaco-editor": "^1.1.0",
     "vue-tsc": "^1.6.5"

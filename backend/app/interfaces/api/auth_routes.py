@@ -38,7 +38,7 @@ async def login(
     
     # Return success response with tokens
     return APIResponse.success(LoginResponse(
-        user=UserResponse.from_user(auth_result.user),
+        user=UserResponse.from_domain(auth_result.user),
         access_token=auth_result.access_token,
         refresh_token=auth_result.refresh_token,
         token_type=auth_result.token_type
@@ -64,7 +64,7 @@ async def register(
     
     # Return success response with tokens
     return APIResponse.success(RegisterResponse(
-        user=UserResponse.from_user(user),
+        user=UserResponse.from_domain(user),
         access_token=access_token,
         refresh_token=refresh_token,
         token_type="bearer"
@@ -106,7 +106,7 @@ async def change_fullname(
     # Change fullname for current user
     updated_user = await auth_service.change_fullname(current_user.id, request.fullname)
     
-    return APIResponse.success(UserResponse.from_user(updated_user))
+    return APIResponse.success(UserResponse.from_domain(updated_user))
 
 
 @router.get("/me", response_model=APIResponse[UserResponse])
@@ -114,7 +114,7 @@ async def get_current_user_info(
     current_user: User = Depends(get_current_user)
 ) -> APIResponse[UserResponse]:
     """Get current user information"""
-    return APIResponse.success(UserResponse.from_user(current_user))
+    return APIResponse.success(UserResponse.from_domain(current_user))
 
 
 @router.get("/user/{user_id}", response_model=APIResponse[UserResponse])
@@ -133,7 +133,7 @@ async def get_user(
     if not user:
         raise NotFoundError("User not found")
     
-    return APIResponse.success(UserResponse.from_user(user))
+    return APIResponse.success(UserResponse.from_domain(user))
 
 
 @router.post("/user/{user_id}/deactivate", response_model=APIResponse[dict])

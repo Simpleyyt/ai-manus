@@ -86,7 +86,7 @@ class AgentService:
         message: Optional[str] = None,
         timestamp: Optional[datetime] = None,
         event_id: Optional[str] = None,
-        attachments: Optional[List[dict]] = None
+        attachments: Optional[List[FileInfo]] = None
     ) -> AsyncGenerator[AgentEvent, None]:
         logger.info(f"Starting chat with session {session_id}: {message[:50]}...")
         # Directly use the domain service's chat method, which will check if the session exists

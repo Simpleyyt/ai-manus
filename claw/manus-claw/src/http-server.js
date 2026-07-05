@@ -185,7 +185,9 @@ export class ManusClawHttpServer {
       return sendJSON(res, 400, { error: 'message is required' });
     }
 
-    const sessionId = session_id || 'manus-main';
+    // Keep in sync with /history and the backend (ClawChatRequest), which
+    // all default to "default" (mapped internally to "manus:default").
+    const sessionId = session_id || 'default';
 
     if (!this.gatewayBridge?.isGatewayReady?.()) {
       return sendJSON(res, 503, { error: 'Gateway not ready' });

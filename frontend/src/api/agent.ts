@@ -77,6 +77,15 @@ export const getVNCUrl = async (
 }
 
 /**
+ * File attachment reference sent with a chat request.
+ * Mirrors the backend `ChatAttachment` schema.
+ */
+export interface ChatAttachment {
+  file_id: string;
+  filename: string;
+}
+
+/**
  * Chat with Session (using SSE to receive streaming responses)
  * @returns A function to cancel the SSE connection
  */
@@ -84,7 +93,7 @@ export const chatWithSession = async (
   sessionId: string, 
   message: string = '',
   eventId?: string,
-  attachments?: string[],
+  attachments?: ChatAttachment[],
   callbacks?: SSECallbacks<AgentSSEEvent['data']>
 ): Promise<() => void> => {
   return createSSEConnection<AgentSSEEvent['data']>(

@@ -1,8 +1,7 @@
-from pydantic import BaseModel, Field, TypeAdapter
+from pydantic import BaseModel, Field
 from typing import Any, Union, Literal, Dict, Optional, List, Self, Type
 from datetime import datetime
-from dataclasses import dataclass
-from app.domain.models.plan import ExecutionStatus, Step
+from app.domain.models.plan import ExecutionStatus
 from app.interfaces.schemas.file import FileInfoResponse
 from app.domain.models.event import ToolStatus, ToolContent, BrowserToolContent
 from app.domain.models.event import (
@@ -51,7 +50,7 @@ class BaseSSEEvent(BaseModel):
 
     @classmethod
     def from_event(cls, event: AgentEvent) -> Self:
-        data_class: Type[BaseEventData] = cls.__annotations__.get('data', BaseEventData)
+        data_class: Type[BaseEventData] = cls.model_fields["data"].annotation or BaseEventData
         return cls(
             event=event.type,
             data=data_class.from_event(event)
@@ -73,7 +72,7 @@ class MessageSSEEvent(BaseSSEEvent):
                 **BaseEventData.base_event_data(event),
                 role=event.role,
                 content=event.message,
-                attachments=[await FileInfoResponse.from_file_info(attachment) for attachment in event.attachments] if event.attachments else None
+                attachments=[await FileInfoResponse.from_domain(attachment) for attachment in event.attachments] if event.attachments else None
             )
         )
 
@@ -173,7 +172,6 @@ class CommonSSEEvent(BaseSSEEvent):
     data: CommonEventData
 
 AgentSSEEvent = Union[
-    CommonEventData,
     PlanSSEEvent,
     MessageSSEEvent,
     TitleSSEEvent,
@@ -182,80 +180,37 @@ AgentSSEEvent = Union[
     DoneSSEEvent,
     ErrorSSEEvent,
     WaitSSEEvent,
+    CommonSSEEvent,
 ]
 
-@dataclass
-class EventMapping:
-    """Data class to store event type mapping information"""
-    sse_event_class: Type[BaseEventData]
-    data_class: Type[BaseEventData]
-    event_type: str
+# Explicit registry: domain event type -> SSE event class.
+# Register new event types here when adding them to AgentEvent.
+_EVENT_TYPE_TO_SSE_CLASS: Dict[str, Type[BaseSSEEvent]] = {
+    "plan": PlanSSEEvent,
+    "message": MessageSSEEvent,
+    "title": TitleSSEEvent,
+    "tool": ToolSSEEvent,
+    "step": StepSSEEvent,
+    "done": DoneSSEEvent,
+    "error": ErrorSSEEvent,
+    "wait": WaitSSEEvent,
+}
 
 class EventMapper:
-    """Map AgentEvent to SSEEvent"""
-    
-    _cached_mapping: Optional[Dict[str, EventMapping]] = None
-    
-    @staticmethod
-    def _get_event_type_mapping() -> Dict[str, EventMapping]:
-        """Dynamically get mapping from event type to SSE event class with caching"""
-        if EventMapper._cached_mapping is not None:
-            return EventMapper._cached_mapping
-            
-        from typing import get_args
-        
-        # Get all subclasses of AgentSSEEvent Union
-        sse_event_classes = get_args(AgentSSEEvent)
-        mapping = {}
-        
-        for sse_event_class in sse_event_classes:
-            # Skip base class
-            if sse_event_class == BaseSSEEvent:
-                continue
-                
-            # Get event type
-            if hasattr(sse_event_class, '__annotations__') and 'event' in sse_event_class.__annotations__:
-                event_field = sse_event_class.__annotations__['event']
-                if hasattr(event_field, '__args__') and len(event_field.__args__) > 0:
-                    event_type = event_field.__args__[0]  # Get Literal value
-                    
-                    # Get data class from sse_event_class
-                    data_class = None
-                    if hasattr(sse_event_class, '__annotations__') and 'data' in sse_event_class.__annotations__:
-                        data_class = sse_event_class.__annotations__['data']
-                    
-                    mapping[event_type] = EventMapping(
-                        sse_event_class=sse_event_class,
-                        data_class=data_class,
-                        event_type=event_type
-                    )
-        
-        # Cache the mapping
-        EventMapper._cached_mapping = mapping
-        return mapping
-    
+    """Map AgentEvent (domain) to SSEEvent (wire format)"""
+
     @staticmethod
     async def event_to_sse_event(event: AgentEvent) -> AgentSSEEvent:
-        # Get mapping dynamically
-        event_type_mapping = EventMapper._get_event_type_mapping()
-        
-        # Find matching SSE event class
-        event_mapping = event_type_mapping.get(event.type)
-        
-        if event_mapping:
-            # Prioritize from_event_async class method if exists, otherwise use from_event
-            sse_event_class = event_mapping.sse_event_class
-            if hasattr(sse_event_class, 'from_event_async'):
-                sse_event = await sse_event_class.from_event_async(event)
-            else:
-                sse_event = sse_event_class.from_event(event)
-            return sse_event
-        # If no matching type found, return base event
-        return CommonEventData.from_event(event)
-    
+        sse_event_class = _EVENT_TYPE_TO_SSE_CLASS.get(event.type, CommonSSEEvent)
+        # Classes needing IO (e.g. signed URLs) define from_event_async
+        from_event_async = getattr(sse_event_class, "from_event_async", None)
+        if from_event_async is not None:
+            return await from_event_async(event)
+        return sse_event_class.from_event(event)
+
     @staticmethod
     async def events_to_sse_events(events: List[AgentEvent]) -> List[AgentSSEEvent]:
         """Create SSE event list from event list"""
-        return list(filter(lambda x: x is not None, [
+        return [
             await EventMapper.event_to_sse_event(event) for event in events if event
-        ]))
+        ]

@@ -1,7 +1,6 @@
 // Backend API client configuration
 import axios, { AxiosError } from 'axios';
 import { fetchEventSource, EventSourceMessage } from '@microsoft/fetch-event-source';
-import { router } from '@/main';
 import { clearStoredTokens, getStoredToken, getStoredRefreshToken, storeToken } from './auth';
 
 // API configuration
@@ -72,16 +71,15 @@ const processQueue = (error: any, token: string | null = null) => {
 };
 
 /**
- * Redirect to login page using Vue Router
+ * Redirect to the login page with a full page load.
+ * Intentionally avoids importing the router to keep the API layer
+ * free of dependencies on the app entry point.
  */
 const redirectToLogin = () => {
-  // Check if we're already on the login page
-  if (window.location.pathname === LOGIN_ROUTE || 
-      router.currentRoute.value.path === LOGIN_ROUTE) {
+  if (window.location.pathname === LOGIN_ROUTE) {
     return; // Already on login page, no need to redirect
   }
 
-  // Use Vue Router to navigate to login page
   setTimeout(() => {
     window.location.href = LOGIN_ROUTE;
   }, 100);

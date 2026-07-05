@@ -114,7 +114,7 @@ const startAutoRefresh = () => {
   }
   
   if (props.live && filePath.value) {
-    refreshTimer.value = setInterval(() => {
+    refreshTimer.value = window.setInterval(() => {
       loadFileContent();
     }, 5000);
   }

@@ -80,11 +80,16 @@ export const getVNCUrl = async (
  * Chat with Session (using SSE to receive streaming responses)
  * @returns A function to cancel the SSE connection
  */
+export interface ChatAttachment {
+  file_id: string;
+  filename: string;
+}
+
 export const chatWithSession = async (
   sessionId: string, 
   message: string = '',
   eventId?: string,
-  attachments?: string[],
+  attachments?: ChatAttachment[],
   callbacks?: SSECallbacks<AgentSSEEvent['data']>
 ): Promise<() => void> => {
   return createSSEConnection<AgentSSEEvent['data']>(

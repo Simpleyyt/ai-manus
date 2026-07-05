@@ -137,11 +137,11 @@
             </button>
             <ChatBox
               v-model="inputMessage"
+              v-model:attachments="attachments"
               :rows="1"
               :isRunning="false"
               :hideStopButton="true"
               :allowSendFilesOnly="true"
-              :attachments="attachments"
               @submit="handleSubmit"
             />
           </div>

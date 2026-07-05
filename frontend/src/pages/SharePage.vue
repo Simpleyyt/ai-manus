@@ -48,13 +48,13 @@
             <div class="flex items-center gap-0.5 w-full sm:flex-1">
               <div class="w-6 h-6"><Bot :size="24" /></div>
               <div>
-                <p class="text-sm text-[var(--text-primary)]">{{ replayCompleted ? 'Manus 任务回放完成。' : 'Manus 正在回放任务...' }}</p>
+                <p class="text-sm text-[var(--text-primary)]">{{ replayCompleted ? t('Manus task replay completed.') : t('Manus is replaying the task...') }}</p>
               </div>
             </div>
             <div class="flex items-center flex-row gap-[8px] max-sm:w-full">
               <button @click="replayCompleted ? replay() : (jumpToEnd = true)"
                 class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors hover:opacity-90 active:opacity-80 bg-[var(--Button-primary-brand)] text-[var(--text-white)] h-[36px] rounded-[10px] gap-[6px] text-sm min-w-16 px-[14px] py-[6px] max-sm:w-1/2"><span
-                  class="text-sm">{{ replayCompleted ? '重放' : '跳转到结果' }}</span></button>
+                  class="text-sm">{{ replayCompleted ? t('Replay') : t('Jump to result') }}</span></button>
             </div>
           </div>
         </div>

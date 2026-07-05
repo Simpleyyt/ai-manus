@@ -116,8 +116,8 @@
             <ArrowDown class="text-[var(--icon-primary)]" :size="20" />
           </button>
           <PlanPanel v-if="plan && plan.steps.length > 0" :plan="plan" />
-          <ChatBox v-model="inputMessage" :rows="1" @submit="handleSubmit" :isRunning="isLoading" @stop="handleStop"
-            :attachments="attachments" />
+          <ChatBox v-model="inputMessage" v-model:attachments="attachments" :rows="1" @submit="handleSubmit"
+            :isRunning="isLoading" @stop="handleStop" />
         </div>
       </div>
     </div>

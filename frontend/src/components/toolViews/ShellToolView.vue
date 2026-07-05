@@ -84,7 +84,7 @@ const startAutoRefresh = () => {
   }
   
   if (props.live && shellSessionId.value) {
-    refreshTimer.value = setInterval(() => {
+    refreshTimer.value = window.setInterval(() => {
       loadShellContent();
     }, 5000);
   }

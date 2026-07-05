@@ -563,36 +563,7 @@ const handleDeleteClaw = () => {
   });
 };
 
-const handleRecreateClaw = async () => {
-  isLoadingClaw.value = true;
-  stopExpiryCountdown();
-  try {
-    const claw = await createClaw();
-    clawData.value = claw;
-    clawStatus.value = claw.status;
-    if (claw.status === 'running') {
-      await loadHistory();
-      setupWebSocket();
-      if (claw.expires_at) startExpiryCountdown(claw.expires_at);
-      isLoadingClaw.value = false;
-      await nextTick();
-      follow.value = true;
-      simpleBarRef.value?.scrollToBottom();
-    } else if (claw.status === 'error') {
-      showErrorToast(claw.error_message || t('Creation failed, please try again later'));
-      await deleteClaw().catch(() => {});
-      clawData.value = null;
-      isLoadingClaw.value = false;
-    } else {
-      startStatusPolling();
-    }
-  } catch (err: any) {
-    showErrorToast(err?.message || t('Creation failed, please try again later'));
-    await deleteClaw().catch(() => {});
-    clawData.value = null;
-    isLoadingClaw.value = false;
-  }
-};
+;
 
 // ------------------------------------------------------------------
 // Send message

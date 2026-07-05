@@ -117,7 +117,7 @@ const handleUserMenuEnter = () => {
 
 // Hide user menu with delay
 const handleUserMenuLeave = () => {
-  userMenuTimeout.value = setTimeout(() => {
+  userMenuTimeout.value = window.setTimeout(() => {
     showUserMenu.value = false;
   }, 200); // 200ms delay to allow moving to menu
 };

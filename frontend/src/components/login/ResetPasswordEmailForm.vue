@@ -69,7 +69,7 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { LoaderCircle } from 'lucide-vue-next'
-import { showErrorToast, showSuccessToast } from '@/utils/toast'
+import { showErrorToast } from '@/utils/toast'
 
 const { t } = useI18n()
 

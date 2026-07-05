@@ -274,7 +274,7 @@ const isFormValid = computed(() => {
 // Start resend cooldown
 const startResendCooldown = () => {
   resendCooldown.value = 60
-  resendTimer = setInterval(() => {
+  resendTimer = window.setInterval(() => {
     resendCooldown.value--
     if (resendCooldown.value <= 0) {
       clearInterval(resendTimer!)

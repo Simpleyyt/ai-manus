@@ -38,7 +38,6 @@
 import { ToolContent } from '@/types/message';
 import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { getFileDownloadUrl } from '@/api/file';
 import VNCViewer from '@/components/VNCViewer.vue';
 import TakeOverIcon from '@/components/icons/TakeOverIcon.vue';
 

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Mapping, Optional
 
 from pydantic import BaseModel
 
@@ -14,22 +14,19 @@ class ShellViewDto(BaseModel):
 
     output: str
     session_id: str
-    console: Optional[List[ConsoleRecordDto]] = None
+    console: Optional[list[ConsoleRecordDto]] = None
 
     @classmethod
-    def from_tool_data(cls, data: Dict[str, Any]) -> "ShellViewDto":
-        console = data.get("console")
-        console_dtos = None
-        if console is not None:
-            console_dtos = [
-                ConsoleRecordDto(**record) if isinstance(record, dict) else record
-                for record in console
-            ]
-        return cls(
-            output=data["output"],
-            session_id=data["session_id"],
-            console=console_dtos,
-        )
+    def from_tool_data(cls, data: Optional[Mapping[str, Any]]) -> "ShellViewDto":
+        """Build the DTO from a sandbox ToolResult payload.
+
+        Field names mirror the sandbox shell-view result, so Pydantic
+        validation handles the mapping (including the nested console
+        records) directly.
+        """
+        if not data:
+            raise ValueError("shell view result is empty")
+        return cls.model_validate(data)
 
 
 class FileViewDto(BaseModel):
@@ -39,5 +36,8 @@ class FileViewDto(BaseModel):
     file: str
 
     @classmethod
-    def from_tool_data(cls, data: Dict[str, Any]) -> "FileViewDto":
-        return cls(content=data["content"], file=data["file"])
+    def from_tool_data(cls, data: Optional[Mapping[str, Any]]) -> "FileViewDto":
+        """Build the DTO from a sandbox ToolResult payload."""
+        if not data:
+            raise ValueError("file view result is empty")
+        return cls.model_validate(data)

@@ -4,13 +4,11 @@ from datetime import datetime
 from app.domain.models.session import Session, SessionSummary
 from app.domain.repositories.session_repository import SessionRepository
 
-from app.interfaces.schemas.session import ShellViewResponse
-from app.interfaces.schemas.file import FileViewResponse
+from app.application.dto.sandbox import FileViewDto, ShellViewDto
 from app.domain.models.agent import Agent
 from app.domain.services.agent_domain_service import AgentDomainService
 from app.domain.models.event import AgentEvent
 from typing import Type
-from app.domain.models.agent import Agent
 from app.domain.external.sandbox import Sandbox
 from app.domain.external.search import SearchEngine
 from app.domain.external.file import FileStorage
@@ -146,7 +144,7 @@ class AgentService:
         await self._agent_domain_service.shutdown()
         logger.info("All agents closed successfully")
 
-    async def shell_view(self, session_id: str, shell_session_id: str, user_id: str) -> ShellViewResponse:
+    async def shell_view(self, session_id: str, shell_session_id: str, user_id: str) -> ShellViewDto:
         """View shell session output, ensuring session belongs to the user"""
         logger.info(f"Getting shell view for session {session_id} for user {user_id}")
         session = await self._session_repository.find_by_id_and_user_id(session_id, user_id)
@@ -164,7 +162,7 @@ class AgentService:
         
         result = await sandbox.view_shell(shell_session_id, console=True)
         if result.success:
-            return ShellViewResponse(**result.data)
+            return ShellViewDto.from_tool_data(result.data)
         else:
             raise RuntimeError(f"Failed to get shell output: {result.message}")
 
@@ -187,7 +185,7 @@ class AgentService:
         
         return sandbox.vnc_url
 
-    async def file_view(self, session_id: str, file_path: str, user_id: str) -> FileViewResponse:
+    async def file_view(self, session_id: str, file_path: str, user_id: str) -> FileViewDto:
         """View file content, ensuring session belongs to the user"""
         logger.info(f"Getting file view for session {session_id} for user {user_id}")
         session = await self._session_repository.find_by_id_and_user_id(session_id, user_id)
@@ -205,7 +203,7 @@ class AgentService:
         
         result = await sandbox.file_read(file_path)
         if result.success:
-            return FileViewResponse(**result.data)
+            return FileViewDto.from_tool_data(result.data)
         else:
             raise RuntimeError(f"Failed to read file: {result.message}")
     

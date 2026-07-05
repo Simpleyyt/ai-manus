@@ -21,6 +21,7 @@ from app.interfaces.schemas.session import (
 from app.interfaces.schemas.file import FileViewRequest, FileViewResponse
 from app.interfaces.schemas.resource import AccessTokenRequest, SignedUrlResponse
 from app.interfaces.schemas.event import EventMapper
+from app.interfaces.mappers.sandbox_mapper import to_file_view_response, to_shell_view_response
 from app.domain.models.file import FileInfo
 from app.domain.models.user import User
 
@@ -176,7 +177,7 @@ async def view_shell(
         APIResponse with shell output
     """
     result = await agent_service.shell_view(session_id, request.session_id, current_user.id)
-    return APIResponse.success(result)
+    return APIResponse.success(to_shell_view_response(result))
 
 @router.post("/{session_id}/file")
 async def view_file(
@@ -197,7 +198,7 @@ async def view_file(
         APIResponse with file content
     """
     result = await agent_service.file_view(session_id, request.file, current_user.id)
-    return APIResponse.success(result)
+    return APIResponse.success(to_file_view_response(result))
 
 @router.websocket("/{session_id}/vnc")
 async def vnc_websocket(

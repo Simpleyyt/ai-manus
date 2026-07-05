@@ -1,18 +1,9 @@
 <template>
-  <div
-    class="h-[36px] flex items-center px-3 w-full bg-[var(--background-gray-main)] border-b border-[var(--border-main)] rounded-t-[12px] shadow-[inset_0px_1px_0px_0px_#FFFFFF] dark:shadow-[inset_0px_1px_0px_0px_#FFFFFF30]">
-    <div class="flex-1 flex items-center justify-center">
-      <div class="max-w-[250px] truncate text-[var(--text-tertiary)] text-sm font-medium text-center">{{
-        shellSessionId }}
-      </div>
-    </div>
-  </div>
+  <ToolViewHeader :title="shellSessionId" />
   <div class="flex-1 min-h-0 w-full overflow-y-auto">
     <div dir="ltr" data-orientation="horizontal" class="flex flex-col flex-1 min-h-0">
-      <div data-state="active" data-orientation="horizontal" role="tabpanel"
-        id="radix-:r5m:-content-setup" tabindex="0"
-        class="py-2 focus-visible:outline-none data-[state=inactive]:hidden flex-1 font-mono text-sm leading-relaxed px-3 outline-none overflow-auto whitespace-pre-wrap break-all"
-        style="animation-duration: 0s;">
+      <div
+        class="py-2 flex-1 font-mono text-sm leading-relaxed px-3 outline-none overflow-auto whitespace-pre-wrap break-all">
         <code v-html="shell"></code>
       </div>
     </div>
@@ -20,10 +11,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed, watch, onUnmounted } from 'vue';
+import { ref, computed, toRef } from 'vue';
 import { viewShellSession } from '@/api/agent';
 import { ToolContent } from '@/types/message';
-//import { showErrorToast } from '@/utils/toast';
+import ToolViewHeader from './ToolViewHeader.vue';
+import { useLiveToolContent } from '@/composables/useLiveToolContent';
 
 const props = defineProps<{
   sessionId: string;
@@ -38,7 +30,6 @@ defineExpose({
 });
 
 const shell = ref('');
-const refreshTimer = ref<number | null>(null);
 
 // Get shellSessionId from toolContent
 const shellSessionId = computed(() => {
@@ -66,7 +57,7 @@ const loadShellContent = async () => {
     updateShellContent(props.toolContent.content?.console);
     return;
   }
-  
+
   if (!shellSessionId.value) return;
 
   try {
@@ -77,53 +68,10 @@ const loadShellContent = async () => {
   }
 };
 
-// Start auto-refresh timer
-const startAutoRefresh = () => {
-  if (refreshTimer.value) {
-    clearInterval(refreshTimer.value);
-  }
-  
-  if (props.live && shellSessionId.value) {
-    refreshTimer.value = window.setInterval(() => {
-      loadShellContent();
-    }, 5000);
-  }
-};
-
-// Stop auto-refresh timer
-const stopAutoRefresh = () => {
-  if (refreshTimer.value) {
-    clearInterval(refreshTimer.value);
-    refreshTimer.value = null;
-  }
-};
-
-watch(() => props.toolContent, () => {
-  loadShellContent();
-});
-
-watch(() => props.toolContent.timestamp, () => {
-  loadShellContent();
-});
-
-// Watch for live prop changes
-watch(() => props.live, (live: boolean) => {
-  if (live) {
-    loadShellContent();
-    startAutoRefresh();
-  } else {
-    stopAutoRefresh();
-  }
-});
-
-// Load content and set up refresh timer when component is mounted
-onMounted(() => {
-  loadShellContent();
-  startAutoRefresh();
-});
-
-// Clear timer when component is unmounted
-onUnmounted(() => {
-  stopAutoRefresh();
+useLiveToolContent({
+  toolContent: toRef(props, 'toolContent'),
+  live: toRef(props, 'live'),
+  targetKey: shellSessionId,
+  load: loadShellContent,
 });
 </script>

@@ -129,14 +129,15 @@
 
 <script setup lang="ts">
 import SimpleBar from '../components/SimpleBar.vue';
-import { ref, onMounted, onUnmounted, reactive, toRefs } from 'vue';
+import { ref, onMounted, watch, nextTick, onUnmounted, reactive, toRefs } from 'vue';
 import { useRouter, onBeforeRouteUpdate } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import ChatBox from '../components/ChatBox.vue';
 import ChatMessage from '../components/ChatMessage.vue';
 import * as agentApi from '../api/agent';
-import { MessageContent, AttachmentsContent, isConsecutiveAssistant } from '../types/message';
-import { AgentSSEEvent } from '../types/event';
+import { Message, MessageContent, ToolContent, AttachmentsContent, isConsecutiveAssistant } from '../types/message';
+import { PlanEventData, AgentSSEEvent } from '../types/event';
+import { useAgentEvents } from '../composables/useAgentEvents';
 import ToolPanel from '../components/ToolPanel.vue'
 import PlanPanel from '../components/PlanPanel.vue';
 import { ArrowDown, FileSearch, PanelLeft, Lock, Globe, Link, Check } from 'lucide-vue-next';
@@ -146,7 +147,6 @@ import type { FileInfo } from '../api/file';
 import { useLeftPanel } from '../composables/useLeftPanel'
 import { useSessionFileList } from '../composables/useSessionFileList'
 import { useFilePanel } from '../composables/useFilePanel'
-import { useAgentEvents } from '../composables/useAgentEvents'
 import { copyToClipboard } from '../utils/dom'
 import { SessionStatus } from '../types/response';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -158,36 +158,21 @@ const { toggleLeftPanel, isLeftPanelShow } = useLeftPanel()
 const { showSessionFileList } = useSessionFileList()
 const { hideFilePanel } = useFilePanel()
 
-// Non-state refs that don't need reset
-const toolPanel = ref<InstanceType<typeof ToolPanel>>()
-const simpleBarRef = ref<InstanceType<typeof SimpleBar>>();
-const observerRef = ref<HTMLDivElement>();
-const chatContainerRef = ref<HTMLDivElement>();
-
-// Shared SSE event handling (messages, plan, title, tool tracking)
-const {
-  isLoading,
-  messages,
-  realTime,
-  follow,
-  title,
-  plan,
-  lastEventId,
-  handleEvent,
-  resetEvents,
-  handleToolClick,
-  jumpToRealTime,
-} = useAgentEvents({
-  liveTools: true,
-  showToolPanel: (tool, live) => toolPanel.value?.showToolPanel(tool, live),
-  scrollToBottom: () => simpleBarRef.value?.scrollToBottom(),
-});
-
-// Page-specific state (input, share settings, connection handle)
+// Create initial state factory
 const createInitialState = () => ({
   inputMessage: '',
+  isLoading: false,
   sessionId: undefined as string | undefined,
+  messages: [] as Message[],
   toolPanelSize: 0,
+  realTime: true,
+  follow: true,
+  title: t('New Chat'),
+  plan: undefined as PlanEventData | undefined,
+  lastNoMessageTool: undefined as ToolContent | undefined,
+  lastMessageTool: undefined as ToolContent | undefined,
+  lastTool: undefined as ToolContent | undefined,
+  lastEventId: undefined as string | undefined,
   cancelCurrentChat: null as (() => void) | null,
   attachments: [] as FileInfo[],
   shareMode: 'private' as 'private' | 'public', // Default to private mode
@@ -195,12 +180,23 @@ const createInitialState = () => ({
   sharingLoading: false // Loading state for share operations
 });
 
+// Create reactive state
 const state = reactive(createInitialState());
 
+// Destructure refs from reactive state
 const {
   inputMessage,
+  isLoading,
   sessionId,
+  messages,
   toolPanelSize,
+  realTime,
+  follow,
+  title,
+  plan,
+  lastNoMessageTool,
+  lastTool,
+  lastEventId,
   cancelCurrentChat,
   attachments,
   shareMode,
@@ -208,16 +204,44 @@ const {
   sharingLoading
 } = toRefs(state);
 
-// Reset all state to initial values
+// Non-state refs that don't need reset
+const toolPanel = ref<InstanceType<typeof ToolPanel>>()
+const simpleBarRef = ref<InstanceType<typeof SimpleBar>>();
+const observerRef = ref<HTMLDivElement>();
+const chatContainerRef = ref<HTMLDivElement>();
+
+// Shared SSE event -> message list conversion
+const { handleEvent } = useAgentEvents(
+  { messages, title, plan, isLoading, lastEventId, lastTool, lastNoMessageTool },
+  {
+    onToolActivity: (tool: ToolContent) => {
+      if (realTime.value) {
+        toolPanel.value?.showToolPanel(tool, true);
+      }
+    },
+  }
+);
+
+// Reset all refs to their initial values
 const resetState = () => {
   // Cancel any existing chat connection
   if (cancelCurrentChat.value) {
     cancelCurrentChat.value();
   }
 
+  // Reset reactive state to initial values
   Object.assign(state, createInitialState());
-  resetEvents();
 };
+
+// Watch message changes and automatically scroll to bottom
+watch(messages, async () => {
+  await nextTick();
+  if (follow.value) {
+    simpleBarRef.value?.scrollToBottom();
+  }
+}, { deep: true });
+
+
 
 const handleSubmit = () => {
   chat(inputMessage.value, attachments.value);
@@ -365,6 +389,37 @@ onUnmounted(() => {
     cancelCurrentChat.value = null;
   }
 })
+
+const isLastNoMessageTool = (tool: ToolContent) => {
+  return tool.tool_call_id === lastNoMessageTool.value?.tool_call_id;
+}
+
+const isLiveTool = (tool: ToolContent) => {
+  if (tool.status === 'calling') {
+    return true;
+  }
+  if (!isLastNoMessageTool(tool)) {
+    return false;
+  }
+  if (tool.timestamp > Date.now() - 5 * 60 * 1000) {
+    return true;
+  }
+  return false;
+}
+
+const handleToolClick = (tool: ToolContent) => {
+  realTime.value = false;
+  if (sessionId.value) {
+    toolPanel.value?.showToolPanel(tool, isLiveTool(tool));
+  }
+}
+
+const jumpToRealTime = () => {
+  realTime.value = true;
+  if (lastNoMessageTool.value) {
+    toolPanel.value?.showToolPanel(lastNoMessageTool.value, isLiveTool(lastNoMessageTool.value));
+  }
+}
 
 const handleFollow = () => {
   follow.value = true;

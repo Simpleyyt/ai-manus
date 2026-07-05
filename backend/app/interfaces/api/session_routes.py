@@ -91,17 +91,7 @@ async def get_all_sessions(
     agent_service: AgentService = Depends(get_agent_service)
 ) -> APIResponse[ListSessionResponse]:
     summaries = await agent_service.get_all_sessions(current_user.id)
-    session_items = [
-        ListSessionItem(
-            session_id=s.id,
-            title=s.title,
-            status=s.status,
-            unread_message_count=s.unread_message_count,
-            latest_message=s.latest_message,
-            latest_message_at=int(s.latest_message_at.timestamp()) if s.latest_message_at else None,
-            is_shared=s.is_shared
-        ) for s in summaries
-    ]
+    session_items = [ListSessionItem.from_domain(s) for s in summaries]
     return APIResponse.success(ListSessionResponse(sessions=session_items))
 
 @router.post("")
@@ -112,17 +102,7 @@ async def stream_sessions(
     async def event_generator() -> AsyncGenerator[ServerSentEvent, None]:
         while True:
             summaries = await agent_service.get_all_sessions(current_user.id)
-            session_items = [
-                ListSessionItem(
-                    session_id=s.id,
-                    title=s.title,
-                    status=s.status,
-                    unread_message_count=s.unread_message_count,
-                    latest_message=s.latest_message,
-                    latest_message_at=int(s.latest_message_at.timestamp()) if s.latest_message_at else None,
-                    is_shared=s.is_shared
-                ) for s in summaries
-            ]
+            session_items = [ListSessionItem.from_domain(s) for s in summaries]
             yield ServerSentEvent(
                 event="sessions",
                 data=ListSessionResponse(sessions=session_items).model_dump_json()
@@ -144,7 +124,7 @@ async def chat(
             message=request.message,
             timestamp=datetime.fromtimestamp(request.timestamp) if request.timestamp else None,
             event_id=request.event_id,
-            attachments=request.attachments
+            attachments=[attachment.to_domain() for attachment in request.attachments] if request.attachments else None
         ):
             logger.debug(f"Received event from chat: {event}")
             sse_event = await EventMapper.event_to_sse_event(event)

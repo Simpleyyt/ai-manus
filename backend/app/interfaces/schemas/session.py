@@ -1,14 +1,24 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from app.interfaces.schemas.event import AgentSSEEvent
-from app.domain.models.session import SessionStatus
+from app.domain.models.file import FileInfo
+from app.domain.models.session import SessionStatus, SessionSummary
+
+
+class ChatAttachment(BaseModel):
+    """File attachment reference in a chat request"""
+    file_id: str
+    filename: str
+
+    def to_domain(self) -> FileInfo:
+        return FileInfo(file_id=self.file_id, filename=self.filename)
 
 
 class ChatRequest(BaseModel):
     """Chat request schema"""
     timestamp: Optional[int] = None
     message: Optional[str] = None
-    attachments: Optional[List[dict]] = None
+    attachments: Optional[List[ChatAttachment]] = None
     event_id: Optional[str] = None
 
 
@@ -40,6 +50,18 @@ class ListSessionItem(BaseModel):
     status: SessionStatus
     unread_message_count: int
     is_shared: bool = False
+
+    @staticmethod
+    def from_domain(summary: SessionSummary) -> 'ListSessionItem':
+        return ListSessionItem(
+            session_id=summary.id,
+            title=summary.title,
+            status=summary.status,
+            unread_message_count=summary.unread_message_count,
+            latest_message=summary.latest_message,
+            latest_message_at=int(summary.latest_message_at.timestamp()) if summary.latest_message_at else None,
+            is_shared=summary.is_shared
+        )
 
 
 class ListSessionResponse(BaseModel):

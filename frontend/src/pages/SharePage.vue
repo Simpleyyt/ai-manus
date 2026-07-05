@@ -92,20 +92,22 @@
 
 <script setup lang="ts">
 import SimpleBar from '../components/SimpleBar.vue';
-import { ref, onMounted, onUnmounted, reactive, toRefs } from 'vue';
+import { ref, onMounted, onUnmounted, watch, nextTick, reactive, toRefs } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import ChatMessage from '../components/ChatMessage.vue';
 import * as agentApi from '../api/agent';
-import { isConsecutiveAssistant } from '../types/message';
+import { Message, ToolContent, isConsecutiveAssistant } from '../types/message';
+import { PlanEventData } from '../types/event';
+import { useAgentEvents } from '../composables/useAgentEvents';
 import ToolPanel from '../components/ToolPanel.vue'
 import PlanPanel from '../components/PlanPanel.vue';
 import { ArrowDown, FileSearch, Link, Bot } from 'lucide-vue-next';
 import ManusLogoTextIcon from '../components/icons/ManusLogoTextIcon.vue';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
+import type { FileInfo } from '../api/file';
 import { useSessionFileList } from '../composables/useSessionFileList'
 import { useFilePanel } from '../composables/useFilePanel'
-import { useAgentEvents } from '../composables/useAgentEvents'
 import LoadingIndicator from '@/components/ui/LoadingIndicator.vue';
 import { copyToClipboard } from '../utils/dom'
 
@@ -114,55 +116,81 @@ const { t } = useI18n()
 const { showSessionFileList } = useSessionFileList()
 const { hideFilePanel } = useFilePanel()
 
-// Non-state refs that don't need reset
-const toolPanel = ref<InstanceType<typeof ToolPanel>>()
-const simpleBarRef = ref<InstanceType<typeof SimpleBar>>();
-let countdownTimer: number | null = null;
-
-// Shared SSE event handling (messages, plan, title, tool tracking).
-// Replays never show live tools.
-const {
-  isLoading,
-  messages,
-  realTime,
-  follow,
-  title,
-  plan,
-  handleEvent,
-  resetEvents,
-  handleToolClick,
-  jumpToRealTime,
-} = useAgentEvents({
-  liveTools: false,
-  showToolPanel: (tool, live) => toolPanel.value?.showToolPanel(tool, live),
-  scrollToBottom: () => simpleBarRef.value?.scrollToBottom(),
-});
-
-// Page-specific state (replay overlay and progress)
+// Create initial state factory
 const createInitialState = () => ({
+  inputMessage: '',
+  isLoading: false,
   sessionId: undefined as string | undefined,
+  messages: [] as Message[],
   toolPanelSize: 0,
+  realTime: true,
+  follow: true,
+  title: t('New Chat'),
+  plan: undefined as PlanEventData | undefined,
+  lastNoMessageTool: undefined as ToolContent | undefined,
+  lastMessageTool: undefined as ToolContent | undefined,
+  lastTool: undefined as ToolContent | undefined,
+  lastEventId: undefined as string | undefined,
+  attachments: [] as FileInfo[],
   showReplayOverlay: false,
   countdown: 3,
   jumpToEnd: false,
   replayCompleted: false,
 });
 
+// Create reactive state
 const state = reactive(createInitialState());
 
+// Destructure refs from reactive state
 const {
+  isLoading,
   sessionId,
+  messages,
   toolPanelSize,
+  realTime,
+  follow,
+  title,
+  plan,
+  lastNoMessageTool,
+  lastTool,
+  lastEventId,
   showReplayOverlay,
   countdown,
   jumpToEnd,
   replayCompleted,
 } = toRefs(state);
 
-// Reset all state to initial values
+// Non-state refs that don't need reset
+const toolPanel = ref<InstanceType<typeof ToolPanel>>()
+const simpleBarRef = ref<InstanceType<typeof SimpleBar>>();
+let countdownTimer: number | null = null;
+
+// Shared SSE event -> message list conversion
+const { handleEvent } = useAgentEvents(
+  { messages, title, plan, isLoading, lastEventId, lastTool, lastNoMessageTool },
+  {
+    onToolActivity: (tool: ToolContent) => {
+      if (realTime.value) {
+        toolPanel.value?.showToolPanel(tool, false);
+      }
+    },
+  }
+);
+
+// Watch message changes and automatically scroll to bottom
+watch(messages, async () => {
+  await nextTick();
+  if (follow.value) {
+    simpleBarRef.value?.scrollToBottom();
+  }
+}, { deep: true });
+
+
+
+// Reset all refs to their initial values
 const resetState = () => {
+  // Reset reactive state to initial values
   Object.assign(state, createInitialState());
-  resetEvents();
 };
 
 const replay = async () => {
@@ -248,6 +276,20 @@ onUnmounted(() => {
     countdownTimer = null;
   }
 });
+
+const handleToolClick = (tool: ToolContent) => {
+  realTime.value = false;
+  if (sessionId.value) {
+    toolPanel.value?.showToolPanel(tool, false);
+  }
+}
+
+const jumpToRealTime = () => {
+  realTime.value = true;
+  if (lastNoMessageTool.value) {
+    toolPanel.value?.showToolPanel(lastNoMessageTool.value, false);
+  }
+}
 
 const handleFollow = () => {
   follow.value = true;

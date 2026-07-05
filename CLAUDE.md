@@ -47,8 +47,8 @@ cd backend && uv run pytest -m file_api                # by marker (see backend/
 ./dev.sh up -d sandbox
 cd sandbox && uv run pytest
 
-# Frontend — no test runner; type-check + build is the gate
-cd frontend && npm run type-check && npm run build
+# Frontend — Vitest unit tests + type-check + lint + build
+cd frontend && npm run test && npm run type-check && npm run lint && npm run build
 ```
 
 ### Running a service outside Docker
@@ -95,7 +95,7 @@ Each toolkit in `domain/services/tools/` (shell, browser, file, search, message,
 
 ## Conventions & gotchas
 
-- **No linter/formatter is configured** anywhere (no Ruff/Black/ESLint/Prettier). Match the style of surrounding code.
+- **Backend/sandbox have no linter/formatter** (no Ruff/Black). The frontend has **ESLint** (`cd frontend && npm run lint`, flat config in `frontend/eslint.config.js`); no Prettier. Match the style of surrounding code.
 - Backend is **async-first** — route handlers and service methods are `async def`.
 - Python deps: **uv** + `pyproject.toml` (PEP 621) per service. Frontend: **npm** + `package.json`.
 - Config is centralized in `backend/app/core/config.py` (Pydantic `Settings`, `@lru_cache`d `get_settings()`); env vars come from `.env`. For dev, point `API_BASE` at `http://mockserver:8090/v1` and set `AUTH_PROVIDER=none` to skip both real LLM and login.

@@ -1,4 +1,4 @@
-from typing import Optional, AsyncGenerator, List
+from typing import Any, Dict, Optional, AsyncGenerator, List, Type
 import asyncio
 import logging
 import os
@@ -28,7 +28,7 @@ from app.domain.external.search import SearchEngine
 from app.domain.external.file import FileStorage
 from app.domain.external.llm import LLM
 from app.domain.repositories.agent_repository import AgentRepository
-from app.domain.external.task import TaskRunner, Task
+from app.domain.external.task import TaskRunner, TaskRunnerFactory, Task
 from app.domain.repositories.session_repository import SessionRepository
 from app.domain.repositories.mcp_repository import MCPRepository
 from app.domain.models.session import SessionStatus
@@ -291,3 +291,64 @@ class AgentTaskRunner(TaskRunner):
             await self._mcp_tool.cleanup()
         
         logger.debug(f"Agent {self._agent_id} has been fully closed and resources cleared")
+
+
+class AgentTaskRunnerFactory(TaskRunnerFactory):
+    """Rebuilds an AgentTaskRunner from serializable parameters.
+
+    Task backends only carry JSON-serializable parameters (session_id,
+    agent_id, user_id, sandbox_id) between the process that creates a task
+    and the process that executes it. This factory reconstructs the runner
+    with live dependencies (sandbox, browser, repositories) on the execution
+    side, which may be the API process (local backend) or a worker process
+    (e.g. Celery backend).
+    """
+
+    def __init__(
+        self,
+        agent_repository: AgentRepository,
+        session_repository: SessionRepository,
+        sandbox_cls: Type[Sandbox],
+        file_storage: FileStorage,
+        mcp_repository: MCPRepository,
+        llm: LLM,
+        search_engine: Optional[SearchEngine] = None,
+    ):
+        self._agent_repository = agent_repository
+        self._session_repository = session_repository
+        self._sandbox_cls = sandbox_cls
+        self._file_storage = file_storage
+        self._mcp_repository = mcp_repository
+        self._llm = llm
+        self._search_engine = search_engine
+
+    @staticmethod
+    def build_params(session_id: str, agent_id: str, user_id: str, sandbox_id: str) -> Dict[str, Any]:
+        return {
+            "session_id": session_id,
+            "agent_id": agent_id,
+            "user_id": user_id,
+            "sandbox_id": sandbox_id,
+        }
+
+    async def create_runner(self, params: Dict[str, Any]) -> AgentTaskRunner:
+        sandbox_id = params["sandbox_id"]
+        sandbox = await self._sandbox_cls.get(sandbox_id)
+        if not sandbox:
+            raise RuntimeError(f"Sandbox {sandbox_id} not found")
+        browser = await sandbox.get_browser()
+        if not browser:
+            raise RuntimeError(f"Failed to get browser for Sandbox {sandbox_id}")
+        return AgentTaskRunner(
+            session_id=params["session_id"],
+            agent_id=params["agent_id"],
+            user_id=params["user_id"],
+            sandbox=sandbox,
+            browser=browser,
+            agent_repository=self._agent_repository,
+            session_repository=self._session_repository,
+            file_storage=self._file_storage,
+            mcp_repository=self._mcp_repository,
+            llm=self._llm,
+            search_engine=self._search_engine,
+        )

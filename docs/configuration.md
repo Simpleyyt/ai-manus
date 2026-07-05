@@ -295,6 +295,44 @@ API_KEY=sk-...
 | `EMAIL_PASSWORD` | - | 否 | 邮箱密码 |
 | `EMAIL_FROM` | - | 否 | 发件人邮箱地址 |
 
+### 任务后端配置
+
+| 配置项 | 默认值 | 是否必需 | 说明 |
+|--------|--------|----------|------|
+| `TASK_BACKEND` | `local` | 否 | Agent 任务执行后端：`local`（在 backend 进程内执行）或 `celery`（投递到分布式 Celery worker 执行） |
+| `CELERY_BROKER_URL` | - | 否 | 自定义 Celery broker 地址，默认复用上面的 Redis 配置 |
+
+#### 使用 Celery 任务后端
+
+`TASK_BACKEND=celery` 时，agent 任务不再运行在 backend 进程内，而是投递到独立的 Celery worker 容器执行，backend 可以水平扩容多副本。事件仍通过 Redis Stream 流式返回，前端行为不变。
+
+worker 容器复用 backend 镜像，通过 `start_worker.sh` 脚本启动，在 compose 中额外添加一个 worker 服务即可：
+
+```yaml
+  worker:
+    image: simpleyyt/manus-backend:latest
+    command: ["./start_worker.sh"]
+    depends_on:
+      - mongodb
+      - redis
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - manus-network
+    env_file:
+      - .env
+    environment:
+      - TASK_BACKEND=celery
+```
+
+说明：
+
+- worker 需要与 backend 使用**相同的 `.env` 配置**（模型、MongoDB、Redis、沙箱等），因为它在执行任务时会直接访问这些服务。
+- worker 需要挂载 `/var/run/docker.sock`，用于创建和连接沙箱容器；开发模式使用固定沙箱时（`SANDBOX_ADDRESS=sandbox`）可省略。
+- 每个 agent 任务运行期间会独占一个 worker 进程，可通过环境变量 `CELERY_CONCURRENCY`（默认 `4`）控制可并行执行的 agent 会话数量，`CELERY_LOG_LEVEL`（默认 `INFO`）控制日志级别。
+- 也可以不通过容器直接启动 worker：`cd backend && ./start_worker.sh`。
+
 ### MCP 配置
 
 | 配置项 | 默认值 | 是否必需 | 说明 |

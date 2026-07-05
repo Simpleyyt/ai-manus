@@ -8,7 +8,7 @@ from app.domain.models.event import BaseEvent, ErrorEvent, DoneEvent, MessageEve
 from pydantic import TypeAdapter
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.repositories.session_repository import SessionRepository
-from app.domain.services.agent_task_runner import AgentTaskRunner
+from app.domain.services.agent_task_runner import AgentTaskRunnerFactory
 from app.domain.external.task import Task
 from typing import Type
 from app.domain.external.file import FileStorage
@@ -61,28 +61,14 @@ class AgentDomainService:
             sandbox = await self._sandbox_cls.create()
             session.sandbox_id = sandbox.id
             await self._session_repository.save(session)
-        browser = await sandbox.get_browser()
-        if not browser:
-            logger.error(f"Failed to get browser for Sandbox {sandbox_id}")
-            raise RuntimeError(f"Failed to get browser for Sandbox {sandbox_id}")
-        
-        await self._session_repository.save(session)
 
-        task_runner = AgentTaskRunner(
+        params = AgentTaskRunnerFactory.build_params(
             session_id=session.id,
             agent_id=session.agent_id,
             user_id=session.user_id,
-            sandbox=sandbox,
-            browser=browser,
-            file_storage=self._file_storage,
-            search_engine=self._search_engine,
-            session_repository=self._session_repository,
-            agent_repository=self._repository,
-            mcp_repository=self._mcp_repository,
-            llm=self._llm,
+            sandbox_id=session.sandbox_id,
         )
-
-        task = self._task_cls.create(task_runner)
+        task = self._task_cls.create(params)
         session.task_id = task.id
         await self._session_repository.save(session)
 
@@ -95,7 +81,7 @@ class AgentDomainService:
         if not task_id:
             return None
         
-        return self._task_cls.get(task_id)
+        return await self._task_cls.get(task_id)
 
     async def stop_session(self, session_id: str) -> None:
         """Stop a session"""
@@ -105,7 +91,7 @@ class AgentDomainService:
             raise RuntimeError("Session not found")
         task = await self._get_task(session)
         if task:
-            task.cancel()
+            await task.cancel()
         await self._session_repository.update_status(session_id, SessionStatus.COMPLETED)
 
     async def chat(
@@ -154,12 +140,18 @@ class AgentDomainService:
             logger.info(f"Session {session_id} started")
             logger.debug(f"Session {session_id} task: {task}")
            
-            while task and not task.done:
-                event_id, event_str = await task.output_stream.get(start_id=latest_event_id, block_ms=0)
-                latest_event_id = event_id
+            while task:
+                # Check done state before reading so buffered events are
+                # fully drained even if the task finished in the meantime
+                task_done = await task.is_done()
+                event_id, event_str = await task.output_stream.get(start_id=latest_event_id, block_ms=1000)
                 if event_str is None:
+                    if task_done:
+                        logger.debug(f"Session {session_id}'s task is done and event queue is drained")
+                        break
                     logger.debug(f"No event found in Session {session_id}'s event queue")
                     continue
+                latest_event_id = event_id
                 event = TypeAdapter(AgentEvent).validate_json(event_str)
                 event.id = event_id
                 logger.debug(f"Got event from Session {session_id}'s event queue: {type(event).__name__}")

@@ -296,6 +296,44 @@ Used only when `AUTH_PROVIDER=password`:
 | `EMAIL_PASSWORD` | - | No | Email password |
 | `EMAIL_FROM` | - | No | Sender email address |
 
+### Task Backend Configuration
+
+| Configuration | Default Value | Required | Description |
+|---------------|---------------|----------|-------------|
+| `TASK_BACKEND` | `local` | No | Agent task execution backend: `local` (run inside the backend process) or `celery` (dispatch to distributed Celery workers) |
+| `CELERY_BROKER_URL` | - | No | Custom Celery broker URL; defaults to the Redis configuration above |
+
+#### Using the Celery Task Backend
+
+With `TASK_BACKEND=celery`, agent tasks no longer run inside the backend process but are dispatched to dedicated Celery worker containers, allowing the backend to scale horizontally. Events still stream back through Redis Streams, so frontend behavior is unchanged.
+
+Workers reuse the backend image and start via the `start_worker.sh` script; just add an extra worker service to your compose file:
+
+```yaml
+  worker:
+    image: simpleyyt/manus-backend:latest
+    command: ["./start_worker.sh"]
+    depends_on:
+      - mongodb
+      - redis
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - manus-network
+    env_file:
+      - .env
+    environment:
+      - TASK_BACKEND=celery
+```
+
+Notes:
+
+- Workers must share the **same `.env` configuration** as the backend (model, MongoDB, Redis, sandbox, etc.), since they access these services directly while executing tasks.
+- Workers need `/var/run/docker.sock` mounted to create and connect to sandbox containers; it can be omitted in development mode with a fixed sandbox (`SANDBOX_ADDRESS=sandbox`).
+- Each agent task occupies one worker process for its whole run; use the `CELERY_CONCURRENCY` env var (default `4`) to bound how many agent sessions execute in parallel, and `CELERY_LOG_LEVEL` (default `INFO`) to control the log level.
+- Workers can also be started without a container: `cd backend && ./start_worker.sh`.
+
 ### MCP Configuration
 
 | Configuration | Default Value | Required | Description |

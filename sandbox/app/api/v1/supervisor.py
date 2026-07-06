@@ -1,15 +1,8 @@
 from fastapi import APIRouter
-from pydantic import BaseModel
-from typing import Optional
 
 from app.schemas.response import Response
+from app.schemas.supervisor import TimeoutRequest
 from app.services.supervisor import supervisor_service
-
-
-# Request model
-class TimeoutRequest(BaseModel):
-    minutes: Optional[int] = None
-
 
 router = APIRouter()
 
@@ -22,7 +15,7 @@ async def get_status():
     return Response(
         success=True,
         message="Services status retrieved successfully",
-        data=processes
+        data=[process.model_dump() for process in processes]
     )
 
 @router.post("/stop", response_model=Response)
@@ -34,7 +27,7 @@ async def stop_services():
     return Response(
         success=True,
         message="All services stopped",
-        data=result
+        data=result.model_dump()
     )
 
 @router.post("/shutdown", response_model=Response)
@@ -46,7 +39,7 @@ async def shutdown_supervisor():
     return Response(
         success=True,
         message="Supervisord service shutdown",
-        data=result
+        data=result.model_dump()
     )
 
 @router.post("/restart", response_model=Response)
@@ -58,7 +51,7 @@ async def restart_services():
     return Response(
         success=True,
         message="All services restarted",
-        data=result
+        data=result.model_dump()
     )
 
 @router.post("/timeout/activate", response_model=Response)
@@ -69,8 +62,8 @@ async def activate_timeout(request: TimeoutRequest):
     minutes: Optional, timeout duration (minutes), if not provided, system default configuration will be used
     """
     result = await supervisor_service.activate_timeout(request.minutes)
-    # Disable auto-expand since user explicitly controls timeout
-    supervisor_service.disable_auto_expand()
+    # Disable auto-extend since user explicitly controls timeout
+    supervisor_service.disable_auto_extend()
     return Response(
         success=True,
         message=f"Timeout reset, all services will be shut down after {result.timeout_minutes} minutes",
@@ -85,8 +78,8 @@ async def extend_timeout(request: TimeoutRequest):
     minutes: Optional, number of minutes to extend, if not provided, system default configuration will be used
     """
     result = await supervisor_service.extend_timeout(request.minutes)
-    # Disable auto-expand since user explicitly controls timeout
-    supervisor_service.disable_auto_expand()
+    # Disable auto-extend since user explicitly controls timeout
+    supervisor_service.disable_auto_extend()
     return Response(
         success=True,
         message=f"Timeout extended, all services will be shut down after {result.timeout_minutes} minutes",

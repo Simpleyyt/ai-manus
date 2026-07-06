@@ -12,15 +12,6 @@ class ConsoleRecord(BaseModel):
     output: str = Field(default="", description="Command output")
 
 
-class ShellTask(BaseModel):
-    """Shell task model"""
-    id: str = Field(..., description="Task unique identifier")
-    command: str = Field(..., description="Executed command")
-    status: str = Field(..., description="Task status")
-    created_at: str = Field(..., description="Task creation time")
-    output: Optional[str] = Field(None, description="Task output")
-
-
 class ShellExecResult(BaseModel):
     """Shell command execution result model"""
     session_id: str = Field(..., description="Shell session ID")

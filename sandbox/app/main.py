@@ -16,37 +16,28 @@ from app.core.exceptions import (
 )
 from app.core.middleware import auto_extend_timeout_middleware
 
-# Configure logging
 def setup_logging():
     """
     Set up the application logging system
-    
+
     Configures log level, format, and handlers based on application settings.
     Outputs logs to stdout for container compatibility.
     """
-    log_level = getattr(logging, settings.LOG_LEVEL)
-    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    
     logging.basicConfig(
-        level=log_level,
-        format=log_format,
+        level=getattr(logging, settings.LOG_LEVEL),
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=[logging.StreamHandler(sys.stdout)]
     )
-    # Get root logger
-    root_logger = logging.getLogger()
-    
-    # Set root log level
-    log_level = getattr(logging, settings.LOG_LEVEL)
-    root_logger.setLevel(log_level)
-    
-    # Log setup completion
     logging.info("Sandbox logging system initialized with level: %s", settings.LOG_LEVEL)
 
-# Initialize logging
+
 setup_logging()
 logger = logging.getLogger(__name__)
 
+logger.info("Sandbox API server starting")
+
 app = FastAPI(
+    title="Sandbox API",
     version="1.0.0",
 )
 
@@ -58,8 +49,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-logger.info("Sandbox API server starting")
 
 # Register middleware
 app.middleware("http")(auto_extend_timeout_middleware)

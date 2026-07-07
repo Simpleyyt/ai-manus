@@ -38,7 +38,11 @@ async def view_shell(request: ShellViewRequest):
     """
     View output of the specified shell session
     """
-    result = await shell_service.view_shell(session_id=request.id, console=request.console)
+    result = await shell_service.view_shell(
+        session_id=request.id,
+        console=request.console,
+        max_length=request.max_length
+    )
 
     return Response(
         success=True,

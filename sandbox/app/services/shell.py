@@ -25,6 +25,10 @@ ANSI_ESCAPE_PATTERN = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
 EXEC_WAIT_SECONDS = 5
 # Default timeout for wait_for_process when none is given
 DEFAULT_WAIT_SECONDS = 60
+# Default maximum length of output returned to clients, longer output is truncated
+DEFAULT_OUTPUT_MAX_LENGTH = 10000
+# Maximum output kept in memory per session, older output is discarded
+MAX_STORED_OUTPUT_LENGTH = 1024 * 1024
 
 
 @dataclass
@@ -58,6 +62,22 @@ class ShellService:
     def _remove_ansi_escape_codes(text: str) -> str:
         """Remove ANSI escape codes from text"""
         return ANSI_ESCAPE_PATTERN.sub('', text)
+
+    @staticmethod
+    def _truncate_output(text: str, max_length: Optional[int]) -> str:
+        """Truncate output to max_length, keeping the most recent (tail) part"""
+        if max_length is not None and max_length > 0 and len(text) > max_length:
+            return "(truncated)" + text[-max_length:]
+        return text
+
+    @staticmethod
+    def _append_bounded(stored: str, new_output: str) -> str:
+        """Append new output to stored output, discarding the oldest part beyond the memory cap"""
+        stored += new_output
+        # Allow some slack before trimming to avoid copying the string on every append
+        if len(stored) > MAX_STORED_OUTPUT_LENGTH + 64 * 1024:
+            stored = stored[-MAX_STORED_OUTPUT_LENGTH:]
+        return stored
 
     @staticmethod
     def _get_display_path(path: str) -> str:
@@ -115,9 +135,10 @@ class ShellService:
             session = self.active_shells.get(session_id)
             # Only record output if this process is still the session's current one
             if session and session.process is process:
-                session.output += output
+                session.output = self._append_bounded(session.output, output)
                 if session.console:
-                    session.console[-1].output += output
+                    record = session.console[-1]
+                    record.output = self._append_bounded(record.output, output)
         logger.debug(f"Output reader for session {session_id} has finished")
 
     async def exec_command(self, session_id: str, exec_dir: Optional[str], command: str) -> ShellExecResult:
@@ -187,25 +208,31 @@ class ShellService:
             output=view_result.output,
         )
 
-    async def view_shell(self, session_id: str, console: bool = False) -> ShellViewResult:
-        """View the output of the specified shell session"""
+    async def view_shell(self, session_id: str, console: bool = False,
+                         max_length: Optional[int] = DEFAULT_OUTPUT_MAX_LENGTH) -> ShellViewResult:
+        """
+        View the output of the specified shell session.
+
+        Output longer than max_length is truncated, keeping the most recent part.
+        """
         logger.debug(f"Viewing shell content for session: {session_id}")
         session = self._get_session(session_id)
         return ShellViewResult(
-            output=self._remove_ansi_escape_codes(session.output),
+            output=self._truncate_output(self._remove_ansi_escape_codes(session.output), max_length),
             session_id=session_id,
-            console=self.get_console_records(session_id) if console else None,
+            console=self.get_console_records(session_id, max_length) if console else None,
         )
 
-    def get_console_records(self, session_id: str) -> List[ConsoleRecord]:
-        """Get console records for the specified session, with ANSI escape codes removed"""
+    def get_console_records(self, session_id: str,
+                            max_length: Optional[int] = DEFAULT_OUTPUT_MAX_LENGTH) -> List[ConsoleRecord]:
+        """Get console records for the specified session, with ANSI escape codes removed and output truncated"""
         logger.debug(f"Getting console records for session: {session_id}")
         session = self._get_session(session_id)
         return [
             ConsoleRecord(
                 ps1=record.ps1,
                 command=record.command,
-                output=self._remove_ansi_escape_codes(record.output),
+                output=self._truncate_output(self._remove_ansi_escape_codes(record.output), max_length),
             )
             for record in session.console
         ]

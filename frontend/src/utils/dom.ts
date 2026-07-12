@@ -8,14 +8,10 @@ export function getParentElement(
   selector: string | HTMLElement | Element,
   parentSelector?: string
 ): HTMLElement | null {
-  let element: Element | null = null
-
   // Handle both string selector and HTMLElement/Element
-  if (typeof selector === 'string') {
-    element = document.querySelector(selector)
-  } else {
-    element = selector
-  }
+  const element: Element | null = typeof selector === 'string'
+    ? document.querySelector(selector)
+    : selector
 
   if (!element) {
     console.warn(`Could not find element: ${typeof selector === 'string' ? selector : 'provided element'}`)
@@ -52,7 +48,6 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   if (navigator.clipboard && navigator.clipboard.writeText) {
     try {
       await navigator.clipboard.writeText(text);
-      console.log('Text copied to clipboard using Clipboard API');
       return true;
     } catch (error) {
       console.error('Clipboard API failed:', error);
@@ -62,8 +57,6 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   
   // Fallback method for older browsers or when clipboard API fails
   try {
-    console.log('Copying text to clipboard using fallback method');
-    
     // Store current active element to restore focus later
     const activeElement = document.activeElement as HTMLElement;
     
@@ -92,7 +85,6 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     }
     
     if (successful) {
-      console.log('Text copied using fallback method');
       return true;
     }
     

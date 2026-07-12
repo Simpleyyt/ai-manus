@@ -116,8 +116,8 @@
             <ArrowDown class="text-[var(--icon-primary)]" :size="20" />
           </button>
           <PlanPanel v-if="plan && plan.steps.length > 0" :plan="plan" />
-          <ChatBox v-model="inputMessage" :rows="1" @submit="handleSubmit" :isRunning="isLoading" @stop="handleStop"
-            :attachments="attachments" />
+          <ChatBox v-model="inputMessage" v-model:attachments="attachments" :rows="1" @submit="handleSubmit"
+            :isRunning="isLoading" @stop="handleStop" />
         </div>
       </div>
     </div>
@@ -295,7 +295,6 @@ const chat = async (message: string = '', files: FileInfo[] = []) => {
                                         filename : file.filename})),
       {
         onOpen: () => {
-          console.log('Chat opened');
           isLoading.value = true;
         },
         onMessage: ({ event, data }) => {
@@ -305,7 +304,6 @@ const chat = async (message: string = '', files: FileInfo[] = []) => {
           });
         },
         onClose: () => {
-          console.log('Chat closed');
           isLoading.value = false;
           // Clear the cancel function when connection is closed normally
           if (cancelCurrentChat.value) {
@@ -509,5 +507,3 @@ const handleCopyLink = async () => {
 }
 </script>
 
-<style scoped>
-</style>

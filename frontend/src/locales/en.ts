@@ -204,6 +204,10 @@ export default {
   'Link copied to clipboard': 'Link copied to clipboard',
   'Failed to copy link': 'Failed to copy link',
   'You are viewing a completed Manus task. Replay will start automatically in {countdown} seconds.': 'You are viewing a completed Manus task. Replay will start automatically in {countdown} seconds.',
+  'Manus task replay completed.': 'Manus task replay completed.',
+  'Manus is replaying the task...': 'Manus is replaying the task...',
+  'Replay': 'Replay',
+  'Jump to result': 'Jump to result',
   // Claw Page
   'Deploy OpenClaw Instantly': 'Deploy OpenClaw Instantly',
   'OpenClaw is an AI assistant with unique personality and long-term memory, one-click deploy to sandbox cloud, no complex setup, 24/7 online': 'OpenClaw is an AI assistant with unique personality and long-term memory, one-click deploy to sandbox cloud, no complex setup, 24/7 online',

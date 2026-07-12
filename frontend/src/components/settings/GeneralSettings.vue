@@ -54,7 +54,6 @@ const onLanguageChange = (value: any) => {
   if (value && typeof value === 'string') {
     const locale = value as Locale
     setLocale(locale)
-    console.log('Language changed to:', locale)
   }
 }
 </script>

@@ -137,11 +137,11 @@
             </button>
             <ChatBox
               v-model="inputMessage"
+              v-model:attachments="attachments"
               :rows="1"
               :isRunning="false"
               :hideStopButton="true"
               :allowSendFilesOnly="true"
-              :attachments="attachments"
               @submit="handleSubmit"
             />
           </div>
@@ -235,7 +235,11 @@ const handleExpired = async () => {
   isWaitingResponse.value = false;
   streamingAssistantIdx.value = -1;
   stopStatusPolling();
-  try { await deleteClaw(); } catch {}
+  try {
+    await deleteClaw();
+  } catch {
+    // The claw may already be gone once it expires; nothing to clean up
+  }
   clawData.value = null;
   clawStatus.value = 'stopped';
   messages.value = [];
@@ -562,8 +566,6 @@ const handleDeleteClaw = () => {
     },
   });
 };
-
-;
 
 // ------------------------------------------------------------------
 // Send message

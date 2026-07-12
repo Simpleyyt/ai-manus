@@ -1,7 +1,7 @@
 <template>
     <svg :width="size" :height="size" viewBox="0 0 19 18" fill="none" xmlns="http://www.w3.org/2000/svg"
         :style="{ minWidth: `${size}px`, minHeight: `${size}px` }">
-        <g id="chat/ç±»å icon">
+        <g id="chat/type-icon">
             <g id="Rectangle 40263">
                 <g filter="url(#filter0_ii_1527_83555)">
                     <path

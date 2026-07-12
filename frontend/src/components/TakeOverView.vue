@@ -5,9 +5,6 @@
                 :session-id="sessionId"
                 :enabled="shouldShow"
                 :view-only="false"
-                @connected="onVNCConnected"
-                @disconnected="onVNCDisconnected"
-                @credentials-required="onVNCCredentialsRequired"
             />
         </div>
         <div class="absolute bottom-4 left-1/2 -translate-x-1/2">
@@ -39,19 +36,6 @@ const handleTakeOverEvent = (event: Event) => {
     const customEvent = event as CustomEvent;
     takeOverActive.value = customEvent.detail.active;
     currentSessionId.value = customEvent.detail.sessionId;
-};
-
-// VNC event handlers
-const onVNCConnected = () => {
-    console.log('TakeOver VNC connection successful');
-};
-
-const onVNCDisconnected = (reason?: any) => {
-    console.log('TakeOver VNC connection disconnected', reason);
-};
-
-const onVNCCredentialsRequired = () => {
-    console.log('TakeOver VNC credentials required');
 };
 
 // Calculate whether to show takeover view
@@ -97,5 +81,3 @@ defineExpose({
 });
 </script>
 
-<style scoped>
-</style>

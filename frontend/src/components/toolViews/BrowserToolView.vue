@@ -1,12 +1,5 @@
 <template>
-  <div
-    class="h-[36px] flex items-center px-3 w-full bg-[var(--background-gray-main)] border-b border-[var(--border-main)] rounded-t-[12px] shadow-[inset_0px_1px_0px_0px_#FFFFFF] dark:shadow-[inset_0px_1px_0px_0px_#FFFFFF30]">
-    <div class="flex-1 flex items-center justify-center">
-      <div class="max-w-[250px] truncate text-[var(--text-tertiary)] text-sm font-medium text-center">
-        {{ toolContent?.args?.url || 'Browser' }}
-      </div>
-    </div>
-  </div>
+  <ToolViewHeader :title="toolContent?.args?.url || 'Browser'" />
   <div class="flex-1 min-h-0 w-full overflow-y-auto">
     <div class="px-0 py-0 flex flex-col relative h-full">
       <div class="w-full h-full object-cover flex items-center justify-center bg-[var(--fill-white)] relative">
@@ -16,9 +9,6 @@
             :session-id="props.sessionId"
             :enabled="props.live"
             :view-only="true"
-            @connected="onVNCConnected"
-            @disconnected="onVNCDisconnected"
-            @credentials-required="onVNCCredentialsRequired"
           />
           <img v-else-if="imageUrl" alt="Image Preview" class="cursor-pointer w-full" referrerpolicy="no-referrer" :src="imageUrl">
         </div>
@@ -40,6 +30,7 @@ import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import VNCViewer from '@/components/VNCViewer.vue';
 import TakeOverIcon from '@/components/icons/TakeOverIcon.vue';
+import ToolViewHeader from './ToolViewHeader.vue';
 
 const props = defineProps<{
   sessionId: string;
@@ -50,21 +41,6 @@ const props = defineProps<{
 
 const { t } = useI18n();
 const imageUrl = ref('');
-
-// VNC event handlers
-const onVNCConnected = () => {
-  console.log('VNC connection successful');
-};
-
-const onVNCDisconnected = (reason?: any) => {
-  console.log('VNC connection disconnected', reason);
-};
-
-const onVNCCredentialsRequired = () => {
-  console.log('VNC credentials required');
-};
-
-
 
 watch(() => props.toolContent?.content?.screenshot, async () => {
   if (!props.toolContent?.content?.screenshot) {
@@ -82,6 +58,3 @@ const takeOver = () => {
   }));
 };
 </script>
-
-<style scoped>
-</style>

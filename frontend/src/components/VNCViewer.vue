@@ -9,7 +9,7 @@
 <script setup lang="ts">
 import { ref, onBeforeUnmount, watch } from 'vue';
 import { getVNCUrl } from '@/api/agent';
-// @ts-ignore
+// @ts-expect-error - @novnc/novnc ships no type declarations
 import RFB from '@novnc/novnc/lib/rfb';
 
 const props = defineProps<{
@@ -56,17 +56,14 @@ const initVNCConnection = async () => {
     //rfb.resizeSession = true;
 
     rfb.addEventListener('connect', () => {
-      console.log('VNC connection successful');
       emit('connected');
     });
 
     rfb.addEventListener('disconnect', (e: any) => {
-      console.log('VNC connection disconnected', e);
       emit('disconnected', e);
     });
 
     rfb.addEventListener('credentialsrequired', () => {
-      console.log('VNC credentials required');
       emit('credentialsRequired');
     });
   } catch (error) {
@@ -108,5 +105,3 @@ defineExpose({
 });
 </script>
 
-<style scoped>
-</style>

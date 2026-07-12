@@ -61,7 +61,8 @@
           <div class="flex flex-col bg-[var(--background-gray-main)] w-full">
             <div class="[&amp;:not(:empty)]:pb-2 bg-[var(--background-gray-main)] rounded-[22px_22px_0px_0px]">
             </div>
-            <ChatBox :rows="2" v-model="message" @submit="handleSubmit" :isRunning="false" :attachments="attachments" />
+            <ChatBox :rows="2" v-model="message" v-model:attachments="attachments" @submit="handleSubmit"
+              :isRunning="false" />
           </div>
         </div>
       </div>
@@ -122,11 +123,8 @@ const handleUserMenuLeave = () => {
   }, 200); // 200ms delay to allow moving to menu
 };
 
-onMounted(() => {
-  hideFilePanel();
-})
-
 onMounted(async () => {
+  hideFilePanel();
   const clientConfig = await getCachedClientConfig();
   if (clientConfig) {
     showGithubButton.value = clientConfig.show_github_button;

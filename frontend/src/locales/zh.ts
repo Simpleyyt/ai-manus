@@ -204,6 +204,10 @@ export default {
   'Link copied to clipboard': '链接已复制到剪贴板',
   'Failed to copy link': '复制链接失败',
   'You are viewing a completed Manus task. Replay will start automatically in {countdown} seconds.': '您正在查看一个已完成的 Manus 任务。回放将在 {countdown} 秒后自动开始。',
+  'Manus task replay completed.': 'Manus 任务回放完成。',
+  'Manus is replaying the task...': 'Manus 正在回放任务...',
+  'Replay': '重放',
+  'Jump to result': '跳转到结果',
   // Claw Page
   'Deploy OpenClaw Instantly': '极速部署 OpenClaw',
   'OpenClaw is an AI assistant with unique personality and long-term memory, one-click deploy to sandbox cloud, no complex setup, 24/7 online': 'OpenClaw 是一个具备独特个性与长期记忆能力的 AI 助手，一键部署到沙盒云端，无需复杂设置，7×24 在线',

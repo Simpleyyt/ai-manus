@@ -1,12 +1,5 @@
 <template>
-  <div
-    class="h-[36px] flex items-center px-3 w-full bg-[var(--background-gray-main)] border-b border-[var(--border-main)] rounded-t-[12px] shadow-[inset_0px_1px_0px_0px_#FFFFFF] dark:shadow-[inset_0px_1px_0px_0px_#FFFFFF30]">
-    <div class="flex-1 flex items-center justify-center">
-      <div class="max-w-[250px] truncate text-[var(--text-tertiary)] text-sm font-medium text-center">
-        MCP Tool
-      </div>
-    </div>
-  </div>
+  <ToolViewHeader title="MCP Tool" />
   <div class="flex-1 min-h-0 w-full overflow-y-auto">
     <div class="flex-1 min-h-0 max-w-[640px] mx-auto">
       <div class="flex flex-col overflow-auto h-full px-4 py-3">
@@ -39,6 +32,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { ToolContent } from '@/types/message';
+import ToolViewHeader from './ToolViewHeader.vue';
 
 const { t } = useI18n()
 

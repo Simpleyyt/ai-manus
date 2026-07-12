@@ -139,11 +139,13 @@ cd sandbox
 uv run pytest
 ```
 
-### Frontend (No Automated Test Runner)
+### Frontend (Vitest)
 
 ```bash
 cd frontend
+npm run test          # Vitest unit tests (src/**/*.spec.ts)
 npm run type-check    # vue-tsc type checking
+npm run lint          # ESLint (flat config, eslint.config.js)
 npm run build         # production build (catches TS + template errors)
 ```
 
@@ -189,7 +191,8 @@ curl -X POST http://localhost:8090/v1/chat/completions \
 - Path alias: `@/` → `src/`
 - **vue-i18n** for internationalization (Chinese + English)
 - Dependency management: **npm** + `package.json`
-- No ESLint or Prettier configured
+- **ESLint** configured (`npm run lint`); no Prettier
+- **Vitest** + @vue/test-utils for unit tests (`npm run test`)
 
 ### Sandbox (Python)
 
@@ -227,7 +230,7 @@ When running in a Cloud Agent environment:
 |---|---|
 | Backend Python logic | `cd backend && uv run pytest` (needs running backend + MongoDB + Redis) |
 | Backend API routes | `cd backend && uv run pytest` against running server |
-| Frontend Vue/TS | `cd frontend && npm run type-check && npm run build` |
+| Frontend Vue/TS | `cd frontend && npm run test && npm run type-check && npm run lint && npm run build` |
 | Frontend UI changes | Type-check + build + manual GUI testing via `computerUse` subagent |
 | Sandbox changes | `cd sandbox && uv run pytest` |
 | Config / env changes | Verify with `./dev.sh up -d` and check service logs |

@@ -167,8 +167,8 @@ export async function getAuthStatus(): Promise<AuthStatusResponse> {
  * @param request Change password data
  * @returns Success response
  */
-export async function changePassword(request: ChangePasswordRequest): Promise<{}> {
-  const response = await apiClient.post<ApiResponse<{}>>('/auth/change-password', request);
+export async function changePassword(request: ChangePasswordRequest): Promise<Record<string, never>> {
+  const response = await apiClient.post<ApiResponse<Record<string, never>>>('/auth/change-password', request);
   return response.data.data;
 }
 
@@ -206,8 +206,8 @@ export async function getUser(userId: string): Promise<User> {
  * @param userId User ID to deactivate
  * @returns Success response
  */
-export async function deactivateUser(userId: string): Promise<{}> {
-  const response = await apiClient.post<ApiResponse<{}>>(`/auth/user/${userId}/deactivate`);
+export async function deactivateUser(userId: string): Promise<Record<string, never>> {
+  const response = await apiClient.post<ApiResponse<Record<string, never>>>(`/auth/user/${userId}/deactivate`);
   return response.data.data;
 }
 
@@ -216,8 +216,8 @@ export async function deactivateUser(userId: string): Promise<{}> {
  * @param userId User ID to activate
  * @returns Success response
  */
-export async function activateUser(userId: string): Promise<{}> {
-  const response = await apiClient.post<ApiResponse<{}>>(`/auth/user/${userId}/activate`);
+export async function activateUser(userId: string): Promise<Record<string, never>> {
+  const response = await apiClient.post<ApiResponse<Record<string, never>>>(`/auth/user/${userId}/activate`);
   return response.data.data;
 }
 
@@ -235,8 +235,8 @@ export async function refreshToken(request: RefreshTokenRequest): Promise<Refres
  * User logout
  * @returns Success response
  */
-export async function logout(): Promise<{}> {
-  const response = await apiClient.post<ApiResponse<{}>>('/auth/logout');
+export async function logout(): Promise<Record<string, never>> {
+  const response = await apiClient.post<ApiResponse<Record<string, never>>>('/auth/logout');
   return response.data.data;
 }
 
@@ -245,8 +245,8 @@ export async function logout(): Promise<{}> {
  * @param request Email to send verification code to
  * @returns Success response
  */
-export async function sendVerificationCode(request: SendVerificationCodeRequest): Promise<{}> {
-  const response = await apiClient.post<ApiResponse<{}>>('/auth/send-verification-code', request);
+export async function sendVerificationCode(request: SendVerificationCodeRequest): Promise<Record<string, never>> {
+  const response = await apiClient.post<ApiResponse<Record<string, never>>>('/auth/send-verification-code', request);
   return response.data.data;
 }
 
@@ -255,8 +255,8 @@ export async function sendVerificationCode(request: SendVerificationCodeRequest)
  * @param request Reset password data including email, verification code and new password
  * @returns Success response
  */
-export async function resetPassword(request: ResetPasswordRequest): Promise<{}> {
-  const response = await apiClient.post<ApiResponse<{}>>('/auth/reset-password', request);
+export async function resetPassword(request: ResetPasswordRequest): Promise<Record<string, never>> {
+  const response = await apiClient.post<ApiResponse<Record<string, never>>>('/auth/reset-password', request);
   return response.data.data;
 }
 

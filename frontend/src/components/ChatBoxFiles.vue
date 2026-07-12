@@ -75,28 +75,29 @@ import { useI18n } from 'vue-i18n';
 import { ref, nextTick, watch, onMounted, computed } from 'vue';
 import { X, RefreshCcw } from 'lucide-vue-next';
 import LoadingSpinnerIcon from './icons/LoadingSpinnerIcon.vue';
-const { t } = useI18n();
 import { useFilePanel } from '../composables/useFilePanel';
 
-const props = defineProps<{
-    attachments: FileInfo[];
-}>();
-
-const { showFilePanel } = useFilePanel();
+const { t } = useI18n();
 
 // Extended FileInfo type to include upload status
-interface ExtendedFileInfo extends FileInfo {
+export interface ExtendedFileInfo extends FileInfo {
     status?: 'uploading' | 'success' | 'failed';
     file?: File | null; // Keep reference to original file for retry
 }
 
-const files = ref<ExtendedFileInfo[]>(props.attachments);
+const props = defineProps<{
+    attachments: ExtendedFileInfo[];
+}>();
+
+const emit = defineEmits<{
+    (e: 'update:attachments', value: ExtendedFileInfo[]): void;
+}>();
+
+const { showFilePanel } = useFilePanel();
+
+const files = computed(() => props.attachments);
 const fileInput = ref<HTMLInputElement>();
 const scrollContainer = ref<HTMLElement>();
-
-watch(() => props.attachments, (newVal) => {
-    files.value = newVal;
-});
 
 // Scroll state
 const canScrollLeft = ref(false);
@@ -106,8 +107,12 @@ const uploadFile = () => {
     fileInput.value?.click();
 };
 
-const getFiles = () => {
-    return files.value;
+const setFiles = (value: ExtendedFileInfo[]) => {
+    emit('update:attachments', value);
+};
+
+const replaceFile = (fileId: string, replacement: ExtendedFileInfo) => {
+    setFiles(files.value.map(f => f.file_id === fileId ? replacement : f));
 };
 
 const handleFileSelect = async (event: Event) => {
@@ -140,37 +145,26 @@ const processFileUpload = async (file: File) => {
     };
 
     // Add to files list with uploading status
-    files.value.push(tempFileInfo);
+    setFiles([...files.value, tempFileInfo]);
 
     try {
         // Upload the file
         const uploadedFile = await apiUploadFile(file);
 
         // Update the file info with successful upload
-        const index = files.value.findIndex(f => f.file_id === tempFileInfo.file_id);
-        if (index !== -1) {
-            files.value[index] = {
-                ...uploadedFile,
-                status: 'success',
-                file: null
-            };
-        }
+        replaceFile(tempFileInfo.file_id, {
+            ...uploadedFile,
+            status: 'success',
+            file: null
+        });
     } catch (error) {
         console.error('Upload failed:', error);
-
-        // Update status to failed
-        const index = files.value.findIndex(f => f.file_id === tempFileInfo.file_id);
-        if (index !== -1) {
-            files.value[index].status = 'failed';
-        }
+        replaceFile(tempFileInfo.file_id, { ...tempFileInfo, status: 'failed' });
     }
 };
 
 const removeFile = (fileId: string) => {
-    const index = files.value.findIndex(f => f.file_id === fileId);
-    if (index !== -1) {
-        files.value.splice(index, 1);
-    }
+    setFiles(files.value.filter(f => f.file_id !== fileId));
 };
 
 const retryUpload = async (fileInfo: ExtendedFileInfo) => {
@@ -179,24 +173,21 @@ const retryUpload = async (fileInfo: ExtendedFileInfo) => {
     }
 
     // Reset status to uploading
-    fileInfo.status = 'uploading';
+    replaceFile(fileInfo.file_id, { ...fileInfo, status: 'uploading' });
 
     try {
         // Retry upload
         const uploadedFile = await apiUploadFile(fileInfo.file);
 
         // Update with new file info
-        const index = files.value.findIndex(f => f.file_id === fileInfo.file_id);
-        if (index !== -1) {
-            files.value[index] = {
-                ...uploadedFile,
-                status: 'success',
-                file: null
-            };
-        }
+        replaceFile(fileInfo.file_id, {
+            ...uploadedFile,
+            status: 'success',
+            file: null
+        });
     } catch (error) {
         console.error('Retry upload failed:', error);
-        fileInfo.status = 'failed';
+        replaceFile(fileInfo.file_id, { ...fileInfo, status: 'failed' });
     }
 };
 
@@ -250,7 +241,8 @@ onMounted(() => {
 });
 
 const isAllUploaded = computed(() => {
-    return files.value.every(file => file.status === 'success');
+    // Files without a status came from the server and are already uploaded
+    return files.value.every(file => !file.status || file.status === 'success');
 });
 
 const handleFileClick = (file: ExtendedFileInfo) => {
@@ -261,7 +253,6 @@ const handleFileClick = (file: ExtendedFileInfo) => {
 
 defineExpose({
     uploadFile,
-    getFiles,
     isAllUploaded
 });
 </script>

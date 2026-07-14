@@ -33,7 +33,10 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUN_DIR="$ROOT_DIR/.dev-local"
 LOG_DIR="$RUN_DIR/logs"
 DATA_DIR="$RUN_DIR/data"
-mkdir -p "$RUN_DIR" "$LOG_DIR" "$DATA_DIR"
+# Python virtualenvs live under .dev-local so they never clash with the
+# in-project .venv dirs used by the Docker dev stack (bind-mount artifacts).
+VENVS_DIR="$RUN_DIR/venvs"
+mkdir -p "$RUN_DIR" "$LOG_DIR" "$DATA_DIR" "$VENVS_DIR"
 
 ALL_SERVICES=(mongodb redis mockserver sandbox backend frontend)
 
@@ -82,12 +85,25 @@ start_process() {
         return 0
     fi
     log "starting $name ..."
-    # setsid (when available) makes the service a process-group leader so
-    # `down` can kill the whole tree (uv/npm spawn children).
+    # setsid (when available) makes the service a session/process-group leader
+    # so `down` can kill the whole tree (uv/npm spawn children). The wrapper
+    # writes its own pid (== the pgid after setsid) to the pid file.
     local runner=()
     command -v setsid &>/dev/null && runner=(setsid)
-    (cd "$dir" && nohup "${runner[@]}" "$@" >>"$LOG_DIR/$name.log" 2>&1 &
-     echo $! >"$(pid_file "$name")")
+    rm -f "$(pid_file "$name")"
+    (
+        cd "$dir" || exit 1
+        # The `&` must be a standalone statement (not `cd && nohup ... &`,
+        # which backgrounds the whole list and leaves a waiting subshell
+        # holding this script's stdout open).
+        nohup "${runner[@]}" bash -c 'echo $$ >"$0"; exec "$@"' \
+            "$(pid_file "$name")" "$@" >>"$LOG_DIR/$name.log" 2>&1 &
+    )
+    # Wait for the pid file to appear, then for the process to survive startup
+    for _ in $(seq 1 20); do
+        [ -s "$(pid_file "$name")" ] && break
+        sleep 0.2
+    done
     sleep 1
     if service_running "$name"; then
         log "$name started (pid $(service_pid "$name"), log: .dev-local/logs/$name.log)"
@@ -193,39 +209,50 @@ start_redis() {
 
 start_mockserver() {
     require_cmd uv "Install it from https://docs.astral.sh/uv/"
-    if [ ! -d "$ROOT_DIR/mockserver/.venv" ]; then
+    local venv="$VENVS_DIR/mockserver"
+    if [ ! -x "$venv/bin/uvicorn" ]; then
         log "mockserver: creating virtualenv ..."
-        (cd "$ROOT_DIR/mockserver" && uv venv .venv -q \
-            && uv pip install -q --python .venv/bin/python -r requirements.txt) \
+        (cd "$ROOT_DIR/mockserver" && uv venv "$venv" -q \
+            && uv pip install -q --python "$venv/bin/python" -r requirements.txt) \
             || die "failed to install mockserver dependencies"
     fi
     start_process mockserver "$ROOT_DIR/mockserver" \
-        .venv/bin/uvicorn main:app --host 0.0.0.0 --port 8090
+        "$venv/bin/uvicorn" main:app --host 0.0.0.0 --port 8090
 }
 
 start_sandbox() {
     require_cmd uv "Install it from https://docs.astral.sh/uv/"
     log "sandbox: syncing dependencies ..."
-    (cd "$ROOT_DIR/sandbox" && uv sync -q) || die "failed to sync sandbox dependencies"
+    (cd "$ROOT_DIR/sandbox" && UV_PROJECT_ENVIRONMENT="$VENVS_DIR/sandbox" uv sync -q) \
+        || die "failed to sync sandbox dependencies"
     # Standalone mode: no supervisord / Chrome / VNC. Shell & file tools work,
     # browser tools are unavailable.
     start_process sandbox "$ROOT_DIR/sandbox" \
-        env LOG_LEVEL="$LOG_LEVEL" \
+        env LOG_LEVEL="$LOG_LEVEL" UV_PROJECT_ENVIRONMENT="$VENVS_DIR/sandbox" \
         uv run uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 }
 
 start_backend() {
     require_cmd uv "Install it from https://docs.astral.sh/uv/"
     log "backend: syncing dependencies ..."
-    (cd "$ROOT_DIR/backend" && uv sync -q) || die "failed to sync backend dependencies"
+    (cd "$ROOT_DIR/backend" && UV_PROJECT_ENVIRONMENT="$VENVS_DIR/backend" uv sync -q) \
+        || die "failed to sync backend dependencies"
     start_process backend "$ROOT_DIR/backend" \
+        env UV_PROJECT_ENVIRONMENT="$VENVS_DIR/backend" \
         uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload \
         --timeout-graceful-shutdown 0
 }
 
 start_frontend() {
     require_cmd npm "Install Node.js (https://nodejs.org/)"
-    if [ ! -d "$ROOT_DIR/frontend/node_modules" ]; then
+    # node_modules may exist but be empty (docker-compose bind-mount artifact),
+    # so check for an actual installed binary.
+    if [ ! -e "$ROOT_DIR/frontend/node_modules/.bin/vite" ]; then
+        if [ -d "$ROOT_DIR/frontend/node_modules" ] && [ ! -w "$ROOT_DIR/frontend/node_modules" ]; then
+            die "frontend/node_modules is not writable (likely a root-owned leftover
+  from the Docker dev stack). Remove it and retry:
+    sudo rm -rf frontend/node_modules"
+        fi
         log "frontend: installing dependencies ..."
         (cd "$ROOT_DIR/frontend" && npm install --no-audit --no-fund) \
             || die "failed to install frontend dependencies"

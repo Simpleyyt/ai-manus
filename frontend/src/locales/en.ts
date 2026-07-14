@@ -1,6 +1,16 @@
 export default {
   'Hello': 'Hello',
   'What can I do for you?': 'What can I do for you?',
+  // Home suggestion chips
+  'Create slides': 'Create slides',
+  'Build website': 'Build website',
+  'Design': 'Design',
+  'Create games': 'Create games',
+  'Deep research': 'Deep research',
+  'Analyze data': 'Analyze data',
+  'Generate image': 'Generate image',
+  'Write report': 'Write report',
+  'More': 'More',
   'Failed to create agent, please try again later': 'Failed to create agent, please try again later',
   'New Chat': 'New Chat',
   'New Task': 'New Task',

@@ -1,6 +1,16 @@
 export default {
   'Hello': '你好',
   'What can I do for you?': '我能为你做什么？',
+  // Home suggestion chips
+  'Create slides': '创建幻灯片',
+  'Build website': '构建网站',
+  'Design': '设计',
+  'Create games': '创建游戏',
+  'Deep research': '深入研究',
+  'Analyze data': '分析数据',
+  'Generate image': '生成图片',
+  'Write report': '撰写报告',
+  'More': '更多',
   'Failed to create agent, please try again later': '创建Agent失败，请稍后重试',
   'New Chat': '新对话',
   'New Task': '新建任务',

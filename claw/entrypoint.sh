@@ -1,6 +1,14 @@
 #!/bin/bash
 set -e
 
+# If arguments are provided, run them instead of the gateway. This makes the
+# compose "prevent claw from starting" override (entrypoint/command:
+# /bin/sh -c "exit 0") work even with compose implementations that pass the
+# override as container args to the image entrypoint instead of replacing it.
+if [ "$#" -gt 0 ]; then
+    exec "$@"
+fi
+
 CONFIG_DIR="/home/node/.openclaw"
 CONFIG_FILE="${CONFIG_DIR}/openclaw.json"
 mkdir -p "${CONFIG_DIR}/workspace"

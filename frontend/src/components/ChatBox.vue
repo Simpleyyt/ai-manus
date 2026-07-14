@@ -5,20 +5,20 @@
             <ChatBoxFiles ref="chatBoxFileListRef" :attachments="attachments"
                 @update:attachments="emit('update:attachments', $event)" />
             <div class="overflow-y-auto pl-4 pr-2">
-                <textarea
+                <textarea ref="textareaRef"
                     class="flex rounded-md border-input focus-visible:outline-none focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 overflow-hidden flex-1 bg-transparent p-0 pt-[1px] border-0 focus-visible:ring-0 focus-visible:ring-offset-0 w-full placeholder:text-[var(--text-disable)] text-[15px] shadow-none resize-none min-h-[40px]"
                     :rows="rows" :value="modelValue"
                     @input="$emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
                     @compositionstart="isComposing = true" @compositionend="isComposing = false"
-                    @keydown.enter.exact="handleEnterKeydown" :placeholder="t('Give Manus a task to work on...')"
+                    @keydown.enter.exact="handleEnterKeydown" :placeholder="t('Assign a task or ask anything')"
                     :style="{ height: '46px' }"></textarea>
             </div>
             <footer class="flex flex-row justify-between w-full px-3">
                 <div class="flex gap-2 pr-2 items-center">
                     <button @click="uploadFile"
-                        class="rounded-full border border-[var(--border-main)] inline-flex items-center justify-center gap-1 clickable cursor-pointer text-xs text-[var(--text-secondary)] hover:bg-[var(--fill-tsp-gray-main)] w-8 h-8 p-0 data-[popover-trigger]:bg-[var(--fill-tsp-gray-main)] shrink-0"
+                        class="rounded-full inline-flex items-center justify-center gap-1 clickable cursor-pointer text-[var(--icon-secondary)] hover:bg-[var(--fill-tsp-gray-main)] w-8 h-8 p-0 data-[popover-trigger]:bg-[var(--fill-tsp-gray-main)] shrink-0"
                         aria-expanded="false" aria-haspopup="dialog">
-                        <Paperclip :size="16" />
+                        <Plus :size="18" />
                     </button>
                 </div>
                 <div class="flex gap-2">
@@ -44,13 +44,14 @@ import { ref, watch, computed } from 'vue';
 import SendIcon from './icons/SendIcon.vue';
 import { useI18n } from 'vue-i18n';
 import ChatBoxFiles from './ChatBoxFiles.vue';
-import { Paperclip } from 'lucide-vue-next';
+import { Plus } from 'lucide-vue-next';
 import type { FileInfo } from '../api/file';
 
 const { t } = useI18n();
 const hasTextInput = ref(false);
 const isComposing = ref(false);
 const chatBoxFileListRef = ref();
+const textareaRef = ref<HTMLTextAreaElement | null>(null);
 
 const props = defineProps<{
     modelValue: string;
@@ -102,6 +103,12 @@ const handleStop = () => {
 const uploadFile = () => {
     chatBoxFileListRef.value?.uploadFile();
 };
+
+const focus = () => {
+    textareaRef.value?.focus();
+};
+
+defineExpose({ focus });
 
 watch(() => props.modelValue, (value) => {
     hasTextInput.value = value.trim() !== '';

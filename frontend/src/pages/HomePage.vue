@@ -44,25 +44,35 @@
         </div>
         <div class="h-8"></div>
       </div>
-      <div class="w-full max-w-full sm:max-w-[768px] sm:min-w-[390px] mx-auto mt-[180px] mb-auto">
-        <div class="w-full flex pl-4 items-center justify-start pb-4">
-          <span class="text-[var(--text-primary)] text-start font-serif text-[32px] leading-[40px]" :style="{
-            fontFamily:
-              'ui-serif, Georgia, Cambria, &quot;Times New Roman&quot;, Times, serif',
-          }">
-            {{ $t('Hello') }}, {{ currentUser?.fullname }}
-            <br />
-            <span class="text-[var(--text-tertiary)]">
-              {{ $t('What can I do for you?') }}
-            </span>
+      <div class="w-full max-w-full sm:max-w-[680px] sm:min-w-[390px] mx-auto mt-auto mb-auto pb-[8vh]">
+        <div class="w-full flex flex-col items-center justify-center pb-8 gap-1">
+          <span v-if="greetingName" class="text-[var(--text-tertiary)] text-center font-serif text-[22px] leading-[30px]"
+            :style="{ fontFamily: serifFontFamily }">
+            {{ $t('Hello') }}, {{ greetingName }}
           </span>
+          <h1 class="text-[var(--text-primary)] text-center font-serif text-[36px] leading-[46px] sm:text-[40px] sm:leading-[52px]"
+            :style="{ fontFamily: serifFontFamily }">
+            {{ $t('What can I do for you?') }}
+          </h1>
         </div>
         <div class="flex flex-col gap-1 w-full">
           <div class="flex flex-col bg-[var(--background-gray-main)] w-full">
             <div class="[&amp;:not(:empty)]:pb-2 bg-[var(--background-gray-main)] rounded-[22px_22px_0px_0px]">
             </div>
-            <ChatBox :rows="2" v-model="message" v-model:attachments="attachments" @submit="handleSubmit"
+            <ChatBox ref="chatBoxRef" :rows="2" v-model="message" v-model:attachments="attachments" @submit="handleSubmit"
               :isRunning="false" />
+          </div>
+          <!-- Suggestion chips -->
+          <div class="flex flex-wrap items-center justify-center gap-2 pt-2">
+            <button v-for="chip in visibleChips" :key="chip.label" @click="handleChipClick(chip)"
+              class="inline-flex items-center gap-[6px] h-[34px] px-[14px] rounded-full border border-[var(--border-btn-main)] bg-transparent text-[13px] text-[var(--text-secondary)] cursor-pointer transition-colors hover:bg-[var(--fill-tsp-white-light)] hover:text-[var(--text-primary)]">
+              <component :is="chip.icon" :size="15" class="text-[var(--icon-secondary)]" />
+              {{ $t(chip.label) }}
+            </button>
+            <button v-if="!showAllChips" @click="showAllChips = true"
+              class="inline-flex items-center gap-[6px] h-[34px] px-[14px] rounded-full border border-[var(--border-btn-main)] bg-transparent text-[13px] text-[var(--text-secondary)] cursor-pointer transition-colors hover:bg-[var(--fill-tsp-white-light)] hover:text-[var(--text-primary)]">
+              {{ $t('More') }}
+            </button>
           </div>
         </div>
       </div>
@@ -72,13 +82,16 @@
 
 <script setup lang="ts">
 import SimpleBar from '../components/SimpleBar.vue';
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, type FunctionalComponent } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import ChatBox from '../components/ChatBox.vue';
 import { createSession } from '../api/agent';
 import { showErrorToast } from '../utils/toast';
-import { Bot, PanelLeft, Github } from 'lucide-vue-next';
+import {
+  Bot, PanelLeft, Github, Presentation, Globe, Palette,
+  Gamepad2, ChartColumn, FileText, Search, Table,
+} from 'lucide-vue-next';
 import ManusLogoTextIcon from '../components/icons/ManusLogoTextIcon.vue';
 import type { FileInfo } from '../api/file';
 import { useLeftPanel } from '../composables/useLeftPanel';
@@ -97,11 +110,47 @@ const { hideFilePanel } = useFilePanel();
 const { currentUser } = useAuth();
 const showGithubButton = ref(false);
 const githubRepositoryUrl = ref('https://github.com/simpleyyt/ai-manus');
+const chatBoxRef = ref<InstanceType<typeof ChatBox> | null>(null);
+
+const serifFontFamily = 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif';
 
 // Get first letter of user's fullname for avatar display
 const avatarLetter = computed(() => {
   return currentUser.value?.fullname?.charAt(0)?.toUpperCase() || 'M';
 });
+
+const greetingName = computed(() => currentUser.value?.fullname || '');
+
+// Suggestion chips shown below the input box
+interface SuggestionChip {
+  label: string;
+  prompt: string;
+  icon: FunctionalComponent;
+}
+
+const primaryChips: SuggestionChip[] = [
+  { label: 'Create slides', prompt: 'Create slides prompt', icon: Presentation },
+  { label: 'Build website', prompt: 'Build website prompt', icon: Globe },
+  { label: 'Design', prompt: 'Design prompt', icon: Palette },
+  { label: 'Create games', prompt: 'Create games prompt', icon: Gamepad2 },
+];
+
+const extraChips: SuggestionChip[] = [
+  { label: 'Analyze data', prompt: 'Analyze data prompt', icon: ChartColumn },
+  { label: 'Research', prompt: 'Research prompt', icon: Search },
+  { label: 'Write report', prompt: 'Write report prompt', icon: FileText },
+  { label: 'Create spreadsheet', prompt: 'Create spreadsheet prompt', icon: Table },
+];
+
+const showAllChips = ref(false);
+const visibleChips = computed(() =>
+  showAllChips.value ? [...primaryChips, ...extraChips] : primaryChips
+);
+
+const handleChipClick = (chip: SuggestionChip) => {
+  message.value = t(chip.prompt);
+  chatBoxRef.value?.focus();
+};
 
 // User menu state
 const showUserMenu = ref(false);

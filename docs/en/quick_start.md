@@ -140,18 +140,23 @@ MAX_TOKENS=2000
 #LLM_PROVIDER=langchain
 
 # MongoDB configuration
+# For non-Docker development use mongodb://localhost:27017 (or ./dev-local.sh,
+# which rewrites the hostname automatically)
 #MONGODB_URI=mongodb://mongodb:27017
 #MONGODB_DATABASE=manus
 #MONGODB_USERNAME=
 #MONGODB_PASSWORD=
 
 # Redis configuration
+# For non-Docker development use localhost (or ./dev-local.sh)
 #REDIS_HOST=redis
 #REDIS_PORT=6379
 #REDIS_DB=0
 #REDIS_PASSWORD=
 
 # Sandbox configuration
+# SANDBOX_ADDRESS: use a single fixed sandbox instead of creating Docker
+# containers per session (e.g. 127.0.0.1 for a sandbox running on the host)
 #SANDBOX_ADDRESS=
 SANDBOX_IMAGE=simpleyyt/manus-sandbox
 SANDBOX_NAME_PREFIX=sandbox

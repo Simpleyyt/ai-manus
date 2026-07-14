@@ -244,6 +244,30 @@ All services will run in reload mode, and code changes will be automatically rel
 ./dev.sh up
 ```
 
+### Development without Docker
+
+If Docker is not available (or you prefer running services natively), use `dev-local.sh` to run the whole development stack as plain host processes:
+
+```bash
+# Start everything: mongodb, redis, mockserver, sandbox, backend, frontend
+./dev-local.sh up
+
+# Check status / tail logs / stop
+./dev-local.sh status
+./dev-local.sh logs backend
+./dev-local.sh down
+```
+
+Requirements: `uv` (Python package manager), Node.js + npm, and MongoDB & Redis (either installed locally — `mongod` / `redis-server` — or already listening on `localhost:27017` / `localhost:6379`; the script reuses running instances and only starts its own when the port is free).
+
+The script reads your `.env` and automatically rewrites Docker Compose hostnames (`mongodb`, `redis`, `mockserver`, `backend`) to `localhost`, so the same `.env` works for both `./dev.sh` and `./dev-local.sh`. It also defaults to `AUTH_PROVIDER=none` and the mockserver LLM.
+
+Notes and limitations of the non-Docker mode:
+- The sandbox runs **directly on your machine** in *standalone mode*: shell and file tools executed by the agent operate on the host (no isolation). Use only for development.
+- Browser tools are unavailable (no Chrome/CDP/VNC managed by supervisord). Agent browser tool calls will return errors; everything else works.
+- Claw is not started; keep `CLAW_ENABLED=false` (default), or run a Claw container yourself and set `CLAW_ADDRESS`.
+- You can also start any subset, e.g. `./dev-local.sh up mockserver backend frontend`, and run other services with Docker.
+
 ### Image Publishing
 
 ```bash

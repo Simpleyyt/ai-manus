@@ -3,6 +3,8 @@ import xmlrpc.client
 import socket
 import http.client
 import asyncio
+import logging
+import os
 from datetime import datetime, timedelta
 from typing import List
 
@@ -13,6 +15,8 @@ from app.models.supervisor import (
     SupervisorActionResult, 
     SupervisorTimeout
 )
+
+logger = logging.getLogger(__name__)
 
 
 # Add Unix socket support for xmlrpc client
@@ -38,9 +42,17 @@ class UnixStreamTransport(xmlrpc.client.Transport):
 class SupervisorService:
     """
     Supervisor service management class, used for managing service timeout and renewal functionality - Async version
+
+    When supervisord is not available (e.g. running the API directly on the
+    host without Docker), the service falls back to *standalone mode*: process
+    status is synthesized so callers (like the backend readiness check) still
+    see a healthy sandbox, while supervisord-only actions return an error.
     """
     def __init__(self):
         self.rpc_url = "/tmp/supervisor.sock"
+        self.standalone = False
+        self.server = None
+        self._started_at = datetime.now()
         self._connect_rpc()
         
         # Timeout management - enabled based on configuration
@@ -69,7 +81,11 @@ class SupervisorService:
         self._auto_expand_enabled = True
     
     def _connect_rpc(self):
-        """Connect to supervisord's RPC interface"""
+        """Connect to supervisord's RPC interface
+
+        Falls back to standalone mode when supervisord is not running,
+        so the sandbox API can be started directly (non-Docker development).
+        """
         try:
             self.server = xmlrpc.client.ServerProxy(
                 'http://localhost',
@@ -78,7 +94,32 @@ class SupervisorService:
             # Test connection
             self.server.supervisor.getState()
         except Exception as e:
-            raise ResourceNotFoundException(f"Cannot connect to Supervisord: {str(e)}")
+            self.server = None
+            self.standalone = True
+            logger.warning(
+                "Cannot connect to Supervisord (%s); running in standalone mode "
+                "without process management", str(e)
+            )
+
+    def _synthetic_processes(self) -> List[ProcessInfo]:
+        """Synthesize process status for standalone mode (no supervisord)"""
+        now = datetime.now()
+        return [ProcessInfo(
+            name="app",
+            group="services",
+            description=f"pid {os.getpid()}, standalone mode",
+            start=int(self._started_at.timestamp()),
+            stop=0,
+            now=int(now.timestamp()),
+            state=20,  # RUNNING
+            statename="RUNNING",
+            spawnerr="",
+            exitstatus=0,
+            logfile="",
+            stdout_logfile="",
+            stderr_logfile="",
+            pid=os.getpid(),
+        )]
     
     def _setup_timer(self, minutes):
         """Set up async timer"""
@@ -119,6 +160,8 @@ class SupervisorService:
     
     async def get_all_processes(self) -> List[ProcessInfo]:
         """Asynchronously get all process statuses"""
+        if self.standalone:
+            return self._synthetic_processes()
         try:
             processes = await self._call_rpc(self.server.supervisor.getAllProcessInfo)
             return [ProcessInfo(**process) for process in processes]
@@ -127,6 +170,8 @@ class SupervisorService:
     
     async def stop_all_services(self) -> SupervisorActionResult:
         """Asynchronously stop all services"""
+        if self.standalone:
+            raise BadRequestException("Supervisord is not available (standalone mode)")
         try:
             result = await self._call_rpc(self.server.supervisor.stopAllProcesses)
             return SupervisorActionResult(status="stopped", result=result)
@@ -135,6 +180,8 @@ class SupervisorService:
     
     async def shutdown(self) -> SupervisorActionResult:
         """Asynchronously shut down the supervisord service itself, without stopping processes"""
+        if self.standalone:
+            raise BadRequestException("Supervisord is not available (standalone mode)")
         try:
             shutdown_result = await self._call_rpc(self.server.supervisor.shutdown)
             return SupervisorActionResult(status="shutdown", shutdown_result=shutdown_result)
@@ -143,6 +190,8 @@ class SupervisorService:
     
     async def restart_all_services(self) -> SupervisorActionResult:
         """Asynchronously restart all services"""
+        if self.standalone:
+            raise BadRequestException("Supervisord is not available (standalone mode)")
         try:
             stop_result = await self._call_rpc(self.server.supervisor.stopAllProcesses)
             start_result = await self._call_rpc(self.server.supervisor.startAllProcesses)

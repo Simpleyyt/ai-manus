@@ -58,6 +58,8 @@ cd backend && uv sync && uv run uvicorn app.main:app --reload --port 8000   # ne
 cd frontend && npm install && BACKEND_URL=http://localhost:8000 npm run dev  # BACKEND_URL enables the /api proxy
 ```
 
+Or run the whole stack without Docker: `./dev-local.sh up` (host processes for mongodb/redis/mockserver/sandbox/backend/frontend; sandbox runs in standalone mode — shell/file tools work, browser tools don't). `./dev-local.sh down` stops everything; logs live in `.dev-local/logs/`.
+
 ## Backend architecture (the part worth understanding)
 
 The backend follows **Domain-Driven Design** with strict layer dependencies pointing inward: `interfaces/` → `application/` → `domain/` ← `infrastructure/`.

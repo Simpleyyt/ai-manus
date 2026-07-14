@@ -245,6 +245,30 @@ MODEL_NAME=gpt-4o
 ./dev.sh up
 ```
 
+### 非 Docker 开发
+
+如果环境中没有 Docker(或者你更喜欢直接在本机运行服务),可以使用 `dev-local.sh` 以普通宿主机进程的方式运行整个开发栈:
+
+```bash
+# 启动全部服务:mongodb、redis、mockserver、sandbox、backend、frontend
+./dev-local.sh up
+
+# 查看状态 / 查看日志 / 停止
+./dev-local.sh status
+./dev-local.sh logs backend
+./dev-local.sh down
+```
+
+依赖要求:`uv`(Python 包管理器)、Node.js + npm,以及 MongoDB 和 Redis(本地安装 `mongod` / `redis-server`,或已有实例监听 `localhost:27017` / `localhost:6379`;脚本会优先复用已运行的实例,端口空闲时才自行启动)。
+
+脚本会读取 `.env`,并自动把 Docker Compose 的服务主机名(`mongodb`、`redis`、`mockserver`、`backend`)改写为 `localhost`,因此同一份 `.env` 可以同时用于 `./dev.sh` 和 `./dev-local.sh`。默认还会启用 `AUTH_PROVIDER=none` 和 mockserver 模拟 LLM。
+
+非 Docker 模式的注意事项与限制:
+- 沙盒以 *standalone 模式* **直接运行在你的机器上**:Agent 执行的 shell 和文件工具会直接操作宿主机(没有隔离),仅供开发使用。
+- 浏览器工具不可用(没有 supervisord 管理的 Chrome/CDP/VNC),Agent 的浏览器工具调用会返回错误,其余功能正常。
+- Claw 不会启动;保持 `CLAW_ENABLED=false`(默认),或自行运行 Claw 容器并设置 `CLAW_ADDRESS`。
+- 也可以只启动部分服务,例如 `./dev-local.sh up mockserver backend frontend`,其余服务用 Docker 运行。
+
 ### 镜像发布
 
 ```bash

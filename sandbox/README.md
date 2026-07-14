@@ -66,6 +66,8 @@ uv sync --dev
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
+> When supervisord is not running (i.e. outside the Docker container), the service starts in **standalone mode**: shell and file APIs work against the host machine, `GET /api/v1/supervisor/status` reports a synthetic RUNNING status, and supervisord-backed actions (stop/restart/shutdown) return an error. Browser/VNC features require the full Docker image.
+
 ### Docker Deployment
 
 ```bash

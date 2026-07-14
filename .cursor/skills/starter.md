@@ -54,6 +54,8 @@ Set `AUTH_PROVIDER=local`. Login at `http://localhost:5173/login` with `LOCAL_AU
 
 ## 2 · Running Services Individually (Without Docker)
 
+> Shortcut: `./dev-local.sh up` starts the whole non-Docker stack (mongodb, redis, mockserver, sandbox, backend, frontend) as host processes, reusing anything already listening on the standard ports. `./dev-local.sh status|logs <svc>|down` manage it; state lives in `.dev-local/`. The steps below are for running services one at a time.
+
 ### Backend
 
 ```bash
@@ -79,7 +81,13 @@ Opens on `http://localhost:5173`. The Vite config auto-creates a proxy for `/api
 
 ### Sandbox
 
-The sandbox is typically used inside Docker (it runs Xvfb, Chrome, VNC via supervisord). Running it standalone requires those system dependencies.
+```bash
+cd sandbox
+uv sync
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
+```
+
+Without supervisord (outside Docker) the sandbox starts in **standalone mode**: shell/file APIs work against the host machine and supervisor status is synthesized as RUNNING, but browser/CDP/VNC features are unavailable (those need the Docker image with Xvfb/Chrome/supervisord).
 
 ### Mockserver
 

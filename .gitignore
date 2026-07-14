@@ -125,3 +125,6 @@ mcp.json
 
 uv.lock
 specs
+
+# Non-Docker local dev stack (dev-local.sh) runtime state
+.dev-local/

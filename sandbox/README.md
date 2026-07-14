@@ -363,6 +363,32 @@ Base URL: `/api/v1`
   }
   ```
 
+#### Upload File
+
+- **Endpoint**: `POST /api/v1/file/upload`
+- **Description**: Upload a file to the sandbox using streaming (multipart form)
+- **Form Fields**:
+  - `file`: The file to upload
+  - `path`: Optional target path (defaults to `/tmp/{filename}`)
+- **Response**:
+  ```json
+  {
+    "success": true,
+    "message": "File uploaded successfully",
+    "data": {
+      "file": "/tmp/file.txt"
+    }
+  }
+  ```
+
+#### Download File
+
+- **Endpoint**: `GET /api/v1/file/download`
+- **Description**: Download a file from the sandbox
+- **Query Parameters**:
+  - `path`: Absolute path of the file to download
+- **Response**: File content stream (`application/octet-stream`)
+
 ### 3. Process Management Endpoints
 
 #### Get Process Status
@@ -513,7 +539,7 @@ The sandbox container includes the following environments:
 
 - Ubuntu 22.04
 - Python 3.10
-- Node.js 20.18.0
+- Node.js 20.x
 - Google Chrome
 
 ## Debugging Guide

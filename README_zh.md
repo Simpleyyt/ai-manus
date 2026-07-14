@@ -40,9 +40,9 @@ https://github.com/user-attachments/assets/5cb2240b-0984-4db0-8818-a24f81624b04
 ## 主要特性
 
  * 部署：最小只需要一个 LLM 服务即可完成部署，不需要依赖其它外部服务。
- * 工具：支持 Terminal、Browser、File、Web Search、消息工具，并支持实查看和接管，支持外部 MCP 工具集成。
+ * 工具：支持 Terminal、Browser、File、Web Search、消息工具，并支持实时查看和接管，支持外部 MCP 工具集成。
  * Claw：集成 [OpenClaw](https://github.com/anthropics/openclaw) AI 助手，一键部署、用户隔离容器、自动过期倒计时、完整聊天历史。
- * 沙盒：每个 Task 会分配单独的一个沙盒，沙盒在本地 Dock 环境里面运行。
+ * 沙盒：每个 Task 会分配单独的一个沙盒，沙盒在本地 Docker 环境里面运行。
  * 任务会话：通过 Mongo/Redis 对会话历史进行管理，支持后台任务。
  * 对话：支持停止与打断，支持文件上传与下载。
  * 多语言：支持中文与英文。
@@ -52,7 +52,7 @@ https://github.com/user-attachments/assets/5cb2240b-0984-4db0-8818-a24f81624b04
 
  * 工具：支持 Deploy & Expose。
  * 沙盒：支持手机与 Windows 电脑接入。
- * 部署：支持 K8s 和 Dock Swarm 多集群部署。
+ * 部署：支持 K8s 和 Docker Swarm 多集群部署。
 
 ## 环境要求
 
@@ -218,16 +218,18 @@ MODEL_NAME=gpt-4o
 
 1. 运行调试：
 ```bash
-# 相当于 docker compose -f docker-compose-development.yaml up
+# 相当于 docker compose -f docker-compose-development.yml up
 ./dev.sh up
 ```
 
 各服务会以 reload 模式运行，代码改动会自动重新加载。暴露的端口如下：
 - 5173: Web前端端口
 - 8000: Server API服务端口
+- 5678: Server debugpy 端口（Python 远程调试）
 - 8080: Sandbox API服务端口
-- 5900: Sandbox VNC端口
-- 9222: Sandbox Chrome浏览器CDP端口
+- 5902: Sandbox VNC端口（映射容器内 5900）
+- 18788: Claw（OpenClaw Gateway）端口
+- 27017: MongoDB 端口
 
 > *注意：在 Debug 模式全局只会启动一个沙盒*
 
@@ -250,10 +252,10 @@ export IMAGE_REGISTRY=your-registry-url
 export IMAGE_TAG=latest
 
 # 构建镜像
-./run build
+./run.sh build
 
 # 推送到相应的镜像仓库
-./run push
+./run.sh push
 ```
 
 ## ⭐️ Star 记录

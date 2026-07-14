@@ -367,6 +367,32 @@ LOG_LEVEL=DEBUG
   }
   ```
 
+#### 上传文件
+
+- **接口**: `POST /api/v1/file/upload`
+- **描述**: 以流式方式上传文件到沙盒（multipart 表单）
+- **表单字段**:
+  - `file`: 要上传的文件
+  - `path`: 可选，目标路径（默认为 `/tmp/{filename}`）
+- **响应**:
+  ```json
+  {
+    "success": true,
+    "message": "File uploaded successfully",
+    "data": {
+      "file": "/tmp/file.txt"
+    }
+  }
+  ```
+
+#### 下载文件
+
+- **接口**: `GET /api/v1/file/download`
+- **描述**: 从沙盒下载文件
+- **查询参数**:
+  - `path`: 要下载文件的绝对路径
+- **响应**: 文件内容流（`application/octet-stream`）
+
 ### 3. 进程管理接口
 
 #### 获取进程状态
@@ -517,7 +543,7 @@ LOG_LEVEL=DEBUG
 
 - Ubuntu 22.04
 - Python 3.10
-- Node.js 20.18.0
+- Node.js 20.x
 - Google Chrome
 
 ## 调试指南

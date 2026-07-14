@@ -17,12 +17,13 @@ backend/
 │   │   ├── external/    # External service interfaces
 │   │   └── prompts/     # Prompt templates
 │   ├── application/     # Application layer: orchestrates business processes
-│   │   ├── services/    # Application services
+│   │   ├── services/    # Application services (agent, auth, file, token, email, claw)
 │   │   └── schemas/     # Data schema definitions
 │   ├── interfaces/      # Interface layer: defines external system interfaces
-│   │   └── api/
-│   │       └── routes.py # API route definitions
+│   │   ├── api/         # API routes (sessions, files, auth, config, claw, OpenAI proxy)
+│   │   └── schemas/     # Request/response and SSE event schemas
 │   ├── infrastructure/  # Infrastructure layer: provides technical implementation
+│   ├── core/            # Core configuration (config.py)
 │   └── main.py          # Application entry
 ├── Dockerfile           # Docker configuration file
 ├── pyproject.toml       # Project dependencies and metadata
@@ -62,27 +63,45 @@ uv sync
 ```
 
 3. **Environment variable configuration**:
-Create a `.env` file and set the following environment variables:
+Create a `.env` file and set the following environment variables (see `app/core/config.py` or the root [.env.example](https://github.com/simpleyyt/ai-manus/blob/main/.env.example) for the full list):
 ```
 # Model provider configuration
-API_KEY=your_api_key_here                # API key for model providers
+API_KEY=your_api_key_here                # API key for model providers (required)
 API_BASE=https://api.openai.com/v1       # Base URL for model API (optional for some providers)
 
 # Model configuration
 MODEL_NAME=gpt-4o                        # Model name to use
 MODEL_PROVIDER=openai                    # Model provider for LangChain
+LLM_PROVIDER=langchain                   # LLM gateway: langchain (default) or openai (OpenAI SDK)
 TEMPERATURE=0.7                          # Model temperature parameter
 MAX_TOKENS=2000                          # Maximum output tokens per model request
 
-# Google search configuration
-GOOGLE_SEARCH_API_KEY=                   # Google Search API key for web search functionality (optional)
-GOOGLE_SEARCH_ENGINE_ID=                 # Google custom search engine ID (optional)
+# Search engine configuration
+SEARCH_PROVIDER=bing_web                 # baidu / baidu_web / google / bing / bing_web / tavily / serper / custom
+GOOGLE_SEARCH_API_KEY=                   # Google Search API key (SEARCH_PROVIDER=google)
+GOOGLE_SEARCH_ENGINE_ID=                 # Google custom search engine ID (SEARCH_PROVIDER=google)
 
 # Sandbox configuration
-SANDBOX_IMAGE=simpleyyt/manus-sandbox          # Sandbox environment Docker image
+SANDBOX_ADDRESS=                         # Fixed sandbox address (dev); when unset, containers are created per session
+SANDBOX_IMAGE=simpleyyt/manus-sandbox    # Sandbox environment Docker image
 SANDBOX_NAME_PREFIX=sandbox              # Sandbox container name prefix
 SANDBOX_TTL_MINUTES=30                   # Sandbox container time-to-live (minutes)
 SANDBOX_NETWORK=manus-network            # Docker network name for communication between sandbox containers
+
+# Authentication configuration
+AUTH_PROVIDER=password                   # password / local / none
+JWT_SECRET_KEY=your-secret-key-here      # JWT signing key (set in production)
+
+# Claw (OpenClaw) configuration
+CLAW_ENABLED=false                       # Enable the Claw integration
+CLAW_IMAGE=simpleyyt/manus-claw          # Claw container Docker image
+CLAW_TTL_SECONDS=3600                    # Claw container time-to-live (seconds)
+
+# MCP configuration
+MCP_CONFIG_PATH=/etc/mcp.json            # Path to external MCP servers config
+
+# Task backend configuration
+TASK_BACKEND=local                       # local (in-process asyncio) or celery (distributed workers)
 
 # Database configuration
 MONGODB_URI=mongodb://localhost:27017    # MongoDB connection URL
@@ -118,184 +137,91 @@ docker run -p 8000:8000 --env-file .env -v /var/run/docker.sock:/var/run/docker.
 
 ## API Documentation
 
-Base URL: `/api/v1`
+Base URL: `/api/v1`. Interactive Swagger UI is available at `/docs` while the service is running.
 
-### 1. Create Session
+All JSON APIs return a unified envelope:
+```json
+{
+  "code": 0,
+  "msg": "success",
+  "data": {}
+}
+```
 
-- **Endpoint**: `PUT /api/v1/sessions`
-- **Description**: Create a new conversation session
-- **Request Body**: None
-- **Response**:
-  ```json
-  {
-    "code": 0,
-    "msg": "success",
-    "data": {
-      "session_id": "string"
-    }
-  }
-  ```
+### Session Endpoints (`/api/v1/sessions`)
 
-### 2. Get Session
+| Method | Path | Description |
+|---|---|---|
+| PUT | `/sessions` | Create a new conversation session |
+| GET | `/sessions` | List all sessions |
+| POST | `/sessions` | Stream session list updates (SSE) |
+| GET | `/sessions/{session_id}` | Get session details including event history |
+| DELETE | `/sessions/{session_id}` | Delete a session |
+| POST | `/sessions/{session_id}/stop` | Stop an active session |
+| POST | `/sessions/{session_id}/chat` | Send a message and receive an SSE event stream |
+| POST | `/sessions/{session_id}/clear_unread_message_count` | Clear the unread message count |
+| POST | `/sessions/{session_id}/shell` | View shell session output in the sandbox |
+| POST | `/sessions/{session_id}/file` | View file content in the sandbox |
+| GET | `/sessions/{session_id}/files` | List files attached to the session |
+| WebSocket | `/sessions/{session_id}/vnc` | VNC connection to the sandbox (binary subprotocol) |
+| POST | `/sessions/{session_id}/vnc/signed-url` | Generate a signed URL for VNC WebSocket access |
+| POST | `/sessions/{session_id}/share` | Share a session publicly |
+| DELETE | `/sessions/{session_id}/share` | Unshare a session |
+| GET | `/sessions/{session_id}/share/files` | List files of a shared session |
+| GET | `/sessions/shared/{session_id}` | Get a shared session (no authentication) |
 
-- **Endpoint**: `GET /api/v1/sessions/{session_id}`
-- **Description**: Get session information including conversation history
-- **Path Parameters**:
-  - `session_id`: Session ID
-- **Response**:
-  ```json
-  {
-    "code": 0,
-    "msg": "success",
-    "data": {
-      "session_id": "string",
-      "title": "string",
-      "events": []
-    }
-  }
-  ```
+SSE event types emitted by `/chat`: `message`, `title`, `plan`, `step`, `tool`, `wait`, `error`, `done`.
 
-### 3. List All Sessions
+### File Endpoints (`/api/v1/files`)
 
-- **Endpoint**: `GET /api/v1/sessions`
-- **Description**: Get list of all sessions
-- **Response**:
-  ```json
-  {
-    "code": 0,
-    "msg": "success",
-    "data": {
-      "sessions": [
-        {
-          "session_id": "string",
-          "title": "string",
-          "latest_message": "string",
-          "latest_message_at": 1234567890,
-          "status": "string",
-          "unread_message_count": 0
-        }
-      ]
-    }
-  }
-  ```
+| Method | Path | Description |
+|---|---|---|
+| POST | `/files` | Upload a file |
+| GET | `/files/{file_id}` | Download a file (supports signed access token) |
+| GET | `/files/{file_id}/download` | Download a file as attachment |
+| DELETE | `/files/{file_id}` | Delete a file |
+| GET | `/files/{file_id}/info` | Get file metadata |
+| POST | `/files/{file_id}/signed-url` | Generate a signed download URL |
 
-### 4. Delete Session
+### Auth Endpoints (`/api/v1/auth`)
 
-- **Endpoint**: `DELETE /api/v1/sessions/{session_id}`
-- **Description**: Delete a session
-- **Path Parameters**:
-  - `session_id`: Session ID
-- **Response**:
-  ```json
-  {
-    "code": 0,
-    "msg": "success",
-    "data": null
-  }
-  ```
+| Method | Path | Description |
+|---|---|---|
+| POST | `/auth/login` | Login |
+| POST | `/auth/register` | Register a new user |
+| GET | `/auth/status` | Get authentication provider status |
+| GET | `/auth/me` | Get current user information |
+| POST | `/auth/refresh` | Refresh access token |
+| POST | `/auth/logout` | Logout |
+| POST | `/auth/change-password` | Change password |
+| POST | `/auth/change-fullname` | Change full name |
+| POST | `/auth/send-verification-code` | Send email verification code |
+| POST | `/auth/reset-password` | Reset password with verification code |
+| GET | `/auth/user/{user_id}` | Get user by ID |
+| POST | `/auth/user/{user_id}/activate` | Activate a user |
+| POST | `/auth/user/{user_id}/deactivate` | Deactivate a user |
 
-### 5. Stop Session
+### Claw Endpoints (`/api/v1/claw`)
 
-- **Endpoint**: `POST /api/v1/sessions/{session_id}/stop`
-- **Description**: Stop an active session
-- **Path Parameters**:
-  - `session_id`: Session ID
-- **Response**:
-  ```json
-  {
-    "code": 0,
-    "msg": "success",
-    "data": null
-  }
-  ```
+| Method | Path | Description |
+|---|---|---|
+| GET | `/claw` | Get the current user's Claw instance |
+| POST | `/claw` | Create a Claw instance for the current user |
+| DELETE | `/claw` | Delete the current user's Claw instance |
+| GET | `/claw/api-key` | Get the per-user API key for the LLM proxy |
+| GET | `/claw/history` | Get merged Claw chat history |
+| POST | `/claw/upload` | Upload a file from the Claw workspace (Claw API key auth) |
+| GET | `/claw/files/{filename}` | Proxy a file download from the Claw workspace |
+| GET | `/claw/resolve/{file_id}` | Resolve `manus-file://` metadata (Claw API key auth) |
+| GET | `/claw/resolve/{file_id}/download` | Download `manus-file://` content (Claw API key auth) |
+| WebSocket | `/claw/ws` | Persistent WebSocket connection for Claw chat |
 
-### 6. Chat with Session
+### Other Endpoints
 
-- **Endpoint**: `POST /api/v1/sessions/{session_id}/chat`
-- **Description**: Send a message to the session and receive streaming response
-- **Path Parameters**:
-  - `session_id`: Session ID
-- **Request Body**:
-  ```json
-  {
-    "message": "User message content",
-    "timestamp": 1234567890,
-    "event_id": "optional event ID"
-  }
-  ```
-- **Response**: Server-Sent Events (SSE) stream
-- **Event Types**:
-  - `message`: Text message from assistant
-  - `title`: Session title update
-  - `plan`: Execution plan with steps
-  - `step`: Step status update
-  - `tool`: Tool invocation information
-  - `error`: Error information
-  - `done`: Conversation completion
-
-### 7. View Shell Session Content
-
-- **Endpoint**: `POST /api/v1/sessions/{session_id}/shell`
-- **Description**: View shell session output in the sandbox environment
-- **Path Parameters**:
-  - `session_id`: Session ID
-- **Request Body**:
-  ```json
-  {
-    "session_id": "shell session ID"
-  }
-  ```
-- **Response**:
-  ```json
-  {
-    "code": 0,
-    "msg": "success",
-    "data": {
-      "output": "shell output content",
-      "session_id": "shell session ID",
-      "console": [
-        {
-          "ps1": "prompt string",
-          "command": "executed command",
-          "output": "command output"
-        }
-      ]
-    }
-  }
-  ```
-
-### 8. View File Content
-
-- **Endpoint**: `POST /api/v1/sessions/{session_id}/file`
-- **Description**: View file content in the sandbox environment
-- **Path Parameters**:
-  - `session_id`: Session ID
-- **Request Body**:
-  ```json
-  {
-    "file": "file path"
-  }
-  ```
-- **Response**:
-  ```json
-  {
-    "code": 0,
-    "msg": "success",
-    "data": {
-      "content": "file content",
-      "file": "file path"
-    }
-  }
-  ```
-
-### 9. VNC Connection
-
-- **Endpoint**: `WebSocket /api/v1/sessions/{session_id}/vnc`
-- **Description**: Establish a VNC WebSocket connection to the session's sandbox environment
-- **Path Parameters**:
-  - `session_id`: Session ID
-- **Protocol**: WebSocket (binary mode)
-- **Subprotocol**: `binary`
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/v1/config/frontend` | Frontend runtime configuration |
+| POST | `/v1/chat/completions` | OpenAI-compatible LLM proxy used by Claw containers |
 
 ## Error Handling
 
@@ -317,6 +243,7 @@ Common error codes:
 
 ### Adding New Tools
 
-1. Define the tool interface in the `domain/external` directory
-2. Implement the tool functionality in the `infrastructure` layer
-3. Integrate the tool in `application/services` 
+1. Define the Protocol interface in the `domain/external` directory
+2. Implement the functionality in the `infrastructure/external` layer
+3. Wire the implementation in `interfaces/dependencies.py`
+4. Expose it as a toolkit in `domain/services/tools` if the agent should call it

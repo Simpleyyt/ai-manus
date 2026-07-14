@@ -217,16 +217,18 @@ MODEL_NAME=gpt-4o
 
 1. Run in debug mode:
 ```bash
-# Equivalent to docker compose -f docker-compose-development.yaml up
+# Equivalent to docker compose -f docker-compose-development.yml up
 ./dev.sh up
 ```
 
 All services will run in reload mode, and code changes will be automatically reloaded. The exposed ports are as follows:
 - 5173: Web frontend port
 - 8000: Server API service port
+- 5678: Server debugpy port (remote Python debugging)
 - 8080: Sandbox API service port
-- 5900: Sandbox VNC port
-- 9222: Sandbox Chrome browser CDP port
+- 5902: Sandbox VNC port (mapped to 5900 inside the container)
+- 18788: Claw (OpenClaw Gateway) port
+- 27017: MongoDB port
 
 > *Note: In Debug mode, only one sandbox will be started globally*
 
@@ -249,12 +251,11 @@ export IMAGE_REGISTRY=your-registry-url
 export IMAGE_TAG=latest
 
 # Build images
-./run build
+./run.sh build
 
 # Push to the corresponding image repository
-./run push
-``` 
-##
+./run.sh push
+```
 
 ## ⭐️ Star History
 

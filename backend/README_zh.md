@@ -17,12 +17,13 @@ backend/
 │   │   ├── external/    # 外部服务接口
 │   │   └── prompts/     # 提示词模板
 │   ├── application/     # 应用层：编排业务流程
-│   │   ├── services/    # 应用服务
+│   │   ├── services/    # 应用服务（agent、auth、file、token、email、claw）
 │   │   └── schemas/     # 数据模式定义
 │   ├── interfaces/      # 接口层：定义系统对外接口
-│   │   └── api/
-│   │       └── routes.py # API路由定义
+│   │   ├── api/         # API 路由（会话、文件、认证、配置、Claw、OpenAI 代理）
+│   │   └── schemas/     # 请求/响应与 SSE 事件模式
 │   ├── infrastructure/  # 基础设施层：提供技术实现
+│   ├── core/            # 核心配置（config.py）
 │   └── main.py          # 应用入口
 ├── Dockerfile           # Docker配置文件
 ├── pyproject.toml       # 项目依赖与元数据
@@ -62,27 +63,45 @@ uv sync
 ```
 
 3. **环境变量配置**:
-创建 `.env` 文件并设置以下环境变量:
+创建 `.env` 文件并设置以下环境变量（完整列表见 `app/core/config.py` 或根目录 [.env.example](https://github.com/simpleyyt/ai-manus/blob/main/.env.example)）:
 ```
 # Model provider configuration
-API_KEY=your_api_key_here                # 模型供应商 API 密钥
+API_KEY=your_api_key_here                # 模型供应商 API 密钥（必填）
 API_BASE=https://api.openai.com/v1       # 模型 API 基础 URL（部分供应商可选）
 
 # Model configuration
 MODEL_NAME=gpt-4o                        # 使用的模型名称
 MODEL_PROVIDER=openai                    # LangChain 模型供应商
+LLM_PROVIDER=langchain                   # LLM 网关: langchain（默认）或 openai（OpenAI SDK）
 TEMPERATURE=0.7                          # 模型温度参数
 MAX_TOKENS=2000                          # 模型单次请求最大输出 token 数量
 
-# Google search configuration
-GOOGLE_SEARCH_API_KEY=                   # Google Search API 密钥，用于网络搜索功能（可选）
-GOOGLE_SEARCH_ENGINE_ID=                 # Google 自定义搜索引擎 ID（可选）
+# Search engine configuration
+SEARCH_PROVIDER=bing_web                 # baidu / baidu_web / google / bing / bing_web / tavily / serper / custom
+GOOGLE_SEARCH_API_KEY=                   # Google Search API 密钥（SEARCH_PROVIDER=google）
+GOOGLE_SEARCH_ENGINE_ID=                 # Google 自定义搜索引擎 ID（SEARCH_PROVIDER=google）
 
 # Sandbox configuration
-SANDBOX_IMAGE=simpleyyt/manus-sandbox          # 沙盒环境 Docker 镜像
+SANDBOX_ADDRESS=                         # 固定沙盒地址（开发用）；未设置时按会话创建容器
+SANDBOX_IMAGE=simpleyyt/manus-sandbox    # 沙盒环境 Docker 镜像
 SANDBOX_NAME_PREFIX=sandbox              # 沙盒容器名称前缀
 SANDBOX_TTL_MINUTES=30                   # 沙盒容器生存时间（分钟）
 SANDBOX_NETWORK=manus-network            # Docker 网络名称，用于沙盒容器间通信
+
+# Authentication configuration
+AUTH_PROVIDER=password                   # password / local / none
+JWT_SECRET_KEY=your-secret-key-here      # JWT 签名密钥（生产环境必须设置）
+
+# Claw (OpenClaw) configuration
+CLAW_ENABLED=false                       # 是否启用 Claw 集成
+CLAW_IMAGE=simpleyyt/manus-claw          # Claw 容器 Docker 镜像
+CLAW_TTL_SECONDS=3600                    # Claw 容器生存时间（秒）
+
+# MCP configuration
+MCP_CONFIG_PATH=/etc/mcp.json            # 外部 MCP 服务配置文件路径
+
+# Task backend configuration
+TASK_BACKEND=local                       # local（进程内 asyncio）或 celery（分布式 worker）
 
 # Database configuration
 MONGODB_URI=mongodb://localhost:27017    # MongoDB 连接 URL
@@ -118,184 +137,91 @@ docker run -p 8000:8000 --env-file .env -v /var/run/docker.sock:/var/run/docker.
 
 ## API接口文档
 
-基础URL: `/api/v1`
+基础URL: `/api/v1`。服务运行时可通过 `/docs` 访问交互式 Swagger UI。
 
-### 1. 创建会话
+所有 JSON 接口返回统一格式：
+```json
+{
+  "code": 0,
+  "msg": "success",
+  "data": {}
+}
+```
 
-- **接口**: `PUT /api/v1/sessions`
-- **描述**: 创建一个新的对话会话
-- **请求体**: 无
-- **响应**:
-  ```json
-  {
-    "code": 0,
-    "msg": "success",
-    "data": {
-      "session_id": "string"
-    }
-  }
-  ```
+### 会话接口（`/api/v1/sessions`）
 
-### 2. 获取会话信息
+| 方法 | 路径 | 描述 |
+|---|---|---|
+| PUT | `/sessions` | 创建新的对话会话 |
+| GET | `/sessions` | 获取所有会话列表 |
+| POST | `/sessions` | 以 SSE 流式获取会话列表更新 |
+| GET | `/sessions/{session_id}` | 获取会话详情（包括事件历史） |
+| DELETE | `/sessions/{session_id}` | 删除会话 |
+| POST | `/sessions/{session_id}/stop` | 停止活跃的会话 |
+| POST | `/sessions/{session_id}/chat` | 发送消息并接收 SSE 事件流 |
+| POST | `/sessions/{session_id}/clear_unread_message_count` | 清除未读消息计数 |
+| POST | `/sessions/{session_id}/shell` | 查看沙盒中的 Shell 会话输出 |
+| POST | `/sessions/{session_id}/file` | 查看沙盒中的文件内容 |
+| GET | `/sessions/{session_id}/files` | 获取会话关联的文件列表 |
+| WebSocket | `/sessions/{session_id}/vnc` | 与沙盒建立 VNC 连接（binary 子协议） |
+| POST | `/sessions/{session_id}/vnc/signed-url` | 生成 VNC WebSocket 访问签名 URL |
+| POST | `/sessions/{session_id}/share` | 公开分享会话 |
+| DELETE | `/sessions/{session_id}/share` | 取消分享会话 |
+| GET | `/sessions/{session_id}/share/files` | 获取已分享会话的文件列表 |
+| GET | `/sessions/shared/{session_id}` | 获取已分享会话（无需认证） |
 
-- **接口**: `GET /api/v1/sessions/{session_id}`
-- **描述**: 获取会话信息，包括对话历史
-- **路径参数**:
-  - `session_id`: 会话ID
-- **响应**:
-  ```json
-  {
-    "code": 0,
-    "msg": "success",
-    "data": {
-      "session_id": "string",
-      "title": "string",
-      "events": []
-    }
-  }
-  ```
+`/chat` 输出的 SSE 事件类型：`message`、`title`、`plan`、`step`、`tool`、`wait`、`error`、`done`。
 
-### 3. 获取所有会话列表
+### 文件接口（`/api/v1/files`）
 
-- **接口**: `GET /api/v1/sessions`
-- **描述**: 获取所有会话的列表
-- **响应**:
-  ```json
-  {
-    "code": 0,
-    "msg": "success",
-    "data": {
-      "sessions": [
-        {
-          "session_id": "string",
-          "title": "string",
-          "latest_message": "string",
-          "latest_message_at": 1234567890,
-          "status": "string",
-          "unread_message_count": 0
-        }
-      ]
-    }
-  }
-  ```
+| 方法 | 路径 | 描述 |
+|---|---|---|
+| POST | `/files` | 上传文件 |
+| GET | `/files/{file_id}` | 下载文件（支持签名访问令牌） |
+| GET | `/files/{file_id}/download` | 以附件形式下载文件 |
+| DELETE | `/files/{file_id}` | 删除文件 |
+| GET | `/files/{file_id}/info` | 获取文件元信息 |
+| POST | `/files/{file_id}/signed-url` | 生成签名下载 URL |
 
-### 4. 删除会话
+### 认证接口（`/api/v1/auth`）
 
-- **接口**: `DELETE /api/v1/sessions/{session_id}`
-- **描述**: 删除指定会话
-- **路径参数**:
-  - `session_id`: 会话ID
-- **响应**:
-  ```json
-  {
-    "code": 0,
-    "msg": "success",
-    "data": null
-  }
-  ```
+| 方法 | 路径 | 描述 |
+|---|---|---|
+| POST | `/auth/login` | 登录 |
+| POST | `/auth/register` | 注册新用户 |
+| GET | `/auth/status` | 获取认证提供方状态 |
+| GET | `/auth/me` | 获取当前用户信息 |
+| POST | `/auth/refresh` | 刷新访问令牌 |
+| POST | `/auth/logout` | 登出 |
+| POST | `/auth/change-password` | 修改密码 |
+| POST | `/auth/change-fullname` | 修改用户名称 |
+| POST | `/auth/send-verification-code` | 发送邮箱验证码 |
+| POST | `/auth/reset-password` | 通过验证码重置密码 |
+| GET | `/auth/user/{user_id}` | 按 ID 获取用户 |
+| POST | `/auth/user/{user_id}/activate` | 激活用户 |
+| POST | `/auth/user/{user_id}/deactivate` | 停用用户 |
 
-### 5. 停止会话
+### Claw 接口（`/api/v1/claw`）
 
-- **接口**: `POST /api/v1/sessions/{session_id}/stop`
-- **描述**: 停止活跃的会话
-- **路径参数**:
-  - `session_id`: 会话ID
-- **响应**:
-  ```json
-  {
-    "code": 0,
-    "msg": "success",
-    "data": null
-  }
-  ```
+| 方法 | 路径 | 描述 |
+|---|---|---|
+| GET | `/claw` | 获取当前用户的 Claw 实例 |
+| POST | `/claw` | 为当前用户创建 Claw 实例 |
+| DELETE | `/claw` | 删除当前用户的 Claw 实例 |
+| GET | `/claw/api-key` | 获取用于 LLM 代理认证的用户级 API 密钥 |
+| GET | `/claw/history` | 获取合并后的 Claw 聊天历史 |
+| POST | `/claw/upload` | 从 Claw 工作区上传文件（Claw API 密钥认证） |
+| GET | `/claw/files/{filename}` | 代理下载 Claw 工作区中的文件 |
+| GET | `/claw/resolve/{file_id}` | 解析 `manus-file://` 元信息（Claw API 密钥认证） |
+| GET | `/claw/resolve/{file_id}/download` | 下载 `manus-file://` 内容（Claw API 密钥认证） |
+| WebSocket | `/claw/ws` | Claw 聊天的持久 WebSocket 连接 |
 
-### 6. 与会话对话
+### 其它接口
 
-- **接口**: `POST /api/v1/sessions/{session_id}/chat`
-- **描述**: 向会话发送消息并接收流式响应
-- **路径参数**:
-  - `session_id`: 会话ID
-- **请求体**:
-  ```json
-  {
-    "message": "用户消息内容",
-    "timestamp": 1234567890,
-    "event_id": "可选的事件ID"
-  }
-  ```
-- **响应**: Server-Sent Events (SSE) 流
-- **事件类型**:
-  - `message`: 来自助手的文本消息
-  - `title`: 会话标题更新
-  - `plan`: 执行计划和步骤
-  - `step`: 步骤状态更新
-  - `tool`: 工具调用信息
-  - `error`: 错误信息
-  - `done`: 对话完成
-
-### 7. 查看Shell会话内容
-
-- **接口**: `POST /api/v1/sessions/{session_id}/shell`
-- **描述**: 查看沙盒环境中的Shell会话输出
-- **路径参数**:
-  - `session_id`: 会话ID
-- **请求体**:
-  ```json
-  {
-    "session_id": "shell会话ID"
-  }
-  ```
-- **响应**:
-  ```json
-  {
-    "code": 0,
-    "msg": "success",
-    "data": {
-      "output": "shell输出内容",
-      "session_id": "shell会话ID",
-      "console": [
-        {
-          "ps1": "提示符字符串",
-          "command": "执行的命令",
-          "output": "命令输出"
-        }
-      ]
-    }
-  }
-  ```
-
-### 8. 查看文件内容
-
-- **接口**: `POST /api/v1/sessions/{session_id}/file`
-- **描述**: 查看沙盒环境中的文件内容
-- **路径参数**:
-  - `session_id`: 会话ID
-- **请求体**:
-  ```json
-  {
-    "file": "文件路径"
-  }
-  ```
-- **响应**:
-  ```json
-  {
-    "code": 0,
-    "msg": "success",
-    "data": {
-      "content": "文件内容",
-      "file": "文件路径"
-    }
-  }
-  ```
-
-### 9. VNC连接
-
-- **接口**: `WebSocket /api/v1/sessions/{session_id}/vnc`
-- **描述**: 建立与会话沙盒环境的VNC WebSocket连接
-- **路径参数**:
-  - `session_id`: 会话ID
-- **协议**: WebSocket (二进制模式)
-- **子协议**: `binary`
+| 方法 | 路径 | 描述 |
+|---|---|---|
+| GET | `/api/v1/config/frontend` | 前端运行时配置 |
+| POST | `/v1/chat/completions` | 供 Claw 容器使用的 OpenAI 兼容 LLM 代理 |
 
 ## 错误处理
 
@@ -317,6 +243,7 @@ docker run -p 8000:8000 --env-file .env -v /var/run/docker.sock:/var/run/docker.
 
 ### 添加新工具
 
-1. 在 `domain/external` 目录下定义工具接口
-2. 在 `infrastructure` 层实现工具功能
-3. 在 `application/services` 中集成工具
+1. 在 `domain/external` 目录下定义 Protocol 接口
+2. 在 `infrastructure/external` 层实现功能
+3. 在 `interfaces/dependencies.py` 中完成依赖注入
+4. 如需供 Agent 调用，在 `domain/services/tools` 中封装为工具集

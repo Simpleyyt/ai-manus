@@ -105,6 +105,31 @@
         </div>
 
       </div>
+
+      <!-- 底部个人 Profile(结构复刻自 manus.im 侧边栏底部) -->
+      <div ref="profileRef" class="relative flex-shrink-0 px-[8px] pb-3 pt-1">
+        <div v-if="showUserMenu" class="absolute bottom-full start-2 mb-1 z-50">
+          <UserMenu />
+        </div>
+        <div
+          @click="showUserMenu = !showUserMenu"
+          class="flex items-center rounded-[10px] cursor-pointer transition-colors w-full gap-[8px] h-[48px] px-[8px]"
+          :class="showUserMenu ? 'bg-[var(--fill-tsp-white-main)]' : 'hover:bg-[var(--fill-tsp-white-light)]'">
+          <div
+            class="relative flex items-center justify-center font-bold flex-shrink-0 rounded-full overflow-hidden"
+            style="width: 32px; height: 32px; font-size: 16px; color: rgba(255, 255, 255, 0.9); background-color: rgb(59, 130, 246);">
+            {{ avatarLetter }}
+          </div>
+          <div class="flex flex-col flex-1 min-w-0">
+            <span class="text-[14px] leading-[18px] text-[var(--text-primary)] font-medium truncate">
+              {{ currentUser?.fullname || t('Unknown User') }}
+            </span>
+            <span class="text-[12px] leading-[16px] text-[var(--text-tertiary)] truncate">
+              {{ currentUser?.email || t('No email') }}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -112,8 +137,10 @@
 <script setup lang="ts">
 import { PanelLeft, SquarePen, Command, MessageSquareDashed, ChevronUp } from 'lucide-vue-next';
 import SessionItem from './SessionItem.vue';
+import UserMenu from './UserMenu.vue';
 import { useLeftPanel } from '../composables/useLeftPanel';
-import { ref, onMounted, watch, onUnmounted } from 'vue';
+import { useAuth } from '../composables/useAuth';
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getSessionsSSE, getSessions } from '../api/agent';
 import { getCachedClientConfig } from '../api/config';
@@ -131,6 +158,21 @@ const isAllTasksCollapsed = ref(false)
 const isListScrolled = ref(false)
 const clawEnabled = ref(false)
 const scrollContainerRef = ref<HTMLElement | null>(null)
+
+// Bottom profile entry
+const { currentUser } = useAuth()
+const showUserMenu = ref(false)
+const profileRef = ref<HTMLElement | null>(null)
+
+const avatarLetter = computed(() => {
+  return currentUser.value?.fullname?.charAt(0)?.toUpperCase() || 'M'
+})
+
+const handleClickOutside = (event: MouseEvent) => {
+  if (showUserMenu.value && profileRef.value && !profileRef.value.contains(event.target as Node)) {
+    showUserMenu.value = false
+  }
+}
 
 const handleListScroll = () => {
   if (scrollContainerRef.value) {
@@ -199,6 +241,7 @@ onMounted(async () => {
 
   // Add keyboard event listener
   window.addEventListener('keydown', handleKeydown)
+  window.addEventListener('mousedown', handleClickOutside)
 })
 
 onUnmounted(() => {
@@ -209,6 +252,7 @@ onUnmounted(() => {
 
   // Remove keyboard event listener
   window.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('mousedown', handleClickOutside)
 })
 
 watch(() => route.path, async () => {

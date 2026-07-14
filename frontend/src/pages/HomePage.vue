@@ -26,7 +26,7 @@
               <Github class="size-[18px]" />
               GitHub
             </a>
-            <div class="relative flex items-center" aria-expanded="false" aria-haspopup="dialog"
+            <div v-if="!isLeftPanelShow" class="relative flex items-center" aria-expanded="false" aria-haspopup="dialog"
               @mouseenter="handleUserMenuEnter" @mouseleave="handleUserMenuLeave">
               <div class="relative flex items-center justify-center font-bold cursor-pointer flex-shrink-0">
                 <div

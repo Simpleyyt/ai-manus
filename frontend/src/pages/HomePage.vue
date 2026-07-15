@@ -27,10 +27,7 @@
       </div>
       <div class="max-md:px-[16px] mx-auto w-full max-w-full sm:max-w-[768px] sm:min-w-[360px] mt-[20vh] mb-auto">
         <div class="w-full flex pl-4 items-center justify-start pb-4">
-          <span class="text-[var(--text-primary)] text-start font-serif text-[32px] leading-[40px]" :style="{
-            fontFamily:
-              'ui-serif, Georgia, Cambria, &quot;Times New Roman&quot;, Times, serif',
-          }">
+          <span class="text-[var(--text-primary)] text-start font-serif text-[32px] leading-[40px]">
             {{ $t('Hello') }}, {{ currentUser?.fullname }}
             <br />
             <span class="text-[var(--text-tertiary)]">

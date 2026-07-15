@@ -1,5 +1,8 @@
 import { createApp } from 'vue'
 import App from './App.vue'
+import '@fontsource/libre-baskerville/400.css'
+import '@fontsource/libre-baskerville/400-italic.css'
+import '@fontsource/libre-baskerville/700.css'
 import './assets/global.css'
 import './assets/theme.css'
 import './utils/toast'

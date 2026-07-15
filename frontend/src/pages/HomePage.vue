@@ -18,7 +18,7 @@
         </div>
         <div class="h-8"></div>
       </div>
-      <div class="max-md:px-[16px] w-full max-w-full sm:max-w-[768px] sm:min-w-[390px] mx-auto mt-[20vh] mb-auto">
+      <div class="max-md:px-[16px] mx-auto w-full max-w-full sm:max-w-[768px] sm:min-w-[360px] mt-[20vh] mb-auto">
         <div class="w-full flex pl-4 items-center justify-start pb-4">
           <span class="text-[var(--text-primary)] text-start font-serif text-[32px] leading-[40px]" :style="{
             fontFamily:
@@ -32,7 +32,7 @@
           </span>
         </div>
         <div class="flex flex-col gap-1 w-full">
-          <div class="flex flex-col bg-[var(--background-gray-main)] w-full">
+          <div class="flex flex-col w-full bg-[var(--background-gray-main)]">
             <div class="[&amp;:not(:empty)]:pb-2 bg-[var(--background-gray-main)] rounded-[22px_22px_0px_0px]">
             </div>
             <ChatBox :rows="2" v-model="message" v-model:attachments="attachments" @submit="handleSubmit"

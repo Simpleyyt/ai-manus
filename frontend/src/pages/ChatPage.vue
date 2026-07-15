@@ -3,14 +3,7 @@
     <div ref="chatContainerRef" class="relative flex flex-col h-full flex-1 min-w-0 px-5">
       <div ref="observerRef"
         class="sm:min-w-[390px] flex flex-row items-center justify-between pt-3 pb-1 gap-1 sticky top-0 z-10 bg-[var(--background-gray-main)] flex-shrink-0">
-        <div class="flex items-center flex-1">
-          <div class="relative flex items-center">
-            <div @click="toggleLeftPanel" v-if="!isLeftPanelShow"
-              class="flex h-7 w-7 items-center justify-center cursor-pointer rounded-md hover:bg-[var(--fill-tsp-gray-main)]">
-              <PanelLeft class="size-5 text-[var(--icon-secondary)]" />
-            </div>
-          </div>
-        </div>
+        <div class="flex items-center flex-1"></div>
         <div class="max-w-full sm:max-w-[768px] sm:min-w-[390px] flex w-full flex-col gap-[4px] overflow-hidden">
           <div
             class="text-[var(--text-primary)] text-lg font-medium w-full flex flex-row items-center justify-between flex-1 min-w-0 gap-2">
@@ -140,11 +133,10 @@ import { PlanEventData, AgentSSEEvent } from '../types/event';
 import { useAgentEvents } from '../composables/useAgentEvents';
 import ToolPanel from '../components/ToolPanel.vue'
 import PlanPanel from '../components/PlanPanel.vue';
-import { ArrowDown, FileSearch, PanelLeft, Lock, Globe, Link, Check } from 'lucide-vue-next';
+import { ArrowDown, FileSearch, Lock, Globe, Link, Check } from 'lucide-vue-next';
 import ShareIcon from '@/components/icons/ShareIcon.vue';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
 import type { FileInfo } from '../api/file';
-import { useLeftPanel } from '../composables/useLeftPanel'
 import { useSessionFileList } from '../composables/useSessionFileList'
 import { useFilePanel } from '../composables/useFilePanel'
 import { copyToClipboard } from '../utils/dom'
@@ -154,7 +146,6 @@ import LoadingIndicator from '@/components/ui/LoadingIndicator.vue';
 
 const router = useRouter()
 const { t } = useI18n()
-const { toggleLeftPanel, isLeftPanelShow } = useLeftPanel()
 const { showSessionFileList } = useSessionFileList()
 const { hideFilePanel } = useFilePanel()
 

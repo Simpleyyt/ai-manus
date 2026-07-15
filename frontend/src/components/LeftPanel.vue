@@ -1,68 +1,85 @@
 <template>
-  <div :class="isLeftPanelShow ?
-    'h-full flex flex-col' :
-    'h-full flex flex-col fixed top-0 start-0 bottom-0 z-[1]'" :style="isLeftPanelShow ?
-      'width: 300px; transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);' :
-      'width: 24px; transition: width 0.36s cubic-bezier(0.4, 0, 0.2, 1);'">
-    <div
-      :class="isLeftPanelShow ?
-        'flex flex-col overflow-hidden bg-[var(--background-nav)] h-full opacity-100 translate-x-0' :
-        'flex flex-col overflow-hidden bg-[var(--background-nav)] fixed top-1 start-1 bottom-1 z-[1] border-1 dark:border-[1px] border-[var(--border-main)] dark:border-[var(--border-light)] rounded-xl shadow-[0px_8px_32px_0px_rgba(0,0,0,0.16),0px_0px_0px_1px_rgba(0,0,0,0.06)] opacity-0 pointer-events-none -translate-x-10'"
-      :style="(isLeftPanelShow ? 'width: 300px;' : 'width: 0px;') + ' transition: opacity 0.2s, transform 0.2s, width 0.2s;'">
+  <div class="h-full flex flex-col flex-shrink-0"
+    :style="'width: ' + (isLeftPanelShow ? 300 : 60) + 'px; transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);'">
+    <div class="flex flex-col overflow-hidden bg-[var(--background-nav)] h-full w-full">
 
-      <!-- 顶部折叠按钮 -->
-      <div class="flex items-center px-3 h-[52px] flex-shrink-0">
-        <div class="flex justify-between w-full px-1 pt-2">
-          <div class="relative flex">
-            <div
-              class="flex h-7 w-7 items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-gray-main)] rounded-md"
-              @click="toggleLeftPanel">
-              <PanelLeft class="h-5 w-5 text-[var(--icon-secondary)]" />
-            </div>
+      <!-- 顶部 Logo + 折叠/展开按钮(结构复刻自 manus.im 侧边栏顶部) -->
+      <div class="flex items-center flex-shrink-0 h-[52px]"
+        :class="isLeftPanelShow ? 'justify-between px-4 pt-2' : 'justify-center pt-2'">
+        <template v-if="isLeftPanelShow">
+          <div class="flex gap-0.5 w-fit items-center">
+            <ManusLogoIcon :width="21.4" :height="28" />
+            <ManusLogoTextIcon :width="64.8" :height="28" />
           </div>
-        </div>
+          <div
+            class="flex h-7 w-7 items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-gray-main)] rounded-md"
+            :title="t('Collapse sidebar')"
+            @click="toggleLeftPanel">
+            <PanelLeft class="h-5 w-5 text-[var(--icon-secondary)]" />
+          </div>
+        </template>
+        <template v-else>
+          <!-- 收起状态：默认显示 logo，悬停变为展开按钮 -->
+          <div
+            class="group flex h-9 w-9 items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-gray-main)] rounded-md"
+            :title="t('Expand sidebar')"
+            @click="toggleLeftPanel">
+            <ManusLogoIcon :width="21.4" :height="28" class="group-hover:hidden" />
+            <PanelLeft class="h-5 w-5 text-[var(--icon-secondary)] hidden group-hover:block" />
+          </div>
+        </template>
       </div>
 
       <!-- 快捷入口区域 -->
-      <div class="flex flex-col flex-1 min-h-0 px-[8px] pb-0 gap-px">
+      <div class="flex flex-col flex-1 min-h-0 pb-0 gap-px" :class="isLeftPanelShow ? 'px-[8px]' : 'px-[12px] items-center'">
 
         <!-- 新建任务 -->
         <div
           @click="handleNewTaskClick"
-          class="flex items-center rounded-[10px] cursor-pointer transition-colors w-full gap-[12px] h-[36px] ps-[9px] pe-[2px]"
-          :class="route.path === '/' ? 'bg-[var(--fill-tsp-white-main)]' : 'hover:bg-[var(--fill-tsp-white-light)]'">
+          :title="isLeftPanelShow ? undefined : t('New Task')"
+          class="flex items-center rounded-[10px] cursor-pointer transition-colors h-[36px]"
+          :class="[
+            isLeftPanelShow ? 'w-full gap-[12px] ps-[9px] pe-[2px]' : 'w-9 justify-center',
+            route.path === '/' ? 'bg-[var(--fill-tsp-white-main)]' : 'hover:bg-[var(--fill-tsp-white-light)]'
+          ]">
           <div class="shrink-0 size-[18px] flex items-center justify-center">
             <SquarePen :size="18" class="text-[var(--text-primary)]" />
           </div>
-          <div class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
-            <span class="truncate">{{ t('New Task') }}</span>
-          </div>
-          <div class="shrink-0 flex items-center gap-1 pe-[6px]">
-            <span class="flex text-[var(--text-tertiary)] justify-center items-center h-5 px-1 rounded-[4px] bg-[var(--fill-tsp-white-light)] border border-[var(--border-light)]">
-              <Command :size="12" />
-            </span>
-            <span class="flex justify-center items-center w-5 h-5 px-1 rounded-[4px] bg-[var(--fill-tsp-white-light)] border border-[var(--border-light)] text-xs text-[var(--text-tertiary)]">
-              K
-            </span>
-          </div>
+          <template v-if="isLeftPanelShow">
+            <div class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
+              <span class="truncate">{{ t('New Task') }}</span>
+            </div>
+            <div class="shrink-0 flex items-center gap-1 pe-[6px]">
+              <span class="flex text-[var(--text-tertiary)] justify-center items-center h-5 px-1 rounded-[4px] bg-[var(--fill-tsp-white-light)] border border-[var(--border-light)]">
+                <Command :size="12" />
+              </span>
+              <span class="flex justify-center items-center w-5 h-5 px-1 rounded-[4px] bg-[var(--fill-tsp-white-light)] border border-[var(--border-light)] text-xs text-[var(--text-tertiary)]">
+                K
+              </span>
+            </div>
+          </template>
         </div>
 
         <!-- Claw 入口 -->
         <div
           v-if="clawEnabled"
           @click="handleClawClick"
-          class="flex items-center rounded-[10px] cursor-pointer transition-colors w-full gap-[12px] h-[36px] ps-[9px] pe-[2px]"
-          :class="route.path === '/chat/claw' ? 'bg-[var(--fill-tsp-white-main)]' : 'hover:bg-[var(--fill-tsp-white-light)]'">
+          :title="isLeftPanelShow ? undefined : 'Manus Claw'"
+          class="flex items-center rounded-[10px] cursor-pointer transition-colors h-[36px]"
+          :class="[
+            isLeftPanelShow ? 'w-full gap-[12px] ps-[9px] pe-[2px]' : 'w-9 justify-center',
+            route.path === '/chat/claw' ? 'bg-[var(--fill-tsp-white-main)]' : 'hover:bg-[var(--fill-tsp-white-light)]'
+          ]">
           <div class="shrink-0 size-[18px] flex items-center justify-center">
             <div class="claw-nav-icon w-[18px] h-[18px]" />
           </div>
-          <div class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
+          <div v-if="isLeftPanelShow" class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
             <span class="truncate">Manus Claw</span>
           </div>
         </div>
 
-        <!-- 所有任务分组标题 + 会话列表 -->
-        <div class="flex flex-col flex-1 min-h-0 -mx-[8px] mt-[4px] overflow-hidden">
+        <!-- 所有任务分组标题 + 会话列表(仅展开时显示) -->
+        <div v-if="isLeftPanelShow" class="flex flex-col flex-1 min-h-0 -mx-[8px] mt-[4px] overflow-hidden">
           <div class="w-full border-t border-[var(--border-main)] transition-opacity duration-200" :class="isListScrolled ? 'opacity-100' : 'opacity-0'"></div>
 
           <!-- 滚动容器：标题 + 列表一起滚动 -->
@@ -103,24 +120,30 @@
 
           </div>
         </div>
+        <div v-else class="flex-1"></div>
 
       </div>
 
       <!-- 底部个人 Profile(结构复刻自 manus.im 侧边栏底部) -->
-      <div ref="profileRef" class="relative flex-shrink-0 px-[8px] pb-3 pt-1">
-        <div v-if="showUserMenu" class="absolute bottom-full start-2 mb-1 z-50">
+      <div ref="profileRef" class="relative flex-shrink-0 pb-3 pt-1" :class="isLeftPanelShow ? 'px-[8px]' : 'px-[10px] flex justify-center'">
+        <div v-if="showUserMenu" class="absolute z-50"
+          :class="isLeftPanelShow ? 'bottom-full start-2 mb-1' : 'bottom-2 start-full ms-1'">
           <UserMenu />
         </div>
         <div
           @click="showUserMenu = !showUserMenu"
-          class="flex items-center rounded-[10px] cursor-pointer transition-colors w-full gap-[8px] h-[48px] px-[8px]"
-          :class="showUserMenu ? 'bg-[var(--fill-tsp-white-main)]' : 'hover:bg-[var(--fill-tsp-white-light)]'">
+          :title="isLeftPanelShow ? undefined : (currentUser?.fullname || t('Unknown User'))"
+          class="flex items-center rounded-[10px] cursor-pointer transition-colors"
+          :class="[
+            isLeftPanelShow ? 'w-full gap-[8px] h-[48px] px-[8px]' : 'w-10 h-10 justify-center',
+            showUserMenu ? 'bg-[var(--fill-tsp-white-main)]' : 'hover:bg-[var(--fill-tsp-white-light)]'
+          ]">
           <div
             class="relative flex items-center justify-center font-bold flex-shrink-0 rounded-full overflow-hidden"
             style="width: 32px; height: 32px; font-size: 16px; color: rgba(255, 255, 255, 0.9); background-color: rgb(59, 130, 246);">
             {{ avatarLetter }}
           </div>
-          <div class="flex flex-col flex-1 min-w-0">
+          <div v-if="isLeftPanelShow" class="flex flex-col flex-1 min-w-0">
             <span class="text-[14px] leading-[18px] text-[var(--text-primary)] font-medium truncate">
               {{ currentUser?.fullname || t('Unknown User') }}
             </span>
@@ -138,6 +161,8 @@
 import { PanelLeft, SquarePen, Command, MessageSquareDashed, ChevronUp } from 'lucide-vue-next';
 import SessionItem from './SessionItem.vue';
 import UserMenu from './UserMenu.vue';
+import ManusLogoIcon from './icons/ManusLogoIcon.vue';
+import ManusLogoTextIcon from './icons/ManusLogoTextIcon.vue';
 import { useLeftPanel } from '../composables/useLeftPanel';
 import { useAuth } from '../composables/useAuth';
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';

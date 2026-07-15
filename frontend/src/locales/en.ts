@@ -11,6 +11,8 @@ export default {
   'Generate image': 'Generate image',
   'Write report': 'Write report',
   'More': 'More',
+  'Collapse sidebar': 'Collapse sidebar',
+  'Expand sidebar': 'Expand sidebar',
   'Failed to create agent, please try again later': 'Failed to create agent, please try again later',
   'New Chat': 'New Chat',
   'New Task': 'New Task',

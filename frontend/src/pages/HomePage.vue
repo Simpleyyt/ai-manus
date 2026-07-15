@@ -3,19 +3,7 @@
     <div
       class="flex flex-col h-full flex-1 min-w-0 mx-auto w-full sm:min-w-[390px] px-5 justify-center items-start gap-2 relative max-w-full sm:max-w-full">
       <div class="w-full pt-4 pb-4 px-5 bg-[var(--background-gray-main)] sticky top-0 z-10 mx-[-1.25]">
-        <div class="flex justify-between items-center w-full absolute left-0 right-0">
-          <div class="h-8 relative z-20 overflow-hidden flex gap-2 items-center flex-shrink-0">
-            <div class="relative flex items-center">
-              <div @click="toggleLeftPanel" v-if="!isLeftPanelShow"
-                class="flex h-7 w-7 items-center justify-center cursor-pointer rounded-md hover:bg-[var(--fill-tsp-gray-main)]">
-                <PanelLeft class="size-5 text-[var(--icon-secondary)]" />
-              </div>
-            </div>
-            <div class="flex gap-0.5 w-fit">
-              <ManusLogoIcon />
-              <ManusLogoTextIcon :width="74.1" :height="32" />
-            </div>
-          </div>
+        <div class="flex justify-end items-center w-full absolute left-0 right-0">
           <div class="flex items-center gap-2">
             <a v-if="showGithubButton"
                :href="githubRepositoryUrl"
@@ -26,20 +14,6 @@
               <Github class="size-[18px]" />
               GitHub
             </a>
-            <div v-if="!isLeftPanelShow" class="relative flex items-center" aria-expanded="false" aria-haspopup="dialog"
-              @mouseenter="handleUserMenuEnter" @mouseleave="handleUserMenuLeave">
-              <div class="relative flex items-center justify-center font-bold cursor-pointer flex-shrink-0">
-                <div
-                  class="relative flex items-center justify-center font-bold flex-shrink-0 rounded-full overflow-hidden"
-                  style="width: 32px; height: 32px; font-size: 16px; color: rgba(255, 255, 255, 0.9); background-color: rgb(59, 130, 246);">
-                  {{ avatarLetter }}</div>
-              </div>
-              <!-- User Menu -->
-              <div v-if="showUserMenu" @mouseenter="handleUserMenuEnter" @mouseleave="handleUserMenuLeave"
-                class="absolute top-full right-0 mt-1 mr-[-15px] z-50">
-                <UserMenu />
-              </div>
-            </div>
           </div>
         </div>
         <div class="h-8"></div>
@@ -101,25 +75,20 @@ import ChatBox from '../components/ChatBox.vue';
 import { createSession } from '../api/agent';
 import { showErrorToast } from '../utils/toast';
 import {
-  PanelLeft, Github, Presentation, Globe, Palette, Gamepad2,
+  Github, Presentation, Globe, Palette, Gamepad2,
   Telescope, ChartColumn, Image, FileText
 } from 'lucide-vue-next';
 import type { Component } from 'vue';
-import ManusLogoIcon from '../components/icons/ManusLogoIcon.vue';
-import ManusLogoTextIcon from '../components/icons/ManusLogoTextIcon.vue';
 import type { FileInfo } from '../api/file';
-import { useLeftPanel } from '../composables/useLeftPanel';
 import { useFilePanel } from '../composables/useFilePanel';
 import { useAuth } from '../composables/useAuth';
 import { getCachedClientConfig } from '../api/config';
-import UserMenu from '../components/UserMenu.vue';
 
 const { t } = useI18n();
 const router = useRouter();
 const message = ref('');
 const isSubmitting = ref(false);
 const attachments = ref<FileInfo[]>([]);
-const { toggleLeftPanel, isLeftPanelShow } = useLeftPanel();
 const { hideFilePanel } = useFilePanel();
 const { currentUser } = useAuth();
 const showGithubButton = ref(false);
@@ -153,31 +122,6 @@ const visibleSuggestions = computed(() =>
 
 const handleSuggestionClick = (suggestion: Suggestion) => {
   message.value = t(suggestion.label);
-};
-
-// Get first letter of user's fullname for avatar display
-const avatarLetter = computed(() => {
-  return currentUser.value?.fullname?.charAt(0)?.toUpperCase() || 'M';
-});
-
-// User menu state
-const showUserMenu = ref(false);
-const userMenuTimeout = ref<number | null>(null);
-
-// Show user menu on hover
-const handleUserMenuEnter = () => {
-  if (userMenuTimeout.value) {
-    clearTimeout(userMenuTimeout.value);
-    userMenuTimeout.value = null;
-  }
-  showUserMenu.value = true;
-};
-
-// Hide user menu with delay
-const handleUserMenuLeave = () => {
-  userMenuTimeout.value = window.setTimeout(() => {
-    showUserMenu.value = false;
-  }, 200); // 200ms delay to allow moving to menu
 };
 
 onMounted(async () => {

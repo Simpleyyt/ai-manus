@@ -6,7 +6,7 @@
           class="min-h-[52px] px-[16px] py-[10px] sm:px-5 sm:py-3 items-center flex justify-between bg-[var(--background-gray-main)]">
           <div class="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 sm:flex-none"><a href="/" class="hidden sm:flex">
               <div class="flex items-center gap-[3px]">
-                <ManusLogoIcon :width="18.3" :height="24" />
+                <Bot :size="24" class="w-6 h-6" />
                 <ManusLogoTextIcon :height="30" :width="65" />
               </div>
             </a>
@@ -46,7 +46,7 @@
           <div
             class="bg-[var(--background-white-main)] rounded-xl border border-[var(--border-main)] shadow-[0px_5px_16px_0px_var(--shadow-S),0px_0px_1.25px_0px_var(--shadow-XS)] backdrop-blur-3xl flex items-center justify-between py-[9px] pr-3 pl-4 sm:flex-row flex-col max-sm:gap-3 max-sm:p-2">
             <div class="flex items-center gap-0.5 w-full sm:flex-1">
-              <div class="w-6 h-6"><ManusLogoIcon :width="18.3" :height="24" /></div>
+              <div class="w-6 h-6"><Bot :size="24" /></div>
               <div>
                 <p class="text-sm text-[var(--text-primary)]">{{ replayCompleted ? t('Manus task replay completed.') : t('Manus is replaying the task...') }}</p>
               </div>
@@ -102,8 +102,7 @@ import { PlanEventData } from '../types/event';
 import { useAgentEvents } from '../composables/useAgentEvents';
 import ToolPanel from '../components/ToolPanel.vue'
 import PlanPanel from '../components/PlanPanel.vue';
-import { ArrowDown, FileSearch, Link } from 'lucide-vue-next';
-import ManusLogoIcon from '../components/icons/ManusLogoIcon.vue';
+import { ArrowDown, FileSearch, Link, Bot } from 'lucide-vue-next';
 import ManusLogoTextIcon from '../components/icons/ManusLogoTextIcon.vue';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
 import type { FileInfo } from '../api/file';

@@ -6,15 +6,7 @@
       <div
         v-if="hasClaw"
         class="sm:min-w-[390px] flex flex-row items-center justify-between pt-3 pb-1 gap-1 sticky top-0 z-10 bg-[var(--background-gray-main)] flex-shrink-0">
-        <div class="flex items-center flex-1">
-          <div
-            v-if="!isLeftPanelShow"
-            class="flex h-7 w-7 items-center justify-center cursor-pointer rounded-md hover:bg-[var(--fill-tsp-gray-main)]"
-            @click="toggleLeftPanel"
-          >
-            <PanelLeft class="size-5 text-[var(--icon-secondary)]" />
-          </div>
-        </div>
+        <div class="flex items-center flex-1"></div>
         <div class="max-w-full sm:max-w-[768px] sm:min-w-[390px] flex w-full flex-col gap-[4px] overflow-hidden">
           <div class="text-[var(--text-primary)] text-lg font-medium w-full flex flex-row items-center justify-between flex-1 min-w-0 gap-2">
             <div class="flex flex-row items-center gap-[6px] flex-1 min-w-0">
@@ -154,7 +146,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
-import { PanelLeft, Code, MessageSquarePlus, ArrowDown } from 'lucide-vue-next';
+import { Code, MessageSquarePlus, ArrowDown } from 'lucide-vue-next';
 import { useI18n } from 'vue-i18n';
 import SimpleBar from '../components/SimpleBar.vue';
 import ChatBox from '../components/ChatBox.vue';
@@ -162,7 +154,6 @@ import ChatMessage from '../components/ChatMessage.vue';
 import LoadingIndicator from '../components/ui/LoadingIndicator.vue';
 import ClawIcon from '../components/icons/ClawIcon.vue';
 import openclawColorImage from '../assets/openclaw-color.png';
-import { useLeftPanel } from '../composables/useLeftPanel';
 import { useFilePanel } from '../composables/useFilePanel';
 import { useDialog } from '../composables/useDialog';
 import {
@@ -175,7 +166,6 @@ import type { FileInfo } from '../api/file';
 import { showErrorToast } from '../utils/toast';
 
 const { t } = useI18n();
-const { isLeftPanelShow, toggleLeftPanel } = useLeftPanel();
 const { hideFilePanel } = useFilePanel();
 const { showConfirmDialog } = useDialog();
 

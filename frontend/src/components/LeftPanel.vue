@@ -126,8 +126,9 @@
 
       <!-- 底部个人 Profile(结构复刻自 manus.im 侧边栏底部) -->
       <div ref="profileRef" class="relative flex-shrink-0 pb-3 pt-1" :class="isLeftPanelShow ? 'px-[8px]' : 'px-[10px] flex justify-center'">
-        <div v-if="showUserMenu" class="absolute z-50"
-          :class="isLeftPanelShow ? 'bottom-full start-2 mb-1' : 'bottom-2 start-full ms-1'">
+        <!-- fixed 定位以避免被侧边栏 overflow-hidden 裁剪(尤其收起状态下向右弹出时) -->
+        <div v-if="showUserMenu" class="fixed z-50"
+          :class="isLeftPanelShow ? 'start-2 bottom-[68px]' : 'start-[64px] bottom-3'">
           <UserMenu />
         </div>
         <div

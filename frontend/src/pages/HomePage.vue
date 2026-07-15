@@ -26,7 +26,7 @@
               <Github class="size-[18px]" />
               GitHub
             </a>
-            <div class="relative flex items-center" aria-expanded="false" aria-haspopup="dialog"
+            <div v-if="!isLeftPanelShow" class="relative flex items-center" aria-expanded="false" aria-haspopup="dialog"
               @mouseenter="handleUserMenuEnter" @mouseleave="handleUserMenuLeave">
               <div class="relative flex items-center justify-center font-bold cursor-pointer flex-shrink-0">
                 <div
@@ -44,7 +44,7 @@
         </div>
         <div class="h-8"></div>
       </div>
-      <div class="w-full max-w-full sm:max-w-[768px] sm:min-w-[390px] mx-auto mt-[180px] mb-auto">
+      <div class="max-md:px-[16px] w-full max-w-full sm:max-w-[768px] sm:min-w-[390px] mx-auto mt-[20vh] mb-auto">
         <div class="w-full flex pl-4 items-center justify-start pb-4">
           <span class="text-[var(--text-primary)] text-start font-serif text-[32px] leading-[40px]" :style="{
             fontFamily:
@@ -65,6 +65,28 @@
               :isRunning="false" />
           </div>
         </div>
+        <!-- Suggestion chips (structure replicated from manus.im home) -->
+        <div class="relative w-full">
+          <div class="w-full transition-transform duration-300 ease-out relative mt-[20px]">
+            <div class="w-full flex flex-col justify-center items-center gap-4">
+              <div class="flex flex-wrap justify-center items-center gap-2">
+                <div v-for="suggestion in visibleSuggestions" :key="suggestion.label" role="button" tabindex="0"
+                  class="h-10 px-[14px] py-[7px] rounded-full border border-[var(--border-main)] flex justify-center items-center gap-2 clickable cursor-pointer hover:bg-[var(--fill-tsp-white-light)] flex-shrink-0"
+                  @click="handleSuggestionClick(suggestion)">
+                  <component :is="suggestion.icon" :size="18" color="var(--icon-tertiary)" />
+                  <div class="flex justify-start items-center gap-1">
+                    <span class="text-[var(--text-primary)] text-[14px] font-normal">{{ $t(suggestion.label) }}</span>
+                  </div>
+                </div>
+                <div v-if="!showMoreSuggestions" role="button" tabindex="0"
+                  class="h-10 px-[14px] text-sm py-[7px] rounded-full border border-[var(--border-main)] flex justify-center items-center gap-2 clickable cursor-pointer hover:bg-[var(--fill-tsp-white-light)] flex-shrink-0 text-[var(--text-primary)]"
+                  @click="showMoreSuggestions = true">
+                  {{ $t('More') }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </SimpleBar>
@@ -78,7 +100,11 @@ import { useI18n } from 'vue-i18n';
 import ChatBox from '../components/ChatBox.vue';
 import { createSession } from '../api/agent';
 import { showErrorToast } from '../utils/toast';
-import { Bot, PanelLeft, Github } from 'lucide-vue-next';
+import {
+  Bot, PanelLeft, Github, Presentation, Globe, Palette, Gamepad2,
+  Telescope, ChartColumn, Image, FileText
+} from 'lucide-vue-next';
+import type { Component } from 'vue';
 import ManusLogoTextIcon from '../components/icons/ManusLogoTextIcon.vue';
 import type { FileInfo } from '../api/file';
 import { useLeftPanel } from '../composables/useLeftPanel';
@@ -97,6 +123,36 @@ const { hideFilePanel } = useFilePanel();
 const { currentUser } = useAuth();
 const showGithubButton = ref(false);
 const githubRepositoryUrl = ref('https://github.com/simpleyyt/ai-manus');
+
+// Suggestion chips, structure replicated from the manus.im home page
+interface Suggestion {
+  label: string;
+  icon: Component;
+}
+
+const primarySuggestions: Suggestion[] = [
+  { label: 'Create slides', icon: Presentation },
+  { label: 'Build website', icon: Globe },
+  { label: 'Design', icon: Palette },
+  { label: 'Create games', icon: Gamepad2 },
+];
+
+const moreSuggestions: Suggestion[] = [
+  { label: 'Deep research', icon: Telescope },
+  { label: 'Analyze data', icon: ChartColumn },
+  { label: 'Generate image', icon: Image },
+  { label: 'Write report', icon: FileText },
+];
+
+const showMoreSuggestions = ref(false);
+
+const visibleSuggestions = computed(() =>
+  showMoreSuggestions.value ? [...primarySuggestions, ...moreSuggestions] : primarySuggestions
+);
+
+const handleSuggestionClick = (suggestion: Suggestion) => {
+  message.value = t(suggestion.label);
+};
 
 // Get first letter of user's fullname for avatar display
 const avatarLetter = computed(() => {

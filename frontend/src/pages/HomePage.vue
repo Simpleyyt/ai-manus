@@ -2,21 +2,28 @@
   <SimpleBar>
     <div
       class="flex flex-col h-full flex-1 min-w-0 mx-auto w-full sm:min-w-[390px] px-5 justify-center items-start gap-2 relative max-w-full sm:max-w-full">
-      <div class="w-full pt-4 pb-4 px-5 bg-[var(--background-gray-main)] sticky top-0 z-10 mx-[-1.25]">
-        <div class="flex justify-end items-center w-full absolute left-0 right-0">
+      <!-- 顶部 header(结构复刻自 manus.im 首页头部,标题固定为 Manus、无下拉) -->
+      <div class="w-[calc(100%+40px)] -mx-5 bg-[var(--background-gray-main)] sticky top-0 z-10 ps-[14px] pe-[20px] py-[12px] border-b border-transparent">
+        <div class="flex justify-between items-center w-full">
+          <div class="relative z-20 overflow-hidden items-center flex-shrink-0 flex">
+            <div class="flex items-center">
+              <div class="flex h-8 pt-[7px] md:pr-[6px] pr-[4px] pb-[7px] md:pl-[8px] pl-[6px] justify-center items-center gap-1 rounded-[8px]">
+                <span class="text-[var(--text-primary)] md:text-[18px] text-[16px] font-[500] md:leading-[22px] leading-[20px] truncate">Manus</span>
+              </div>
+            </div>
+          </div>
           <div class="flex items-center gap-2">
             <a v-if="showGithubButton"
                :href="githubRepositoryUrl"
                target="_blank"
                rel="noopener noreferrer"
-               class="items-center justify-center whitespace-nowrap font-medium transition-colors hover:opacity-90 active:opacity-80 px-[12px] gap-[6px] text-sm min-w-16 outline outline-1 -outline-offset-1 hover:bg-[var(--fill-tsp-white-light)] text-[var(--text-primary)] outline-[var(--border-btn-main)] bg-transparent clickable hidden sm:flex rounded-[100px] relative h-[32px] group"
+               class="clickable hidden sm:flex h-8 items-center justify-center gap-1 rounded-[8px] border border-[var(--border-main)] ps-2 pe-3 text-[14px] font-medium leading-[20px] tracking-[-0.15px] text-[var(--text-primary)] hover:bg-[var(--fill-tsp-white-main)]"
                title="Visit GitHub Repository">
-              <Github class="size-[18px]" />
+              <Github :size="16" />
               GitHub
             </a>
           </div>
         </div>
-        <div class="h-8"></div>
       </div>
       <div class="max-md:px-[16px] mx-auto w-full max-w-full sm:max-w-[768px] sm:min-w-[360px] mt-[20vh] mb-auto">
         <div class="w-full flex pl-4 items-center justify-start pb-4">

@@ -8,17 +8,17 @@
         <div class="flex gap-0.5 items-center">
           <template v-if="isLeftPanelShow">
             <div class="flex items-center justify-center flex-shrink-0 size-[32px] mx-[2px]">
-              <ManusLogoIcon :width="28" :height="28" />
+              <Bot :size="28" class="text-[var(--icon-primary)]" />
             </div>
             <ManusLogoTextIcon :width="64.8" :height="28" />
           </template>
           <template v-else>
-            <!-- 收起状态：默认显示 logo，悬停变为展开按钮 -->
+            <!-- 收起状态：默认显示图标，悬停变为展开按钮 -->
             <div
               class="group flex items-center justify-center flex-shrink-0 size-[32px] mx-[2px] cursor-pointer rounded-md hover:bg-[var(--fill-tsp-gray-main)]"
               :title="t('Expand sidebar')"
               @click="toggleLeftPanel">
-              <ManusLogoIcon :width="28" :height="28" class="group-hover:hidden" />
+              <Bot :size="28" class="text-[var(--icon-primary)] group-hover:hidden" />
               <PanelLeft class="h-5 w-5 text-[var(--icon-secondary)] hidden group-hover:block" />
             </div>
           </template>
@@ -155,10 +155,9 @@
 </template>
 
 <script setup lang="ts">
-import { PanelLeft, SquarePen, Command, MessageSquareDashed, ChevronUp } from 'lucide-vue-next';
+import { Bot, PanelLeft, SquarePen, Command, MessageSquareDashed, ChevronUp } from 'lucide-vue-next';
 import SessionItem from './SessionItem.vue';
 import UserMenu from './UserMenu.vue';
-import ManusLogoIcon from './icons/ManusLogoIcon.vue';
 import ManusLogoTextIcon from './icons/ManusLogoTextIcon.vue';
 import { useLeftPanel } from '../composables/useLeftPanel';
 import { useAuth } from '../composables/useAuth';

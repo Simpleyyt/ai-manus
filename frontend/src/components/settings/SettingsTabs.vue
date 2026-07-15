@@ -4,8 +4,8 @@
     <div
       class="md:w-[221px] overflow-x-auto md:overflow-x-visible border-r border-[var(--border-main)] pb-2 md:pb-0 relative">
       <div class="items-center hidden px-5 pt-5 pb-3 md:flex">
-        <div class="flex gap-0.5 w-fit">
-          <ManusLogoIcon :width="22.9" :height="30" />
+        <div class="flex gap-0.5 w-fit items-center">
+          <Bot :size="30" />
           <ManusLogoTextIcon width="69.47368421052632" height="30" />
         </div>
       </div>
@@ -67,8 +67,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronLeft } from 'lucide-vue-next'
-import ManusLogoIcon from '@/components/icons/ManusLogoIcon.vue'
+import { Bot, ChevronLeft } from 'lucide-vue-next'
 import ManusLogoTextIcon from '@/components/icons/ManusLogoTextIcon.vue'
 
 export interface TabItem {

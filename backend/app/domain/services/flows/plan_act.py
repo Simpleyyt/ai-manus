@@ -71,12 +71,13 @@ class PlanActFlow(BaseFlow):
         if search_engine:
             tools.append(SearchToolkit(search_engine))
 
-        # Create planner and execution agents
+        # Create planner and execution agents. The planner only receives a
+        # compact capability overview instead of full tool schemas.
         self.planner = PlannerAgent(
             agent_id=self._agent_id,
             agent_repository=self._repository,
             llm=self._llm,
-            tools=tools,
+            capability_toolkits=tools,
         )
         logger.debug(f"Created planner agent for Agent {self._agent_id}")
             

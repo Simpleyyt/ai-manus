@@ -1,19 +1,28 @@
+# Canned responses follow the native tool-calling protocol:
+# planner submits plans via create_plan/update_plan output tools, and the
+# executor finishes steps via complete_step and delivers via deliver_result.
 - choices:
     - index: 0
       message:
         role: assistant
-        content: |
-          {
-            "message": "This is a test",
-            "goal": "test goal",
-            "title": "test title",
-            "steps": [
-              {
-                "id": "1",
-                "description": "test step"
-              }
-            ]
-          }
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: create_plan
+              arguments: |
+                {
+                  "message": "This is a test",
+                  "language": "en",
+                  "goal": "test goal",
+                  "title": "test title",
+                  "steps": [
+                    {
+                      "id": "1",
+                      "description": "test step"
+                    }
+                  ]
+                }
 
 - choices:
     - index: 0
@@ -127,37 +136,52 @@
     - index: 0
       message:
         role: assistant
-        content: |
-          {
-            "success": true,
-            "result": "test end",
-            "attachments": [
-              "/home/ubuntu/example.txt",
-              "/home/ubuntu/example.md",
-              "/home/ubuntu/example.py"
-            ]
-          }
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: complete_step
+              arguments: |
+                {
+                  "success": true,
+                  "result": "test end",
+                  "attachments": [
+                    "/home/ubuntu/example.txt",
+                    "/home/ubuntu/example.md",
+                    "/home/ubuntu/example.py"
+                  ]
+                }
 
 - choices:
     - index: 0
       message:
         role: assistant
-        content: |
-          {
-            "steps": []
-          }
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: update_plan
+              arguments: |
+                {
+                  "steps": []
+                }
       finish_reason: stop
 
 - choices:
     - index: 0
       message:
         role: assistant
-        content: |
-          {
-            "message": "This is a test",
-            "attachments": [
-              "/home/ubuntu/example.txt",
-              "/home/ubuntu/example.md",
-              "/home/ubuntu/example.py"
-            ]
-          }
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: deliver_result
+              arguments: |
+                {
+                  "message": "This is a test",
+                  "attachments": [
+                    "/home/ubuntu/example.txt",
+                    "/home/ubuntu/example.md",
+                    "/home/ubuntu/example.py"
+                  ]
+                }

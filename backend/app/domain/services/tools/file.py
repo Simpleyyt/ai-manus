@@ -7,6 +7,12 @@ class FileToolkit(BaseToolkit):
     """File tool class, providing file operation functions"""
 
     name: str = "file"
+    instructions: str = """
+- Prefer file tools over shell redirection to avoid escaping issues
+- Actively save intermediate results; keep different kinds of reference material in separate files
+- Use append mode to concatenate content onto an existing file
+- Only read text, code, or markdown files; never read binary files
+"""
     
     def __init__(self, sandbox: Sandbox):
         """Initialize file tool class

@@ -51,9 +51,14 @@ class TestMemoryOperations:
         m.roll_back()
         assert len(m.messages) == n - 1
 
-    def test_compact_strips_browser_tool_output(self):
+    def test_compact_elides_old_tool_output(self):
         m = self._memory()
-        m.compact()
+        m.compact(keep_recent=0)
         tool_msg = m.messages[-1]
         assert "huge page content" not in tool_msg.content
-        assert "(removed)" in tool_msg.content
+        assert "elided" in tool_msg.content
+
+    def test_compact_keeps_recent_tool_output(self):
+        m = self._memory()
+        m.compact()  # default keep_recent window covers all 4 messages
+        assert m.messages[-1].content == "huge page content"

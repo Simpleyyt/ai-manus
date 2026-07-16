@@ -7,6 +7,13 @@ class ShellToolkit(BaseToolkit):
     """Shell tool class, providing Shell interaction related functions"""
 
     name: str = "shell"
+    instructions: str = """
+- Avoid commands requiring interactive confirmation; use -y or -f flags
+- Avoid commands with excessive output; redirect to files when necessary
+- Chain related commands with && to minimize round-trips
+- Use non-interactive `bc` for simple math, Python for anything complex; never compute mentally
+- Save code to files before execution; never pipe code inline into interpreters
+"""
     
     def __init__(self, sandbox: Sandbox):
         """Initialize Shell tool class

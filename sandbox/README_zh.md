@@ -67,6 +67,8 @@ uv sync --dev
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
+> 当 supervisord 未运行时(即在 Docker 容器之外),服务会以 **standalone 模式**启动:shell 和文件 API 直接作用于宿主机,`GET /api/v1/supervisor/status` 返回合成的 RUNNING 状态,依赖 supervisord 的操作(stop/restart/shutdown)会返回错误。浏览器/VNC 功能仍需要完整的 Docker 镜像。
+
 ### Docker部署
 
 ```bash

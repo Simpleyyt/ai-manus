@@ -40,6 +40,7 @@ ai-manus/
 ├── docs/              # Docsify documentation site
 ├── .cursor/skills/    # Cursor agent skills
 ├── dev.sh             # Shortcut: docker compose -f docker-compose-development.yml ...
+├── dev-local.sh       # Non-Docker dev stack (host processes: mongodb/redis/mockserver/sandbox/backend/frontend)
 ├── run.sh             # Shortcut: docker compose -f docker-compose.yml ...
 ├── build.sh           # docker buildx bake
 ├── .env.example       # Environment variable template
@@ -79,6 +80,21 @@ This starts: frontend (5173), backend (8000), sandbox (8080), mockserver (8090),
 | `SANDBOX_ADDRESS` | `sandbox` | Use single dev sandbox container |
 | `LOG_LEVEL` | `DEBUG` | Verbose logging |
 
+### Non-Docker Development Stack (dev-local.sh)
+
+When Docker is unavailable, run the whole stack as host processes:
+
+```bash
+./dev-local.sh up          # mongodb, redis, mockserver, sandbox, backend, frontend
+./dev-local.sh status      # show service status
+./dev-local.sh logs backend
+./dev-local.sh down
+```
+
+Requires `uv`, Node.js/npm, and MongoDB + Redis (local `mongod`/`redis-server` binaries, or instances already listening on `localhost:27017`/`localhost:6379`). The script reads `.env` and rewrites compose hostnames (`mongodb`, `redis`, `mockserver`, `backend`) to `localhost`; it defaults to `AUTH_PROVIDER=none` and the mockserver LLM. Logs and PIDs live in `.dev-local/`.
+
+Limitations: the sandbox runs in **standalone mode** directly on the host (shell/file tools work, browser tools are unavailable — no Chrome/CDP/VNC); Claw is not started.
+
 ### Running Services Individually (Without Docker)
 
 **Backend:**
@@ -97,7 +113,13 @@ BACKEND_URL=http://localhost:8000 npm run dev
 ```
 The Vite config creates a proxy for `/api` when `BACKEND_URL` is set.
 
-**Sandbox:** Typically Docker-only (requires Xvfb, Chrome, VNC, supervisord).
+**Sandbox:**
+```bash
+cd sandbox
+uv sync
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
+```
+Without supervisord (outside Docker) the sandbox starts in **standalone mode**: shell/file APIs work against the host, supervisor status is synthesized as RUNNING, browser/VNC features are unavailable. Full browser support requires the Docker image.
 
 **Mockserver:**
 ```bash
@@ -219,7 +241,7 @@ Single GitHub Actions workflow: `.github/workflows/docker-build-and-push.yml`
 
 When running in a Cloud Agent environment:
 
-1. Docker may not be available. If Docker commands fail, focus on running individual services or testing code changes without the full stack.
+1. Docker may not be available. If Docker commands fail, use `./dev-local.sh up` to run the stack as host processes (see "Non-Docker Development Stack"), or run individual services manually.
 2. For backend work, install dependencies with `cd backend && uv sync`.
 3. For frontend work, install dependencies with `cd frontend && npm install`.
 4. Set `AUTH_PROVIDER=none` and `API_KEY=test` in `.env` to bypass auth and LLM requirements.

@@ -7,6 +7,13 @@ class SearchToolkit(BaseToolkit):
     """Search tool class, providing search engine interaction functions"""
 
     name: str = "search"
+    instructions: str = """
+- Prefer the dedicated search tool over browsing to a search engine results page
+- Snippets are not valid sources; open the original pages via browser before citing
+- Visit multiple result URLs for comprehensive information or cross-validation
+- Search step by step: query attributes of a single entity separately, handle entities one by one
+- Authoritative web information takes priority over internal model knowledge
+"""
     
     def __init__(self, search_engine: SearchEngine):
         """Initialize search tool class

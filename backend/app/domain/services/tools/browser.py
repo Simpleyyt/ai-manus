@@ -7,6 +7,14 @@ class BrowserToolkit(BaseToolkit):
     """Browser tool class, providing browser interaction functions"""
 
     name: str = "browser"
+    instructions: str = """
+- Use browser tools to open every URL provided by the user and URLs from search results
+- Actively explore valuable links for deeper information
+- Tools return elements in the visible viewport as `index[:]<tag>text</tag>`; use the index for subsequent interactions
+- Not all interactive elements are listed; use coordinates for unlisted elements
+- Pages are auto-extracted to Markdown when possible; the extraction may include off-screen text but omits links/images and is not guaranteed complete
+- If the extracted Markdown already covers what you need, don't scroll; otherwise scroll to view the full page
+"""
     
     def __init__(self, browser: Browser):
         """Initialize browser tool class

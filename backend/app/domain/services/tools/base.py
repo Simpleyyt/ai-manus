@@ -1,16 +1,26 @@
 """Framework-agnostic tool abstraction for the domain layer.
 
-Replaces the previous LangChain ``BaseTool`` / ``@tool`` integration so the
-domain no longer depends on LangChain. A lightweight ``@tool`` decorator parses
-the method signature and its Google-style docstring into an OpenAI-compatible
-function schema, and ``Tool`` / ``BaseToolkit`` expose the tools for the agent
-loop and the LLM gateway.
+A lightweight ``@tool`` decorator parses the method signature and its
+Google-style docstring into an OpenAI-compatible function schema, and
+``Tool`` / ``BaseToolkit`` expose the tools for the agent loop and the LLM
+gateway.
+
+Two additional concepts support modern context engineering:
+
+* ``Tool.dynamic`` — build an invocable tool from a runtime schema and an
+  async invoker (used for MCP tools discovered at runtime), so every tool the
+  LLM sees is dispatchable through the same ``BaseToolkit.get_tool`` path.
+* ``OutputTool`` — a schema-only tool the model calls to submit structured
+  output (plans, step reports, final results). It is never executed; the agent
+  loop validates the arguments against a Pydantic model and feeds validation
+  errors back to the model for self-repair. This replaces the legacy
+  "JSON-in-prompt + repair parser" protocol with native function calling.
 """
 import inspect
 import re
-from typing import Any, Callable, Dict, List, Optional, get_type_hints
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Type, get_type_hints
 
-from pydantic import Field, create_model
+from pydantic import BaseModel, Field, ValidationError, create_model
 
 
 def _parse_docstring(doc: Optional[str]) -> tuple[str, Dict[str, str]]:
@@ -57,6 +67,9 @@ def _clean_schema(schema: Dict[str, Any]) -> Dict[str, Any]:
     for definition in schema.get("$defs", {}).values():
         if isinstance(definition, dict):
             definition.pop("title", None)
+            for prop in definition.get("properties", {}).values():
+                if isinstance(prop, dict):
+                    prop.pop("title", None)
     return schema
 
 
@@ -115,16 +128,56 @@ def tool(func: Optional[Callable] = None, **_kwargs: Any):
 class Tool:
     """An invocable tool bound to its owning toolkit."""
 
-    def __init__(self, tool_function: ToolFunction, toolkit: "BaseToolkit"):
-        self._func = tool_function.func
-        self.name = tool_function.name
-        self.description = tool_function.description
-        self.parameters = tool_function.parameters
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        parameters: Dict[str, Any],
+        invoker: Callable[[Dict[str, Any]], Awaitable[Any]],
+        toolkit: "BaseToolkit",
+    ):
+        self.name = name
+        self.description = description
+        self.parameters = parameters
         self.toolkit = toolkit
+        self._invoker = invoker
+
+    @classmethod
+    def from_function(cls, tool_function: ToolFunction, toolkit: "BaseToolkit") -> "Tool":
+        """Build a tool from a ``@tool``-decorated toolkit method."""
+
+        async def invoker(args: Dict[str, Any]) -> Any:
+            return await tool_function.func(toolkit, **(args or {}))
+
+        return cls(
+            name=tool_function.name,
+            description=tool_function.description,
+            parameters=tool_function.parameters,
+            invoker=invoker,
+            toolkit=toolkit,
+        )
+
+    @classmethod
+    def dynamic(
+        cls,
+        name: str,
+        description: str,
+        parameters: Dict[str, Any],
+        invoker: Callable[[Dict[str, Any]], Awaitable[Any]],
+        toolkit: "BaseToolkit",
+    ) -> "Tool":
+        """Build a tool from a runtime-discovered schema (e.g. an MCP tool)."""
+        return cls(
+            name=name,
+            description=description,
+            parameters=parameters,
+            invoker=invoker,
+            toolkit=toolkit,
+        )
 
     async def invoke(self, args: Dict[str, Any]) -> Any:
         """Invoke the underlying coroutine with the given arguments."""
-        return await self._func(self.toolkit, **(args or {}))
+        return await self._invoker(args or {})
 
     def to_openai_schema(self) -> Dict[str, Any]:
         """Render this tool as an OpenAI function-calling schema."""
@@ -138,17 +191,59 @@ class Tool:
         }
 
 
+class OutputTool:
+    """A schema-only tool the model calls to submit structured output.
+
+    The agent loop never executes it; instead the arguments are validated
+    against ``schema`` and returned as the structured result of the run.
+    Validation errors are sent back to the model as the tool response so it
+    can correct itself — native function calling replaces prompt-embedded
+    JSON format instructions.
+    """
+
+    def __init__(self, name: str, description: str, schema: Type[BaseModel]):
+        self.name = name
+        self.description = description
+        self.schema = schema
+        self.parameters = _clean_schema(schema.model_json_schema())
+
+    def validate(self, args: Dict[str, Any]) -> BaseModel:
+        """Validate raw tool-call arguments against the output schema.
+
+        Raises:
+            pydantic.ValidationError: when the arguments do not conform.
+        """
+        return self.schema.model_validate(args or {})
+
+    def to_openai_schema(self) -> Dict[str, Any]:
+        """Render this output tool as an OpenAI function-calling schema."""
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": self.parameters,
+            },
+        }
+
+
 class BaseToolkit:
-    """Base toolset class, providing common tool discovery and lookup."""
+    """Base toolset class, providing common tool discovery and lookup.
+
+    Subclasses may set ``instructions`` — usage guidance that is assembled
+    into the system prompt only when the toolkit is actually bound to the
+    agent, keeping prompt content and available tools in sync.
+    """
 
     name: str = ""
+    instructions: str = ""
 
     def __init__(self):
         self.tools: List[Tool] = []
         for _, member in inspect.getmembers(
             type(self), lambda x: isinstance(x, ToolFunction)
         ):
-            self.tools.append(Tool(member, toolkit=self))
+            self.tools.append(Tool.from_function(member, toolkit=self))
 
     def get_tools(self) -> List[Tool]:
         """Return all invocable tools in this toolkit."""
@@ -156,11 +251,37 @@ class BaseToolkit:
 
     def get_tool_schemas(self) -> List[Dict[str, Any]]:
         """Return OpenAI function schemas for all tools in this toolkit."""
-        return [t.to_openai_schema() for t in self.tools]
+        return [t.to_openai_schema() for t in self.get_tools()]
 
     def get_tool(self, tool_name: str) -> Optional[Tool]:
         """Return the tool with the given name, or ``None``."""
-        for t in self.tools:
+        for t in self.get_tools():
             if t.name == tool_name:
                 return t
         return None
+
+
+def describe_toolkits(toolkits: List[BaseToolkit]) -> str:
+    """Render a compact capability overview of the given toolkits.
+
+    Used to inform the planner about available capabilities without paying
+    the context cost of full function schemas.
+    """
+    lines: List[str] = []
+    for toolkit in toolkits:
+        tool_names = [t.name for t in toolkit.get_tools()]
+        if not tool_names:
+            continue
+        lines.append(f"- {toolkit.name}: {', '.join(tool_names)}")
+    return "\n".join(lines)
+
+
+__all__ = [
+    "tool",
+    "Tool",
+    "ToolFunction",
+    "OutputTool",
+    "BaseToolkit",
+    "describe_toolkits",
+    "ValidationError",
+]

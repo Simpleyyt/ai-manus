@@ -7,6 +7,11 @@ class MessageToolkit(BaseToolkit):
     """Message tool class, providing message sending functions for user interaction"""
 
     name: str = "message"
+    instructions: str = """
+- Use message_notify_user for brief one-sentence progress updates; it needs no reply
+- Use message_ask_user only when blocked without user input (clarification, confirmation, credentials, or browser takeover)
+- Deliver final results and files to the user, not todo lists, advice, or plans
+"""
     
     def __init__(self):
         """Initialize message tool class"""

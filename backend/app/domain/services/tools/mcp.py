@@ -9,7 +9,7 @@ from mcp.client.sse import sse_client
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.types import Tool as MCPToolkit
 
-from app.domain.services.tools.base import BaseToolkit
+from app.domain.services.tools.base import BaseToolkit, Tool
 from app.domain.models.tool_result import ToolResult
 from app.domain.models.mcp_config import MCPConfig, MCPServerConfig
 
@@ -313,43 +313,49 @@ class MCPClientManager:
 
 
 class MCPToolkit(BaseToolkit):
-    """MCP 工具类"""
-    
+    """MCP 工具类
+
+    Tools discovered from MCP servers at runtime are wrapped as regular
+    invocable :class:`Tool` objects, so the agent loop dispatches them through
+    the same ``get_tool`` path as builtin tools.
+    """
+
     name: str = "mcp"
-    
+
     def __init__(self):
         super().__init__()
         self._initialized = False
-        self._tools = []
-    
+        self.manager: Optional[MCPClientManager] = None
+
     async def initialized(self, config: Optional[MCPConfig] = None):
         """确保管理器已初始化"""
         if not self._initialized:
             self.manager = MCPClientManager(config)
             await self.manager.initialize()
-            self._tools = await self.manager.get_all_tools()
+            self.tools = self._build_tools(await self.manager.get_all_tools())
             self._initialized = True
 
-    def get_tools(self) -> List[Any]:
-        """MCP tools are dynamic schemas, not invocable domain Tool objects."""
-        return []
+    def _build_tools(self, schemas: List[Dict[str, Any]]) -> List[Tool]:
+        """Wrap runtime-discovered MCP schemas as invocable domain tools."""
+        tools: List[Tool] = []
+        for schema in schemas:
+            function = schema.get("function", {})
+            tool_name = function.get("name", "")
+            if not tool_name:
+                continue
 
-    def get_tool_schemas(self) -> List[Dict[str, Any]]:
-        """Return OpenAI function schemas for the dynamic MCP tools."""
-        return self._tools
+            async def invoker(args: Dict[str, Any], _name: str = tool_name) -> ToolResult:
+                return await self.manager.call_tool(_name, args)
 
-    def has_function(self, function_name: str) -> bool:
-        """检查指定函数是否存在（包括动态 MCP 工具）"""
-        # 检查是否是 MCP 工具
-        for tool in self._tools:
-            if tool['function']['name'] == function_name:
-                return True
-        return False
-    
-    async def invoke_function(self, function_name: str, **kwargs) -> ToolResult:
-        """调用工具函数"""
-        return await self.manager.call_tool(function_name, kwargs)
-    
+            tools.append(Tool.dynamic(
+                name=tool_name,
+                description=function.get("description", ""),
+                parameters=function.get("parameters", {}) or {"type": "object", "properties": {}},
+                invoker=invoker,
+                toolkit=self,
+            ))
+        return tools
+
     async def cleanup(self):
         """清理资源"""
         if self.manager:

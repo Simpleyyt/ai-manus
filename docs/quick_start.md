@@ -28,7 +28,7 @@
 
 ## 部署
 
-使用 Docker Compose 进行部署。所有配置均通过 `.env` 文件管理（`env_file`），无需在 `docker-compose.yml` 中堆积环境变量：
+使用 Docker Compose 进行部署，所有配置均通过 `.env` 文件（`env_file`）管理：
 
 <!-- docker-compose-example.yml -->
 ```yaml

@@ -27,7 +27,7 @@ Install Docker Engine according to official requirements: https://docs.docker.co
 
 ## Deployment
 
-Deploy using Docker Compose. All configuration is managed through a `.env` file (via `env_file`), so there is no need to pile environment variables into `docker-compose.yml`:
+Deploy using Docker Compose. All configuration is managed through a `.env` file (via `env_file`):
 
 <!-- docker-compose-example.yml -->
 ```yaml

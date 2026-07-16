@@ -98,18 +98,10 @@ services:
       #- ./mcp.json:/etc/mcp.json # Mount MCP servers directory
     networks:
       - manus-network
-    environment:
-      # OpenAI API base URL
-      - API_BASE=https://api.openai.com/v1
-      # OpenAI API key, replace with your own
-      - API_KEY=sk-xxxx
-      # LLM model name
-      - MODEL_NAME=gpt-4o
-      # LLM temperature parameter, controls randomness
-      #- TEMPERATURE=0.7
-      # Maximum tokens for LLM response
-      #- MAX_TOKENS=2000
+    env_file:
+      # All configuration is loaded from the .env file, see .env.example
       # More configuration options: https://docs.ai-manus.com/#/configuration
+      - .env
 
   sandbox:
     image: simpleyyt/manus-sandbox
@@ -152,7 +144,15 @@ networks:
 ```
 <!-- /docker-compose-example.yml -->
 
-保存成`docker-compose.yml`文件，并运行
+保存成`docker-compose.yml`文件。所有配置通过 `.env` 文件加载，在同级目录下参考 [.env.example](https://github.com/simpleyyt/ai-manus/blob/main/.env.example) 创建 `.env` 文件，至少需要设置 `API_KEY`：
+
+```ini
+API_KEY=sk-xxxx
+API_BASE=https://api.openai.com/v1
+MODEL_NAME=gpt-4o
+```
+
+然后运行：
 
 ```shell
 docker compose up -d

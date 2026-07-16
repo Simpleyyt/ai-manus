@@ -28,7 +28,7 @@
 
 ## 部署
 
-使用 Docker Compose 进行部署，至少需要修改 `API_KEY`，并根据模型服务调整 `API_BASE` 与 `MODEL_PROVIDER`：
+使用 Docker Compose 进行部署，所有配置均通过 `.env` 文件（`env_file`）管理：
 
 <!-- docker-compose-example.yml -->
 ```yaml
@@ -56,18 +56,10 @@ services:
       #- ./mcp.json:/etc/mcp.json # Mount MCP servers directory
     networks:
       - manus-network
-    environment:
-      # OpenAI API base URL
-      - API_BASE=https://api.openai.com/v1
-      # OpenAI API key, replace with your own
-      - API_KEY=sk-xxxx
-      # LLM model name
-      - MODEL_NAME=gpt-4o
-      # LLM temperature parameter, controls randomness
-      #- TEMPERATURE=0.7
-      # Maximum tokens for LLM response
-      #- MAX_TOKENS=2000
+    env_file:
+      # All configuration is loaded from the .env file, see .env.example
       # More configuration options: https://docs.ai-manus.com/#/configuration
+      - .env
 
   sandbox:
     image: simpleyyt/manus-sandbox
@@ -112,11 +104,17 @@ networks:
 
 保存成 `docker-compose.yml` 文件。
 
-### 使用 `.env` 文件管理配置
+### 创建 `.env` 配置文件
 
-上述示例仅包含最基本的 AI 模型配置。如需自定义更多配置（搜索引擎、认证方式、沙箱、Claw 等），推荐使用 `env_file` 方式加载 `.env` 文件，避免在 `docker-compose.yml` 中堆积大量环境变量。
+在 `docker-compose.yml` 同级目录下，基于 [`.env.example`](https://github.com/simpleyyt/ai-manus/blob/main/.env.example) 创建 `.env` 文件，至少需要修改 `API_KEY`，并根据模型服务调整 `API_BASE` 与 `MODEL_NAME`：
 
-**步骤 1**：基于 [`.env.example`](https://github.com/simpleyyt/ai-manus/blob/main/.env.example) 创建 `.env` 文件：
+```ini
+API_KEY=sk-xxxx
+API_BASE=https://api.openai.com/v1
+MODEL_NAME=gpt-4o
+```
+
+完整的 `.env.example` 如下（搜索引擎、认证方式、沙箱、Claw 等更多配置项）：
 
 <!-- .env.example -->
 ```ini
@@ -311,16 +309,6 @@ JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
 LOG_LEVEL=INFO
 ```
 <!-- /.env.example -->
-
-**步骤 2**：在 `docker-compose.yml` 的 `backend` 服务中，将 `environment` 替换为 `env_file`：
-
-```yaml
-  backend:
-    image: simpleyyt/manus-backend
-    # ...
-    env_file:
-      - .env
-```
 
 > **提示**：`env_file` 和 `environment` 可以同时使用，`environment` 中的值会覆盖 `env_file` 中的同名变量。完整的配置项说明请参阅[配置说明](configuration.md)。
 

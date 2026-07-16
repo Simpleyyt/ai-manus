@@ -27,7 +27,7 @@ Install Docker Engine according to official requirements: https://docs.docker.co
 
 ## Deployment
 
-Deploy using Docker Compose: at minimum set `API_KEY`, and adjust `API_BASE` and `MODEL_PROVIDER` for your model service:
+Deploy using Docker Compose. All configuration is managed through a `.env` file (via `env_file`):
 
 <!-- docker-compose-example.yml -->
 ```yaml
@@ -55,18 +55,10 @@ services:
       #- ./mcp.json:/etc/mcp.json # Mount MCP servers directory
     networks:
       - manus-network
-    environment:
-      # OpenAI API base URL
-      - API_BASE=https://api.openai.com/v1
-      # OpenAI API key, replace with your own
-      - API_KEY=sk-xxxx
-      # LLM model name
-      - MODEL_NAME=gpt-4o
-      # LLM temperature parameter, controls randomness
-      #- TEMPERATURE=0.7
-      # Maximum tokens for LLM response
-      #- MAX_TOKENS=2000
+    env_file:
+      # All configuration is loaded from the .env file, see .env.example
       # More configuration options: https://docs.ai-manus.com/#/configuration
+      - .env
 
   sandbox:
     image: simpleyyt/manus-sandbox
@@ -111,11 +103,17 @@ networks:
 
 Save as `docker-compose.yml` file.
 
-### Managing Configuration with `.env` File
+### Create the `.env` Configuration File
 
-The example above only includes the essential AI model configuration. For additional settings (search engine, authentication, sandbox, Claw, etc.), it is recommended to use `env_file` to load a `.env` file, keeping your `docker-compose.yml` clean.
+Next to `docker-compose.yml`, create a `.env` file based on [`.env.example`](https://github.com/simpleyyt/ai-manus/blob/main/.env.example). At minimum set `API_KEY`, and adjust `API_BASE` and `MODEL_NAME` for your model service:
 
-**Step 1**: Create a `.env` file based on [`.env.example`](https://github.com/simpleyyt/ai-manus/blob/main/.env.example):
+```ini
+API_KEY=sk-xxxx
+API_BASE=https://api.openai.com/v1
+MODEL_NAME=gpt-4o
+```
+
+The full `.env.example` is shown below (search engine, authentication, sandbox, Claw, and more options):
 
 <!-- .env.example -->
 ```ini
@@ -310,16 +308,6 @@ JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
 LOG_LEVEL=INFO
 ```
 <!-- /.env.example -->
-
-**Step 2**: In `docker-compose.yml`, replace the `environment` section of the `backend` service with `env_file`:
-
-```yaml
-  backend:
-    image: simpleyyt/manus-backend
-    # ...
-    env_file:
-      - .env
-```
 
 > **Tip**: `env_file` and `environment` can be used together — values in `environment` override those from `env_file`. See [Configuration](configuration.md) for a full list of available options.
 

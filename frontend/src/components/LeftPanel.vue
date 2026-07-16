@@ -1,68 +1,80 @@
 <template>
-  <div :class="isLeftPanelShow ?
-    'h-full flex flex-col' :
-    'h-full flex flex-col fixed top-0 start-0 bottom-0 z-[1]'" :style="isLeftPanelShow ?
-      'width: 300px; transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);' :
-      'width: 24px; transition: width 0.36s cubic-bezier(0.4, 0, 0.2, 1);'">
-    <div
-      :class="isLeftPanelShow ?
-        'flex flex-col overflow-hidden bg-[var(--background-nav)] h-full opacity-100 translate-x-0' :
-        'flex flex-col overflow-hidden bg-[var(--background-nav)] fixed top-1 start-1 bottom-1 z-[1] border-1 dark:border-[1px] border-[var(--border-main)] dark:border-[var(--border-light)] rounded-xl shadow-[0px_8px_32px_0px_rgba(0,0,0,0.16),0px_0px_0px_1px_rgba(0,0,0,0.06)] opacity-0 pointer-events-none -translate-x-10'"
-      :style="(isLeftPanelShow ? 'width: 300px;' : 'width: 0px;') + ' transition: opacity 0.2s, transform 0.2s, width 0.2s;'">
+  <div class="h-full flex flex-col flex-shrink-0"
+    :style="'width: ' + (isLeftPanelShow ? 300 : 52) + 'px; transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);'">
+    <div class="flex flex-col overflow-hidden bg-[var(--background-nav)] h-full w-full">
 
-      <!-- 顶部折叠按钮 -->
-      <div class="flex items-center px-3 h-[52px] flex-shrink-0">
-        <div class="flex justify-between w-full px-1 pt-2">
-          <div class="relative flex">
-            <div
-              class="flex h-7 w-7 items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-gray-main)] rounded-md"
-              @click="toggleLeftPanel">
-              <PanelLeft class="h-5 w-5 text-[var(--icon-secondary)]" />
+      <!-- 顶部 Logo + 折叠/展开按钮(结构复刻自 manus.im 侧边栏顶部) -->
+      <div class="flex items-center justify-between pointer-events-auto h-[56px] px-[8px] py-[12px] flex-shrink-0">
+        <div class="flex gap-0.5 items-center">
+          <template v-if="isLeftPanelShow">
+            <div class="flex items-center justify-center flex-shrink-0 size-[32px] mx-[2px]">
+              <Bot :size="28" class="text-[var(--icon-primary)]" />
             </div>
-          </div>
+            <ManusLogoTextIcon :width="64.8" :height="28" />
+          </template>
+          <template v-else>
+            <!-- 收起状态：默认显示图标，悬停变为展开按钮 -->
+            <div
+              class="group flex items-center justify-center flex-shrink-0 size-[32px] mx-[2px] cursor-pointer rounded-md hover:bg-[var(--fill-tsp-gray-main)]"
+              :title="t('Expand sidebar')"
+              @click="toggleLeftPanel">
+              <Bot :size="28" class="text-[var(--icon-primary)] group-hover:hidden" />
+              <PanelLeft class="h-5 w-5 text-[var(--icon-secondary)] hidden group-hover:block" />
+            </div>
+          </template>
+        </div>
+        <div v-if="isLeftPanelShow"
+          class="flex h-7 w-7 items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-gray-main)] rounded-md"
+          :title="t('Collapse sidebar')"
+          @click="toggleLeftPanel">
+          <PanelLeft class="h-5 w-5 text-[var(--icon-secondary)]" />
         </div>
       </div>
 
       <!-- 快捷入口区域 -->
-      <div class="flex flex-col flex-1 min-h-0 px-[8px] pb-0 gap-px">
+      <div class="flex flex-col flex-1 min-h-0 p-[8px] pb-0 gap-px overflow-hidden">
 
         <!-- 新建任务 -->
         <div
           @click="handleNewTaskClick"
-          class="flex items-center rounded-[10px] cursor-pointer transition-colors w-full gap-[12px] h-[36px] ps-[9px] pe-[2px]"
+          :title="isLeftPanelShow ? undefined : t('New Task')"
+          class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] pointer-events-auto p-[9px]"
           :class="route.path === '/' ? 'bg-[var(--fill-tsp-white-main)]' : 'hover:bg-[var(--fill-tsp-white-light)]'">
-          <div class="shrink-0 size-[18px] flex items-center justify-center">
+          <div class="shrink-0 size-[20px] flex items-center justify-center ltr:-translate-x-px rtl:translate-x-px">
             <SquarePen :size="18" class="text-[var(--text-primary)]" />
           </div>
-          <div class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
-            <span class="truncate">{{ t('New Task') }}</span>
-          </div>
-          <div class="shrink-0 flex items-center gap-1 pe-[6px]">
-            <span class="flex text-[var(--text-tertiary)] justify-center items-center h-5 px-1 rounded-[4px] bg-[var(--fill-tsp-white-light)] border border-[var(--border-light)]">
-              <Command :size="12" />
-            </span>
-            <span class="flex justify-center items-center w-5 h-5 px-1 rounded-[4px] bg-[var(--fill-tsp-white-light)] border border-[var(--border-light)] text-xs text-[var(--text-tertiary)]">
-              K
-            </span>
-          </div>
+          <template v-if="isLeftPanelShow">
+            <div class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
+              <span class="truncate">{{ t('New Task') }}</span>
+            </div>
+            <div class="shrink-0 flex items-center gap-1">
+              <span class="flex text-[var(--text-tertiary)] justify-center items-center h-5 px-1 rounded-[4px] bg-[var(--fill-tsp-white-light)] border border-[var(--border-light)]">
+                <Command :size="12" />
+              </span>
+              <span class="flex justify-center items-center w-5 h-5 px-1 rounded-[4px] bg-[var(--fill-tsp-white-light)] border border-[var(--border-light)] text-xs text-[var(--text-tertiary)]">
+                K
+              </span>
+            </div>
+          </template>
         </div>
 
         <!-- Claw 入口 -->
         <div
           v-if="clawEnabled"
           @click="handleClawClick"
-          class="flex items-center rounded-[10px] cursor-pointer transition-colors w-full gap-[12px] h-[36px] ps-[9px] pe-[2px]"
+          :title="isLeftPanelShow ? undefined : 'Manus Claw'"
+          class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] pointer-events-auto p-[9px]"
           :class="route.path === '/chat/claw' ? 'bg-[var(--fill-tsp-white-main)]' : 'hover:bg-[var(--fill-tsp-white-light)]'">
-          <div class="shrink-0 size-[18px] flex items-center justify-center">
+          <div class="shrink-0 size-[20px] flex items-center justify-center ltr:-translate-x-px rtl:translate-x-px">
             <div class="claw-nav-icon w-[18px] h-[18px]" />
           </div>
-          <div class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
+          <div v-if="isLeftPanelShow" class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
             <span class="truncate">Manus Claw</span>
           </div>
         </div>
 
-        <!-- 所有任务分组标题 + 会话列表 -->
-        <div class="flex flex-col flex-1 min-h-0 -mx-[8px] mt-[4px] overflow-hidden">
+        <!-- 所有任务分组标题 + 会话列表(仅展开时显示) -->
+        <div v-if="isLeftPanelShow" class="flex flex-col flex-1 min-h-0 -mx-[8px] mt-[4px] overflow-hidden">
           <div class="w-full border-t border-[var(--border-main)] transition-opacity duration-200" :class="isListScrolled ? 'opacity-100' : 'opacity-0'"></div>
 
           <!-- 滚动容器：标题 + 列表一起滚动 -->
@@ -103,30 +115,38 @@
 
           </div>
         </div>
+        <template v-else>
+          <div class="mx-auto my-[10px] w-[28px] h-[1px] bg-[var(--border-main)]"></div>
+          <div class="flex-1"></div>
+        </template>
 
       </div>
 
       <!-- 底部个人 Profile(结构复刻自 manus.im 侧边栏底部) -->
-      <div ref="profileRef" class="relative flex-shrink-0 px-[8px] pb-3 pt-1">
-        <div v-if="showUserMenu" class="absolute bottom-full start-2 mb-1 z-50">
+      <div ref="profileRef" class="relative flex flex-col justify-center items-start gap-[8px] bg-[var(--background-nav)] p-[8px] flex-shrink-0">
+        <!-- fixed 定位以避免被侧边栏 overflow-hidden 裁剪(尤其收起状态下向右弹出时) -->
+        <div v-if="showUserMenu" class="fixed z-50"
+          :class="isLeftPanelShow ? 'start-2 bottom-[52px]' : 'start-[56px] bottom-3'">
           <UserMenu />
         </div>
-        <div
-          @click="showUserMenu = !showUserMenu"
-          class="flex items-center rounded-[10px] cursor-pointer transition-colors w-full gap-[8px] h-[48px] px-[8px]"
-          :class="showUserMenu ? 'bg-[var(--fill-tsp-white-main)]' : 'hover:bg-[var(--fill-tsp-white-light)]'">
-          <div
-            class="relative flex items-center justify-center font-bold flex-shrink-0 rounded-full overflow-hidden"
-            style="width: 32px; height: 32px; font-size: 16px; color: rgba(255, 255, 255, 0.9); background-color: rgb(59, 130, 246);">
-            {{ avatarLetter }}
-          </div>
-          <div class="flex flex-col flex-1 min-w-0">
-            <span class="text-[14px] leading-[18px] text-[var(--text-primary)] font-medium truncate">
-              {{ currentUser?.fullname || t('Unknown User') }}
-            </span>
-            <span class="text-[12px] leading-[16px] text-[var(--text-tertiary)] truncate">
-              {{ currentUser?.email || t('No email') }}
-            </span>
+        <div class="flex w-full items-center justify-between pe-[2px]" :class="isLeftPanelShow ? '' : 'flex-col-reverse gap-[4px]'">
+          <div class="flex-1 min-w-0 flex items-center">
+            <div
+              @click="showUserMenu = !showUserMenu"
+              :title="isLeftPanelShow ? undefined : (currentUser?.fullname || t('Unknown User'))"
+              class="flex min-w-0 ps-[2px] items-center gap-[8px] clickable cursor-pointer hover:opacity-70 p-[2px] text-[var(--text-primary)] text-sm font-[500]"
+              aria-expanded="false" aria-haspopup="dialog">
+              <div class="relative flex items-center justify-center font-bold cursor-pointer flex-shrink-0">
+                <div
+                  class="relative flex items-center justify-center font-bold flex-shrink-0 rounded-full overflow-hidden"
+                  style="width: 28px; height: 28px; font-size: 14px; color: rgba(255, 255, 255, 0.9); background-color: rgb(59, 130, 246);">
+                  {{ avatarLetter }}
+                </div>
+              </div>
+              <span v-if="isLeftPanelShow" class="truncate">
+                {{ currentUser?.fullname || t('Unknown User') }}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -135,9 +155,10 @@
 </template>
 
 <script setup lang="ts">
-import { PanelLeft, SquarePen, Command, MessageSquareDashed, ChevronUp } from 'lucide-vue-next';
+import { Bot, PanelLeft, SquarePen, Command, MessageSquareDashed, ChevronUp } from 'lucide-vue-next';
 import SessionItem from './SessionItem.vue';
 import UserMenu from './UserMenu.vue';
+import ManusLogoTextIcon from './icons/ManusLogoTextIcon.vue';
 import { useLeftPanel } from '../composables/useLeftPanel';
 import { useAuth } from '../composables/useAuth';
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';

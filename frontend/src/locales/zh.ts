@@ -11,6 +11,8 @@ export default {
   'Generate image': '生成图片',
   'Write report': '撰写报告',
   'More': '更多',
+  'Collapse sidebar': '收起侧边栏',
+  'Expand sidebar': '展开侧边栏',
   'Failed to create agent, please try again later': '创建Agent失败，请稍后重试',
   'New Chat': '新对话',
   'New Task': '新建任务',

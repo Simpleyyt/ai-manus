@@ -3,9 +3,9 @@
     <div class="sticky top-0 left-0 w-full z-[10] px-[48px] max-sm:px-[12px] max-sm:bg-[var(--background-gray-login)]">
       <div class="w-full h-[60px] mx-auto flex items-center justify-between text-[var(--text-primary)]">
         <a href="/">
-          <div class="flex">
-            <Bot :size="30" />
-            <ManusLogoTextIcon />
+          <div class="flex gap-0.5 w-fit items-center">
+            <Bot :size="30" class="text-[var(--icon-primary)]" />
+            <ManusLogoTextIcon :width="74.1" :height="32" />
           </div>
         </a>
       </div>

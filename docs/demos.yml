@@ -1,15 +1,19 @@
 # Demo catalog — single source of truth for README + Docsify demo sections.
-# Edit URLs / titles / tasks here, then run: ./update_doc.sh
+# Edit here, then run: ./update_doc.sh
 #
-# After recording a new demo locally (see recordings/, gitignored):
-# 1. Upload mp4s: gh release create demo-videos-YYYYMMDD recordings/*.mp4 --title "..."
-# 2. Paste browser_download_url values below
-# 3. Run ./update_doc.sh
+# README tip: GitHub only auto-embeds a video player for user-attachments URLs
+# (web drag-and-drop). Release download links render as plain text.
+# For README we therefore use animated GIF previews under docs/assets/demos/
+# (inline motion). Docsify can still embed the full MP4 via `url`.
+#
+# Local recordings stay in recordings/ (gitignored). Full MP4s are also on:
+#   https://github.com/Simpleyyt/ai-manus/releases/tag/demo-videos-20260718
 
 readme:
   - id: basic
     title_en: Basic Features
     title_zh: 基本功能
+    preview: docs/assets/demos/basic.gif
     url: https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/basic.mp4
 
   - id: browser
@@ -17,6 +21,7 @@ readme:
     title_zh: Browser Use
     task_en: Open example.com and read the page title
     task_zh: 打开 example.com 并读取页面标题
+    preview: docs/assets/demos/browser-use.gif
     url: https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/browser-use.mp4
 
   - id: code
@@ -24,9 +29,10 @@ readme:
     title_zh: Code Use
     task_en: Write a complex Python example
     task_zh: 写一个复杂的 python 示例
+    preview: docs/assets/demos/code-use.gif
     url: https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/code-use.mp4
 
-# Docsify site (docs/demo.md, docs/en/demo.md)
+# Docsify site (docs/demo.md, docs/en/demo.md) — full MP4 players
 docsify:
   - id: basic
     title_en: Basic Features

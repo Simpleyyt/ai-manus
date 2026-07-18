@@ -13,12 +13,10 @@ backend/
 ├── app/
 │   ├── domain/          # 领域层：包含核心业务逻辑
 │   │   ├── models/      # 领域模型定义
-│   │   ├── services/    # 领域服务
-│   │   ├── external/    # 外部服务接口
-│   │   └── prompts/     # 提示词模板
+│   │   ├── services/    # 领域服务（agents、tools、prompts、flows）
+│   │   └── external/    # 外部服务接口（Protocol）
 │   ├── application/     # 应用层：编排业务流程
-│   │   ├── services/    # 应用服务（agent、auth、file、token、email、claw）
-│   │   └── schemas/     # 数据模式定义
+│   │   └── services/    # 应用服务（agent、auth、file、token、email、claw）
 │   ├── interfaces/      # 接口层：定义系统对外接口
 │   │   ├── api/         # API 路由（会话、文件、认证、配置、Claw、OpenAI 代理）
 │   │   └── schemas/     # 请求/响应与 SSE 事件模式

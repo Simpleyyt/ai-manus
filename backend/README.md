@@ -13,12 +13,10 @@ backend/
 ├── app/
 │   ├── domain/          # Domain layer: contains core business logic
 │   │   ├── models/      # Domain model definitions
-│   │   ├── services/    # Domain services
-│   │   ├── external/    # External service interfaces
-│   │   └── prompts/     # Prompt templates
+│   │   ├── services/    # Domain services (agents, tools, prompts, flows)
+│   │   └── external/    # External service interfaces (Protocols)
 │   ├── application/     # Application layer: orchestrates business processes
-│   │   ├── services/    # Application services (agent, auth, file, token, email, claw)
-│   │   └── schemas/     # Data schema definitions
+│   │   └── services/    # Application services (agent, auth, file, token, email, claw)
 │   ├── interfaces/      # Interface layer: defines external system interfaces
 │   │   ├── api/         # API routes (sessions, files, auth, config, claw, OpenAI proxy)
 │   │   └── schemas/     # Request/response and SSE event schemas

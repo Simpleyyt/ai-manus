@@ -9,7 +9,7 @@
 1. Web sends a create Agent request to Server, Server creates Sandbox through `/var/run/docker.sock` and returns session ID.
 2. Sandbox is an Ubuntu Docker environment that starts Chrome browser and API services for File/Shell and other tools.
 3. Web sends user messages to the session ID, Server receives user messages and forwards them to PlanAct Agent for processing.
-4. PlanAct Agent calls relevant tools to complete tasks during processing.
+4. PlanAct Agent plans and executes steps: the planner/executor submit structured results through native tool calls (e.g. `create_plan` / `complete_step`), and invoke sandbox tools (Shell / Browser / File / Search / MCP) as needed.
 5. All events generated during Agent processing are sent back to Web via SSE.
 
 **When users browse tools:**

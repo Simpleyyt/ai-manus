@@ -57,18 +57,31 @@ def render_readme(items: list[dict], lang: str) -> str:
     for item in items:
         title = pick(item, "title", lang) or item.get("id", "Demo")
         url = pick(item, "url", lang)
+        preview = pick(item, "preview", lang)
         task = pick(item, "task", lang)
         lines.append(f"### {title}")
         lines.append("")
         if task:
             lines.append(f"* {task_label}: {task}")
             lines.append("")
-        if url:
-            # Match historical README style: bare URL or <url>
-            if lang == "en" and item.get("id") != "basic":
-                lines.append(f"<{url}>")
+        if preview:
+            # Animated GIF/WebP renders inline on GitHub README.
+            # Link to full MP4 when available (Release or Attachments).
+            if url:
+                lines.append(f"[![{title}]({preview})]({url})")
             else:
-                lines.append(url)
+                lines.append(f"![{title}]({preview})")
+            lines.append("")
+        elif url:
+            # Bare user-attachments URL → native GitHub video player.
+            # Release download URLs only show as text links.
+            if "user-attachments/assets" in url:
+                if lang == "en" and item.get("id") != "basic":
+                    lines.append(f"<{url}>")
+                else:
+                    lines.append(url)
+            else:
+                lines.append(f"<{url}>")
             lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 

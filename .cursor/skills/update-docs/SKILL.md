@@ -83,8 +83,8 @@ The script will replace the content between every matching tag pair across all `
 ### Updating demo videos
 
 1. Record locally under `recordings/` (gitignored)
-2. Copy MP4s into `docs/assets/demos/` and/or upload to a Release; set `url` / `path` in `docs/demos.yml`
-3. For **README inline players** on github.com, prefer `user-attachments` URLs (web drag-and-drop). Release / in-repo MP4s use an HTML `<video>` tag via `scripts/sync_demos.py`
+2. Upload MP4s for README players: `gh extension install drogers0/gh-image` then `gh image docs/assets/demos/*.mp4` (requires a browser logged into github.com; prints `user-attachments` URLs)
+3. Paste those URLs into `docs/demos.yml` (`url`); optionally keep `path` / Release mirrors as backup
 4. Run `./update_doc.sh`
 
 Demo sync tags:

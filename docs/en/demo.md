@@ -17,7 +17,7 @@
 
 ## Browser Use
 
-> Task: Open Hacker News, find a top AI/LLM story, and summarize it in Chinese
+> Task: Open Hacker News, find a top AI/LLM story, and summarize it
 
-[](https://github.com/user-attachments/assets/08fdd38e-c684-4b5d-9e0f-f59ffacc7403 ':include controls width="100%"')
+[](https://github.com/user-attachments/assets/95ae2ad9-ead5-4104-9c63-7fe391088b5f ':include controls width="100%"')
 <!-- /demos:docsify:en -->

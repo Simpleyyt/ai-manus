@@ -37,6 +37,14 @@ https://github.com/user-attachments/assets/8f7788a4-fbda-49f5-b836-949a607c64ac
 https://github.com/user-attachments/assets/5cb2240b-0984-4db0-8818-a24f81624b04
 
 
+### 本地跑通验证（开发栈）
+
+使用 `./dev.sh up -d`（真实 LLM）跑通并录屏：
+
+* E2E 测试过程（Shell → Code → Browser）：[e2e-test-process.mp4](recordings/e2e-test-process.mp4)
+* Code Use — 任务：写一个复杂的 Python 示例：[ai-manus-code-demo.mp4](recordings/ai-manus-code-demo.mp4)
+* Browser Use — 任务：搜索最新 LLM 论文：[ai-manus-browser-demo.mp4](recordings/ai-manus-browser-demo.mp4)
+
 ## 主要特性
 
  * 部署：最小只需要一个 LLM 服务即可完成部署，不需要依赖其它外部服务。

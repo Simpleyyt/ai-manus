@@ -125,3 +125,8 @@ mcp.json
 
 uv.lock
 specs
+
+# Local demo recording intermediates (commit selected *.mp4 explicitly if needed)
+recordings/*.webm
+recordings/screenshots/
+recordings/raw*/

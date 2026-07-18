@@ -23,7 +23,7 @@ Enjoy your own agent with AI Manus!
 <!-- demos:readme:en -->
 ### Basic Features
 
-https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/basic-features.mp4
+https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/basic.mp4
 
 ### Browser Use
 

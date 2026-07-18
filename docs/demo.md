@@ -17,7 +17,7 @@
 
 ## Browser Use
 
-> 任务: 打开 example.com 并读取页面标题
+> 任务: 浏览 Hacker News，打开一条 AI/LLM 相关热门帖并总结标题/分数/评论/链接
 
-[](https://github.com/user-attachments/assets/a28bc9d2-cbf0-46b3-8bc1-ecc0b4425060 ':include controls width="100%"')
+[](https://github.com/user-attachments/assets/197da14a-bed0-4bc9-bfc3-dd58d84f5f99 ':include controls width="100%"')
 <!-- /demos:docsify:zh -->

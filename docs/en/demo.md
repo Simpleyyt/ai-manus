@@ -17,7 +17,7 @@
 
 ## Browser Use
 
-> Task: Open example.com and read the page title
+> Task: Browse Hacker News, open a top AI/LLM story, and summarize title/points/comments/URL
 
-[](https://github.com/user-attachments/assets/a28bc9d2-cbf0-46b3-8bc1-ecc0b4425060 ':include controls width="100%"')
+[](https://github.com/user-attachments/assets/197da14a-bed0-4bc9-bfc3-dd58d84f5f99 ':include controls width="100%"')
 <!-- /demos:docsify:en -->

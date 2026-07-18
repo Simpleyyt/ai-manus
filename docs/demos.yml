@@ -1,5 +1,5 @@
 # Demo catalog — single source of truth for README demo sections.
-# Edit here, then run: ./update_doc.sh
+# Edit here, then run: ./update_doc.sh  (or .cursor/skills/update-docs/update_doc.sh)
 #
 # README: prefer user-attachments URLs for native inline video players on
 # github.com.

@@ -84,7 +84,7 @@ Preferred output names for the three README demos: `basic.mp4`, `browser-use.mp4
 |------|------|
 | `docs/demos.yml` | Source of truth for **README** demos only (titles, tasks, `url`) |
 | `scripts/sync_demos.py` | Fills `<!-- demos:readme:en\|zh -->` in README.md / README_zh.md |
-| `./update_doc.sh` | Doc embeds + runs `sync_demos.py` |
+| `.cursor/skills/update-docs/update_doc.sh` | Doc embeds + runs `sync_demos.py` (root `./update_doc.sh` wraps it) |
 | `docs/demo.md` / `docs/en/demo.md` | Hand-maintained scenario demos (takeover / file / MCP) — **not** from demos.yml |
 | `tmp/videos/` | Local recordings (gitignored) |
 | `tmp/screenshots/` | Local frames / posters (gitignored) |

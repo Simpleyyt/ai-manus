@@ -10,10 +10,9 @@
 模型能力要求：
 
  * 支持 LangChain Chat Model（默认 `openai` 提供商）
- * 支持 FunctionCall
- * 支持 Json Format 输出
+ * 支持原生 Tool / Function Calling（计划与步骤结果通过结构化输出工具提交，不再依赖 Prompt 内嵌 JSON）
 
-推荐使用 Deepseek 与 ChatGPT 模型。
+推荐使用具备稳定工具调用能力的 Deepseek 与 ChatGPT 模型。
 
 
 ## Docker 安装
@@ -321,3 +320,15 @@ docker compose up -d
 > 注意：如果提示 `sandbox-1 exited with code 0`，这是正常的，这是为了让 sandbox 镜像成功拉取到本地。
 
 打开浏览器访问 <http://localhost:5173> 即可访问 Manus。
+
+## 本地开发快速验证
+
+开发调试推荐使用热重载栈：
+
+```bash
+cp .env.example .env
+# 开发时可设 AUTH_PROVIDER=none，API_BASE 指向 mockserver 或真实 LLM
+./dev.sh up -d
+```
+
+访问 <http://localhost:5173>。调试模式下全局只启动一个共享沙盒（`SANDBOX_ADDRESS=sandbox`）。更多见仓库根目录 README「开发指南」。

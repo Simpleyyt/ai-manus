@@ -25,6 +25,7 @@ Each service and tool in AI Manus includes a Built-in version that can be fully 
 ## Core Features
 
  * **Deployment:** Only requires one LLM service for deployment, no dependency on other external services.
+ * **Agent loop:** Plan-and-execute with composable system prompts and native structured output tools (`create_plan` / `complete_step`, etc.).
  * **Tools:** Supports Terminal, Browser, File, Web Search, message tools, with real-time viewing and takeover capabilities, and supports external MCP tool integration.
  * **Claw:** Integrated [OpenClaw](https://github.com/anthropics/openclaw) AI assistant with one-click deployment, per-user isolated containers, auto-expiry countdown, and full chat history.
  * **Sandbox:** Each Task is allocated a separate sandbox that runs in a local Docker environment.

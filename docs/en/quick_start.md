@@ -10,10 +10,9 @@ This project mainly relies on Docker for development and deployment, requiring a
 Model capabilities required:
 
  * Supports LangChain chat models (default provider is `openai`)
- * Supports Function Call
- * Supports JSON Format output
+ * Native tool / function calling (plans and step results are submitted via structured output tools — not JSON-in-prompt)
 
-Recommended models: Deepseek and ChatGPT.
+Recommended models: Deepseek and ChatGPT with reliable tool calling.
 
 ## Docker Installation
 
@@ -320,3 +319,15 @@ docker compose up -d
 > Note: If you see `sandbox-1 exited with code 0`, this is normal — it ensures the sandbox image is successfully pulled locally.
 
 Open your browser and visit <http://localhost:5173> to access Manus.
+
+## Local Development Smoke Test
+
+For day-to-day development, use the hot-reload stack:
+
+```bash
+cp .env.example .env
+# For local smoke tests you can set AUTH_PROVIDER=none and point API_BASE at mockserver or a real LLM
+./dev.sh up -d
+```
+
+Open <http://localhost:5173>. In debug mode only one shared sandbox is started (`SANDBOX_ADDRESS=sandbox`). See the root README “Development Guide” for more.

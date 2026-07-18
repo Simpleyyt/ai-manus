@@ -125,3 +125,8 @@ mcp.json
 
 uv.lock
 specs
+
+# Demo recording intermediates (keep selected *.mp4 tracked intentionally)
+recordings/*.webm
+recordings/screenshots/
+recordings/raw*/

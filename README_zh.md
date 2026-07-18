@@ -36,10 +36,19 @@ https://github.com/user-attachments/assets/8f7788a4-fbda-49f5-b836-949a607c64ac
 
 https://github.com/user-attachments/assets/5cb2240b-0984-4db0-8818-a24f81624b04
 
+### 本地跑通验证（开发栈）
+
+使用 `./dev.sh up -d`（真实 LLM）跑通并录屏：
+
+* 启动验证 — [main-run-demo.mp4](recordings/main-run-demo.mp4)
+* E2E 测试过程（Shell → Code → Browser）— [e2e-test-process.mp4](recordings/e2e-test-process.mp4)
+* Code Use — [ai-manus-code-demo.mp4](recordings/ai-manus-code-demo.mp4)
+* Browser Use — [ai-manus-browser-demo.mp4](recordings/ai-manus-browser-demo.mp4)
 
 ## 主要特性
 
  * 部署：最小只需要一个 LLM 服务即可完成部署，不需要依赖其它外部服务。
+ * Agent 循环：Plan-and-Execute，可组合 System Prompt，以及原生结构化输出工具（不再使用脆弱的 Prompt 内嵌 JSON 协议）。
  * 工具：支持 Terminal、Browser、File、Web Search、消息工具，并支持实时查看和接管，支持外部 MCP 工具集成。
  * Claw：集成 [OpenClaw](https://github.com/anthropics/openclaw) AI 助手，一键部署、用户隔离容器、自动过期倒计时、完整聊天历史。
  * 沙盒：每个 Task 会分配单独的一个沙盒，沙盒在本地 Docker 环境里面运行。
@@ -54,6 +63,8 @@ https://github.com/user-attachments/assets/5cb2240b-0984-4db0-8818-a24f81624b04
  * 沙盒：支持手机与 Windows 电脑接入。
  * 部署：支持 K8s 和 Docker Swarm 多集群部署。
 
+完整清单见 [docs/roadmap.md](docs/roadmap.md)（含已完成的 Docker Compose、设置页、Celery 后端、上下文工程等）。
+
 ## 环境要求
 
 本项目主要依赖Docker进行开发与部署，需要安装较新版本的Docker：
@@ -62,10 +73,9 @@ https://github.com/user-attachments/assets/5cb2240b-0984-4db0-8818-a24f81624b04
 
 模型能力要求：
 - 支持 LangChain Chat Model（默认 `openai` 提供商）
-- 支持FunctionCall
-- 支持Json Format输出
+- 支持原生 **Tool / Function Calling**（计划与步骤结果通过 `create_plan` / `complete_step` 等结构化输出工具提交，不再依赖 Prompt 内嵌 JSON）
 
-推荐使用Deepseek与GPT模型。
+推荐使用具备稳定工具调用能力的 Deepseek 与 GPT 模型。
 
 
 ## 部署指南
@@ -183,7 +193,7 @@ docker compose up -d
 1. Web 向 Server 发送创建 Agent 请求，Server 通过`/var/run/docker.sock`创建出 Sandbox，并返回会话 ID。
 2. Sandbox 是一个 Ubuntu Docker 环境，里面会启动 chrome 浏览器及 File/Shell 等工具的 API 服务。
 3. Web 往会话 ID 中发送用户消息，Server 收到用户消息后，将消息发送给 PlanAct Agent 处理。
-4. PlanAct Agent 处理过程中会调用相关工具完成任务。
+4. PlanAct Agent 进行规划与执行：规划器/执行器通过原生工具调用提交结构化结果，并按需调用沙盒工具（Shell / Browser / File / Search / MCP）。
 5. Agent 处理过程中产生的所有事件通过 SSE 发回 Web。
 
 **当用户浏览工具时：**

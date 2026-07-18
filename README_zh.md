@@ -29,9 +29,9 @@ https://github.com/user-attachments/assets/64c1cd54-26dc-43ac-aa48-d915d83d8ae1
 
 ### Browser Use
 
-* 任务: 浏览 Hacker News，打开一条 AI/LLM 相关热门帖并总结标题/分数/评论/链接
+* 任务: 用浏览器打开 Hacker News，找一条 AI/大模型相关热门帖并用中文总结
 
-https://github.com/user-attachments/assets/197da14a-bed0-4bc9-bfc3-dd58d84f5f99
+https://github.com/user-attachments/assets/08fdd38e-c684-4b5d-9e0f-f59ffacc7403
 
 ### Code Use
 

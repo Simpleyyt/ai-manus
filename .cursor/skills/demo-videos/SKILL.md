@@ -23,7 +23,7 @@ Docsify pages for **电脑接管 / 文件处理 / MCP** (picgo videos), separate
 |----|--------|
 | Put `user-attachments` URLs in `docs/demos.yml` `url` for README players | Expect Release / `raw.githubusercontent.com` / in-repo paths to auto-play in README |
 | Use `gh image` (browser `user_session`) to upload | Use `gh auth token` / PAT for Attachments — upload API rejects them |
-| Run `./update_doc.sh` after editing `demos.yml` | Hand-edit `<!-- demos:... -->` blocks |
+| Run `.cursor/skills/update-docs/update_doc.sh` after editing `demos.yml` | Hand-edit `<!-- demos:... -->` blocks |
 | Keep Release assets until new Attachment URLs are committed and verified | Delete a Release while README still points at it |
 | Trim solid-white first frames before upload | Ship recordings that open on a blank white frame |
 | Keep all local MP4 / WebM / poster JPG under `tmp/` | Commit videos, screenshots, or `docs/assets/demos/` into git |
@@ -36,7 +36,7 @@ Recording, trimming, and local review under `tmp/` may proceed without asking.
 
 1. `gh image` / Release upload (creates public Attachment or Release assets)
 2. Editing `docs/demos.yml` `url` (or related title/task that ships with a new video)
-3. `./update_doc.sh` when it would rewrite README/docs demo blocks to new URLs
+3. `.cursor/skills/update-docs/update_doc.sh` when it would rewrite README/docs demo blocks to new URLs
 4. `git commit` / `git push` of those demo URL / synced markdown changes
 
 **Before asking for confirmation**, show the user enough to decide:
@@ -46,7 +46,7 @@ Recording, trimming, and local review under `tmp/` may proceed without asking.
 - First-frame / key stills under `tmp/screenshots/` (or describe what the clip shows)
 - Intended task text / language if changing
 
-Only after the user clearly confirms (e.g. “确认发布”, “upload”, “可以更新”) continue with upload → `demos.yml` → `./update_doc.sh` → commit/push.
+Only after the user clearly confirms (e.g. “确认发布”, “upload”, “可以更新”) continue with upload → `demos.yml` → `.cursor/skills/update-docs/update_doc.sh` → commit/push.
 
 If confirmation is ambiguous or missing, **do not publish** — leave artifacts in `tmp/` and wait.
 
@@ -73,7 +73,7 @@ git check-ignore -v tmp/videos/x.mp4 tmp/screenshots/x.jpg recordings
 
 - `.gitignore` already covers `tmp/`, `recordings`, and `recordings/`.
 - Never `git add` MP4/WebM/demo JPG. Never recreate tracked files under `docs/assets/demos/`.
-- What *does* get committed after a demo update: `docs/demos.yml`, regenerated README/docs via `./update_doc.sh`, and skill/docs text — **not** binaries.
+- What *does* get committed after a demo update: `docs/demos.yml`, regenerated README/docs via `.cursor/skills/update-docs/update_doc.sh`, and skill/docs text — **not** binaries.
 - Old local takes (e.g. `ai-manus-*-demo.*`, `e2e-test-process.*`, `main-run-demo.*`) can stay or be deleted under `tmp/`; they are not part of the published catalog.
 
 Preferred output names for the three README demos: `basic.mp4`, `browser-use.mp4`, `code-use.mp4` in `tmp/videos/`.
@@ -84,7 +84,7 @@ Preferred output names for the three README demos: `basic.mp4`, `browser-use.mp4
 |------|------|
 | `docs/demos.yml` | Source of truth for **README** demos only (titles, tasks, `url`) |
 | `scripts/sync_demos.py` | Fills `<!-- demos:readme:en\|zh -->` in README.md / README_zh.md |
-| `.cursor/skills/update-docs/update_doc.sh` | Doc embeds + runs `sync_demos.py` (root `./update_doc.sh` wraps it) |
+| `.cursor/skills/update-docs/update_doc.sh` | Doc embeds + runs `sync_demos.py` |
 | `docs/demo.md` / `docs/en/demo.md` | Hand-maintained scenario demos (takeover / file / MCP) — **not** from demos.yml |
 | `tmp/videos/` | Local recordings (gitignored) |
 | `tmp/screenshots/` | Local frames / posters (gitignored) |
@@ -157,7 +157,7 @@ Task Progress:
 - [ ] 3. Stop — get explicit user confirmation to publish (see Publish gate)
 - [ ] 4. Upload with gh image → user-attachments URLs
 - [ ] 5. Update docs/demos.yml
-- [ ] 6. ./update_doc.sh
+- [ ] 6. .cursor/skills/update-docs/update_doc.sh
 - [ ] 7. Verify players render (and first frame is not white)
 ```
 
@@ -209,7 +209,7 @@ Set each demo’s `url` to the matching Attachment URL. Keep bilingual `title_*`
 ### 6. Sync
 
 ```bash
-./update_doc.sh
+.cursor/skills/update-docs/update_doc.sh
 ```
 
 Confirm `README.md`, `README_zh.md` updated. Do **not** expect `docs/demo.md` to change.

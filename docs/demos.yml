@@ -19,9 +19,9 @@ readme:
   - id: browser
     title_en: Browser Use
     title_zh: Browser Use
-    task_en: Open example.com and read the page title
-    task_zh: 打开 example.com 并读取页面标题
-    url: https://github.com/user-attachments/assets/a28bc9d2-cbf0-46b3-8bc1-ecc0b4425060
+    task_en: Browse Hacker News, open a top AI/LLM story, and summarize title/points/comments/URL
+    task_zh: 浏览 Hacker News，打开一条 AI/LLM 相关热门帖并总结标题/分数/评论/链接
+    url: https://github.com/user-attachments/assets/197da14a-bed0-4bc9-bfc3-dd58d84f5f99
     path: docs/assets/demos/browser-use.mp4
 
   - id: code
@@ -50,6 +50,6 @@ docsify:
   - id: browser
     title_en: Browser Use
     title_zh: Browser Use
-    task_en: Open example.com and read the page title
-    task_zh: 打开 example.com 并读取页面标题
-    url: https://github.com/user-attachments/assets/a28bc9d2-cbf0-46b3-8bc1-ecc0b4425060
+    task_en: Browse Hacker News, open a top AI/LLM story, and summarize title/points/comments/URL
+    task_zh: 浏览 Hacker News，打开一条 AI/LLM 相关热门帖并总结标题/分数/评论/链接
+    url: https://github.com/user-attachments/assets/197da14a-bed0-4bc9-bfc3-dd58d84f5f99

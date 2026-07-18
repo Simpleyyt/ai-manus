@@ -136,12 +136,17 @@ def main() -> int:
         print(f"Missing {DEMOS_FILE}", file=sys.stderr)
         return 1
     data = yaml.safe_load(DEMOS_FILE.read_text(encoding="utf-8")) or {}
-    any_updated = False
+    touched = 0
     for path in TARGET_FILES:
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8")
+        if not TAG_RE.search(text):
+            continue
         if sync_file(path, data):
-            any_updated = True
-    if not any_updated:
-        print("No demo sync tags found or content already up to date.")
+            touched += 1
+    if touched == 0:
+        print("Demo sections already up to date (or no sync tags present).")
     return 0
 
 

@@ -23,19 +23,25 @@ Enjoy your own agent with AI Manus!
 <!-- demos:readme:en -->
 ### Basic Features
 
-[![Basic Features](docs/assets/demos/basic.gif)](https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/basic.mp4)
+<video src="https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/basic.mp4" controls width="100%" playsinline></video>
+
+docs/assets/demos/basic.mp4
 
 ### Browser Use
 
 * Task: Open example.com and read the page title
 
-[![Browser Use](docs/assets/demos/browser-use.gif)](https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/browser-use.mp4)
+<video src="https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/browser-use.mp4" controls width="100%" playsinline></video>
+
+docs/assets/demos/browser-use.mp4
 
 ### Code Use
 
 * Task: Write a complex Python example
 
-[![Code Use](docs/assets/demos/code-use.gif)](https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/code-use.mp4)
+<video src="https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/code-use.mp4" controls width="100%" playsinline></video>
+
+docs/assets/demos/code-use.mp4
 <!-- /demos:readme:en -->
 
 ## Key Features

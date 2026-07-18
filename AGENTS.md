@@ -252,3 +252,6 @@ The dev compose starts the backend with **debugpy** on port `5678`. Attach a rem
 | Skill File | When to Use |
 |---|---|
 | `.cursor/skills/starter.md` | Setting up, running, or testing any part of the codebase. Contains detailed API reference, env var tables, and testing workflows. |
+| `.cursor/skills/update-docs/SKILL.md` | Syncing compose/env snippets into markdown via `update_doc.sh`. |
+| `.cursor/skills/demo-videos/SKILL.md` | Recording/uploading README demo MP4s (`gh image`, `docs/demos.yml`, Attachment players). |
+| `.cursor/skills/debug-claw/SKILL.md` | Debugging OpenClaw / Claw chat, history, uploads, WebSocket, containers. |

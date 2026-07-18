@@ -2,51 +2,49 @@
 # Edit URLs / titles / tasks here, then run: ./update_doc.sh
 #
 # After recording a new demo locally (see recordings/, gitignored):
-# 1. Upload the mp4 to a GitHub issue/PR comment (or Release)
-# 2. Paste the resulting user-attachments / raw URL below
+# 1. Upload mp4s: gh release create demo-videos-YYYYMMDD recordings/*.mp4 --title "..."
+# 2. Paste browser_download_url values below
 # 3. Run ./update_doc.sh
 
 readme:
   - id: basic
     title_en: Basic Features
     title_zh: 基本功能
-    url: https://github.com/user-attachments/assets/37060a09-c647-4bcb-920c-959f7fa73ebe
+    url: https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/basic-features.mp4
 
   - id: browser
     title_en: Browser Use
     title_zh: Browser Use
-    task_en: Latest LLM papers
-    task_zh: llm 最新论文
-    url_en: https://github.com/user-attachments/assets/4e35bc4d-024a-4617-8def-a537a94bd285
-    url_zh: https://github.com/user-attachments/assets/8f7788a4-fbda-49f5-b836-949a607c64ac
+    task_en: Open example.com and read the page title
+    task_zh: 打开 example.com 并读取页面标题
+    url: https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/browser-use.mp4
 
   - id: code
     title_en: Code Use
     title_zh: Code Use
     task_en: Write a complex Python example
     task_zh: 写一个复杂的 python 示例
-    url_en: https://github.com/user-attachments/assets/765ea387-bb1c-4dc2-b03e-716698feef77
-    url_zh: https://github.com/user-attachments/assets/5cb2240b-0984-4db0-8818-a24f81624b04
+    url: https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/code-use.mp4
 
-# Docsify site (docs/demo.md, docs/en/demo.md) — embeddable video URLs
+# Docsify site (docs/demo.md, docs/en/demo.md)
 docsify:
-  - id: takeover
-    title_en: Computer Takeover
-    title_zh: 电脑接管
-    task_en: Check Zhihu trending topics
-    task_zh: 看一下知乎热搜
-    url: https://raw.githubusercontent.com/Simpleyyt/picgo-image/master/takeover.mp4
+  - id: basic
+    title_en: Basic Features
+    title_zh: 基本功能
+    task_en: Shell echo hello-manus
+    task_zh: Shell 输出 hello-manus
+    url: https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/basic-features.mp4
 
-  - id: file
-    title_en: File Processing
-    title_zh: 文件处理
-    task_en: Convert to JPG
-    task_zh: 转成 jpg
-    url: https://raw.githubusercontent.com/Simpleyyt/picgo-image/master/file.mp4
+  - id: code
+    title_en: Code Use
+    title_zh: Code Use
+    task_en: Write a complex Python example
+    task_zh: 写一个复杂的 Python 示例
+    url: https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/code-use.mp4
 
-  - id: mcp
-    title_en: MCP Tool Integration
-    title_zh: MCP 工具调用
-    task_en: Analyze the GitHub repositories of user simpleyyt
-    task_zh: 统计一下 simpleyyt 用户的 github 仓库
-    url: https://raw.githubusercontent.com/Simpleyyt/picgo-image/master/mcp.mp4
+  - id: browser
+    title_en: Browser Use
+    title_zh: Browser Use
+    task_en: Open example.com and read the page title
+    task_zh: 打开 example.com 并读取页面标题
+    url: https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/browser-use.mp4

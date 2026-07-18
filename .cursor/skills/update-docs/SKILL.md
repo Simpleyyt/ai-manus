@@ -82,9 +82,9 @@ The script will replace the content between every matching tag pair across all `
 
 ### Updating demo videos
 
-1. Record locally under `recordings/` (gitignored — do not commit full mp4s)
-2. For **README inline motion**: export a compact animated GIF into `docs/assets/demos/` and set `preview` in `docs/demos.yml` (GitHub README does not render Release download URLs as video players; only `user-attachments` bare URLs do)
-3. For **Docsify / full video**: upload mp4 to a Release (or Attachments) and set `url`
+1. Record locally under `recordings/` (gitignored)
+2. Copy MP4s into `docs/assets/demos/` and/or upload to a Release; set `url` / `path` in `docs/demos.yml`
+3. For **README inline players** on github.com, prefer `user-attachments` URLs (web drag-and-drop). Release / in-repo MP4s use an HTML `<video>` tag via `scripts/sync_demos.py`
 4. Run `./update_doc.sh`
 
 Demo sync tags:

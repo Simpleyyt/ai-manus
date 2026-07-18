@@ -20,6 +20,7 @@ Enjoy your own agent with AI Manus!
 
 ## Demos
 
+<!-- demos:readme:en -->
 ### Basic Features
 
 https://github.com/user-attachments/assets/37060a09-c647-4bcb-920c-959f7fa73ebe
@@ -35,15 +36,7 @@ https://github.com/user-attachments/assets/37060a09-c647-4bcb-920c-959f7fa73ebe
 * Task: Write a complex Python example
 
 <https://github.com/user-attachments/assets/765ea387-bb1c-4dc2-b03e-716698feef77>
-
-### Local verification (dev stack)
-
-Brought up with `./dev.sh up -d` (real LLM) and recorded:
-
-* Run & verify — [main-run-demo.mp4](recordings/main-run-demo.mp4)
-* E2E test process (Shell → Code → Browser) — [e2e-test-process.mp4](recordings/e2e-test-process.mp4)
-* Code Use — [ai-manus-code-demo.mp4](recordings/ai-manus-code-demo.mp4)
-* Browser Use — [ai-manus-browser-demo.mp4](recordings/ai-manus-browser-demo.mp4)
+<!-- /demos:readme:en -->
 
 ## Key Features
 

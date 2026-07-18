@@ -29,7 +29,9 @@ Running `./update_doc.sh` scans all `.md` files, finds matching tag pairs, and r
 
 | File | Purpose |
 |------|---------|
-| `update_doc.sh` | Sync script — `FILES_TO_SYNC` array at the top controls which files are synced |
+| `update_doc.sh` | Sync script — `FILES_TO_SYNC` array at the top controls which files are synced; also runs `scripts/sync_demos.py` |
+| `docs/demos.yml` | Single source of truth for README + Docsify demo video titles/URLs |
+| `scripts/sync_demos.py` | Renders `<!-- demos:readme|docsify:en|zh -->` blocks from `docs/demos.yml` |
 | `docker-compose-example.yml` | Minimal compose example shown in quick start docs |
 | `.env.example` | Full environment variable reference |
 | `docs/quick_start.md` | Chinese quick start guide |
@@ -76,7 +78,26 @@ The tag name must match the filename in `FILES_TO_SYNC` exactly.
 ./update_doc.sh
 ```
 
-The script will replace the content between every matching tag pair across all `.md` files in the repo (excluding `.venv`, `.git`, `node_modules`).
+The script will replace the content between every matching tag pair across all `.md` files in the repo (excluding `.venv`, `.git`, `node_modules`), then regenerate demo sections from `docs/demos.yml`.
+
+### Updating demo videos
+
+1. Record locally under `recordings/` (gitignored — do not commit binaries)
+2. Upload the mp4 to a GitHub issue/PR comment (Attachments) or a Release
+3. Paste the URL into `docs/demos.yml` (`url` / `url_en` / `url_zh`)
+4. Run `./update_doc.sh`
+
+Demo sync tags:
+
+```markdown
+<!-- demos:readme:en -->
+...
+<!-- /demos:readme:en -->
+
+<!-- demos:docsify:zh -->
+...
+<!-- /demos:docsify:zh -->
+```
 
 ### 5. Verify the Result
 

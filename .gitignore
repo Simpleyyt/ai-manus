@@ -126,7 +126,5 @@ mcp.json
 uv.lock
 specs
 
-# Demo recording intermediates (keep selected *.mp4 tracked intentionally)
-recordings/*.webm
-recordings/screenshots/
-recordings/raw*/
+# Local screen recordings (upload to GitHub Attachments / Release, then update docs/demos.yml)
+recordings/

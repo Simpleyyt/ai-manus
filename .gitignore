@@ -126,7 +126,5 @@ mcp.json
 uv.lock
 specs
 
-# Local screen recordings (upload to GitHub Attachments / Release, then update docs/demos.yml)
-recordings
-recordings/
+# Local demo media (never commit). Upload via gh image, then update docs/demos.yml.
 tmp/

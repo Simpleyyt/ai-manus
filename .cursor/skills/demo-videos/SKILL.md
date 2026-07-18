@@ -58,21 +58,19 @@ All recording intermediates and review frames live under the repo-local **`tmp/`
 |------|----------|
 | `tmp/videos/` | Final and intermediate recordings (`.mp4`, `.webm`) |
 | `tmp/screenshots/` | First-frame checks, posters, Playwright stills (`.jpg`, `.png`) |
-| `recordings/` | Symlink → `tmp/videos/` (compat for older scripts) |
 
 Setup if missing:
 
 ```bash
 mkdir -p tmp/videos tmp/screenshots
-ln -sfn tmp/videos recordings   # optional compat symlink
-git check-ignore -v tmp/videos/x.mp4 tmp/screenshots/x.jpg recordings
+git check-ignore -v tmp/videos/x.mp4 tmp/screenshots/x.jpg
 # Expect: .gitignore matches — these must NOT appear in git status as addable files
 ```
 
 **Git rules:**
 
-- `.gitignore` already covers `tmp/`, `recordings`, and `recordings/`.
-- Never `git add` MP4/WebM/demo JPG. Never recreate tracked files under `docs/assets/demos/`.
+- `.gitignore` already covers `tmp/`.
+- Never `git add` MP4/WebM/demo JPG. Never recreate tracked files under `docs/assets/demos/` or `recordings/`.
 - What *does* get committed after a demo update: `docs/demos.yml`, regenerated README/docs via `.cursor/skills/update-docs/update_doc.sh`, and skill/docs text — **not** binaries.
 - Old local takes (e.g. `ai-manus-*-demo.*`, `e2e-test-process.*`, `main-run-demo.*`) can stay or be deleted under `tmp/`; they are not part of the published catalog.
 
@@ -88,8 +86,7 @@ Preferred output names for the three README demos: `basic.mp4`, `browser-use.mp4
 | `docs/demo.md` / `docs/en/demo.md` | Hand-maintained scenario demos (takeover / file / MCP) — **not** from demos.yml |
 | `tmp/videos/` | Local recordings (gitignored) |
 | `tmp/screenshots/` | Local frames / posters (gitignored) |
-| `recordings/` | Symlink to `tmp/videos/` |
-| `.gitignore` | Must ignore `tmp/`, `recordings`, `recordings/` |
+| `.gitignore` | Must ignore `tmp/` |
 
 ## First-frame white screen (must fix)
 
@@ -163,7 +160,7 @@ Task Progress:
 
 ### 1. Record
 
-Produce MP4s under `tmp/videos/` (or `recordings/` symlink). Prefer short, clear demos:
+Produce MP4s under `tmp/videos/`. Prefer short, clear demos:
 `basic.mp4`, `browser-use.mp4`, `code-use.mp4`.
 
 **Basic Features** should show more than a single agent run: expand the left

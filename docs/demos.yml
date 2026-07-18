@@ -8,7 +8,7 @@
 # showcase takeover / file / MCP scenarios (picgo-hosted videos) and are
 # maintained by hand.
 #
-# Local recordings stay in tmp/videos/ (gitignored; recordings/ → symlink).
+# Local recordings stay in tmp/videos/ (gitignored).
 # Do not commit MP4s into the repo.
 
 readme:

@@ -128,3 +128,4 @@ specs
 
 # Local screen recordings (upload to GitHub Attachments / Release, then update docs/demos.yml)
 recordings/
+tmp/

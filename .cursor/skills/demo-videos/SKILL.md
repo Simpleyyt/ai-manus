@@ -21,7 +21,8 @@ Keep README + Docsify demos in sync via `docs/demos.yml`. On **github.com**, onl
 | Keep Release assets until new Attachment URLs are committed and verified | Delete a Release while README still points at it |
 | Trim solid-white first frames before upload | Ship recordings that open on a blank white frame |
 
-`recordings/` is gitignored (local only). Optional checked-in copies: `docs/assets/demos/*.mp4`.
+`tmp/` is gitignored (local review only): `tmp/videos/` for recordings, `tmp/screenshots/` for frames.
+`recordings/` is a symlink to `tmp/videos/` for older scripts. Optional checked-in copies: `docs/assets/demos/*.mp4`.
 
 ## Key files
 
@@ -30,8 +31,10 @@ Keep README + Docsify demos in sync via `docs/demos.yml`. On **github.com**, onl
 | `docs/demos.yml` | Source of truth (titles, tasks, `url`, optional `path`) |
 | `scripts/sync_demos.py` | Fills `<!-- demos:readme\|docsify:en\|zh -->` blocks |
 | `./update_doc.sh` | Doc embeds + runs `sync_demos.py` |
-| `docs/assets/demos/` | Optional MP4 backups / local paths |
-| `recordings/` | Local recordings (not committed) |
+| `tmp/videos/` | Local recordings (gitignored; `recordings/` → symlink) |
+| `tmp/screenshots/` | Local frames / posters for review (gitignored) |
+| `docs/assets/demos/` | Optional MP4 backups checked into the repo |
+| `recordings/` | Symlink to `tmp/videos/` |
 
 ## First-frame white screen (must fix)
 

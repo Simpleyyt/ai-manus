@@ -23,25 +23,19 @@ AI Manus 是一个通用的 AI Agent 系统，支持在沙盒环境中运行各�
 <!-- demos:readme:zh -->
 ### 基本功能
 
-<video src="https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/basic.mp4" controls width="100%" playsinline></video>
-
-docs/assets/demos/basic.mp4
+[![基本功能](docs/assets/demos/basic.jpg)](docs/assets/demos/basic.mp4)
 
 ### Browser Use
 
 * 任务: 打开 example.com 并读取页面标题
 
-<video src="https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/browser-use.mp4" controls width="100%" playsinline></video>
-
-docs/assets/demos/browser-use.mp4
+[![Browser Use](docs/assets/demos/browser-use.jpg)](docs/assets/demos/browser-use.mp4)
 
 ### Code Use
 
 * 任务: 写一个复杂的 python 示例
 
-<video src="https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/code-use.mp4" controls width="100%" playsinline></video>
-
-docs/assets/demos/code-use.mp4
+[![Code Use](docs/assets/demos/code-use.jpg)](docs/assets/demos/code-use.mp4)
 <!-- /demos:readme:zh -->
 
 ## 主要特性

@@ -58,28 +58,32 @@ def render_readme(items: list[dict], lang: str) -> str:
         title = pick(item, "title", lang) or item.get("id", "Demo")
         url = pick(item, "url", lang)
         path = pick(item, "path", lang)
+        poster = pick(item, "poster", lang)
         task = pick(item, "task", lang)
         lines.append(f"### {title}")
         lines.append("")
         if task:
             lines.append(f"* {task_label}: {task}")
             lines.append("")
-        if url:
-            # user-attachments bare URL → GitHub native inline video player
-            if "user-attachments/assets" in url:
-                if lang == "en" and item.get("id") != "basic":
-                    lines.append(f"<{url}>")
-                else:
-                    lines.append(url)
+        # Native player (Attachments) > poster linking to MP4 > bare MP4 URL
+        if url and "user-attachments/assets" in url:
+            if lang == "en" and item.get("id") != "basic":
+                lines.append(f"<{url}>")
             else:
-                # HTML5 video for MP4 (Release / raw). github.com may sanitize
-                # non-attachment sources; the fallback link still opens the file.
-                src = url
-                lines.append(f'<video src="{src}" controls width="100%" playsinline></video>')
-                lines.append("")
-                fallback = path or url
-                lines.append(fallback)
-            lines.append("")
+                lines.append(url)
+        elif poster and path:
+            lines.append(f"[![{title}]({poster})]({path})")
+        elif path:
+            if lang == "en" and item.get("id") != "basic":
+                lines.append(f"<{path}>")
+            else:
+                lines.append(path)
+        elif url:
+            if lang == "en" and item.get("id") != "basic":
+                lines.append(f"<{url}>")
+            else:
+                lines.append(url)
+        lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 
 

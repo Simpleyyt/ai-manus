@@ -100,4 +100,4 @@ Each toolkit in `domain/services/tools/` (shell, browser, file, search, message,
 - Python deps: **uv** + `pyproject.toml` (PEP 621) per service. Frontend: **npm** + `package.json`.
 - Config is centralized in `backend/app/core/config.py` (Pydantic `Settings`, `@lru_cache`d `get_settings()`); env vars come from `.env`. For dev, point `API_BASE` at `http://mockserver:8090/v1` and set `AUTH_PROVIDER=none` to skip both real LLM and login.
 - CI (`.github/workflows/docker-build-and-push.yml`) only builds/pushes multi-arch Docker images — it runs **no tests or lint**. Verify changes locally.
-- Docs site is Docsify under `docs/`; `update_doc.sh` and `.cursor/skills/update-docs/SKILL.md` regenerate snippets embedded from compose files.
+- Docs site is Docsify under `docs/`; `update_doc.sh` and `.cursor/skills/update-docs/SKILL.md` sync compose/env embeds and README demos (not `docs/demo.md` scenario pages).

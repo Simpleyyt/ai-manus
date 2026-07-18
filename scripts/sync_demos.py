@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate README / Docsify demo markdown from docs/demos.yml.
+"""Generate README demo markdown from docs/demos.yml.
 
 Looks for tags in markdown files:
 
@@ -7,11 +7,14 @@ Looks for tags in markdown files:
   ... auto-generated ...
   <!-- /demos:readme:en -->
 
-  <!-- demos:docsify:zh -->
+  <!-- demos:readme:zh -->
   ...
-  <!-- /demos:docsify:zh -->
+  <!-- /demos:readme:zh -->
 
-Supported targets: readme|docsify × en|zh
+Supported targets: readme × en|zh
+
+Note: docs/demo.md and docs/en/demo.md are hand-maintained scenario demos
+(takeover / file / MCP) and must NOT be synced from this catalog.
 """
 from __future__ import annotations
 
@@ -28,16 +31,14 @@ except ImportError:
 ROOT = Path(__file__).resolve().parents[1]
 DEMOS_FILE = ROOT / "docs" / "demos.yml"
 
-# Files that may contain demo sync tags
+# Files that may contain demo sync tags (README only — not docs/demo.md)
 TARGET_FILES = [
     ROOT / "README.md",
     ROOT / "README_zh.md",
-    ROOT / "docs" / "demo.md",
-    ROOT / "docs" / "en" / "demo.md",
 ]
 
 TAG_RE = re.compile(
-    r"<!--\s*demos:(readme|docsify):(en|zh)\s*-->\s*\n.*?<!--\s*/demos:\1:\2\s*-->",
+    r"<!--\s*demos:(readme):(en|zh)\s*-->\s*\n.*?<!--\s*/demos:\1:\2\s*-->",
     re.DOTALL,
 )
 
@@ -87,37 +88,10 @@ def render_readme(items: list[dict], lang: str) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def render_docsify(items: list[dict], lang: str) -> str:
-    lines: list[str] = []
-    task_prefix = "Task" if lang == "en" else "任务"
-    for item in items:
-        title = pick(item, "title", lang) or item.get("id", "Demo")
-        url = pick(item, "url", lang)
-        task = pick(item, "task", lang)
-        lines.append(f"## {title}")
-        lines.append("")
-        if task:
-            lines.append(f"> {task_prefix}: {task}" if lang == "en" else f"> {task_prefix}: {task}")
-            # Chinese historically used "任务: " without space inconsistency — keep simple
-            if lang == "zh":
-                lines[-1] = f"> 任务: {task}"
-            else:
-                lines[-1] = f"> Task: {task}"
-            lines.append("")
-        if url:
-            # Docsify video embed
-            lines.append(f"[]({url} ':include controls width=\"100%\"')")
-            lines.append("")
-            lines.append("")
-    return "\n".join(lines).rstrip() + "\n"
-
-
 def render(section: str, lang: str, data: dict) -> str:
     items = data.get(section) or []
     if section == "readme":
         return render_readme(items, lang)
-    if section == "docsify":
-        return render_docsify(items, lang)
     raise ValueError(f"unknown section: {section}")
 
 

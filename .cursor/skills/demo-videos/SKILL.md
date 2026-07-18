@@ -1,17 +1,21 @@
 ---
 name: demo-videos
 description: >-
-  Record, upload, and sync README/Docsify demo MP4s for ai-manus. Use when
+  Record, upload, and sync README demo MP4s for ai-manus. Use when
   recording demos, updating demo videos, fixing README video embeds, working
   with docs/demos.yml, gh image, user-attachments, sync_demos.py, or local
   tmp/videos and tmp/screenshots (gitignored — never commit demo binaries).
   Publishing (upload / demos.yml / push) requires explicit user confirmation.
+  Do not overwrite docs/demo.md scenario pages (takeover / file / MCP).
 ---
 
 # Demo Videos
 
-Keep README + Docsify demos in sync via `docs/demos.yml`. On **github.com**, only
+Keep README demos in sync via `docs/demos.yml`. On **github.com**, only
 `https://github.com/user-attachments/assets/...` URLs render as inline MP4 players.
+
+**Do not overwrite** `docs/demo.md` / `docs/en/demo.md` — those are hand-maintained
+Docsify pages for **电脑接管 / 文件处理 / MCP** (picgo videos), separate from README demos.
 
 ## Hard rules
 
@@ -78,9 +82,10 @@ Preferred output names for the three README demos: `basic.mp4`, `browser-use.mp4
 
 | File | Role |
 |------|------|
-| `docs/demos.yml` | Source of truth (titles, tasks, `url` only — no local `path`) |
-| `scripts/sync_demos.py` | Fills `<!-- demos:readme\|docsify:en\|zh -->` blocks |
+| `docs/demos.yml` | Source of truth for **README** demos only (titles, tasks, `url`) |
+| `scripts/sync_demos.py` | Fills `<!-- demos:readme:en\|zh -->` in README.md / README_zh.md |
 | `./update_doc.sh` | Doc embeds + runs `sync_demos.py` |
+| `docs/demo.md` / `docs/en/demo.md` | Hand-maintained scenario demos (takeover / file / MCP) — **not** from demos.yml |
 | `tmp/videos/` | Local recordings (gitignored) |
 | `tmp/screenshots/` | Local frames / posters (gitignored) |
 | `recordings/` | Symlink to `tmp/videos/` |
@@ -199,8 +204,7 @@ It does **not** use `gh auth login` / OAuth. If `check-token` fails:
 
 ### 5. Update `docs/demos.yml`
 
-Set each demo’s `url` to the matching Attachment URL. Keep bilingual `title_*` / `task_*`.  
-Same Attachment URLs can be reused under the `docsify:` section.
+Set each demo’s `url` to the matching Attachment URL. Keep bilingual `title_*` / `task_*`.
 
 ### 6. Sync
 
@@ -208,7 +212,7 @@ Same Attachment URLs can be reused under the `docsify:` section.
 ./update_doc.sh
 ```
 
-Confirm `README.md`, `README_zh.md`, `docs/demo.md`, `docs/en/demo.md` updated.
+Confirm `README.md`, `README_zh.md` updated. Do **not** expect `docs/demo.md` to change.
 
 ### 7. Verify
 

@@ -1,23 +1,20 @@
 # ✨ 场景演示
 
-<!-- demos:docsify:zh -->
-## 基本功能
+## 电脑接管
 
-> 任务: Shell 输出 hello-manus
+> 任务: 看一下知乎热搜
 
-[](https://github.com/user-attachments/assets/64c1cd54-26dc-43ac-aa48-d915d83d8ae1 ':include controls width="100%"')
+[](https://raw.githubusercontent.com/Simpleyyt/picgo-image/master/takeover.mp4 ':include controls width="100%"')
 
+## 文件处理
 
-## Code Use
+> 任务：转成 jpg
 
-> 任务: 写一个复杂的 Python 示例
-
-[](https://github.com/user-attachments/assets/7b39b828-ec27-4b8f-b5f7-527e29efbe48 ':include controls width="100%"')
+![](https://raw.githubusercontent.com/Simpleyyt/picgo-image/master/file.mp4 ':include controls width="100%"')
 
 
-## Browser Use
+## MCP 工具调用
 
-> 任务: 打开 Hacker News，找一条 AI/大模型相关热门帖并总结
+> 任务：统计一下 simpleyyt 用户的 github 仓库
 
-[](https://github.com/user-attachments/assets/95ae2ad9-ead5-4104-9c63-7fe391088b5f ':include controls width="100%"')
-<!-- /demos:docsify:zh -->
+![](https://raw.githubusercontent.com/Simpleyyt/picgo-image/master/mcp.mp4 ':include controls width="100%"')

@@ -30,8 +30,8 @@ Running `./update_doc.sh` scans all `.md` files, finds matching tag pairs, and r
 | File | Purpose |
 |------|---------|
 | `update_doc.sh` | Sync script — `FILES_TO_SYNC` array at the top controls which files are synced; also runs `scripts/sync_demos.py` |
-| `docs/demos.yml` | Single source of truth for README + Docsify demo video titles/URLs |
-| `scripts/sync_demos.py` | Renders `<!-- demos:readme|docsify:en|zh -->` blocks from `docs/demos.yml` |
+| `docs/demos.yml` | Source of truth for README demo video titles/URLs (not docs/demo.md) |
+| `scripts/sync_demos.py` | Renders `<!-- demos:readme:en|zh -->` blocks from `docs/demos.yml` |
 | `docker-compose-example.yml` | Minimal compose example shown in quick start docs |
 | `.env.example` | Full environment variable reference |
 | `docs/quick_start.md` | Chinese quick start guide |
@@ -86,7 +86,9 @@ See **`.cursor/skills/demo-videos/SKILL.md`** (record under `tmp/videos/` → **
 
 Local MP4/screenshots stay in gitignored `tmp/` (`tmp/videos/`, `tmp/screenshots/`). Do **not** commit binaries or `docs/assets/demos/`. Do **not** upload or change live demo URLs without explicit user confirmation.
 
-Demo sync tags: `<!-- demos:readme|docsify:en|zh -->` / `<!-- /demos:... -->`.
+`docs/demos.yml` syncs **README only**. Leave `docs/demo.md` / `docs/en/demo.md` alone — they are scenario demos (takeover / file / MCP), edited by hand.
+
+Demo sync tags: `<!-- demos:readme:en|zh -->` / `<!-- /demos:... -->`.
 ### 5. Verify the Result
 
 Read the updated `.md` files to confirm the synced content is correct.

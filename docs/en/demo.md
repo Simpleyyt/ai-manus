@@ -1,23 +1,20 @@
 # ✨ Demo Scenarios
 
-<!-- demos:docsify:en -->
-## Basic Features
+## Computer Takeover
 
-> Task: Shell echo hello-manus
+> Task: Check Zhihu trending topics
 
-[](https://github.com/user-attachments/assets/64c1cd54-26dc-43ac-aa48-d915d83d8ae1 ':include controls width="100%"')
+[](https://raw.githubusercontent.com/Simpleyyt/picgo-image/master/takeover.mp4 ':include controls width="100%"')
 
+## File Processing
 
-## Code Use
+> Task: Convert to JPG
 
-> Task: Write a complex Python example
-
-[](https://github.com/user-attachments/assets/7b39b828-ec27-4b8f-b5f7-527e29efbe48 ':include controls width="100%"')
+![](https://raw.githubusercontent.com/Simpleyyt/picgo-image/master/file.mp4 ':include controls width="100%"')
 
 
-## Browser Use
+## MCP Tool Integration
 
-> Task: Open Hacker News, find a top AI/LLM story, and summarize it
+> Task: Analyze the GitHub repositories of user simpleyyt
 
-[](https://github.com/user-attachments/assets/95ae2ad9-ead5-4104-9c63-7fe391088b5f ':include controls width="100%"')
-<!-- /demos:docsify:en -->
+![](https://raw.githubusercontent.com/Simpleyyt/picgo-image/master/mcp.mp4 ':include controls width="100%"')

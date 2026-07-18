@@ -1,8 +1,12 @@
-# Demo catalog — single source of truth for README + Docsify demo sections.
+# Demo catalog — single source of truth for README demo sections.
 # Edit here, then run: ./update_doc.sh
 #
 # README: prefer user-attachments URLs for native inline video players on
-# github.com. Docsify embeds the same (or Release) MP4 via `:include`.
+# github.com.
+#
+# docs/demo.md and docs/en/demo.md are NOT generated from this file — they
+# showcase takeover / file / MCP scenarios (picgo-hosted videos) and are
+# maintained by hand.
 #
 # Local recordings stay in tmp/videos/ (gitignored; recordings/ → symlink).
 # Do not commit MP4s into the repo.
@@ -28,25 +32,3 @@ readme:
     task_en: Write a complex Python example
     task_zh: 写一个复杂的 python 示例
     url: https://github.com/user-attachments/assets/7b39b828-ec27-4b8f-b5f7-527e29efbe48
-
-docsify:
-  - id: basic
-    title_en: Basic Features
-    title_zh: 基本功能
-    task_en: Shell echo hello-manus
-    task_zh: Shell 输出 hello-manus
-    url: https://github.com/user-attachments/assets/64c1cd54-26dc-43ac-aa48-d915d83d8ae1
-
-  - id: code
-    title_en: Code Use
-    title_zh: Code Use
-    task_en: Write a complex Python example
-    task_zh: 写一个复杂的 Python 示例
-    url: https://github.com/user-attachments/assets/7b39b828-ec27-4b8f-b5f7-527e29efbe48
-
-  - id: browser
-    title_en: Browser Use
-    title_zh: Browser Use
-    task_en: Open Hacker News, find a top AI/LLM story, and summarize it
-    task_zh: 打开 Hacker News，找一条 AI/大模型相关热门帖并总结
-    url: https://github.com/user-attachments/assets/95ae2ad9-ead5-4104-9c63-7fe391088b5f

@@ -82,23 +82,9 @@ The script will replace the content between every matching tag pair across all `
 
 ### Updating demo videos
 
-1. Record locally under `recordings/` (gitignored)
-2. Upload MP4s for README players: `gh extension install drogers0/gh-image` then `gh image docs/assets/demos/*.mp4` (requires a browser logged into github.com; prints `user-attachments` URLs)
-3. Paste those URLs into `docs/demos.yml` (`url`); optionally keep `path` / Release mirrors as backup
-4. Run `./update_doc.sh`
+See **`.cursor/skills/demo-videos/SKILL.md`** (record → `gh image` → `docs/demos.yml` → `./update_doc.sh`).
 
-Demo sync tags:
-
-```markdown
-<!-- demos:readme:en -->
-...
-<!-- /demos:readme:en -->
-
-<!-- demos:docsify:zh -->
-...
-<!-- /demos:docsify:zh -->
-```
-
+Demo sync tags: `<!-- demos:readme|docsify:en|zh -->` / `<!-- /demos:... -->`.
 ### 5. Verify the Result
 
 Read the updated `.md` files to confirm the synced content is correct.

@@ -5,7 +5,7 @@
 
 > Task: Shell echo hello-manus
 
-[](https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/basic-features.mp4 ':include controls width="100%"')
+[](https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/basic.mp4 ':include controls width="100%"')
 
 
 ## Code Use

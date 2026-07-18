@@ -10,7 +10,7 @@ readme:
   - id: basic
     title_en: Basic Features
     title_zh: 基本功能
-    url: https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/basic-features.mp4
+    url: https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/basic.mp4
 
   - id: browser
     title_en: Browser Use
@@ -33,7 +33,7 @@ docsify:
     title_zh: 基本功能
     task_en: Shell echo hello-manus
     task_zh: Shell 输出 hello-manus
-    url: https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/basic-features.mp4
+    url: https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/basic.mp4
 
   - id: code
     title_en: Code Use

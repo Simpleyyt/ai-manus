@@ -1,36 +1,39 @@
 # Demo catalog — single source of truth for README + Docsify demo sections.
 # Edit here, then run: ./update_doc.sh
 #
-# README inline players: only `user-attachments` bare URLs auto-embed on
-# github.com. In-repo / Release MP4s use an HTML <video> tag (plus a fallback
-# link). Docsify embeds MP4 via `:include`.
+# README on github.com:
+#   - `user-attachments` bare URLs → native inline video player (best)
+#   - otherwise: poster JPG + link to in-repo MP4 (GitHub blob page has a player)
 #
-# Local recordings stay in recordings/ (gitignored). Checked-in copies live
-# under docs/assets/demos/ and are also mirrored on:
-#   https://github.com/Simpleyyt/ai-manus/releases/tag/demo-videos-20260718
+# Docsify embeds the Release MP4 via `:include`.
+#
+# Local recordings stay in recordings/ (gitignored).
 
 readme:
   - id: basic
     title_en: Basic Features
     title_zh: 基本功能
-    url: https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/basic.mp4
     path: docs/assets/demos/basic.mp4
+    poster: docs/assets/demos/basic.jpg
+    url: https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/basic.mp4
 
   - id: browser
     title_en: Browser Use
     title_zh: Browser Use
     task_en: Open example.com and read the page title
     task_zh: 打开 example.com 并读取页面标题
-    url: https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/browser-use.mp4
     path: docs/assets/demos/browser-use.mp4
+    poster: docs/assets/demos/browser-use.jpg
+    url: https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/browser-use.mp4
 
   - id: code
     title_en: Code Use
     title_zh: Code Use
     task_en: Write a complex Python example
     task_zh: 写一个复杂的 python 示例
-    url: https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/code-use.mp4
     path: docs/assets/demos/code-use.mp4
+    poster: docs/assets/demos/code-use.jpg
+    url: https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/code-use.mp4
 
 docsify:
   - id: basic

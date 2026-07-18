@@ -19,9 +19,9 @@ readme:
   - id: browser
     title_en: Browser Use
     title_zh: Browser Use
-    task_en: Open Hacker News, find a top AI/LLM story, and summarize it in Chinese
-    task_zh: 用浏览器打开 Hacker News，找一条 AI/大模型相关热门帖并用中文总结
-    url: https://github.com/user-attachments/assets/08fdd38e-c684-4b5d-9e0f-f59ffacc7403
+    task_en: Open Hacker News, find a top AI/LLM story, and summarize it
+    task_zh: 打开 Hacker News，找一条 AI/大模型相关热门帖并总结
+    url: https://github.com/user-attachments/assets/95ae2ad9-ead5-4104-9c63-7fe391088b5f
     path: docs/assets/demos/browser-use.mp4
 
   - id: code
@@ -50,6 +50,6 @@ docsify:
   - id: browser
     title_en: Browser Use
     title_zh: Browser Use
-    task_en: Open Hacker News, find a top AI/LLM story, and summarize it in Chinese
-    task_zh: 用浏览器打开 Hacker News，找一条 AI/大模型相关热门帖并用中文总结
-    url: https://github.com/user-attachments/assets/08fdd38e-c684-4b5d-9e0f-f59ffacc7403
+    task_en: Open Hacker News, find a top AI/LLM story, and summarize it
+    task_zh: 打开 Hacker News，找一条 AI/大模型相关热门帖并总结
+    url: https://github.com/user-attachments/assets/95ae2ad9-ead5-4104-9c63-7fe391088b5f

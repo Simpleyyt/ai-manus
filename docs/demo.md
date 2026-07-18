@@ -17,7 +17,7 @@
 
 ## Browser Use
 
-> 任务: 用浏览器打开 Hacker News，找一条 AI/大模型相关热门帖并用中文总结
+> 任务: 打开 Hacker News，找一条 AI/大模型相关热门帖并总结
 
-[](https://github.com/user-attachments/assets/08fdd38e-c684-4b5d-9e0f-f59ffacc7403 ':include controls width="100%"')
+[](https://github.com/user-attachments/assets/95ae2ad9-ead5-4104-9c63-7fe391088b5f ':include controls width="100%"')
 <!-- /demos:docsify:zh -->

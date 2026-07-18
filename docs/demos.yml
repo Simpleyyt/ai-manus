@@ -11,7 +11,9 @@ readme:
   - id: basic
     title_en: Basic Features
     title_zh: 基本功能
-    url: https://github.com/user-attachments/assets/251bfa39-53d0-41ae-9fc5-10bdec15c993
+    task_en: Agent shell task, New Task, and multi-session switching
+    task_zh: Agent Shell 任务、新建任务与多会话切换
+    url: https://github.com/user-attachments/assets/64c1cd54-26dc-43ac-aa48-d915d83d8ae1
     path: docs/assets/demos/basic.mp4
 
   - id: browser
@@ -36,7 +38,7 @@ docsify:
     title_zh: 基本功能
     task_en: Shell echo hello-manus
     task_zh: Shell 输出 hello-manus
-    url: https://github.com/user-attachments/assets/251bfa39-53d0-41ae-9fc5-10bdec15c993
+    url: https://github.com/user-attachments/assets/64c1cd54-26dc-43ac-aa48-d915d83d8ae1
 
   - id: code
     title_en: Code Use

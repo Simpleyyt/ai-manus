@@ -23,19 +23,19 @@ Enjoy your own agent with AI Manus!
 <!-- demos:readme:en -->
 ### Basic Features
 
-https://github.com/user-attachments/assets/37060a09-c647-4bcb-920c-959f7fa73ebe
+https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/basic-features.mp4
 
 ### Browser Use
 
-* Task: Latest LLM papers
+* Task: Open example.com and read the page title
 
-<https://github.com/user-attachments/assets/4e35bc4d-024a-4617-8def-a537a94bd285>
+<https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/browser-use.mp4>
 
 ### Code Use
 
 * Task: Write a complex Python example
 
-<https://github.com/user-attachments/assets/765ea387-bb1c-4dc2-b03e-716698feef77>
+<https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/code-use.mp4>
 <!-- /demos:readme:en -->
 
 ## Key Features

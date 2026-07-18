@@ -1,23 +1,23 @@
 # ✨ 场景演示
 
 <!-- demos:docsify:zh -->
-## 电脑接管
+## 基本功能
 
-> 任务: 看一下知乎热搜
+> 任务: Shell 输出 hello-manus
 
-[](https://raw.githubusercontent.com/Simpleyyt/picgo-image/master/takeover.mp4 ':include controls width="100%"')
-
-
-## 文件处理
-
-> 任务: 转成 jpg
-
-[](https://raw.githubusercontent.com/Simpleyyt/picgo-image/master/file.mp4 ':include controls width="100%"')
+[](https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/basic-features.mp4 ':include controls width="100%"')
 
 
-## MCP 工具调用
+## Code Use
 
-> 任务: 统计一下 simpleyyt 用户的 github 仓库
+> 任务: 写一个复杂的 Python 示例
 
-[](https://raw.githubusercontent.com/Simpleyyt/picgo-image/master/mcp.mp4 ':include controls width="100%"')
+[](https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/code-use.mp4 ':include controls width="100%"')
+
+
+## Browser Use
+
+> 任务: 打开 example.com 并读取页面标题
+
+[](https://github.com/Simpleyyt/ai-manus/releases/download/demo-videos-20260718/browser-use.mp4 ':include controls width="100%"')
 <!-- /demos:docsify:zh -->

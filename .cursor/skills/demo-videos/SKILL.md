@@ -19,6 +19,7 @@ Keep README + Docsify demos in sync via `docs/demos.yml`. On **github.com**, onl
 | Use `gh image` (browser `user_session`) to upload | Use `gh auth token` / PAT for Attachments — upload API rejects them |
 | Run `./update_doc.sh` after editing `demos.yml` | Hand-edit `<!-- demos:... -->` blocks |
 | Keep Release assets until new Attachment URLs are committed and verified | Delete a Release while README still points at it |
+| Trim solid-white first frames before upload | Ship recordings that open on a blank white frame |
 
 `recordings/` is gitignored (local only). Optional checked-in copies: `docs/assets/demos/*.mp4`.
 
@@ -32,16 +33,74 @@ Keep README + Docsify demos in sync via `docs/demos.yml`. On **github.com**, onl
 | `docs/assets/demos/` | Optional MP4 backups / local paths |
 | `recordings/` | Local recordings (not committed) |
 
+## First-frame white screen (must fix)
+
+Playwright / browser recordings almost always start with **~1–2s of solid white** (blank tab / page load). GitHub’s README player and local players show that as the opening frame, so demos look broken.
+
+**Before upload:**
+
+1. Extract the first frame and later samples; pure white ≈ mean luma `255`, variance `~0`.
+2. Find the first timestamp where the Manus UI is visible (not solid white).
+3. Re-encode with `-ss <that time>` (often `1.5`) so frame 0 is real UI.
+4. Re-check the new file’s first frame before `gh image`.
+
+```bash
+FFMPEG=$(python3 -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')
+
+# Inspect first frame
+"$FFMPEG" -y -i in.mp4 -vframes 1 /tmp/first.jpg
+
+# Trim blank intro (adjust -ss after inspection)
+"$FFMPEG" -y -i in.mp4 -ss 1.5 -c:v libx264 -preset fast -crf 23 -an \
+  -movflags +faststart out.mp4
+
+# Confirm new first frame is UI, not white
+"$FFMPEG" -y -i out.mp4 -vframes 1 /tmp/first-after.jpg
+```
+
+Optional scan (mean/var over time) to pick `-ss`:
+
+```bash
+python3 - <<'PY'
+# prints t / mean / var; BLANK when mean>245 and var<30
+import subprocess, sys
+from pathlib import Path
+try:
+    from PIL import Image
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "--user", "pillow", "-q"])
+    from PIL import Image
+ff = subprocess.check_output(
+    [sys.executable, "-c", "import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())"],
+    text=True,
+).strip()
+src = Path("in.mp4")  # change path
+for t in [i / 2 for i in range(0, 21)]:
+    jpg = Path(f"/tmp/scan-{t}.jpg")
+    subprocess.run(
+        [ff, "-y", "-ss", str(t), "-i", str(src), "-vframes", "1", str(jpg)],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    im = Image.open(jpg).convert("L").resize((160, 90))
+    px = list(im.getdata())
+    mean = sum(px) / len(px)
+    var = sum((p - mean) ** 2 for p in px) / len(px)
+    blank = mean > 245 and var < 30
+    print(f"t={t:4.1f} mean={mean:6.1f} var={var:7.1f} {'BLANK' if blank else 'ok'}")
+PY
+```
+
 ## Workflow
 
 ```
 Task Progress:
 - [ ] 1. Record / convert MP4
-- [ ] 2. Copy into docs/assets/demos/ (optional but recommended)
-- [ ] 3. Upload with gh image → user-attachments URLs
-- [ ] 4. Update docs/demos.yml
-- [ ] 5. ./update_doc.sh
-- [ ] 6. Verify players render
+- [ ] 2. Trim first-frame white screen (see above)
+- [ ] 3. Copy into docs/assets/demos/ (optional but recommended)
+- [ ] 4. Upload with gh image → user-attachments URLs
+- [ ] 5. Update docs/demos.yml
+- [ ] 6. ./update_doc.sh
+- [ ] 7. Verify players render (and first frame is not white)
 ```
 
 ### 1. Record
@@ -49,16 +108,11 @@ Task Progress:
 Produce MP4s under `recordings/` (e.g. Playwright + ffmpeg). Prefer short, clear demos:
 `basic.mp4`, `browser-use.mp4`, `code-use.mp4`.
 
-**Trim blank intros:** recordings often start with ~1–2s of solid white (page load).
-Before upload, cut until the first UI frame:
+### 2. Trim first-frame white screen
 
-```bash
-FFMPEG=$(python3 -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')
-# adjust -ss if needed after inspecting first frames
-"$FFMPEG" -y -i in.mp4 -ss 1.5 -c:v libx264 -preset fast -crf 23 -an -movflags +faststart out.mp4
-```
+Follow **First-frame white screen (must fix)** above. Do not upload until frame 0 is real UI.
 
-### 2. Stage under docs (optional)
+### 3. Stage under docs (optional)
 
 ```bash
 mkdir -p docs/assets/demos
@@ -66,7 +120,7 @@ cp recordings/basic.mp4 docs/assets/demos/basic.mp4
 # … browser-use, code-use
 ```
 
-### 3. Upload for README players (`gh image`)
+### 4. Upload for README players (`gh image`)
 
 ```bash
 gh extension install drogers0/gh-image   # once
@@ -90,14 +144,14 @@ It does **not** use `gh auth login` / OAuth. If `check-token` fails:
 2. Retry `gh image check-token`
 3. If still failing, Chrome may store cookies under an unusual profile path; ensure the active profile has `user_session` (not only `logged_in=no`)
 
-### 4. Update `docs/demos.yml`
+### 5. Update `docs/demos.yml`
 
 Set each demo’s `url` to the matching Attachment URL. Keep bilingual `title_*` / `task_*`.  
 Optional: `path: docs/assets/demos/....mp4` as a repo backup.
 
 Same Attachment URLs can be reused under the `docsify:` section.
 
-### 5. Sync
+### 6. Sync
 
 ```bash
 ./update_doc.sh
@@ -105,7 +159,7 @@ Same Attachment URLs can be reused under the `docsify:` section.
 
 Confirm `README.md`, `README_zh.md`, `docs/demo.md`, `docs/en/demo.md` updated.
 
-### 6. Verify
+### 7. Verify
 
 ```bash
 # Expect camera-video / <video> for each Attachment URL

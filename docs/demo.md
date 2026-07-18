@@ -5,7 +5,7 @@
 
 > 任务: Shell 输出 hello-manus
 
-[](https://github.com/user-attachments/assets/251bfa39-53d0-41ae-9fc5-10bdec15c993 ':include controls width="100%"')
+[](https://github.com/user-attachments/assets/64c1cd54-26dc-43ac-aa48-d915d83d8ae1 ':include controls width="100%"')
 
 
 ## Code Use

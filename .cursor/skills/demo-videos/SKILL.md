@@ -3,7 +3,8 @@ name: demo-videos
 description: >-
   Record, upload, and sync README/Docsify demo MP4s for ai-manus. Use when
   recording demos, updating demo videos, fixing README video embeds, working
-  with docs/demos.yml, gh image, user-attachments, or sync_demos.py.
+  with docs/demos.yml, gh image, user-attachments, sync_demos.py, or local
+  tmp/videos and tmp/screenshots (gitignored — never commit demo binaries).
 ---
 
 # Demo Videos
@@ -20,20 +21,47 @@ Keep README + Docsify demos in sync via `docs/demos.yml`. On **github.com**, onl
 | Run `./update_doc.sh` after editing `demos.yml` | Hand-edit `<!-- demos:... -->` blocks |
 | Keep Release assets until new Attachment URLs are committed and verified | Delete a Release while README still points at it |
 | Trim solid-white first frames before upload | Ship recordings that open on a blank white frame |
+| Keep all local MP4 / WebM / poster JPG under `tmp/` | Commit videos, screenshots, or `docs/assets/demos/` into git |
 
-`tmp/` is gitignored (local review only): `tmp/videos/` for recordings, `tmp/screenshots/` for frames.
-`recordings/` is a symlink to `tmp/videos/` for older scripts. **Do not commit MP4s.**
+## Local media (`tmp/` — never commit)
+
+All recording intermediates and review frames live under the repo-local **`tmp/`** tree (listed in `.gitignore`). README/docs only store Attachment URLs in `docs/demos.yml`.
+
+| Path | Contents |
+|------|----------|
+| `tmp/videos/` | Final and intermediate recordings (`.mp4`, `.webm`) |
+| `tmp/screenshots/` | First-frame checks, posters, Playwright stills (`.jpg`, `.png`) |
+| `recordings/` | Symlink → `tmp/videos/` (compat for older scripts) |
+
+Setup if missing:
+
+```bash
+mkdir -p tmp/videos tmp/screenshots
+ln -sfn tmp/videos recordings   # optional compat symlink
+git check-ignore -v tmp/videos/x.mp4 tmp/screenshots/x.jpg recordings
+# Expect: .gitignore matches — these must NOT appear in git status as addable files
+```
+
+**Git rules:**
+
+- `.gitignore` already covers `tmp/`, `recordings`, and `recordings/`.
+- Never `git add` MP4/WebM/demo JPG. Never recreate tracked files under `docs/assets/demos/`.
+- What *does* get committed after a demo update: `docs/demos.yml`, regenerated README/docs via `./update_doc.sh`, and skill/docs text — **not** binaries.
+- Old local takes (e.g. `ai-manus-*-demo.*`, `e2e-test-process.*`, `main-run-demo.*`) can stay or be deleted under `tmp/`; they are not part of the published catalog.
+
+Preferred output names for the three README demos: `basic.mp4`, `browser-use.mp4`, `code-use.mp4` in `tmp/videos/`.
 
 ## Key files
 
 | File | Role |
 |------|------|
-| `docs/demos.yml` | Source of truth (titles, tasks, `url`) |
+| `docs/demos.yml` | Source of truth (titles, tasks, `url` only — no local `path`) |
 | `scripts/sync_demos.py` | Fills `<!-- demos:readme\|docsify:en\|zh -->` blocks |
 | `./update_doc.sh` | Doc embeds + runs `sync_demos.py` |
-| `tmp/videos/` | Local recordings (gitignored; `recordings/` → symlink) |
-| `tmp/screenshots/` | Local frames / posters for review (gitignored) |
+| `tmp/videos/` | Local recordings (gitignored) |
+| `tmp/screenshots/` | Local frames / posters (gitignored) |
 | `recordings/` | Symlink to `tmp/videos/` |
+| `.gitignore` | Must ignore `tmp/`, `recordings`, `recordings/` |
 
 ## First-frame white screen (must fix)
 
@@ -49,15 +77,15 @@ Playwright / browser recordings almost always start with **~1–2s of solid whit
 ```bash
 FFMPEG=$(python3 -c 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())')
 
-# Inspect first frame
-"$FFMPEG" -y -i in.mp4 -vframes 1 /tmp/first.jpg
+# Inspect first frame (save under tmp/screenshots for review)
+"$FFMPEG" -y -i tmp/videos/in.mp4 -vframes 1 tmp/screenshots/first.jpg
 
 # Trim blank intro (adjust -ss after inspection)
-"$FFMPEG" -y -i in.mp4 -ss 1.5 -c:v libx264 -preset fast -crf 23 -an \
-  -movflags +faststart out.mp4
+"$FFMPEG" -y -i tmp/videos/in.mp4 -ss 1.5 -c:v libx264 -preset fast -crf 23 -an \
+  -movflags +faststart tmp/videos/out.mp4
 
 # Confirm new first frame is UI, not white
-"$FFMPEG" -y -i out.mp4 -vframes 1 /tmp/first-after.jpg
+"$FFMPEG" -y -i tmp/videos/out.mp4 -vframes 1 tmp/screenshots/first-after.jpg
 ```
 
 Optional scan (mean/var over time) to pick `-ss`:

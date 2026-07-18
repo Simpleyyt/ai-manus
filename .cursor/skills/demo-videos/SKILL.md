@@ -22,18 +22,17 @@ Keep README + Docsify demos in sync via `docs/demos.yml`. On **github.com**, onl
 | Trim solid-white first frames before upload | Ship recordings that open on a blank white frame |
 
 `tmp/` is gitignored (local review only): `tmp/videos/` for recordings, `tmp/screenshots/` for frames.
-`recordings/` is a symlink to `tmp/videos/` for older scripts. Optional checked-in copies: `docs/assets/demos/*.mp4`.
+`recordings/` is a symlink to `tmp/videos/` for older scripts. **Do not commit MP4s.**
 
 ## Key files
 
 | File | Role |
 |------|------|
-| `docs/demos.yml` | Source of truth (titles, tasks, `url`, optional `path`) |
+| `docs/demos.yml` | Source of truth (titles, tasks, `url`) |
 | `scripts/sync_demos.py` | Fills `<!-- demos:readme\|docsify:en\|zh -->` blocks |
 | `./update_doc.sh` | Doc embeds + runs `sync_demos.py` |
 | `tmp/videos/` | Local recordings (gitignored; `recordings/` → symlink) |
 | `tmp/screenshots/` | Local frames / posters for review (gitignored) |
-| `docs/assets/demos/` | Optional MP4 backups checked into the repo |
 | `recordings/` | Symlink to `tmp/videos/` |
 
 ## First-frame white screen (must fix)
@@ -97,18 +96,17 @@ PY
 
 ```
 Task Progress:
-- [ ] 1. Record / convert MP4
+- [ ] 1. Record / convert MP4 under tmp/videos/
 - [ ] 2. Trim first-frame white screen (see above)
-- [ ] 3. Copy into docs/assets/demos/ (optional but recommended)
-- [ ] 4. Upload with gh image → user-attachments URLs
-- [ ] 5. Update docs/demos.yml
-- [ ] 6. ./update_doc.sh
-- [ ] 7. Verify players render (and first frame is not white)
+- [ ] 3. Upload with gh image → user-attachments URLs
+- [ ] 4. Update docs/demos.yml
+- [ ] 5. ./update_doc.sh
+- [ ] 6. Verify players render (and first frame is not white)
 ```
 
 ### 1. Record
 
-Produce MP4s under `recordings/` (e.g. Playwright + ffmpeg). Prefer short, clear demos:
+Produce MP4s under `tmp/videos/` (or `recordings/` symlink). Prefer short, clear demos:
 `basic.mp4`, `browser-use.mp4`, `code-use.mp4`.
 
 **Basic Features** should show more than a single agent run: expand the left
@@ -119,23 +117,15 @@ click **New Task**, start a second session, then switch via **All Tasks**.
 
 Follow **First-frame white screen (must fix)** above. Do not upload until frame 0 is real UI.
 
-### 3. Stage under docs (optional)
-
-```bash
-mkdir -p docs/assets/demos
-cp recordings/basic.mp4 docs/assets/demos/basic.mp4
-# … browser-use, code-use
-```
-
-### 4. Upload for README players (`gh image`)
+### 3. Upload for README players (`gh image`)
 
 ```bash
 gh extension install drogers0/gh-image   # once
 gh image check-token                    # must print GitHub username
 gh image --repo Simpleyyt/ai-manus \
-  docs/assets/demos/basic.mp4 \
-  docs/assets/demos/browser-use.mp4 \
-  docs/assets/demos/code-use.mp4
+  tmp/videos/basic.mp4 \
+  tmp/videos/browser-use.mp4 \
+  tmp/videos/code-use.mp4
 ```
 
 Prints one bare URL per file (order = upload order), e.g.:
@@ -151,14 +141,12 @@ It does **not** use `gh auth login` / OAuth. If `check-token` fails:
 2. Retry `gh image check-token`
 3. If still failing, Chrome may store cookies under an unusual profile path; ensure the active profile has `user_session` (not only `logged_in=no`)
 
-### 5. Update `docs/demos.yml`
+### 4. Update `docs/demos.yml`
 
 Set each demo’s `url` to the matching Attachment URL. Keep bilingual `title_*` / `task_*`.  
-Optional: `path: docs/assets/demos/....mp4` as a repo backup.
-
 Same Attachment URLs can be reused under the `docsify:` section.
 
-### 6. Sync
+### 5. Sync
 
 ```bash
 ./update_doc.sh
@@ -166,7 +154,7 @@ Same Attachment URLs can be reused under the `docsify:` section.
 
 Confirm `README.md`, `README_zh.md`, `docs/demo.md`, `docs/en/demo.md` updated.
 
-### 7. Verify
+### 6. Verify
 
 ```bash
 # Expect camera-video / <video> for each Attachment URL
@@ -200,7 +188,7 @@ Use only if Attachments are unavailable:
 |----------|----------------|
 | Release `releases/download/.../*.mp4` bare URL | Text link only |
 | HTML `<video src="release-or-raw">` | Stripped by GitHub sanitizer |
-| Poster JPG → in-repo MP4 link | Static frame; click opens blob player |
+| Poster JPG → Attachment MP4 link | Static frame; click opens blob player |
 | Short GIF in repo | Inline motion, no real controls |
 
 Docsify can still embed Release MP4s via `[](url ':include controls width="100%"')` even when README cannot.
@@ -208,7 +196,7 @@ Docsify can still embed Release MP4s via `[](url ':include controls width="100%"
 ## Optional: Release mirror
 
 ```bash
-gh release create demo-videos-YYYYMMDD docs/assets/demos/*.mp4 \
+gh release create demo-videos-YYYYMMDD tmp/videos/basic.mp4 tmp/videos/browser-use.mp4 tmp/videos/code-use.mp4 \
   --title "Demo videos YYYY-MM-DD" --latest=false
 ```
 

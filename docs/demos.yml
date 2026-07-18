@@ -4,8 +4,8 @@
 # README: prefer user-attachments URLs for native inline video players on
 # github.com. Docsify embeds the same (or Release) MP4 via `:include`.
 #
-# Local recordings stay in recordings/ (gitignored). Checked-in copies under
-# docs/assets/demos/ are optional backups / Docsify fallbacks.
+# Local recordings stay in tmp/videos/ (gitignored; recordings/ → symlink).
+# Do not commit MP4s into the repo.
 
 readme:
   - id: basic
@@ -14,7 +14,6 @@ readme:
     task_en: Agent shell task, New Task, and multi-session switching
     task_zh: Agent Shell 任务、新建任务与多会话切换
     url: https://github.com/user-attachments/assets/64c1cd54-26dc-43ac-aa48-d915d83d8ae1
-    path: docs/assets/demos/basic.mp4
 
   - id: browser
     title_en: Browser Use
@@ -22,7 +21,6 @@ readme:
     task_en: Open Hacker News, find a top AI/LLM story, and summarize it
     task_zh: 打开 Hacker News，找一条 AI/大模型相关热门帖并总结
     url: https://github.com/user-attachments/assets/95ae2ad9-ead5-4104-9c63-7fe391088b5f
-    path: docs/assets/demos/browser-use.mp4
 
   - id: code
     title_en: Code Use
@@ -30,7 +28,6 @@ readme:
     task_en: Write a complex Python example
     task_zh: 写一个复杂的 python 示例
     url: https://github.com/user-attachments/assets/7b39b828-ec27-4b8f-b5f7-527e29efbe48
-    path: docs/assets/demos/code-use.mp4
 
 docsify:
   - id: basic

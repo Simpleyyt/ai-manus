@@ -23,19 +23,19 @@ Enjoy your own agent with AI Manus!
 <!-- demos:readme:en -->
 ### Basic Features
 
-[![Basic Features](docs/assets/demos/basic.jpg)](docs/assets/demos/basic.mp4)
+https://github.com/user-attachments/assets/cbef4214-fa66-449d-b745-a151b67b5a76
 
 ### Browser Use
 
 * Task: Open example.com and read the page title
 
-[![Browser Use](docs/assets/demos/browser-use.jpg)](docs/assets/demos/browser-use.mp4)
+<https://github.com/user-attachments/assets/bd5520ad-a06b-4ced-bf33-f957d7d60df1>
 
 ### Code Use
 
 * Task: Write a complex Python example
 
-[![Code Use](docs/assets/demos/code-use.jpg)](docs/assets/demos/code-use.mp4)
+<https://github.com/user-attachments/assets/065d6b56-0559-4c23-9f7e-84e710b353eb>
 <!-- /demos:readme:en -->
 
 ## Key Features

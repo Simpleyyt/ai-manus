@@ -108,6 +108,10 @@ Task Progress:
 Produce MP4s under `recordings/` (e.g. Playwright + ffmpeg). Prefer short, clear demos:
 `basic.mp4`, `browser-use.mp4`, `code-use.mp4`.
 
+**Basic Features** should show more than a single agent run: expand the left
+sidebar (`localStorage.manus-left-panel-state = true`), run a short agent task,
+click **New Task**, start a second session, then switch via **All Tasks**.
+
 ### 2. Trim first-frame white screen
 
 Follow **First-frame white screen (must fix)** above. Do not upload until frame 0 is real UI.

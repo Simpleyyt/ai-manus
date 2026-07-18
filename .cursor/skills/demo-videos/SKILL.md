@@ -5,6 +5,7 @@ description: >-
   recording demos, updating demo videos, fixing README video embeds, working
   with docs/demos.yml, gh image, user-attachments, sync_demos.py, or local
   tmp/videos and tmp/screenshots (gitignored — never commit demo binaries).
+  Publishing (upload / demos.yml / push) requires explicit user confirmation.
 ---
 
 # Demo Videos
@@ -22,6 +23,28 @@ Keep README + Docsify demos in sync via `docs/demos.yml`. On **github.com**, onl
 | Keep Release assets until new Attachment URLs are committed and verified | Delete a Release while README still points at it |
 | Trim solid-white first frames before upload | Ship recordings that open on a blank white frame |
 | Keep all local MP4 / WebM / poster JPG under `tmp/` | Commit videos, screenshots, or `docs/assets/demos/` into git |
+| **Get explicit user confirmation before publishing** | Upload, change live demo URLs, or push demo doc updates unprompted |
+
+## Publish gate (confirmation required)
+
+Recording, trimming, and local review under `tmp/` may proceed without asking.
+**Publishing** must stop for explicit user OK first. “Publishing” means any of:
+
+1. `gh image` / Release upload (creates public Attachment or Release assets)
+2. Editing `docs/demos.yml` `url` (or related title/task that ships with a new video)
+3. `./update_doc.sh` when it would rewrite README/docs demo blocks to new URLs
+4. `git commit` / `git push` of those demo URL / synced markdown changes
+
+**Before asking for confirmation**, show the user enough to decide:
+
+- Which demo(s) (basic / browser / code)
+- Local path(s) under `tmp/videos/`
+- First-frame / key stills under `tmp/screenshots/` (or describe what the clip shows)
+- Intended task text / language if changing
+
+Only after the user clearly confirms (e.g. “确认发布”, “upload”, “可以更新”) continue with upload → `demos.yml` → `./update_doc.sh` → commit/push.
+
+If confirmation is ambiguous or missing, **do not publish** — leave artifacts in `tmp/` and wait.
 
 ## Local media (`tmp/` — never commit)
 
@@ -126,10 +149,11 @@ PY
 Task Progress:
 - [ ] 1. Record / convert MP4 under tmp/videos/
 - [ ] 2. Trim first-frame white screen (see above)
-- [ ] 3. Upload with gh image → user-attachments URLs
-- [ ] 4. Update docs/demos.yml
-- [ ] 5. ./update_doc.sh
-- [ ] 6. Verify players render (and first frame is not white)
+- [ ] 3. Stop — get explicit user confirmation to publish (see Publish gate)
+- [ ] 4. Upload with gh image → user-attachments URLs
+- [ ] 5. Update docs/demos.yml
+- [ ] 6. ./update_doc.sh
+- [ ] 7. Verify players render (and first frame is not white)
 ```
 
 ### 1. Record
@@ -145,7 +169,11 @@ click **New Task**, start a second session, then switch via **All Tasks**.
 
 Follow **First-frame white screen (must fix)** above. Do not upload until frame 0 is real UI.
 
-### 3. Upload for README players (`gh image`)
+### 3. Confirm with user (required)
+
+Do **not** run `gh image`, edit live `url`s, sync demo docs, or push those changes until the user confirms. Present paths + stills (or a short summary of the clip) and wait.
+
+### 4. Upload for README players (`gh image`)
 
 ```bash
 gh extension install drogers0/gh-image   # once
@@ -169,12 +197,12 @@ It does **not** use `gh auth login` / OAuth. If `check-token` fails:
 2. Retry `gh image check-token`
 3. If still failing, Chrome may store cookies under an unusual profile path; ensure the active profile has `user_session` (not only `logged_in=no`)
 
-### 4. Update `docs/demos.yml`
+### 5. Update `docs/demos.yml`
 
 Set each demo’s `url` to the matching Attachment URL. Keep bilingual `title_*` / `task_*`.  
 Same Attachment URLs can be reused under the `docsify:` section.
 
-### 5. Sync
+### 6. Sync
 
 ```bash
 ./update_doc.sh
@@ -182,7 +210,7 @@ Same Attachment URLs can be reused under the `docsify:` section.
 
 Confirm `README.md`, `README_zh.md`, `docs/demo.md`, `docs/en/demo.md` updated.
 
-### 6. Verify
+### 7. Verify
 
 ```bash
 # Expect camera-video / <video> for each Attachment URL

@@ -82,9 +82,9 @@ The script will replace the content between every matching tag pair across all `
 
 ### Updating demo videos
 
-See **`.cursor/skills/demo-videos/SKILL.md`** (record under `tmp/videos/` → `gh image` → `docs/demos.yml` → `./update_doc.sh`).
+See **`.cursor/skills/demo-videos/SKILL.md`** (record under `tmp/videos/` → **user confirms publish** → `gh image` → `docs/demos.yml` → `./update_doc.sh`).
 
-Local MP4/screenshots stay in gitignored `tmp/` (`tmp/videos/`, `tmp/screenshots/`). Do **not** commit binaries or `docs/assets/demos/`.
+Local MP4/screenshots stay in gitignored `tmp/` (`tmp/videos/`, `tmp/screenshots/`). Do **not** commit binaries or `docs/assets/demos/`. Do **not** upload or change live demo URLs without explicit user confirmation.
 
 Demo sync tags: `<!-- demos:readme|docsify:en|zh -->` / `<!-- /demos:... -->`.
 ### 5. Verify the Result

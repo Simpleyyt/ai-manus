@@ -25,13 +25,13 @@ Enjoy your own agent with AI Manus!
 
 * Task: Code Use, Browser Use, and multi-session switching
 
-https://github.com/user-attachments/assets/64c1cd54-26dc-43ac-aa48-d915d83d8ae1
+https://github.com/user-attachments/assets/83d9549b-1a99-4c06-b39e-1bc0b48b3055
 
 ### Browser Use
 
 * Task: Find latest news
 
-<https://github.com/user-attachments/assets/95ae2ad9-ead5-4104-9c63-7fe391088b5f>
+<https://github.com/user-attachments/assets/f7297f8f-51fd-44c0-9ff9-0b7fcfaabf0f>
 
 ### Code Use
 

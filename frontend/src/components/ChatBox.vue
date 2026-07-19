@@ -11,13 +11,32 @@
                     :rows="rows" :value="modelValue"
                     @input="$emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
                     @compositionstart="isComposing = true" @compositionend="isComposing = false"
-                    @keydown.enter.exact="handleEnterKeydown" :placeholder="t('Give Manus a task to work on...')"
+                    @keydown.enter.exact="handleEnterKeydown" :placeholder="placeholderText"
                     :style="{ height: '46px' }"></textarea>
             </div>
             <div class="px-3"></div>
             <footer class="flex gap-2 px-3 items-center">
+                <!-- Manus-style + menu (local files) -->
+                <div class="relative" ref="plusMenuRef">
+                    <button type="button" @click="showPlusMenu = !showPlusMenu"
+                        class="rounded-full border border-[var(--border-main)] inline-flex items-center justify-center gap-1 clickable cursor-pointer text-xs text-[var(--text-secondary)] hover:bg-[var(--fill-tsp-white-light)] w-8 h-8 p-0 shrink-0"
+                        :title="t('Add files and more')"
+                        aria-expanded="false" aria-haspopup="dialog">
+                        <Plus :size="16" />
+                    </button>
+                    <div v-if="showPlusMenu"
+                        class="absolute bottom-[calc(100%+8px)] left-0 z-50 min-w-[200px] rounded-[12px] border border-[var(--border-light)] bg-[var(--background-menu-white)] shadow-[0px_8px_32px_0px_var(--shadow-S)] py-1">
+                        <button type="button"
+                            class="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--fill-tsp-white-main)]"
+                            @click="handleAddLocalFiles">
+                            <Paperclip :size="16" class="text-[var(--icon-tertiary)]" />
+                            {{ t('Add local files') }}
+                        </button>
+                    </div>
+                </div>
                 <button @click="uploadFile"
                     class="rounded-full border border-[var(--border-main)] inline-flex items-center justify-center gap-1 clickable cursor-pointer text-xs text-[var(--text-secondary)] hover:bg-[var(--fill-tsp-white-light)] w-8 h-8 p-0 shrink-0"
+                    :title="t('Add local files')"
                     aria-expanded="false" aria-haspopup="dialog">
                     <Paperclip :size="16" />
                 </button>
@@ -40,26 +59,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import SendIcon from './icons/SendIcon.vue';
 import { useI18n } from 'vue-i18n';
 import ChatBoxFiles from './ChatBoxFiles.vue';
-import { Paperclip } from 'lucide-vue-next';
+import { Paperclip, Plus } from 'lucide-vue-next';
 import type { FileInfo } from '../api/file';
 
 const { t } = useI18n();
 const hasTextInput = ref(false);
 const isComposing = ref(false);
 const chatBoxFileListRef = ref();
+const showPlusMenu = ref(false);
+const plusMenuRef = ref<HTMLElement | null>(null);
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
     modelValue: string;
     rows: number;
     isRunning: boolean;
     attachments: FileInfo[];
     hideStopButton?: boolean;
     allowSendFilesOnly?: boolean;
-}>();
+    /** Manus session detail uses "Send message to Manus"; home keeps the task prompt. */
+    placeholder?: string;
+}>(), {
+    placeholder: undefined,
+});
+
+const placeholderText = computed(() => props.placeholder || t('Give Manus a task to work on...'));
 
 const sendEnabled = computed(() => {
     const hasFiles = (props.attachments?.length ?? 0) > 0;
@@ -102,6 +129,25 @@ const handleStop = () => {
 const uploadFile = () => {
     chatBoxFileListRef.value?.uploadFile();
 };
+
+const handleAddLocalFiles = () => {
+    showPlusMenu.value = false;
+    uploadFile();
+};
+
+const handleClickOutside = (event: MouseEvent) => {
+    if (showPlusMenu.value && plusMenuRef.value && !plusMenuRef.value.contains(event.target as Node)) {
+        showPlusMenu.value = false;
+    }
+};
+
+onMounted(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+});
+
+onUnmounted(() => {
+    document.removeEventListener('mousedown', handleClickOutside);
+});
 
 watch(() => props.modelValue, (value) => {
     hasTextInput.value = value.trim() !== '';

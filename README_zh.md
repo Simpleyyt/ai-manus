@@ -29,7 +29,7 @@ https://github.com/user-attachments/assets/64c1cd54-26dc-43ac-aa48-d915d83d8ae1
 
 ### Browser Use
 
-* 任务: 打开 Hacker News
+* 任务: 找一下最新新闻
 
 https://github.com/user-attachments/assets/95ae2ad9-ead5-4104-9c63-7fe391088b5f
 

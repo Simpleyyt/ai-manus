@@ -22,8 +22,8 @@ readme:
   - id: browser
     title_en: Browser Use
     title_zh: Browser Use
-    task_en: Open Hacker News
-    task_zh: 打开 Hacker News
+    task_en: Find latest news
+    task_zh: 找一下最新新闻
     url: https://github.com/user-attachments/assets/95ae2ad9-ead5-4104-9c63-7fe391088b5f
 
   - id: code

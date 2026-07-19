@@ -22,8 +22,8 @@ readme:
   - id: browser
     title_en: Browser Use
     title_zh: Browser Use
-    task_en: Open Hacker News, find a top AI/LLM story, and summarize it
-    task_zh: 打开 Hacker News，找一条 AI/大模型相关热门帖并总结
+    task_en: Open Hacker News
+    task_zh: 打开 Hacker News
     url: https://github.com/user-attachments/assets/95ae2ad9-ead5-4104-9c63-7fe391088b5f
 
   - id: code

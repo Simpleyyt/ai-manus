@@ -1,0 +1,34 @@
+# Demo catalog — single source of truth for README demo sections.
+# Edit here, then run: .cursor/skills/update-docs/update_doc.sh
+#
+# README: prefer user-attachments URLs for native inline video players on
+# github.com.
+#
+# docs/demo.md and docs/en/demo.md are NOT generated from this file — they
+# showcase takeover / file / MCP scenarios (picgo-hosted videos) and are
+# maintained by hand.
+#
+# Local recordings stay in tmp/videos/ (gitignored).
+# Do not commit MP4s into the repo.
+
+readme:
+  - id: basic
+    title_en: Basic Features
+    title_zh: 基本功能
+    task_en: Code Use, Browser Use, and multi-session switching
+    task_zh: Code Use、Browser Use 与多会话切换
+    url: https://github.com/user-attachments/assets/83d9549b-1a99-4c06-b39e-1bc0b48b3055
+
+  - id: browser
+    title_en: Browser Use
+    title_zh: Browser Use
+    task_en: Find latest news
+    task_zh: 找一下最新新闻
+    url: https://github.com/user-attachments/assets/f7297f8f-51fd-44c0-9ff9-0b7fcfaabf0f
+
+  - id: code
+    title_en: Code Use
+    title_zh: Code Use
+    task_en: Write a complex Python example
+    task_zh: 写一个复杂的 python 示例
+    url: https://github.com/user-attachments/assets/7b39b828-ec27-4b8f-b5f7-527e29efbe48

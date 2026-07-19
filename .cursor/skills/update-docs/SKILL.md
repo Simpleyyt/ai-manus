@@ -1,52 +1,68 @@
 ---
 name: update-docs
 description: >-
-  Sync source files into markdown documentation using update_doc.sh.
-  Use when updating docs, README, quick_start, configuration files,
-  adding new synced files, or when the user mentions documentation updates,
-  update_doc.sh, or doc sync tags.
+  Sync source files and README demo catalog into markdown via
+  .cursor/skills/update-docs/update_doc.sh. Use when updating docs, README,
+  quick_start, configuration, .env.example, docker-compose-example.yml,
+  docs/demos.yml, adding sync tags, or when the user mentions update_doc.sh,
+  doc sync, or documentation updates.
 ---
 
 # Update Documentation
 
-This project uses `update_doc.sh` to keep markdown documentation in sync with source files (e.g. `docker-compose-example.yml`, `.env.example`).
+Script: **`.cursor/skills/update-docs/update_doc.sh`**
 
-## How It Works
+After editing synced sources, run:
 
-Source files are embedded into `.md` files via **sync tags**:
-
-```markdown
-<!-- filename -->
-```code_type
-(auto-replaced content)
-```
-<!-- /filename -->
+```bash
+.cursor/skills/update-docs/update_doc.sh
 ```
 
-Running `./update_doc.sh` scans all `.md` files, finds matching tag pairs, and replaces the content between them with the actual file content wrapped in a fenced code block.
+It does two jobs:
 
-## Key Files
+1. **File embeds** — replace `<!-- filename -->` … `<!-- /filename -->` blocks with live file content
+2. **README demos** — run `scripts/sync_demos.py` from `docs/demos.yml` into `<!-- demos:readme:… -->` blocks
 
-| File | Purpose |
-|------|---------|
-| `update_doc.sh` | Sync script — `FILES_TO_SYNC` array at the top controls which files are synced |
-| `docker-compose-example.yml` | Minimal compose example shown in quick start docs |
-| `.env.example` | Full environment variable reference |
-| `docs/quick_start.md` | Chinese quick start guide |
-| `docs/en/quick_start.md` | English quick start guide |
-| `docs/configuration.md` | Chinese configuration reference |
-| `docs/en/configuration.md` | English configuration reference |
-| `README.md` / `README_zh.md` | Project READMEs (also contain sync tags) |
+## Hard rules
+
+| Do | Don't |
+|----|--------|
+| Edit the **source** (`.env.example`, compose example, `demos.yml`), then run the script | Hand-edit content inside sync tags |
+| Update **both** Chinese and English docs for prose changes | Change only one language |
+| Keep `docs/demo.md` / `docs/en/demo.md` hand-edited | Overwrite those pages from `demos.yml` (they are takeover / file / MCP scenarios) |
+| Point demo **video** work to `.cursor/skills/demo-videos/SKILL.md` | Treat this skill as the recording/upload guide |
+
+## Key files
+
+| File | Role |
+|------|------|
+| `.cursor/skills/update-docs/update_doc.sh` | Sync driver; `FILES_TO_SYNC` lists embed sources; then calls `sync_demos.py` |
+| `docker-compose-example.yml` | Minimal compose snippet in quick start |
+| `.env.example` | Env var reference in configuration / quick start |
+| `docs/demos.yml` | README demo titles / tasks / Attachment URLs only |
+| `scripts/sync_demos.py` | Fills `<!-- demos:readme:en\|zh -->` in `README.md` / `README_zh.md` |
+| `docs/demo.md` / `docs/en/demo.md` | Scenario demos — **not** synced |
 
 ## Workflow
 
-### 1. Edit the Source File
+```
+Task Progress:
+- [ ] 1. Edit source file(s)
+- [ ] 2. Register new embeds in FILES_TO_SYNC (if needed)
+- [ ] 3. Add <!-- filename --> tags in target .md (if needed)
+- [ ] 4. .cursor/skills/update-docs/update_doc.sh
+- [ ] 5. Verify both ZH and EN outputs
+```
 
-Edit the source file directly (e.g. `docker-compose-example.yml` or `.env.example`).
+### 1. Edit the source
 
-### 2. Ensure the File Is Registered in `update_doc.sh`
+Examples: `docker-compose-example.yml`, `.env.example`, `docs/demos.yml`.
 
-Open `update_doc.sh` and check the `FILES_TO_SYNC` array:
+For **new README demo videos** (record / `gh image` / confirm publish), follow **demo-videos** skill first, then edit `docs/demos.yml` and run this script.
+
+### 2. Register embeds (new files only)
+
+In `.cursor/skills/update-docs/update_doc.sh`:
 
 ```bash
 FILES_TO_SYNC=(
@@ -55,43 +71,52 @@ FILES_TO_SYNC=(
 )
 ```
 
-Format: `"filename:code_type"`. Supported code types: `yaml`, `json`, `javascript`, `typescript`, `python`, `bash`, `css`, `html`, `xml`, `sql`, `markdown`, `ini`, `env`, `dockerfile`, `nginx`, `text`. If omitted, code type is inferred from the file extension.
+Format: `"path:code_type"`. If `code_type` is omitted, it is inferred from the extension.
 
-### 3. Add Sync Tags in Target Markdown (if new file)
+Supported types: `yaml`, `json`, `javascript`, `typescript`, `python`, `bash`, `css`, `html`, `xml`, `sql`, `markdown`, `ini`, `env`, `dockerfile`, `nginx`, `text`.
 
-In each `.md` file that should include the content, add a pair of HTML comment tags with an empty fenced code block between them:
+### 3. Add sync tags (new embeds only)
+
+Tag name must match `FILES_TO_SYNC` exactly:
 
 ```markdown
-<!-- myfile.yml -->
+<!-- docker-compose-example.yml -->
 ```yaml
 ```
-<!-- /myfile.yml -->
+<!-- /docker-compose-example.yml -->
 ```
 
-The tag name must match the filename in `FILES_TO_SYNC` exactly.
+README demo blocks (managed by `sync_demos.py`):
 
-### 4. Run the Sync Script
+```markdown
+<!-- demos:readme:en -->
+…
+<!-- /demos:readme:en -->
+```
+
+```markdown
+<!-- demos:readme:zh -->
+…
+<!-- /demos:readme:zh -->
+```
+
+Do **not** put `demos:docsify` tags in `docs/demo.md`.
+
+### 4. Run sync
 
 ```bash
-./update_doc.sh
+.cursor/skills/update-docs/update_doc.sh
 ```
 
-The script will replace the content between every matching tag pair across all `.md` files in the repo (excluding `.venv`, `.git`, `node_modules`).
+Scans repo `.md` files (skips `.venv`, `.git`, `node_modules`), refreshes embed blocks, then syncs README demos.
 
-### 5. Verify the Result
+### 5. Verify
 
-Read the updated `.md` files to confirm the synced content is correct.
+- Spot-check that fenced blocks match the sources
+- Confirm README Demos match `docs/demos.yml`
+- Confirm `docs/demo.md` still shows 电脑接管 / 文件处理 / MCP (unchanged by sync)
 
-## Adding a New Synced File — Checklist
-
-1. Add the entry to `FILES_TO_SYNC` in `update_doc.sh`
-2. Add `<!-- filename -->` / `<!-- /filename -->` tag pairs in every target `.md` file
-3. Run `./update_doc.sh`
-4. Verify the output
-
-## Important: Always Update Both Languages
-
-This project maintains **Chinese and English** versions of all documentation. When making any doc change, always update both:
+## Bilingual map
 
 | Chinese | English |
 |---------|---------|
@@ -100,9 +125,13 @@ This project maintains **Chinese and English** versions of all documentation. Wh
 | `docs/configuration.md` | `docs/en/configuration.md` |
 | `docs/*.md` | `docs/en/*.md` |
 
-## Common Pitfalls
+## Pitfalls
 
-- **Forgetting the other language**: Every doc change must be applied to both Chinese and English versions.
-- **Tag name mismatch**: The text inside `<!-- ... -->` must exactly match the filename in `FILES_TO_SYNC` (including path separators if any).
-- **Missing closing tag**: Both `<!-- filename -->` and `<!-- /filename -->` are required.
-- **Forgetting to run the script**: After editing source files, always run `./update_doc.sh` before committing.
+- Tag text must exactly match the registered filename
+- Both open and close tags are required
+- Forgetting to run the script before commit leaves docs stale
+- Mixing README demos with `docs/demo.md` scenario pages
+
+## Related
+
+- Demo recording / upload / publish confirmation: `.cursor/skills/demo-videos/SKILL.md`

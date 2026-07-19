@@ -20,30 +20,25 @@ Enjoy your own agent with AI Manus!
 
 ## Demos
 
+<!-- demos:readme:en -->
 ### Basic Features
 
-https://github.com/user-attachments/assets/37060a09-c647-4bcb-920c-959f7fa73ebe
+* Task: Code Use, Browser Use, and multi-session switching
+
+https://github.com/user-attachments/assets/83d9549b-1a99-4c06-b39e-1bc0b48b3055
 
 ### Browser Use
 
-* Task: Latest LLM papers
+* Task: Find latest news
 
-<https://github.com/user-attachments/assets/4e35bc4d-024a-4617-8def-a537a94bd285>
+<https://github.com/user-attachments/assets/f7297f8f-51fd-44c0-9ff9-0b7fcfaabf0f>
 
 ### Code Use
 
 * Task: Write a complex Python example
 
-<https://github.com/user-attachments/assets/765ea387-bb1c-4dc2-b03e-716698feef77>
-
-### Local verification (dev stack)
-
-Brought up with `./dev.sh up -d` (real LLM) and recorded:
-
-* Run & verify — [main-run-demo.mp4](recordings/main-run-demo.mp4)
-* E2E test process (Shell → Code → Browser) — [e2e-test-process.mp4](recordings/e2e-test-process.mp4)
-* Code Use — [ai-manus-code-demo.mp4](recordings/ai-manus-code-demo.mp4)
-* Browser Use — [ai-manus-browser-demo.mp4](recordings/ai-manus-browser-demo.mp4)
+<https://github.com/user-attachments/assets/7b39b828-ec27-4b8f-b5f7-527e29efbe48>
+<!-- /demos:readme:en -->
 
 ## Key Features
 

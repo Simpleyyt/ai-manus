@@ -127,7 +127,12 @@ process_file() {
 # Main Program
 # ===============================
 
-echo "Starting document update process..."
+# Skill lives at .cursor/skills/update-docs/; repo root is three levels up.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+cd "$REPO_ROOT" || exit 1
+
+echo "Starting document update process (repo: $REPO_ROOT)..."
 echo ""
 
 # Display configured file list
@@ -185,12 +190,17 @@ find . -name "*.md" -type f \
 done
 
 echo ""
+echo "Syncing demo catalog from docs/demos.yml ..."
+python3 "$REPO_ROOT/scripts/sync_demos.py"
+
+echo ""
 echo "Script execution completed!"
 echo ""
 echo "Usage Instructions:"
 echo "1. Add files to sync in the FILES_TO_SYNC array at the top of the script"
 echo "2. Use format in markdown files: <!-- filename --> ... <!-- /filename -->"
-echo "3. Run the script to automatically sync content"
+echo "3. Edit docs/demos.yml for README demo videos only, then re-run this script"
+echo "4. Run the script to automatically sync content"
 echo ""
 echo "Supported code types:"
 echo "  yaml, json, javascript, typescript, python, bash, css, html, xml, sql, markdown, env, dockerfile, nginx, text"

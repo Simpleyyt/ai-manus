@@ -26,6 +26,8 @@ class SessionSummary(BaseModel):
     latest_message_at: Optional[datetime] = None
     status: SessionStatus = SessionStatus.PENDING
     is_shared: bool = False
+    is_favorite: bool = False
+    project_id: Optional[str] = None
 
 
 class Session(BaseModel):
@@ -45,6 +47,8 @@ class Session(BaseModel):
     files: List[FileInfo] = []
     status: SessionStatus = SessionStatus.PENDING
     is_shared: bool = False  # Whether this session is shared publicly
+    is_favorite: bool = False
+    project_id: Optional[str] = None
 
     def get_last_plan(self) -> Optional[Plan]:
         """Get the last plan from the events"""

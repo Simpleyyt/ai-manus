@@ -8,7 +8,10 @@ interface DialogState {
   confirmText: string
   cancelText: string
   confirmType: 'primary' | 'danger'
-  onConfirm?: () => void | Promise<void>
+  inputEnabled: boolean
+  inputValue: string
+  inputPlaceholder: string
+  onConfirm?: (inputValue?: string) => void | Promise<void>
   onCancel?: () => void
 }
 
@@ -20,6 +23,9 @@ const dialogConfig = reactive<DialogState>({
   confirmText: '',
   cancelText: '',
   confirmType: 'primary',
+  inputEnabled: false,
+  inputValue: '',
+  inputPlaceholder: '',
   onConfirm: undefined,
   onCancel: undefined
 })
@@ -27,15 +33,13 @@ const dialogConfig = reactive<DialogState>({
 export function useDialog() {
   const { t } = useI18n()
 
-  // Handle confirm
   const handleConfirm = async () => {
     if (dialogConfig.onConfirm) {
-      await dialogConfig.onConfirm()
+      await dialogConfig.onConfirm(dialogConfig.inputEnabled ? dialogConfig.inputValue : undefined)
     }
     dialogVisible.value = false
   }
 
-  // Handle cancel
   const handleCancel = () => {
     if (dialogConfig.onCancel) {
       dialogConfig.onCancel()
@@ -43,7 +47,6 @@ export function useDialog() {
     dialogVisible.value = false
   }
 
-  // Show general confirm dialog
   const showConfirmDialog = (options: {
     title: string
     content: string
@@ -59,13 +62,44 @@ export function useDialog() {
       confirmText: options.confirmText || t('Confirm'),
       cancelText: options.cancelText || t('Cancel'),
       confirmType: options.confirmType || 'primary',
+      inputEnabled: false,
+      inputValue: '',
+      inputPlaceholder: '',
       onConfirm: options.onConfirm,
       onCancel: options.onCancel
     })
     dialogVisible.value = true
   }
 
-  // Show delete session dialog
+  const showInputDialog = (options: {
+    title: string
+    content?: string
+    initialValue?: string
+    placeholder?: string
+    confirmText?: string
+    cancelText?: string
+    onConfirm?: (value: string) => void | Promise<void>
+    onCancel?: () => void
+  }) => {
+    Object.assign(dialogConfig, {
+      title: options.title,
+      content: options.content || '',
+      confirmText: options.confirmText || t('Confirm'),
+      cancelText: options.cancelText || t('Cancel'),
+      confirmType: 'primary' as const,
+      inputEnabled: true,
+      inputValue: options.initialValue || '',
+      inputPlaceholder: options.placeholder || '',
+      onConfirm: async (inputValue?: string) => {
+        if (options.onConfirm) {
+          await options.onConfirm((inputValue ?? '').trim())
+        }
+      },
+      onCancel: options.onCancel
+    })
+    dialogVisible.value = true
+  }
+
   const showDeleteSessionDialog = (onConfirm?: () => void | Promise<void>) => {
     showConfirmDialog({
       title: t('Are you sure you want to delete this session?'),
@@ -79,10 +113,11 @@ export function useDialog() {
 
   return {
     dialogVisible: readonly(dialogVisible),
-    dialogConfig: readonly(dialogConfig),
+    dialogConfig,
     handleConfirm,
     handleCancel,
     showConfirmDialog,
+    showInputDialog,
     showDeleteSessionDialog
   }
-} 
+}

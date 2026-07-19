@@ -31,6 +31,8 @@ from app.infrastructure.repositories.user_repository import MongoUserRepository
 from app.infrastructure.repositories.claw_repository import ClawRepository as MongoClawRepository
 from app.application.services.claw_service import ClawService
 from app.domain.services.claw_domain_service import ClawDomainService
+from app.application.services.project_service import ProjectService
+from app.infrastructure.repositories.mongo_project_repository import MongoProjectRepository
 
 
 # Configure logging
@@ -115,6 +117,16 @@ def get_file_service() -> FileService:
     return FileService(
         file_storage=file_storage,
         token_service=token_service,
+    )
+
+
+@lru_cache()
+def get_project_service() -> ProjectService:
+    """Get project service instance"""
+    logger.info("Creating ProjectService instance")
+    return ProjectService(
+        project_repository=MongoProjectRepository(),
+        session_repository=MongoSessionRepository(),
     )
 
 

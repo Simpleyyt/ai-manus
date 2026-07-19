@@ -39,6 +39,39 @@ export async function deleteSession(sessionId: string): Promise<void> {
   await apiClient.delete<ApiResponse<void>>(`/sessions/${sessionId}`);
 }
 
+export async function updateSessionTitle(sessionId: string, title: string): Promise<{ session_id: string; title: string }> {
+  const response = await apiClient.patch<ApiResponse<{ session_id: string; title: string }>>(
+    `/sessions/${sessionId}/title`,
+    { title }
+  );
+  return response.data.data;
+}
+
+export async function favoriteSession(sessionId: string): Promise<{ session_id: string; is_favorite: boolean }> {
+  const response = await apiClient.post<ApiResponse<{ session_id: string; is_favorite: boolean }>>(
+    `/sessions/${sessionId}/favorite`
+  );
+  return response.data.data;
+}
+
+export async function unfavoriteSession(sessionId: string): Promise<{ session_id: string; is_favorite: boolean }> {
+  const response = await apiClient.delete<ApiResponse<{ session_id: string; is_favorite: boolean }>>(
+    `/sessions/${sessionId}/favorite`
+  );
+  return response.data.data;
+}
+
+export async function moveSessionProject(
+  sessionId: string,
+  projectId: string | null
+): Promise<{ session_id: string; project_id: string | null }> {
+  const response = await apiClient.patch<ApiResponse<{ session_id: string; project_id: string | null }>>(
+    `/sessions/${sessionId}/project`,
+    { project_id: projectId }
+  );
+  return response.data.data;
+}
+
 export async function stopSession(sessionId: string): Promise<void> {
   await apiClient.post<ApiResponse<void>>(`/sessions/${sessionId}/stop`);
 }

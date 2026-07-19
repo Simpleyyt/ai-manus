@@ -10,13 +10,16 @@ from app.interfaces.dependencies import get_file_service
 
 from app.application.services.agent_service import AgentService
 from app.application.services.token_service import TokenService
-from app.application.errors.exceptions import NotFoundError, UnauthorizedError
+from app.application.errors.exceptions import NotFoundError, UnauthorizedError, BadRequestError
 from app.interfaces.dependencies import get_agent_service, get_current_user, get_optional_current_user, get_token_service, verify_signature_websocket
 from app.interfaces.schemas.base import APIResponse
 from app.interfaces.schemas.session import (
     ChatRequest, ShellViewRequest, CreateSessionResponse, GetSessionResponse,
     ListSessionItem, ListSessionResponse, ShellViewResponse,
-    ShareSessionResponse, SharedSessionResponse
+    ShareSessionResponse, SharedSessionResponse,
+    UpdateSessionTitleRequest, UpdateSessionTitleResponse,
+    FavoriteSessionResponse, MoveSessionProjectRequest, MoveSessionProjectResponse,
+    LibraryFileItem, LibraryResponse,
 )
 from app.interfaces.schemas.file import FileViewRequest, FileViewResponse
 from app.interfaces.schemas.resource import AccessTokenRequest, SignedUrlResponse
@@ -66,6 +69,54 @@ async def delete_session(
 ) -> APIResponse[None]:
     await agent_service.delete_session(session_id, current_user.id)
     return APIResponse.success()
+
+@router.patch("/{session_id}/title", response_model=APIResponse[UpdateSessionTitleResponse])
+async def update_session_title(
+    session_id: str,
+    request: UpdateSessionTitleRequest,
+    current_user: User = Depends(get_current_user),
+    agent_service: AgentService = Depends(get_agent_service)
+) -> APIResponse[UpdateSessionTitleResponse]:
+    title = request.title.strip()
+    if not title:
+        raise BadRequestError("Title cannot be empty")
+    await agent_service.update_session_title(session_id, current_user.id, title)
+    return APIResponse.success(UpdateSessionTitleResponse(session_id=session_id, title=title))
+
+@router.post("/{session_id}/favorite", response_model=APIResponse[FavoriteSessionResponse])
+async def favorite_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    agent_service: AgentService = Depends(get_agent_service)
+) -> APIResponse[FavoriteSessionResponse]:
+    await agent_service.update_session_favorite(session_id, current_user.id, True)
+    return APIResponse.success(FavoriteSessionResponse(session_id=session_id, is_favorite=True))
+
+@router.delete("/{session_id}/favorite", response_model=APIResponse[FavoriteSessionResponse])
+async def unfavorite_session(
+    session_id: str,
+    current_user: User = Depends(get_current_user),
+    agent_service: AgentService = Depends(get_agent_service)
+) -> APIResponse[FavoriteSessionResponse]:
+    await agent_service.update_session_favorite(session_id, current_user.id, False)
+    return APIResponse.success(FavoriteSessionResponse(session_id=session_id, is_favorite=False))
+
+@router.patch("/{session_id}/project", response_model=APIResponse[MoveSessionProjectResponse])
+async def move_session_project(
+    session_id: str,
+    request: MoveSessionProjectRequest,
+    current_user: User = Depends(get_current_user),
+    agent_service: AgentService = Depends(get_agent_service),
+) -> APIResponse[MoveSessionProjectResponse]:
+    if request.project_id:
+        from app.interfaces.dependencies import get_project_service
+        project_service = get_project_service()
+        await project_service.get_project(request.project_id, current_user.id)
+    await agent_service.update_session_project(session_id, current_user.id, request.project_id)
+    return APIResponse.success(MoveSessionProjectResponse(
+        session_id=session_id,
+        project_id=request.project_id,
+    ))
 
 @router.post("/{session_id}/stop", response_model=APIResponse[None])
 async def stop_session(

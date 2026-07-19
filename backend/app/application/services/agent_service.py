@@ -123,6 +123,52 @@ class AgentService:
         await self._session_repository.delete(session_id)
         logger.info(f"Session {session_id} deleted successfully")
 
+    async def update_session_title(self, session_id: str, user_id: str, title: str) -> None:
+        """Update a session title, ensuring it belongs to the user"""
+        logger.info(f"Updating title for session {session_id} for user {user_id}")
+        session = await self._session_repository.find_by_id_and_user_id(session_id, user_id)
+        if not session:
+            logger.error(f"Session {session_id} not found for user {user_id}")
+            raise RuntimeError("Session not found")
+        await self._session_repository.update_title(session_id, title)
+        logger.info(f"Session {session_id} title updated successfully")
+
+    async def update_session_favorite(self, session_id: str, user_id: str, is_favorite: bool) -> None:
+        """Update favorite status of a session"""
+        session = await self._session_repository.find_by_id_and_user_id(session_id, user_id)
+        if not session:
+            raise RuntimeError("Session not found")
+        await self._session_repository.update_favorite_status(session_id, is_favorite)
+
+    async def update_session_project(
+        self,
+        session_id: str,
+        user_id: str,
+        project_id: Optional[str],
+    ) -> None:
+        """Move a session into a project or remove it from any project"""
+        session = await self._session_repository.find_by_id_and_user_id(session_id, user_id)
+        if not session:
+            raise RuntimeError("Session not found")
+        await self._session_repository.update_project_id(session_id, project_id)
+
+    async def get_library_files(self, user_id: str, limit: int = 100) -> List[dict]:
+        """Aggregate recent files across the user's sessions for Library view"""
+        sessions = await self._session_repository.find_by_user_id(user_id)
+        items: List[dict] = []
+        for session in sessions:
+            for file_info in session.files or []:
+                items.append({
+                    "session_id": session.id,
+                    "session_title": session.title,
+                    "file_id": file_info.file_id,
+                    "filename": file_info.filename,
+                    "file_path": getattr(file_info, "file_path", None),
+                })
+                if len(items) >= limit:
+                    return items
+        return items
+
     async def stop_session(self, session_id: str, user_id: str) -> None:
         """Stop a session, ensuring it belongs to the user"""
         logger.info(f"Stopping session {session_id} for user {user_id}")

@@ -202,9 +202,12 @@ Follow **Clean initial state** above. Do not start recording until the session l
 Produce MP4s under `tmp/videos/`. Prefer short, clear demos:
 `basic.mp4`, `browser-use.mp4`, `code-use.mp4`.
 
-**Basic Features** should show more than a single agent run: expand the left
-sidebar (`localStorage.manus-left-panel-state = true`), run a short agent task,
-click **New Task**, start a second session, then switch via **All Tasks**.
+**Basic Features** should showcase **multi-session switching**, not a single agent run:
+clear the session list first (see Clean initial state), expand the sidebar
+(`localStorage.manus-left-panel-state = true`), then create short sessions that
+mirror the other demos (e.g. a Code Use–style prompt, then **New Task**, then a
+Browser Use–style prompt such as “找一下最新新闻” / “Find latest news”), and
+switch between them via **All Tasks**.
 
 ### 3. Trim first-frame white screen
 

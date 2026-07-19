@@ -23,7 +23,7 @@ Enjoy your own agent with AI Manus!
 <!-- demos:readme:en -->
 ### Basic Features
 
-* Task: Agent shell task, New Task, and multi-session switching
+* Task: Code Use, Browser Use, and multi-session switching
 
 https://github.com/user-attachments/assets/64c1cd54-26dc-43ac-aa48-d915d83d8ae1
 

@@ -15,8 +15,8 @@ readme:
   - id: basic
     title_en: Basic Features
     title_zh: 基本功能
-    task_en: Agent shell task, New Task, and multi-session switching
-    task_zh: Agent Shell 任务、新建任务与多会话切换
+    task_en: Code Use, Browser Use, and multi-session switching
+    task_zh: Code Use、Browser Use 与多会话切换
     url: https://github.com/user-attachments/assets/64c1cd54-26dc-43ac-aa48-d915d83d8ae1
 
   - id: browser

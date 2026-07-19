@@ -1,7 +1,7 @@
 import hashlib
 import secrets
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from app.domain.models.user import User, UserRole
 from app.domain.repositories.user_repository import UserRepository
 from app.application.errors.exceptions import UnauthorizedError, ValidationError, BadRequestError
@@ -92,8 +92,8 @@ class AuthService:
             password_hash=password_hash,
             role=role,
             is_active=True,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            created_at=datetime.now(datetime.timezone.utc),
+            updated_at=datetime.now(datetime.timezone.utc)
         )
         
         # Save to database
@@ -259,7 +259,7 @@ class AuthService:
         
         # Update user password
         user.password_hash = new_password_hash
-        user.updated_at = datetime.utcnow()
+        user.updated_at = datetime.now(datetime.timezone.utc)
         
         await self.user_repository.update_user(user)
         
@@ -284,7 +284,7 @@ class AuthService:
         
         # Update user fullname
         user.fullname = new_fullname.strip()
-        user.updated_at = datetime.utcnow()
+        user.updated_at = datetime.now(datetime.timezone.utc)
         
         updated_user = await self.user_repository.update_user(user)
         
@@ -347,7 +347,7 @@ class AuthService:
         
         # Update user password
         user.password_hash = new_password_hash
-        user.updated_at = datetime.utcnow()
+        user.updated_at = datetime.now(datetime.timezone.utc)
         
         await self.user_repository.update_user(user)
         

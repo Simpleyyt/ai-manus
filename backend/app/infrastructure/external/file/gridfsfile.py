@@ -1,7 +1,7 @@
 import logging
 import io
 from typing import BinaryIO, Optional, Dict, Any, Tuple
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
 from gridfs import AsyncGridFSBucket
 
@@ -54,7 +54,7 @@ class GridFSFileStorage(FileStorage):
             filename=file_info.get('filename', f"file_{file_id}"),
             content_type=metadata.get('contentType'),
             size=file_info.get('length', 0),
-            upload_date=file_info.get('uploadDate', datetime.utcnow()),
+            upload_date=file_info.get('uploadDate', datetime.now(datetime.timezone.utc)),
             metadata=metadata,
             user_id=metadata.get('user_id', '')  # Get user_id from metadata
         )
@@ -74,7 +74,7 @@ class GridFSFileStorage(FileStorage):
             # Prepare metadata
             file_metadata = {
                 'filename': filename,
-                'uploadDate': datetime.utcnow(),
+                'uploadDate': datetime.now(datetime.timezone.utc),
                 'user_id': user_id,  # Store user_id in metadata
                 **(metadata or {})
             }

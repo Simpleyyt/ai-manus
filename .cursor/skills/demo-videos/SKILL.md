@@ -28,6 +28,40 @@ Docsify pages for **电脑接管 / 文件处理 / MCP** (picgo videos), separate
 | Trim solid-white first frames before upload | Ship recordings that open on a blank white frame |
 | Keep all local MP4 / WebM / poster JPG under `tmp/` | Commit videos, screenshots, or `docs/assets/demos/` into git |
 | **Get explicit user confirmation before publishing** | Upload, change live demo URLs, or push demo doc updates unprompted |
+| **Start every recording from a clean UI** (empty session list) | Record over leftover chats in the sidebar / All Tasks |
+
+## Clean initial state (required before record)
+
+Demos must open on a **fresh home screen**: no prior sessions in the left panel / All Tasks list.
+Leftover chats make Basic Features (multi-session) and other clips look messy.
+
+With `AUTH_PROVIDER=none` (dev default), wipe all sessions via API **before** launching Playwright:
+
+```bash
+python3 - <<'PY'
+import json, urllib.request
+
+base = "http://localhost:8000/api/v1"
+sessions = json.load(urllib.request.urlopen(base + "/sessions"))["data"]["sessions"]
+for s in sessions:
+    sid = s["session_id"]
+    req = urllib.request.Request(f"{base}/sessions/{sid}", method="DELETE")
+    urllib.request.urlopen(req)
+    print("deleted", sid)
+left = json.load(urllib.request.urlopen(base + "/sessions"))["data"]["sessions"]
+print("remaining", len(left))
+assert len(left) == 0, left
+PY
+```
+
+Then open `/` (not `/chat/<old-id>`). Expand the sidebar if the demo needs it
+(`localStorage.manus-left-panel-state = true`). Confirm **All Tasks** is empty before typing the first prompt.
+
+Fallback (wipes all DB sessions for the stack):
+
+```bash
+./dev.sh exec -T mongodb mongosh manus --quiet --eval 'db.sessions.deleteMany({})'
+```
 
 ## Publish gate (confirmation required)
 
@@ -149,16 +183,21 @@ PY
 
 ```
 Task Progress:
-- [ ] 1. Record / convert MP4 under tmp/videos/
-- [ ] 2. Trim first-frame white screen (see above)
-- [ ] 3. Stop — get explicit user confirmation to publish (see Publish gate)
-- [ ] 4. Upload with gh image → user-attachments URLs
-- [ ] 5. Update docs/demos.yml
-- [ ] 6. .cursor/skills/update-docs/update_doc.sh
-- [ ] 7. Verify players render (and first frame is not white)
+- [ ] 1. Clear all sessions (empty All Tasks) — see Clean initial state
+- [ ] 2. Record / convert MP4 under tmp/videos/
+- [ ] 3. Trim first-frame white screen (see above)
+- [ ] 4. Stop — get explicit user confirmation to publish (see Publish gate)
+- [ ] 5. Upload with gh image → user-attachments URLs
+- [ ] 6. Update docs/demos.yml
+- [ ] 7. .cursor/skills/update-docs/update_doc.sh
+- [ ] 8. Verify players render (and first frame is not white)
 ```
 
-### 1. Record
+### 1. Clean initial state
+
+Follow **Clean initial state** above. Do not start recording until the session list is empty.
+
+### 2. Record
 
 Produce MP4s under `tmp/videos/`. Prefer short, clear demos:
 `basic.mp4`, `browser-use.mp4`, `code-use.mp4`.
@@ -167,15 +206,15 @@ Produce MP4s under `tmp/videos/`. Prefer short, clear demos:
 sidebar (`localStorage.manus-left-panel-state = true`), run a short agent task,
 click **New Task**, start a second session, then switch via **All Tasks**.
 
-### 2. Trim first-frame white screen
+### 3. Trim first-frame white screen
 
 Follow **First-frame white screen (must fix)** above. Do not upload until frame 0 is real UI.
 
-### 3. Confirm with user (required)
+### 4. Confirm with user (required)
 
 Do **not** run `gh image`, edit live `url`s, sync demo docs, or push those changes until the user confirms. Present paths + stills (or a short summary of the clip) and wait.
 
-### 4. Upload for README players (`gh image`)
+### 5. Upload for README players (`gh image`)
 
 ```bash
 gh extension install drogers0/gh-image   # once
@@ -199,11 +238,11 @@ It does **not** use `gh auth login` / OAuth. If `check-token` fails:
 2. Retry `gh image check-token`
 3. If still failing, Chrome may store cookies under an unusual profile path; ensure the active profile has `user_session` (not only `logged_in=no`)
 
-### 5. Update `docs/demos.yml`
+### 6. Update `docs/demos.yml`
 
 Set each demo’s `url` to the matching Attachment URL. Keep bilingual `title_*` / `task_*`.
 
-### 6. Sync
+### 7. Sync
 
 ```bash
 .cursor/skills/update-docs/update_doc.sh
@@ -211,7 +250,7 @@ Set each demo’s `url` to the matching Attachment URL. Keep bilingual `title_*`
 
 Confirm `README.md`, `README_zh.md` updated. Do **not** expect `docs/demo.md` to change.
 
-### 7. Verify
+### 8. Verify
 
 ```bash
 # Expect camera-video / <video> for each Attachment URL

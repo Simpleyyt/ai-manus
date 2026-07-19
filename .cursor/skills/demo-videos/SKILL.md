@@ -24,7 +24,9 @@ Docsify pages for **电脑接管 / 文件处理 / MCP** (picgo videos), separate
 | Put `user-attachments` URLs in `docs/demos.yml` `url` for README players | Expect Release / `raw.githubusercontent.com` / in-repo paths to auto-play in README |
 | Use `gh image` (browser `user_session`) to upload | Use `gh auth token` / PAT for Attachments — upload API rejects them |
 | Run `.cursor/skills/update-docs/update_doc.sh` after editing `demos.yml` | Hand-edit `<!-- demos:... -->` blocks |
-| Keep Release assets until new Attachment URLs are committed and verified | Delete a Release while README still points at it |
+| Keep Release assets until new Attachment URLs are committed and verified | Delete a product Release while README still points at it |
+| Prefer versioned product releases (`vX.Y.Z`) for shipping | Create `demo-videos-*` releases just to host README MP4s |
+
 | Trim solid-white first frames before upload | Ship recordings that open on a blank white frame |
 | Keep all local MP4 / WebM / poster JPG under `tmp/` | Commit videos, screenshots, or `docs/assets/demos/` into git |
 | **Get explicit user confirmation before publishing** | Upload, change live demo URLs, or push demo doc updates unprompted |
@@ -294,13 +296,14 @@ Docsify can still embed Release MP4s via `[](url ':include controls width="100%"
 
 ## Optional: Release mirror
 
-```bash
-gh release create demo-videos-YYYYMMDD tmp/videos/basic.mp4 tmp/videos/browser-use.mp4 tmp/videos/code-use.mp4 \
-  --title "Demo videos YYYY-MM-DD" --latest=false
-```
+Do **not** create `demo-videos-*` releases. Product shipping uses versioned
+`vX.Y.Z` releases — see `.cursor/skills/release/SKILL.md`.
 
-Useful as CDN backup / Docsify source. **Do not delete** until `demos.yml` no longer references those download URLs.
+If Attachments are unavailable and you must host MP4s on a **version** release,
+attach files to that `vX.Y.Z` release only with explicit user approval. Prefer
+keeping README on `user-attachments` URLs.
 
 ## Related
 
+- Version releases (`vX.Y.Z` notes format): `.cursor/skills/release/SKILL.md`
 - General doc sync (compose/env embeds): `.cursor/skills/update-docs/SKILL.md`

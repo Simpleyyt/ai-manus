@@ -33,14 +33,6 @@
               </span>
             </div>
             <div class="flex items-center gap-1 flex-shrink-0">
-              <!-- Collaborate (Manus header) -->
-              <button type="button"
-                class="p-[5px] flex items-center justify-center hover:bg-[var(--fill-tsp-white-dark)] rounded-lg cursor-pointer"
-                :title="t('Collaborate')"
-                @click="handleCollaborateClick">
-                <UserPlus class="text-[var(--icon-secondary)]" :size="18" />
-              </button>
-
               <!-- Share popover (structure from manus SharePermission UI) -->
               <span class="relative flex-shrink-0" aria-expanded="false" aria-haspopup="dialog">
                 <Popover>
@@ -174,7 +166,6 @@
       @selectTool="handleSelectTool"
       @selectApp="handleSelectApp" />
   </SimpleBar>
-  <CollaborateDialog :visible="showCollaborate" :sessionId="sessionId" @close="showCollaborate = false" />
 </template>
 
 <script setup lang="ts">
@@ -184,7 +175,6 @@ import { useRouter, onBeforeRouteUpdate } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import ChatBox from '../components/ChatBox.vue';
 import ChatMessage from '../components/ChatMessage.vue';
-import CollaborateDialog from '../components/CollaborateDialog.vue';
 import TakeControlBanner from '../components/TakeControlBanner.vue';
 import * as agentApi from '../api/agent';
 import { Message, MessageContent, ToolContent, AttachmentsContent, StepContent, isConsecutiveAssistant } from '../types/message';
@@ -193,7 +183,7 @@ import { useAgentEvents } from '../composables/useAgentEvents';
 import ToolPanel from '../components/ToolPanel.vue'
 import type { ComputerApp } from '../components/ToolPanelContent.vue'
 import PlanPanel from '../components/PlanPanel.vue';
-import { ArrowDown, FileSearch, Lock, Globe, Link, Check, UserPlus, Ellipsis, ExternalLink, Copy, ChevronDown } from 'lucide-vue-next';
+import { ArrowDown, FileSearch, Lock, Globe, Link, Check, Ellipsis, ExternalLink, Copy, ChevronDown } from 'lucide-vue-next';
 import ShareIcon from '@/components/icons/ShareIcon.vue';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
 import type { FileInfo } from '../api/file';
@@ -264,7 +254,6 @@ const chatContainerRef = ref<HTMLDivElement>();
 const moreBtnRef = ref<HTMLElement | null>(null);
 const modeMenuRef = ref<HTMLElement | null>(null);
 const showModeMenu = ref(false);
-const showCollaborate = ref(false);
 const taskMode = ref<'agent' | 'chat'>((localStorage.getItem('manus-task-mode') as 'agent' | 'chat') || 'agent');
 const sessionStatus = ref<SessionStatus | undefined>(undefined);
 const { showContextMenu } = useContextMenu();
@@ -597,10 +586,6 @@ const handleCopyLink = async () => {
     console.error('Error copying share link:', error);
     showErrorToast(t('Failed to copy link'));
   }
-}
-
-const handleCollaborateClick = () => {
-  showCollaborate.value = true;
 }
 
 const handleTakeControl = () => {

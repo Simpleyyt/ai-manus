@@ -8,7 +8,27 @@
           <div
             class="text-[var(--text-primary)] text-lg font-medium w-full flex flex-row items-center justify-between flex-1 min-w-0 gap-2">
             <div class="flex flex-row items-center gap-[6px] flex-1 min-w-0">
-              <span class="whitespace-nowrap text-ellipsis overflow-hidden">
+              <div class="relative shrink-0" ref="modeMenuRef">
+                <button type="button"
+                  class="inline-flex items-center gap-1 rounded-[8px] px-2 py-1 hover:bg-[var(--fill-tsp-white-main)] text-[var(--text-primary)] text-[15px] font-medium"
+                  @click="showModeMenu = !showModeMenu">
+                  Manus
+                  <span class="text-[12px] text-[var(--text-tertiary)] font-normal">{{ taskMode === 'agent' ? t('Agent mode') : t('Chat mode') }}</span>
+                  <ChevronDown :size="14" class="text-[var(--icon-tertiary)]" />
+                </button>
+                <div v-if="showModeMenu"
+                  class="absolute left-0 top-[calc(100%+6px)] z-50 min-w-[220px] rounded-[12px] border border-[var(--border-light)] bg-[var(--background-menu-white)] shadow-[0px_8px_32px_0px_var(--shadow-S)] py-1">
+                  <button type="button" class="flex w-full flex-col items-start px-3 py-2 hover:bg-[var(--fill-tsp-white-main)]" @click="setTaskMode('agent')">
+                    <span class="text-sm font-medium text-[var(--text-primary)]">{{ t('Agent mode') }}</span>
+                    <span class="text-[12px] text-[var(--text-tertiary)]">{{ t('Autonomous planning and tool use') }}</span>
+                  </button>
+                  <button type="button" class="flex w-full flex-col items-start px-3 py-2 hover:bg-[var(--fill-tsp-white-main)]" @click="setTaskMode('chat')">
+                    <span class="text-sm font-medium text-[var(--text-primary)]">{{ t('Chat mode') }}</span>
+                    <span class="text-[12px] text-[var(--text-tertiary)]">{{ t('Fast answers and discussion') }}</span>
+                  </button>
+                </div>
+              </div>
+              <span class="whitespace-nowrap text-ellipsis overflow-hidden text-[var(--text-secondary)] text-[14px] font-normal">
                 {{ title }}
               </span>
             </div>
@@ -128,6 +148,7 @@
       </div>
       <div class="mx-auto w-full max-w-full sm:max-w-[768px] sm:min-w-[390px] flex flex-col flex-1">
         <div class="flex flex-col w-full gap-[12px] pb-[80px] pt-[12px] flex-1 overflow-y-auto">
+          <TakeControlBanner :visible="showTakeControlBanner" @takeControl="handleTakeControl" />
           <ChatMessage v-for="(message, index) in messages" :key="index" :message="message"
             :hideHeader="isConsecutiveAssistant(messages, index)"
             @toolClick="handleToolClick" />
@@ -143,30 +164,36 @@
           </button>
           <PlanPanel v-if="plan && plan.steps.length > 0" :plan="plan" />
           <ChatBox v-model="inputMessage" v-model:attachments="attachments" :rows="1" @submit="handleSubmit"
-            :isRunning="isLoading" @stop="handleStop" :placeholder="t('Send message to Manus')" />
+            :isRunning="isLoading" @stop="handleStop" :placeholder="chatPlaceholder" />
         </div>
       </div>
     </div>
-    <ToolPanel ref="toolPanel" :size="toolPanelSize" :sessionId="sessionId" :realTime="realTime" 
-      :isShare="false"
-      @jumpToRealTime="jumpToRealTime" />
+    <ToolPanel ref="toolPanel" :size="toolPanelSize" :sessionId="sessionId" :realTime="realTime"
+      :isShare="false" :toolHistory="toolHistory"
+      @jumpToRealTime="jumpToRealTime"
+      @selectTool="handleSelectTool"
+      @selectApp="handleSelectApp" />
   </SimpleBar>
+  <CollaborateDialog :visible="showCollaborate" :sessionId="sessionId" @close="showCollaborate = false" />
 </template>
 
 <script setup lang="ts">
 import SimpleBar from '../components/SimpleBar.vue';
-import { ref, onMounted, watch, nextTick, onUnmounted, reactive, toRefs } from 'vue';
+import { ref, onMounted, watch, nextTick, onUnmounted, reactive, toRefs, computed } from 'vue';
 import { useRouter, onBeforeRouteUpdate } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import ChatBox from '../components/ChatBox.vue';
 import ChatMessage from '../components/ChatMessage.vue';
+import CollaborateDialog from '../components/CollaborateDialog.vue';
+import TakeControlBanner from '../components/TakeControlBanner.vue';
 import * as agentApi from '../api/agent';
-import { Message, MessageContent, ToolContent, AttachmentsContent, isConsecutiveAssistant } from '../types/message';
+import { Message, MessageContent, ToolContent, AttachmentsContent, StepContent, isConsecutiveAssistant } from '../types/message';
 import { PlanEventData, AgentSSEEvent } from '../types/event';
 import { useAgentEvents } from '../composables/useAgentEvents';
 import ToolPanel from '../components/ToolPanel.vue'
+import type { ComputerApp } from '../components/ToolPanelContent.vue'
 import PlanPanel from '../components/PlanPanel.vue';
-import { ArrowDown, FileSearch, Lock, Globe, Link, Check, UserPlus, Ellipsis, ExternalLink, Copy } from 'lucide-vue-next';
+import { ArrowDown, FileSearch, Lock, Globe, Link, Check, UserPlus, Ellipsis, ExternalLink, Copy, ChevronDown } from 'lucide-vue-next';
 import ShareIcon from '@/components/icons/ShareIcon.vue';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
 import type { FileInfo } from '../api/file';
@@ -235,7 +262,37 @@ const simpleBarRef = ref<InstanceType<typeof SimpleBar>>();
 const observerRef = ref<HTMLDivElement>();
 const chatContainerRef = ref<HTMLDivElement>();
 const moreBtnRef = ref<HTMLElement | null>(null);
+const modeMenuRef = ref<HTMLElement | null>(null);
+const showModeMenu = ref(false);
+const showCollaborate = ref(false);
+const taskMode = ref<'agent' | 'chat'>((localStorage.getItem('manus-task-mode') as 'agent' | 'chat') || 'agent');
+const sessionStatus = ref<SessionStatus | undefined>(undefined);
 const { showContextMenu } = useContextMenu();
+
+const toolHistory = computed(() => {
+  const tools: ToolContent[] = [];
+  for (const message of messages.value) {
+    if (message.type === 'tool') {
+      tools.push(message.content as ToolContent);
+    } else if (message.type === 'step') {
+      const step = message.content as StepContent;
+      if (step.tools?.length) tools.push(...step.tools);
+    }
+  }
+  return tools;
+});
+
+const showTakeControlBanner = computed(() => sessionStatus.value === SessionStatus.WAITING);
+
+const chatPlaceholder = computed(() =>
+  taskMode.value === 'chat' ? t('Send message to Manus') : t('Send message to Manus')
+);
+
+const setTaskMode = (mode: 'agent' | 'chat') => {
+  taskMode.value = mode;
+  localStorage.setItem('manus-task-mode', mode);
+  showModeMenu.value = false;
+};
 
 // Shared SSE event -> message list conversion
 const { handleEvent } = useAgentEvents(
@@ -362,6 +419,7 @@ const restoreSession = async () => {
   const session = await agentApi.getSession(sessionId.value);
   // Initialize share mode based on session state
   shareMode.value = session.is_shared ? 'public' : 'private';
+  sessionStatus.value = session.status as SessionStatus;
   realTime.value = false;
   for (const event of session.events) {
     handleEvent(event);
@@ -390,6 +448,7 @@ onBeforeRouteUpdate((to, _, next) => {
 // Initialize active conversation
 onMounted(() => {
   hideFilePanel();
+  document.addEventListener('mousedown', handleModeMenuOutside);
   const routeParams = router.currentRoute.value.params;
   if (routeParams.sessionId) {
     // If sessionId is included in URL, use it directly
@@ -409,11 +468,18 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  document.removeEventListener('mousedown', handleModeMenuOutside);
   if (cancelCurrentChat.value) {
     cancelCurrentChat.value();
     cancelCurrentChat.value = null;
   }
 })
+
+const handleModeMenuOutside = (event: MouseEvent) => {
+  if (showModeMenu.value && modeMenuRef.value && !modeMenuRef.value.contains(event.target as Node)) {
+    showModeMenu.value = false;
+  }
+}
 
 const isLastNoMessageTool = (tool: ToolContent) => {
   return tool.tool_call_id === lastNoMessageTool.value?.tool_call_id;
@@ -534,7 +600,40 @@ const handleCopyLink = async () => {
 }
 
 const handleCollaborateClick = () => {
-  showSuccessToast(t('Collaboration coming soon'));
+  showCollaborate.value = true;
+}
+
+const handleTakeControl = () => {
+  if (!sessionId.value) return;
+  // Prefer opening computer panel on latest browser tool, then enter takeover
+  const browserTool = [...toolHistory.value].reverse().find((t) => t.name === 'browser');
+  if (browserTool) {
+    realTime.value = true;
+    toolPanel.value?.showToolPanel(browserTool, true);
+  }
+  window.dispatchEvent(new CustomEvent('takeover', {
+    detail: { sessionId: sessionId.value, active: true }
+  }));
+}
+
+const handleSelectTool = (tool: ToolContent) => {
+  realTime.value = false;
+  toolPanel.value?.showToolPanel(tool, false);
+}
+
+const handleSelectApp = (app: ComputerApp) => {
+  const match = [...toolHistory.value].reverse().find((tool) => {
+    if (app === 'terminal') return tool.name === 'shell';
+    if (app === 'file') return tool.name === 'file';
+    if (app === 'search') return tool.name === 'info';
+    return tool.name === 'browser';
+  });
+  if (match) {
+    realTime.value = false;
+    toolPanel.value?.showToolPanel(match, false);
+  } else if (lastNoMessageTool.value) {
+    toolPanel.value?.showToolPanel(lastNoMessageTool.value, isLiveTool(lastNoMessageTool.value));
+  }
 }
 
 const getShareUrl = () => {

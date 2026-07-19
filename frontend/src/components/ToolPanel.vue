@@ -8,7 +8,19 @@
     }"
     :style="{ 'width': isShow ? `${parentSize/2}px` : '0px', 'opacity': isShow ? '1' : '0', 'transition': '0.2s ease-in-out' }">
     <div class="h-full" :style="{ 'width': isShow ? '100%' : '0px' }">
-      <ToolPanelContent v-if="isShow && toolContent" :sessionId="sessionId" :realTime="realTime" :toolContent="toolContent" :live="live" :isShare="isShare" @hide="hideToolPanel" @jumpToRealTime="jumpToRealTime" />
+      <ToolPanelContent
+        v-if="isShow && toolContent"
+        :sessionId="sessionId"
+        :realTime="realTime"
+        :toolContent="toolContent"
+        :live="live"
+        :isShare="isShare"
+        :toolHistory="toolHistory"
+        @hide="hideToolPanel"
+        @jumpToRealTime="jumpToRealTime"
+        @selectTool="onSelectTool"
+        @selectApp="onSelectApp"
+      />
     </div>
   </div>
 </template>
@@ -16,7 +28,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import type { ToolContent } from '../types/message'
-import ToolPanelContent from './ToolPanelContent.vue'
+import ToolPanelContent, { type ComputerApp } from './ToolPanelContent.vue'
 import { useResizeObserver } from '../composables/useResizeObserver'
 import { eventBus } from '../utils/eventBus'
 import { EVENT_SHOW_FILE_PANEL, EVENT_SHOW_TOOL_PANEL } from '../constants/event'
@@ -27,7 +39,6 @@ const { size: parentSize } = useResizeObserver(toolPanelRef, {
   property: 'width'
 })
 
-// Tool panel state
 const isShow = ref(false)
 const live = ref(false)
 const toolContent = ref<ToolContent>()
@@ -35,12 +46,15 @@ const visible = ref(true)
 
 const emit = defineEmits<{
   (e: 'jumpToRealTime'): void
+  (e: 'selectTool', tool: ToolContent): void
+  (e: 'selectApp', app: ComputerApp): void
 }>()
 
 defineProps<{
   sessionId?: string
   realTime: boolean
   isShare: boolean
+  toolHistory?: ToolContent[]
 }>()
 
 const showToolPanel = (content: ToolContent, isLive: boolean = false) => {
@@ -57,6 +71,16 @@ const hideToolPanel = () => {
 
 const jumpToRealTime = () => {
   emit('jumpToRealTime')
+}
+
+const onSelectTool = (tool: ToolContent) => {
+  toolContent.value = tool
+  live.value = false
+  emit('selectTool', tool)
+}
+
+const onSelectApp = (app: ComputerApp) => {
+  emit('selectApp', app)
 }
 
 onMounted(() => {

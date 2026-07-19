@@ -27,10 +27,36 @@ export interface ListSessionItem {
     status: SessionStatus;
     unread_message_count: number;
     is_shared: boolean;
+    is_favorite: boolean;
+    project_id: string | null;
 }
 
 export interface ListSessionResponse {
     sessions: ListSessionItem[];
+}
+
+export interface ProjectItem {
+    project_id: string;
+    name: string;
+    instruction: string | null;
+    is_pinned: boolean;
+    sort_order: number;
+}
+
+export interface ListProjectsResponse {
+    projects: ProjectItem[];
+}
+
+export interface LibraryFileItem {
+    session_id: string;
+    session_title: string | null;
+    file_id: string | null;
+    filename: string | null;
+    file_path: string | null;
+}
+
+export interface LibraryResponse {
+    files: LibraryFileItem[];
 }
 
 export interface ConsoleRecord {

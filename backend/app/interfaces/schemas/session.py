@@ -50,6 +50,8 @@ class ListSessionItem(BaseModel):
     status: SessionStatus
     unread_message_count: int
     is_shared: bool = False
+    is_favorite: bool = False
+    project_id: Optional[str] = None
 
     @staticmethod
     def from_domain(summary: SessionSummary) -> 'ListSessionItem':
@@ -60,7 +62,9 @@ class ListSessionItem(BaseModel):
             unread_message_count=summary.unread_message_count,
             latest_message=summary.latest_message,
             latest_message_at=int(summary.latest_message_at.timestamp()) if summary.latest_message_at else None,
-            is_shared=summary.is_shared
+            is_shared=summary.is_shared,
+            is_favorite=summary.is_favorite,
+            project_id=summary.project_id,
         )
 
 
@@ -81,6 +85,45 @@ class ShellViewResponse(BaseModel):
     output: str
     session_id: str
     console: Optional[List[ConsoleRecord]] = None
+
+
+class UpdateSessionTitleRequest(BaseModel):
+    """Update session title request schema"""
+    title: str
+
+
+class UpdateSessionTitleResponse(BaseModel):
+    """Update session title response schema"""
+    session_id: str
+    title: str
+
+
+class FavoriteSessionResponse(BaseModel):
+    """Favorite session response schema"""
+    session_id: str
+    is_favorite: bool
+
+
+class MoveSessionProjectRequest(BaseModel):
+    """Move session to project (null to remove from project)"""
+    project_id: Optional[str] = None
+
+
+class MoveSessionProjectResponse(BaseModel):
+    session_id: str
+    project_id: Optional[str] = None
+
+
+class LibraryFileItem(BaseModel):
+    session_id: str
+    session_title: Optional[str] = None
+    file_id: Optional[str] = None
+    filename: Optional[str] = None
+    file_path: Optional[str] = None
+
+
+class LibraryResponse(BaseModel):
+    files: List[LibraryFileItem]
 
 
 class ShareSessionResponse(BaseModel):

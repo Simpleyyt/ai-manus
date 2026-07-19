@@ -74,13 +74,14 @@ async def _ensure_initialized() -> None:
         SessionDocument,
         UserDocument,
         ClawDocument,
+        ProjectDocument,
     )
 
     settings = get_settings()
     await get_mongodb().initialize()
     await init_beanie(
         database=get_mongodb().client[settings.mongodb_database],
-        document_models=[AgentDocument, SessionDocument, UserDocument, ClawDocument],
+        document_models=[AgentDocument, SessionDocument, UserDocument, ClawDocument, ProjectDocument],
     )
     await get_redis().initialize()
     CeleryTask.set_runner_factory(_build_runner_factory())

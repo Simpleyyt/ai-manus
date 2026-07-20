@@ -81,6 +81,9 @@ class SessionRepository(Protocol):
 
     async def clear_project_id(self, project_id: str) -> None:
         """Clear project_id from all sessions belonging to a project"""
+
+    async def update_task_mode(self, session_id: str, task_mode: str) -> None:
+        """Update session task mode (agent | chat)"""
         ...
     
     async def delete(self, session_id: str) -> None:

@@ -1,151 +1,137 @@
 <template>
   <SimpleBar ref="simpleBarRef" @scroll="handleScroll">
-    <div ref="chatContainerRef" class="relative flex flex-col h-full flex-1 min-w-0 px-5">
+    <!-- Chat column: full-bleed header (Manus) + centered message column -->
+    <div ref="chatContainerRef" class="relative flex flex-col h-full flex-1 min-w-0">
+      <!-- Session chrome — full width of chat pane (not constrained to 768) -->
       <div ref="observerRef"
-        class="sm:min-w-[390px] flex flex-row items-center justify-between pt-3 pb-1 gap-1 sticky top-0 z-10 bg-[var(--background-gray-main)] flex-shrink-0">
-        <div class="flex items-center flex-1"></div>
-        <div class="max-w-full sm:max-w-[768px] sm:min-w-[390px] flex w-full flex-col gap-[4px] overflow-hidden">
-          <div
-            class="text-[var(--text-primary)] text-lg font-medium w-full flex flex-row items-center justify-between flex-1 min-w-0 gap-2">
-            <div class="flex flex-row items-center gap-[6px] flex-1 min-w-0">
-              <div class="relative shrink-0" ref="modeMenuRef">
-                <button type="button"
-                  class="inline-flex items-center gap-1 rounded-[8px] px-2 py-1 hover:bg-[var(--fill-tsp-white-main)] text-[var(--text-primary)] text-[15px] font-medium"
-                  @click="showModeMenu = !showModeMenu">
-                  Manus
-                  <span class="text-[12px] text-[var(--text-tertiary)] font-normal">{{ taskMode === 'agent' ? t('Agent mode') : t('Chat mode') }}</span>
-                  <ChevronDown :size="14" class="text-[var(--icon-tertiary)]" />
-                </button>
-                <div v-if="showModeMenu"
-                  class="absolute left-0 top-[calc(100%+6px)] z-50 min-w-[220px] rounded-[12px] border border-[var(--border-light)] bg-[var(--background-menu-white)] shadow-[0px_8px_32px_0px_var(--shadow-S)] py-1">
-                  <button type="button" class="flex w-full flex-col items-start px-3 py-2 hover:bg-[var(--fill-tsp-white-main)]" @click="setTaskMode('agent')">
-                    <span class="text-sm font-medium text-[var(--text-primary)]">{{ t('Agent mode') }}</span>
-                    <span class="text-[12px] text-[var(--text-tertiary)]">{{ t('Autonomous planning and tool use') }}</span>
-                  </button>
-                  <button type="button" class="flex w-full flex-col items-start px-3 py-2 hover:bg-[var(--fill-tsp-white-main)]" @click="setTaskMode('chat')">
-                    <span class="text-sm font-medium text-[var(--text-primary)]">{{ t('Chat mode') }}</span>
-                    <span class="text-[12px] text-[var(--text-tertiary)]">{{ t('Fast answers and discussion') }}</span>
-                  </button>
-                </div>
-              </div>
-              <span class="whitespace-nowrap text-ellipsis overflow-hidden text-[var(--text-secondary)] text-[14px] font-normal">
-                {{ title }}
-              </span>
-            </div>
-            <div class="flex items-center gap-1 flex-shrink-0">
-              <!-- Share popover (structure from manus SharePermission UI) -->
-              <span class="relative flex-shrink-0" aria-expanded="false" aria-haspopup="dialog">
-                <Popover>
-                  <PopoverTrigger>
-                    <button
-                      class="h-8 px-3 rounded-[100px] inline-flex items-center gap-1 clickable outline outline-1 outline-offset-[-1px] outline-[var(--border-btn-main)] hover:bg-[var(--fill-tsp-white-light)]">
-                      <ShareIcon color="var(--icon-secondary)" />
-                      <span class="text-[var(--text-secondary)] text-sm font-medium">{{ t('Share') }}</span>
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent>
-                    <div
-                      class="w-[400px] flex flex-col rounded-2xl bg-[var(--background-menu-white)] shadow-[0px_8px_32px_0px_var(--shadow-S),0px_0px_0px_1px_var(--border-light)]"
-                      style="max-width: calc(-16px + 100vw);">
-                      <div class="flex flex-col pt-[12px] px-[16px] pb-[16px]">
-                        <div class="flex items-center justify-between mb-2 px-[8px]">
-                          <div class="text-[15px] font-semibold text-[var(--text-primary)]">{{ t('Share') }}</div>
-                        </div>
-                        <!-- Only me -->
-                        <div @click="handleShareModeChange('private')"
-                          :class="{'pointer-events-none opacity-50': sharingLoading}"
-                          class="flex items-center gap-[10px] px-[8px] -mx-[8px] py-[8px] rounded-[8px] clickable hover:bg-[var(--fill-tsp-white-main)]">
-                          <div
-                            :class="shareMode === 'private' ? 'bg-[var(--Button-primary-black)]' : 'bg-[var(--fill-tsp-white-dark)]'"
-                            class="size-8 rounded-[8px] flex items-center justify-center">
-                            <Lock :size="16" :stroke="shareMode === 'private' ? 'var(--text-onblack)' : 'var(--icon-primary)'" :stroke-width="2" />
-                          </div>
-                          <div class="flex flex-col flex-1 min-w-0">
-                            <div class="text-sm font-medium text-[var(--text-primary)]">{{ t('Only me') }}</div>
-                            <div class="text-[13px] text-[var(--text-tertiary)]">{{ t('Only visible to you') }}</div>
-                          </div>
-                          <Check :size="20" :class="shareMode === 'private' ? 'ml-auto' : 'ml-auto invisible'" :color="shareMode === 'private' ? 'var(--icon-primary)' : 'var(--icon-tertiary)'" />
-                        </div>
-                        <!-- Public access -->
-                        <div @click="handleShareModeChange('public')"
-                          :class="{'pointer-events-none opacity-50': sharingLoading}"
-                          class="flex items-center gap-[10px] px-[8px] -mx-[8px] py-[8px] rounded-[8px] clickable hover:bg-[var(--fill-tsp-white-main)]">
-                          <div
-                            :class="shareMode === 'public' ? 'bg-[var(--Button-primary-black)]' : 'bg-[var(--fill-tsp-white-dark)]'"
-                            class="size-8 rounded-[8px] flex items-center justify-center">
-                            <Globe :size="16" :stroke="shareMode === 'public' ? 'var(--text-onblack)' : 'var(--icon-primary)'" :stroke-width="2" />
-                          </div>
-                          <div class="flex flex-col flex-1 min-w-0">
-                            <div class="text-sm font-medium text-[var(--text-primary)]">{{ t('Public access') }}</div>
-                            <div class="text-[13px] text-[var(--text-tertiary)]">{{ t('Anyone with a link can view') }}</div>
-                          </div>
-                          <Check :size="20" :class="shareMode === 'public' ? 'ml-auto' : 'ml-auto invisible'" :color="shareMode === 'public' ? 'var(--icon-primary)' : 'var(--icon-tertiary)'" />
-                        </div>
-                        <div class="border-t border-[var(--border-main)] mt-[4px]"></div>
-
-                        <div v-if="shareMode === 'private'">
-                          <button @click.stop="handleInstantShare"
-                            :disabled="sharingLoading"
-                            class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors hover:opacity-90 active:opacity-80 bg-[var(--Button-primary-black)] text-[var(--text-onblack)] h-[36px] px-[12px] rounded-[10px] gap-[6px] text-sm min-w-16 mt-[16px] w-full disabled:opacity-50 disabled:cursor-not-allowed"
-                            tabindex="-1">
-                            <div v-if="sharingLoading" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            <Link v-else :size="16" stroke="currentColor" :stroke-width="2" />
-                            {{ sharingLoading ? t('Sharing...') : t('Share Instantly') }}
-                          </button>
-                        </div>
-                        <div v-else class="mt-[16px] flex flex-col gap-3">
-                          <!-- SocialMediaShare row from Manus -->
-                          <div class="flex items-center justify-center gap-2">
-                            <button type="button" class="size-9 rounded-full border border-[var(--border-main)] flex items-center justify-center hover:bg-[var(--fill-tsp-white-main)]" :title="'X'" @click="shareToSocial('x')">
-                              <span class="text-sm font-bold text-[var(--text-primary)]">𝕏</span>
-                            </button>
-                            <button type="button" class="size-9 rounded-full border border-[var(--border-main)] flex items-center justify-center hover:bg-[var(--fill-tsp-white-main)] text-[12px] font-semibold text-[var(--text-primary)]" @click="shareToSocial('linkedin')">in</button>
-                            <button type="button" class="size-9 rounded-full border border-[var(--border-main)] flex items-center justify-center hover:bg-[var(--fill-tsp-white-main)] text-[12px] font-semibold text-[var(--text-primary)]" @click="shareToSocial('facebook')">f</button>
-                            <button type="button" class="size-9 rounded-full border border-[var(--border-main)] flex items-center justify-center hover:bg-[var(--fill-tsp-white-main)] text-[11px] font-semibold text-[var(--text-primary)]" @click="shareToSocial('reddit')">r/</button>
-                          </div>
-                          <button @click.stop="handleCopyLink"
-                            :class="linkCopied ? 'inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors active:opacity-80 bg-[var(--Button-primary-white)] text-[var(--text-primary)] hover:opacity-70 h-[36px] px-[12px] rounded-[10px] gap-[6px] text-sm min-w-16 w-full border border-[var(--border-btn-main)] shadow-none' : 'inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors hover:opacity-90 active:opacity-80 bg-[var(--Button-primary-black)] text-[var(--text-onblack)] h-[36px] px-[12px] rounded-[10px] gap-[6px] text-sm min-w-16 w-full'"
-                            tabindex="-1">
-                            <Link v-if="!linkCopied" :size="16" stroke="currentColor" :stroke-width="2" />
-                            <Check v-else :size="16" color="var(--text-primary)" />
-                            {{ linkCopied ? t('Link Copied') : t('Copy link') }}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </span>
-
-              <!-- View all files -->
-              <button type="button" @click="handleFileListShow"
-                class="p-[5px] flex items-center justify-center hover:bg-[var(--fill-tsp-white-dark)] rounded-lg cursor-pointer"
-                :title="t('View all files in this task')">
-                <FileSearch class="text-[var(--icon-secondary)]" :size="18" />
-              </button>
-
-              <!-- More options -->
-              <button type="button" ref="moreBtnRef"
-                class="p-[5px] flex items-center justify-center hover:bg-[var(--fill-tsp-white-dark)] rounded-lg cursor-pointer"
-                :title="t('More options')"
-                @click="handleMoreClick">
-                <Ellipsis class="text-[var(--icon-secondary)]" :size="18" />
-              </button>
-            </div>
-          </div>
-          <div class="w-full flex justify-between items-center">
+        class="sticky top-0 z-10 flex-shrink-0 flex items-center justify-between gap-3 h-[52px] px-4 bg-[var(--background-gray-main)]">
+        <div class="relative shrink-0 min-w-0" ref="modeMenuRef">
+          <button type="button"
+            class="inline-flex items-center gap-1 max-w-full rounded-[8px] px-2 py-1.5 hover:bg-[var(--fill-tsp-white-main)] text-[var(--text-primary)] text-[15px] font-medium"
+            @click="showModeMenu = !showModeMenu">
+            <span class="truncate">{{ modelLabel }}</span>
+            <ChevronDown :size="16" class="text-[var(--icon-tertiary)] shrink-0" />
+          </button>
+          <div v-if="showModeMenu"
+            class="absolute left-0 top-[calc(100%+6px)] z-50 min-w-[260px] rounded-[12px] border border-[var(--border-light)] bg-[var(--background-menu-white)] shadow-[0px_8px_32px_0px_var(--shadow-S)] py-1">
+            <button type="button"
+              class="flex w-full flex-col items-start px-3 py-2.5 hover:bg-[var(--fill-tsp-white-main)]"
+              :class="taskMode === 'agent' ? 'bg-[var(--fill-tsp-white-light)]' : ''"
+              @click="setTaskMode('agent')">
+              <span class="text-sm font-medium text-[var(--text-primary)]">{{ t('Manus 1.6') }}</span>
+              <span class="text-[12px] text-[var(--text-tertiary)]">{{ t('Autonomous planning and tool use') }}</span>
+            </button>
+            <button type="button"
+              class="flex w-full flex-col items-start px-3 py-2.5 hover:bg-[var(--fill-tsp-white-main)]"
+              :class="taskMode === 'chat' ? 'bg-[var(--fill-tsp-white-light)]' : ''"
+              @click="setTaskMode('chat')">
+              <span class="text-sm font-medium text-[var(--text-primary)]">{{ t('Manus 1.6 Lite') }}</span>
+              <span class="text-[12px] text-[var(--text-tertiary)]">{{ t('Fast answers and discussion') }}</span>
+            </button>
           </div>
         </div>
-        <div class="flex-1"></div>
+
+        <div class="flex items-center gap-0.5 flex-shrink-0">
+          <!-- Share — Manus SharePermission layout -->
+          <Popover>
+            <PopoverTrigger>
+              <button type="button"
+                class="h-8 px-3 rounded-[100px] inline-flex items-center gap-1 clickable hover:bg-[var(--fill-tsp-white-light)]"
+                :class="shareMode === 'public' ? 'bg-[var(--fill-tsp-white-main)]' : ''">
+                <ShareIcon color="var(--icon-secondary)" />
+                <span class="text-[var(--text-secondary)] text-sm font-medium">{{ t('Share') }}</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="end">
+              <div class="w-[400px] max-w-[calc(100vw-16px)] flex flex-col bg-[var(--background-menu-white)] rounded-2xl shadow-[0px_8px_32px_0px_var(--shadow-S),0px_0px_0px_1px_var(--border-light)]">
+                <div class="flex py-3 px-4 justify-between items-center border-b border-[var(--border-main)]">
+                  <h3 class="text-[var(--text-primary)] text-base font-medium leading-[22px]">{{ t('Share') }}</h3>
+                  <span class="inline-flex ml-auto cursor-help" :title="t('Share privacy tip')">
+                    <CircleHelp :size="16" class="text-[var(--icon-tertiary)]" />
+                  </span>
+                </div>
+                <div class="pt-[12px] px-[16px] pb-[16px]">
+                  <div @click="handleShareModeChange('private')"
+                    :class="{'pointer-events-none opacity-50': sharingLoading}"
+                    class="flex items-center gap-[10px] px-[8px] -mx-[8px] py-[8px] rounded-[8px] clickable hover:bg-[var(--fill-tsp-white-main)]">
+                    <div class="size-8 rounded-[8px] flex items-center justify-center bg-[var(--fill-tsp-white-dark)]">
+                      <Lock :size="16" color="var(--icon-primary)" :stroke-width="2" />
+                    </div>
+                    <div class="flex flex-col flex-1 min-w-0">
+                      <div class="text-[var(--text-primary)] text-sm font-medium">{{ t('Only me') }}</div>
+                      <div class="text-[var(--text-tertiary)] text-[13px]">{{ t('Viewable by yourself only') }}</div>
+                    </div>
+                    <Check :size="20" :class="shareMode === 'private' ? 'ml-auto' : 'ml-auto invisible'" color="var(--icon-primary)" />
+                  </div>
+                  <div @click="handleShareModeChange('public')"
+                    :class="{'pointer-events-none opacity-50': sharingLoading}"
+                    class="flex items-center gap-[10px] px-[8px] -mx-[8px] py-[8px] rounded-[8px] clickable hover:bg-[var(--fill-tsp-white-main)]">
+                    <div class="size-8 rounded-[8px] flex items-center justify-center bg-[var(--fill-tsp-white-dark)]">
+                      <Globe :size="16" color="var(--icon-primary)" :stroke-width="2" />
+                    </div>
+                    <div class="flex flex-col flex-1 min-w-0">
+                      <div class="text-[var(--text-primary)] text-sm font-medium">{{ t('Public access') }}</div>
+                      <div class="text-[var(--text-tertiary)] text-[13px]">{{ t('Anyone with a link can view') }}</div>
+                    </div>
+                    <Check :size="20" :class="shareMode === 'public' ? 'ml-auto' : 'ml-auto invisible'" color="var(--icon-primary)" />
+                  </div>
+
+                  <div v-if="shareMode === 'private'" class="mt-2">
+                    <button @click.stop="handleInstantShare" :disabled="sharingLoading"
+                      class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors hover:opacity-90 active:opacity-80 bg-[var(--Button-primary-black)] text-[var(--text-onblack)] h-[36px] px-[12px] rounded-[10px] gap-[6px] text-sm w-full disabled:opacity-50">
+                      <div v-if="sharingLoading" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <Link v-else :size="16" stroke="currentColor" :stroke-width="2" />
+                      {{ sharingLoading ? t('Sharing...') : t('Share Instantly') }}
+                    </button>
+                  </div>
+                  <!-- Manus: SocialMediaShare left + Copy link right -->
+                  <div v-else class="mt-2 space-y-2">
+                    <div class="flex items-center justify-between gap-2">
+                      <div class="flex items-center gap-2">
+                        <button type="button" class="size-9 rounded-full bg-[var(--fill-tsp-white-dark)] flex items-center justify-center hover:opacity-80" title="X" @click="shareToSocial('x')">
+                          <span class="text-sm font-bold text-[var(--text-primary)]">𝕏</span>
+                        </button>
+                        <button type="button" class="size-9 rounded-full bg-[var(--fill-tsp-white-dark)] flex items-center justify-center hover:opacity-80 text-[12px] font-semibold text-[var(--text-primary)]" @click="shareToSocial('linkedin')">in</button>
+                        <button type="button" class="size-9 rounded-full bg-[var(--fill-tsp-white-dark)] flex items-center justify-center hover:opacity-80 text-[13px] font-semibold text-[var(--text-primary)]" @click="shareToSocial('facebook')">f</button>
+                        <button type="button" class="size-9 rounded-full bg-[var(--fill-tsp-white-dark)] flex items-center justify-center hover:opacity-80 text-[11px] font-semibold text-[var(--text-primary)]" @click="shareToSocial('reddit')">r/</button>
+                      </div>
+                      <button @click.stop="handleCopyLink"
+                        class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors h-[36px] px-[12px] rounded-[10px] gap-[6px] text-sm shrink-0"
+                        :class="linkCopied
+                          ? 'bg-[var(--Button-primary-white)] text-[var(--text-primary)] border border-[var(--border-btn-main)]'
+                          : 'bg-[var(--Button-primary-black)] text-[var(--text-onblack)] hover:opacity-90'">
+                        <Link v-if="!linkCopied" :size="16" stroke="currentColor" :stroke-width="2" />
+                        <Check v-else :size="16" color="var(--text-primary)" />
+                        {{ linkCopied ? t('Link copied') : t('Copy link') }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <button type="button" @click="handleFileListShow"
+            class="size-8 flex items-center justify-center hover:bg-[var(--fill-tsp-white-dark)] rounded-[8px] cursor-pointer"
+            :title="t('View all files in this task')">
+            <FileSearch class="text-[var(--icon-secondary)]" :size="18" />
+          </button>
+
+          <button type="button" ref="moreBtnRef"
+            class="size-8 flex items-center justify-center hover:bg-[var(--fill-tsp-white-dark)] rounded-[8px] cursor-pointer"
+            :title="t('More options')"
+            @click="handleMoreClick">
+            <Ellipsis class="text-[var(--icon-secondary)]" :size="18" />
+          </button>
+        </div>
       </div>
-      <div class="mx-auto w-full max-w-full sm:max-w-[768px] sm:min-w-[390px] flex flex-col flex-1">
+
+      <div class="mx-auto w-full max-w-full sm:max-w-[768px] sm:min-w-[390px] flex flex-col flex-1 px-5 min-h-0">
         <div class="flex flex-col w-full gap-[12px] pb-[80px] pt-[12px] flex-1 overflow-y-auto">
           <TakeControlBanner :visible="showTakeControlBanner" @takeControl="handleTakeControl" />
           <ChatMessage v-for="(message, index) in messages" :key="index" :message="message"
             :hideHeader="isConsecutiveAssistant(messages, index)"
             @toolClick="handleToolClick" />
-
-          <!-- Loading indicator -->
           <LoadingIndicator v-if="isLoading" :text="$t('Thinking')" />
         </div>
 
@@ -160,7 +146,7 @@
         </div>
       </div>
     </div>
-    <ToolPanel ref="toolPanel" :size="toolPanelSize" :sessionId="sessionId" :realTime="realTime"
+    <ComputerPanel ref="computerPanel" :size="computerPanelSize" :sessionId="sessionId" :realTime="realTime"
       :isShare="false" :toolHistory="toolHistory"
       @jumpToRealTime="jumpToRealTime"
       @selectTool="handleSelectTool"
@@ -180,10 +166,10 @@ import * as agentApi from '../api/agent';
 import { Message, MessageContent, ToolContent, AttachmentsContent, StepContent, isConsecutiveAssistant } from '../types/message';
 import { PlanEventData, AgentSSEEvent } from '../types/event';
 import { useAgentEvents } from '../composables/useAgentEvents';
-import ToolPanel from '../components/ToolPanel.vue'
-import type { ComputerApp } from '../components/ToolPanelContent.vue'
+import ComputerPanel from '../components/ComputerPanel.vue'
+import type { ComputerApp } from '../components/ComputerPanelContent.vue'
 import PlanPanel from '../components/PlanPanel.vue';
-import { ArrowDown, FileSearch, Lock, Globe, Link, Check, Ellipsis, ExternalLink, Copy, ChevronDown } from 'lucide-vue-next';
+import { ArrowDown, FileSearch, Lock, Globe, Link, Check, Ellipsis, ExternalLink, Copy, ChevronDown, CircleHelp } from 'lucide-vue-next';
 import ShareIcon from '@/components/icons/ShareIcon.vue';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
 import type { FileInfo } from '../api/file';
@@ -206,7 +192,7 @@ const createInitialState = () => ({
   isLoading: false,
   sessionId: undefined as string | undefined,
   messages: [] as Message[],
-  toolPanelSize: 0,
+  computerPanelSize: 0,
   realTime: true,
   follow: true,
   title: t('New Chat'),
@@ -231,7 +217,7 @@ const {
   isLoading,
   sessionId,
   messages,
-  toolPanelSize,
+  computerPanelSize,
   realTime,
   follow,
   title,
@@ -247,14 +233,14 @@ const {
 } = toRefs(state);
 
 // Non-state refs that don't need reset
-const toolPanel = ref<InstanceType<typeof ToolPanel>>()
+const computerPanel = ref<InstanceType<typeof ComputerPanel>>()
 const simpleBarRef = ref<InstanceType<typeof SimpleBar>>();
 const observerRef = ref<HTMLDivElement>();
 const chatContainerRef = ref<HTMLDivElement>();
 const moreBtnRef = ref<HTMLElement | null>(null);
 const modeMenuRef = ref<HTMLElement | null>(null);
 const showModeMenu = ref(false);
-const taskMode = ref<'agent' | 'chat'>((localStorage.getItem('manus-task-mode') as 'agent' | 'chat') || 'agent');
+const taskMode = ref<'agent' | 'chat'>('agent');
 const sessionStatus = ref<SessionStatus | undefined>(undefined);
 const { showContextMenu } = useContextMenu();
 
@@ -273,14 +259,42 @@ const toolHistory = computed(() => {
 
 const showTakeControlBanner = computed(() => sessionStatus.value === SessionStatus.WAITING);
 
-const chatPlaceholder = computed(() =>
-  taskMode.value === 'chat' ? t('Send message to Manus') : t('Send message to Manus')
+const modelLabel = computed(() =>
+  taskMode.value === 'chat' ? t('Manus 1.6 Lite') : t('Manus 1.6')
 );
 
-const setTaskMode = (mode: 'agent' | 'chat') => {
+const chatPlaceholder = computed(() => t('Send message to Manus'));
+
+const setTaskMode = async (mode: 'agent' | 'chat') => {
+  if (!sessionId.value || taskMode.value === mode) {
+    showModeMenu.value = false;
+    return;
+  }
+  const previous = taskMode.value;
   taskMode.value = mode;
-  localStorage.setItem('manus-task-mode', mode);
   showModeMenu.value = false;
+  try {
+    // Stop in-flight agent/chat so the next message picks up the new mode
+    if (sessionStatus.value === SessionStatus.RUNNING || sessionStatus.value === SessionStatus.PENDING) {
+      try {
+        await agentApi.stopSession(sessionId.value);
+      } catch (error) {
+        console.warn('Failed to stop session before mode switch:', error);
+      }
+      if (cancelCurrentChat.value) {
+        cancelCurrentChat.value();
+        cancelCurrentChat.value = null;
+      }
+      isLoading.value = false;
+      sessionStatus.value = SessionStatus.COMPLETED;
+    }
+    await agentApi.updateSessionTaskMode(sessionId.value, mode);
+    localStorage.setItem('manus-task-mode', mode);
+  } catch (error) {
+    console.error('Failed to update task mode:', error);
+    taskMode.value = previous;
+    showErrorToast(t('Failed to update task mode'));
+  }
 };
 
 // Shared SSE event -> message list conversion
@@ -289,7 +303,7 @@ const { handleEvent } = useAgentEvents(
   {
     onToolActivity: (tool: ToolContent) => {
       if (realTime.value) {
-        toolPanel.value?.showToolPanel(tool, true);
+        computerPanel.value?.showComputerPanel(tool, true);
       }
     },
   }
@@ -409,6 +423,7 @@ const restoreSession = async () => {
   // Initialize share mode based on session state
   shareMode.value = session.is_shared ? 'public' : 'private';
   sessionStatus.value = session.status as SessionStatus;
+  taskMode.value = session.task_mode === 'chat' ? 'chat' : 'agent';
   realTime.value = false;
   for (const event of session.events) {
     handleEvent(event);
@@ -423,7 +438,7 @@ const restoreSession = async () => {
 
 
 onBeforeRouteUpdate((to, _, next) => {
-  toolPanel.value?.hideToolPanel();
+  computerPanel.value?.hideComputerPanel();
   hideFilePanel();
   resetState();
   if (to.params.sessionId) {
@@ -447,7 +462,18 @@ onMounted(() => {
     const files: FileInfo[] = history.state?.files;
     history.replaceState({}, document.title);
     if (message) {
-      chat(message, files);
+      // Load persisted task_mode before first chat so Chat preference from home applies
+      void (async () => {
+        try {
+          const session = await agentApi.getSession(sessionId.value!);
+          taskMode.value = session.task_mode === 'chat' ? 'chat' : 'agent';
+          shareMode.value = session.is_shared ? 'public' : 'private';
+          sessionStatus.value = session.status as SessionStatus;
+        } catch (error) {
+          console.error('Failed to load session mode:', error);
+        }
+        await chat(message, files);
+      })();
     } else {
       restoreSession();
     }
@@ -481,7 +507,8 @@ const isLiveTool = (tool: ToolContent) => {
   if (!isLastNoMessageTool(tool)) {
     return false;
   }
-  if (tool.timestamp > Date.now() - 5 * 60 * 1000) {
+  // tool.timestamp is Unix seconds (see backend event serializers)
+  if (tool.timestamp > Math.floor(Date.now() / 1000) - 5 * 60) {
     return true;
   }
   return false;
@@ -490,14 +517,14 @@ const isLiveTool = (tool: ToolContent) => {
 const handleToolClick = (tool: ToolContent) => {
   realTime.value = false;
   if (sessionId.value) {
-    toolPanel.value?.showToolPanel(tool, isLiveTool(tool));
+    computerPanel.value?.showComputerPanel(tool, isLiveTool(tool));
   }
 }
 
 const jumpToRealTime = () => {
   realTime.value = true;
   if (lastNoMessageTool.value) {
-    toolPanel.value?.showToolPanel(lastNoMessageTool.value, isLiveTool(lastNoMessageTool.value));
+    computerPanel.value?.showComputerPanel(lastNoMessageTool.value, isLiveTool(lastNoMessageTool.value));
   }
 }
 
@@ -594,7 +621,7 @@ const handleTakeControl = () => {
   const browserTool = [...toolHistory.value].reverse().find((t) => t.name === 'browser');
   if (browserTool) {
     realTime.value = true;
-    toolPanel.value?.showToolPanel(browserTool, true);
+    computerPanel.value?.showComputerPanel(browserTool, true);
   }
   window.dispatchEvent(new CustomEvent('takeover', {
     detail: { sessionId: sessionId.value, active: true }
@@ -603,7 +630,7 @@ const handleTakeControl = () => {
 
 const handleSelectTool = (tool: ToolContent) => {
   realTime.value = false;
-  toolPanel.value?.showToolPanel(tool, false);
+  computerPanel.value?.showComputerPanel(tool, false);
 }
 
 const handleSelectApp = (app: ComputerApp) => {
@@ -615,9 +642,9 @@ const handleSelectApp = (app: ComputerApp) => {
   });
   if (match) {
     realTime.value = false;
-    toolPanel.value?.showToolPanel(match, false);
+    computerPanel.value?.showComputerPanel(match, false);
   } else if (lastNoMessageTool.value) {
-    toolPanel.value?.showToolPanel(lastNoMessageTool.value, isLiveTool(lastNoMessageTool.value));
+    computerPanel.value?.showComputerPanel(lastNoMessageTool.value, isLiveTool(lastNoMessageTool.value));
   }
 }
 

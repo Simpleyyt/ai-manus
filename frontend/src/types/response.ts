@@ -17,6 +17,7 @@ export interface GetSessionResponse {
     status: SessionStatus;
     events: AgentSSEEvent[];
     is_shared: boolean;
+    task_mode: 'agent' | 'chat';
 }
 
 export interface ListSessionItem {
@@ -29,6 +30,7 @@ export interface ListSessionItem {
     is_shared: boolean;
     is_favorite: boolean;
     project_id: string | null;
+    task_mode?: 'agent' | 'chat';
 }
 
 export interface ListSessionResponse {

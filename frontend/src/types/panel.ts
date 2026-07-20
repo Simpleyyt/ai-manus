@@ -1,9 +1,9 @@
 import { Ref } from 'vue'
 
-export interface LeftPanelState {
-  isLeftPanelShow: Ref<boolean>
-  toggleLeftPanel: () => void
-  setLeftPanel: (visible: boolean) => void
-  showLeftPanel: () => void
-  hideLeftPanel: () => void
-} 
+export interface SessionSidebarState {
+  isSessionSidebarShow: Ref<boolean>
+  toggleSessionSidebar: () => void
+  setSessionSidebar: (visible: boolean) => void
+  showSessionSidebar: () => void
+  hideSessionSidebar: () => void
+}

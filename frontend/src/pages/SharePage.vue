@@ -84,23 +84,24 @@
         </div>
       </div>
     </div>
-    <ToolPanel ref="toolPanel" :size="toolPanelSize" :sessionId="sessionId" :realTime="realTime"
-      :isShare="true"
-      @jumpToRealTime="jumpToRealTime" />
+    <ComputerPanel ref="computerPanel" :size="computerPanelSize" :sessionId="sessionId" :realTime="realTime"
+      :isShare="true" :toolHistory="toolHistory"
+      @jumpToRealTime="jumpToRealTime"
+      @selectTool="handleSelectTool" />
   </SimpleBar>
 </template>
 
 <script setup lang="ts">
 import SimpleBar from '../components/SimpleBar.vue';
-import { ref, onMounted, onUnmounted, watch, nextTick, reactive, toRefs } from 'vue';
+import { ref, onMounted, onUnmounted, watch, nextTick, reactive, toRefs, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import ChatMessage from '../components/ChatMessage.vue';
 import * as agentApi from '../api/agent';
-import { Message, ToolContent, isConsecutiveAssistant } from '../types/message';
+import { Message, ToolContent, StepContent, isConsecutiveAssistant } from '../types/message';
 import { PlanEventData } from '../types/event';
 import { useAgentEvents } from '../composables/useAgentEvents';
-import ToolPanel from '../components/ToolPanel.vue'
+import ComputerPanel from '../components/ComputerPanel.vue'
 import PlanPanel from '../components/PlanPanel.vue';
 import { ArrowDown, FileSearch, Link, Bot } from 'lucide-vue-next';
 import ManusLogoTextIcon from '../components/icons/ManusLogoTextIcon.vue';
@@ -122,7 +123,7 @@ const createInitialState = () => ({
   isLoading: false,
   sessionId: undefined as string | undefined,
   messages: [] as Message[],
-  toolPanelSize: 0,
+  computerPanelSize: 0,
   realTime: true,
   follow: true,
   title: t('New Chat'),
@@ -146,7 +147,7 @@ const {
   isLoading,
   sessionId,
   messages,
-  toolPanelSize,
+  computerPanelSize,
   realTime,
   follow,
   title,
@@ -161,9 +162,22 @@ const {
 } = toRefs(state);
 
 // Non-state refs that don't need reset
-const toolPanel = ref<InstanceType<typeof ToolPanel>>()
+const computerPanel = ref<InstanceType<typeof ComputerPanel>>()
 const simpleBarRef = ref<InstanceType<typeof SimpleBar>>();
 let countdownTimer: number | null = null;
+
+const toolHistory = computed(() => {
+  const tools: ToolContent[] = [];
+  for (const message of messages.value) {
+    if (message.type === 'tool') {
+      tools.push(message.content as ToolContent);
+    } else if (message.type === 'step') {
+      const step = message.content as StepContent;
+      if (step.tools?.length) tools.push(...step.tools);
+    }
+  }
+  return tools;
+});
 
 // Shared SSE event -> message list conversion
 const { handleEvent } = useAgentEvents(
@@ -171,7 +185,7 @@ const { handleEvent } = useAgentEvents(
   {
     onToolActivity: (tool: ToolContent) => {
       if (realTime.value) {
-        toolPanel.value?.showToolPanel(tool, false);
+        computerPanel.value?.showComputerPanel(tool, false);
       }
     },
   }
@@ -199,7 +213,7 @@ const replay = async () => {
     return;
   }
   hideFilePanel();
-  toolPanel.value?.hideToolPanel();
+  computerPanel.value?.hideComputerPanel();
   resetState();
   sessionId.value = String(router.currentRoute.value.params.sessionId) as string;
   const session = await agentApi.getSharedSession(sessionId.value);
@@ -280,14 +294,19 @@ onUnmounted(() => {
 const handleToolClick = (tool: ToolContent) => {
   realTime.value = false;
   if (sessionId.value) {
-    toolPanel.value?.showToolPanel(tool, false);
+    computerPanel.value?.showComputerPanel(tool, false);
   }
+}
+
+const handleSelectTool = (tool: ToolContent) => {
+  realTime.value = false;
+  computerPanel.value?.showComputerPanel(tool, false);
 }
 
 const jumpToRealTime = () => {
   realTime.value = true;
   if (lastNoMessageTool.value) {
-    toolPanel.value?.showToolPanel(lastNoMessageTool.value, false);
+    computerPanel.value?.showComputerPanel(lastNoMessageTool.value, false);
   }
 }
 

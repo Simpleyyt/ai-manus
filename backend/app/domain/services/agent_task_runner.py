@@ -4,7 +4,7 @@ import logging
 import os
 import debugpy
 from pydantic import TypeAdapter
-from app.domain.models.message import Message
+from app.domain.models.message import Message, LLMMessage, Role
 from app.domain.models.event import (
     BaseEvent,
     ErrorEvent,
@@ -31,7 +31,7 @@ from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.external.task import TaskRunner, TaskRunnerFactory, Task
 from app.domain.repositories.session_repository import SessionRepository
 from app.domain.repositories.mcp_repository import MCPRepository
-from app.domain.models.session import SessionStatus
+from app.domain.models.session import SessionStatus, TaskMode
 from app.domain.models.file import FileInfo
 from app.domain.services.tools.mcp import MCPToolkit
 from app.domain.models.tool_result import ToolResult
@@ -209,20 +209,35 @@ class AgentTaskRunner(TaskRunner):
         """Process agent's message queue and run the agent's flow"""
         try:
             logger.info(f"Agent {self._agent_id} message processing task started")
-            await self._sandbox.ensure_sandbox()
-            await self._mcp_tool.initialized(await self._mcp_repository.get_mcp_config())
+
             while not await task.input_stream.is_empty():
+                session = await self._session_repository.find_by_id(self._session_id)
+                is_chat = bool(session and session.task_mode == TaskMode.CHAT)
+
+                if not is_chat:
+                    await self._sandbox.ensure_sandbox()
+                    await self._mcp_tool.initialized(await self._mcp_repository.get_mcp_config())
+
                 event = await self._pop_event(task)
                 message = ""
                 if isinstance(event, MessageEvent):
                     message = event.message or ""
-                    await self._sync_message_attachments_to_sandbox(event)
+                    if not is_chat:
+                        await self._sync_message_attachments_to_sandbox(event)
                     
                 logger.info(f"Agent {self._agent_id} received new message: {message[:50]}...")
 
-                message_obj = Message(message=message, attachments=[attachment.file_path for attachment in event.attachments])
+                message_obj = Message(
+                    message=message,
+                    attachments=[
+                        attachment.file_path
+                        for attachment in (event.attachments or [])
+                        if attachment.file_path
+                    ],
+                )
                 
-                async for event in self._run_flow(message_obj):
+                flow = self._run_chat(message_obj) if is_chat else self._run_flow(message_obj)
+                async for event in flow:
                     await self._put_and_add_event(task, event)
                     if isinstance(event, TitleEvent):
                         await self._session_repository.update_title(self._session_id, event.title)
@@ -254,6 +269,41 @@ class AgentTaskRunner(TaskRunner):
             await self._put_and_add_event(task, ErrorEvent(error=f"Task error: {str(e)}"))
             await self._session_repository.update_status(self._session_id, SessionStatus.COMPLETED)
     
+    async def _run_chat(self, message: Message) -> AsyncGenerator[BaseEvent, None]:
+        """Lightweight Chat mode: single LLM reply without tools / plan-act."""
+        if not message.message:
+            logger.warning(f"Agent {self._agent_id} received empty message in chat mode")
+            yield ErrorEvent(error="No message")
+            return
+
+        session = await self._session_repository.find_by_id(self._session_id)
+        history: List[LLMMessage] = [
+            LLMMessage(
+                role=Role.SYSTEM,
+                content=(
+                    "You are Manus, a helpful AI assistant in Chat mode. "
+                    "Answer the user's questions clearly and concisely. "
+                    "You do not have access to tools, a computer, or the internet."
+                ),
+            )
+        ]
+        for ev in (session.events if session else []) or []:
+            if isinstance(ev, MessageEvent) and ev.message:
+                role = Role.USER if ev.role == "user" else Role.ASSISTANT
+                history.append(LLMMessage(role=role, content=ev.message))
+
+        reply = await self._llm.ask(history)
+        content = (reply.content or "").strip() or "(No response)"
+
+        if session and not session.title:
+            title = message.message.strip().replace("\n", " ")[:50]
+            if title:
+                yield TitleEvent(title=title)
+
+        yield MessageEvent(role="assistant", message=content)
+        yield DoneEvent()
+        logger.info(f"Agent {self._agent_id} completed chat-mode reply")
+
     async def _run_flow(self, message: Message) -> AsyncGenerator[BaseEvent, None]:
         """Process a single message through the agent's flow and yield events"""
         if not message.message:

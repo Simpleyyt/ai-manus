@@ -19,6 +19,7 @@ from app.interfaces.schemas.session import (
     ShareSessionResponse, SharedSessionResponse,
     UpdateSessionTitleRequest, UpdateSessionTitleResponse,
     FavoriteSessionResponse, MoveSessionProjectRequest, MoveSessionProjectResponse,
+    UpdateSessionTaskModeRequest, UpdateSessionTaskModeResponse,
     LibraryFileItem, LibraryResponse,
 )
 from app.interfaces.schemas.file import FileViewRequest, FileViewResponse
@@ -58,7 +59,8 @@ async def get_session(
         title=session.title,
         status=session.status,
         events=await EventMapper.events_to_sse_events(session.events),
-        is_shared=session.is_shared
+        is_shared=session.is_shared,
+        task_mode=session.task_mode,
     ))
 
 @router.delete("/{session_id}", response_model=APIResponse[None])
@@ -116,6 +118,21 @@ async def move_session_project(
     return APIResponse.success(MoveSessionProjectResponse(
         session_id=session_id,
         project_id=request.project_id,
+    ))
+
+@router.patch("/{session_id}/mode", response_model=APIResponse[UpdateSessionTaskModeResponse])
+async def update_session_task_mode(
+    session_id: str,
+    request: UpdateSessionTaskModeRequest,
+    current_user: User = Depends(get_current_user),
+    agent_service: AgentService = Depends(get_agent_service),
+) -> APIResponse[UpdateSessionTaskModeResponse]:
+    await agent_service.update_session_task_mode(
+        session_id, current_user.id, request.task_mode.value
+    )
+    return APIResponse.success(UpdateSessionTaskModeResponse(
+        session_id=session_id,
+        task_mode=request.task_mode,
     ))
 
 @router.post("/{session_id}/stop", response_model=APIResponse[None])

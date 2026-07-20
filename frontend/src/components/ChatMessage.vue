@@ -9,7 +9,7 @@
     </div>
     <div class="flex max-w-[90%] relative flex-col gap-2 items-end">
       <div
-        class="relative flex items-center rounded-[12px] overflow-hidden bg-[var(--fill-white)] dark:bg-[var(--fill-tsp-white-main)] p-3 ltr:rounded-br-none rtl:rounded-bl-none border border-[var(--border-main)] dark:border-0"
+        class="relative flex items-center rounded-[18px] overflow-hidden bg-[var(--fill-tsp-white-dark)] px-3.5 py-2.5 ltr:rounded-br-[6px] rtl:rounded-bl-[6px]"
         v-html="renderMarkdown(messageContent.content)">
       </div>
     </div>

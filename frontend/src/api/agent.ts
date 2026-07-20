@@ -72,6 +72,17 @@ export async function moveSessionProject(
   return response.data.data;
 }
 
+export async function updateSessionTaskMode(
+  sessionId: string,
+  taskMode: 'agent' | 'chat'
+): Promise<{ session_id: string; task_mode: 'agent' | 'chat' }> {
+  const response = await apiClient.patch<ApiResponse<{ session_id: string; task_mode: 'agent' | 'chat' }>>(
+    `/sessions/${sessionId}/mode`,
+    { task_mode: taskMode }
+  );
+  return response.data.data;
+}
+
 export async function stopSession(sessionId: string): Promise<void> {
   await apiClient.post<ApiResponse<void>>(`/sessions/${sessionId}/stop`);
 }

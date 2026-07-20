@@ -1,48 +1,52 @@
 <template>
   <div class="h-full flex flex-col flex-shrink-0"
-    :style="'width: ' + (isLeftPanelShow ? 300 : 52) + 'px; transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);'">
+    :style="'width: ' + (isSessionSidebarShow ? 300 : 52) + 'px; transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);'">
     <div class="flex flex-col overflow-hidden bg-[var(--background-nav)] h-full w-full">
 
-      <!-- 顶部 Logo + 折叠/展开 -->
-      <div class="flex items-center justify-between pointer-events-auto h-[56px] px-[8px] py-[12px] flex-shrink-0">
-        <div class="flex gap-0.5 items-center">
-          <template v-if="isLeftPanelShow">
-            <div class="flex items-center justify-center flex-shrink-0 size-[32px] mx-[2px]">
+      <!-- Header — Manus SESSION_LIST: h-56, ps-13 pe-11 -->
+      <div
+        class="flex items-center justify-between pointer-events-auto h-[56px] py-[12px] flex-shrink-0"
+        :class="isSessionSidebarShow ? 'ps-[13px] pe-[11px]' : 'px-[8px]'">
+        <div class="flex gap-0.5 items-center min-w-0">
+          <template v-if="isSessionSidebarShow">
+            <div class="flex items-center justify-center flex-shrink-0 size-[32px]">
               <Bot :size="28" class="text-[var(--icon-primary)]" />
             </div>
             <ManusLogoTextIcon :width="64.8" :height="28" />
           </template>
           <template v-else>
             <div
-              class="group flex items-center justify-center flex-shrink-0 size-[32px] mx-[2px] cursor-pointer rounded-md hover:bg-[var(--fill-tsp-gray-main)]"
+              class="group flex items-center justify-center flex-shrink-0 size-[32px] cursor-pointer rounded-md hover:bg-[var(--fill-tsp-gray-main)]"
               :title="t('Expand sidebar')"
-              @click="toggleLeftPanel">
+              @click="toggleSessionSidebar">
               <Bot :size="28" class="text-[var(--icon-primary)] group-hover:hidden" />
               <PanelLeft class="h-5 w-5 text-[var(--icon-secondary)] hidden group-hover:block" />
             </div>
           </template>
         </div>
-        <div v-if="isLeftPanelShow"
-          class="flex h-7 w-7 items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-gray-main)] rounded-md"
+        <div v-if="isSessionSidebarShow"
+          class="flex size-8 items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-gray-main)] rounded-[8px] shrink-0"
           :title="t('Collapse sidebar')"
-          @click="toggleLeftPanel">
+          @click="toggleSessionSidebar">
           <PanelLeft class="h-5 w-5 text-[var(--icon-secondary)]" />
         </div>
       </div>
 
-      <!-- 快捷入口 -->
-      <div class="flex flex-col flex-1 min-h-0 p-[8px] pb-0 gap-px overflow-hidden">
+      <!-- 快捷入口 — Manus skeleton: px-14 gap-2 when expanded -->
+      <div
+        class="flex flex-col flex-1 min-h-0 pb-0 overflow-hidden"
+        :class="isSessionSidebarShow ? 'px-[14px] gap-[2px]' : 'px-[8px] gap-px'">
 
         <!-- New Task -->
         <div
           @click="handleNewTaskClick"
-          :title="isLeftPanelShow ? undefined : t('New Task')"
+          :title="isSessionSidebarShow ? undefined : t('New Task')"
           class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] pointer-events-auto p-[9px]"
           :class="route.path === '/' && !isSearchMode ? 'bg-[var(--fill-tsp-white-main)]' : 'hover:bg-[var(--fill-tsp-white-light)]'">
           <div class="shrink-0 size-[20px] flex items-center justify-center ltr:-translate-x-px rtl:translate-x-px">
             <SquarePen :size="18" class="text-[var(--text-primary)]" />
           </div>
-          <template v-if="isLeftPanelShow">
+          <template v-if="isSessionSidebarShow">
             <div class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
               <span class="truncate">{{ t('New Task') }}</span>
             </div>
@@ -60,13 +64,13 @@
         <!-- Search -->
         <div
           @click="handleSearchClick"
-          :title="isLeftPanelShow ? undefined : t('Search')"
+          :title="isSessionSidebarShow ? undefined : t('Search')"
           class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] pointer-events-auto p-[9px]"
           :class="isSearchMode ? 'bg-[var(--fill-tsp-white-main)]' : 'hover:bg-[var(--fill-tsp-white-light)]'">
           <div class="shrink-0 size-[20px] flex items-center justify-center ltr:-translate-x-px rtl:translate-x-px">
             <Search :size="18" class="text-[var(--text-primary)]" />
           </div>
-          <div v-if="isLeftPanelShow" class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
+          <div v-if="isSessionSidebarShow" class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
             <span class="truncate">{{ t('Search') }}</span>
           </div>
         </div>
@@ -74,12 +78,12 @@
         <!-- Library（占位，对齐官方导航） -->
         <div
           @click="handleLibraryClick"
-          :title="isLeftPanelShow ? undefined : t('Library')"
+          :title="isSessionSidebarShow ? undefined : t('Library')"
           class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] pointer-events-auto p-[9px] hover:bg-[var(--fill-tsp-white-light)]">
           <div class="shrink-0 size-[20px] flex items-center justify-center ltr:-translate-x-px rtl:translate-x-px">
             <Library :size="18" class="text-[var(--text-primary)]" />
           </div>
-          <div v-if="isLeftPanelShow" class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
+          <div v-if="isSessionSidebarShow" class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
             <span class="truncate">{{ t('Library') }}</span>
           </div>
         </div>
@@ -88,22 +92,22 @@
         <div
           v-if="clawEnabled"
           @click="handleClawClick"
-          :title="isLeftPanelShow ? undefined : 'Manus Claw'"
+          :title="isSessionSidebarShow ? undefined : 'Manus Claw'"
           class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] pointer-events-auto p-[9px]"
           :class="route.path === '/chat/claw' ? 'bg-[var(--fill-tsp-white-main)]' : 'hover:bg-[var(--fill-tsp-white-light)]'">
           <div class="shrink-0 size-[20px] flex items-center justify-center ltr:-translate-x-px rtl:translate-x-px">
             <div class="claw-nav-icon w-[18px] h-[18px]" />
           </div>
-          <div v-if="isLeftPanelShow" class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
+          <div v-if="isSessionSidebarShow" class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
             <span class="truncate">Manus Claw</span>
           </div>
         </div>
 
-        <!-- 任务列表区 -->
-        <div v-if="isLeftPanelShow" class="flex flex-col flex-1 min-h-0 -mx-[8px] mt-[4px] overflow-hidden">
+        <!-- 任务列表区 — Projects 距快捷入口 mt-6（官方 skeleton） -->
+        <div v-if="isSessionSidebarShow" class="flex flex-col flex-1 min-h-0 -mx-[14px] mt-6 overflow-hidden">
           <div class="w-full border-t border-[var(--border-main)] transition-opacity duration-200" :class="isListScrolled ? 'opacity-100' : 'opacity-0'"></div>
 
-          <div ref="scrollContainerRef" class="flex flex-col flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-5 px-[8px]" @scroll="handleListScroll">
+          <div ref="scrollContainerRef" class="flex flex-col flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-5 px-[14px]" @scroll="handleListScroll">
 
             <!-- Search 输入 -->
             <div v-if="isSearchMode" class="mt-[4px] mb-[8px] px-[2px]">
@@ -245,16 +249,17 @@
       </div>
 
       <!-- 底部 Profile -->
-      <div ref="profileRef" class="relative flex flex-col justify-center items-start gap-[8px] bg-[var(--background-nav)] p-[8px] flex-shrink-0">
+      <div ref="profileRef" class="relative flex flex-col justify-center items-start gap-[8px] bg-[var(--background-nav)] flex-shrink-0"
+        :class="isSessionSidebarShow ? 'px-[14px] py-[8px]' : 'p-[8px]'">
         <div v-if="showUserMenu" class="fixed z-50"
-          :class="isLeftPanelShow ? 'start-2 bottom-[52px]' : 'start-[56px] bottom-3'">
+          :class="isSessionSidebarShow ? 'start-2 bottom-[52px]' : 'start-[56px] bottom-3'">
           <UserMenu />
         </div>
-        <div class="flex w-full items-center justify-between pe-[2px]" :class="isLeftPanelShow ? '' : 'flex-col-reverse gap-[4px]'">
+        <div class="flex w-full items-center justify-between pe-[2px]" :class="isSessionSidebarShow ? '' : 'flex-col-reverse gap-[4px]'">
           <div class="flex-1 min-w-0 flex items-center">
             <div
               @click="showUserMenu = !showUserMenu"
-              :title="isLeftPanelShow ? undefined : (currentUser?.fullname || t('Unknown User'))"
+              :title="isSessionSidebarShow ? undefined : (currentUser?.fullname || t('Unknown User'))"
               class="flex min-w-0 ps-[2px] items-center gap-[8px] clickable cursor-pointer hover:opacity-70 p-[2px] text-[var(--text-primary)] text-sm font-[500]"
               aria-expanded="false" aria-haspopup="dialog">
               <div class="relative flex items-center justify-center font-bold cursor-pointer flex-shrink-0">
@@ -264,7 +269,7 @@
                   {{ avatarLetter }}
                 </div>
               </div>
-              <span v-if="isLeftPanelShow" class="truncate">
+              <span v-if="isSessionSidebarShow" class="truncate">
                 {{ currentUser?.fullname || t('Unknown User') }}
               </span>
             </div>
@@ -282,7 +287,7 @@ import SessionItem from './SessionItem.vue';
 import UserMenu from './UserMenu.vue';
 import LibraryDialog from './LibraryDialog.vue';
 import ManusLogoTextIcon from './icons/ManusLogoTextIcon.vue';
-import { useLeftPanel } from '../composables/useLeftPanel';
+import { useSessionSidebar } from '../composables/useSessionSidebar';
 import { useAuth } from '../composables/useAuth';
 import { useDialog } from '../composables/useDialog';
 import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue';
@@ -297,7 +302,7 @@ import { showSuccessToast, showErrorToast } from '../utils/toast';
 type TaskFilter = 'all' | 'favorites' | 'shared' | 'noProject'
 
 const { t } = useI18n()
-const { isLeftPanelShow, toggleLeftPanel } = useLeftPanel()
+const { isSessionSidebarShow, toggleSessionSidebar } = useSessionSidebar()
 const { showInputDialog } = useDialog()
 const route = useRoute()
 const router = useRouter()
@@ -428,8 +433,8 @@ const handleNewTaskClick = () => {
 }
 
 const handleSearchClick = async () => {
-  if (!isLeftPanelShow.value) {
-    toggleLeftPanel()
+  if (!isSessionSidebarShow.value) {
+    toggleSessionSidebar()
   }
   isSearchMode.value = true
   await nextTick()

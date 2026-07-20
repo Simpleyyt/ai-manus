@@ -76,7 +76,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import ChatBox from '../components/ChatBox.vue';
-import { createSession } from '../api/agent';
+import { createSession, updateSessionTaskMode } from '../api/agent';
 import { showErrorToast } from '../utils/toast';
 import {
   Github, Presentation, Globe, Palette, Gamepad2,
@@ -145,6 +145,10 @@ const handleSubmit = async () => {
       // Create new Agent
       const session = await createSession();
       const sessionId = session.session_id;
+      const preferredMode = localStorage.getItem('manus-task-mode');
+      if (preferredMode === 'chat') {
+        await updateSessionTaskMode(sessionId, 'chat');
+      }
 
       // Navigate to new route with session_id, passing initial message via state
       router.push({

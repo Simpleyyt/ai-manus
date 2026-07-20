@@ -152,6 +152,18 @@ class AgentService:
             raise RuntimeError("Session not found")
         await self._session_repository.update_project_id(session_id, project_id)
 
+    async def update_session_task_mode(
+        self,
+        session_id: str,
+        user_id: str,
+        task_mode: str,
+    ) -> None:
+        """Update Manus-style task mode (agent | chat)"""
+        session = await self._session_repository.find_by_id_and_user_id(session_id, user_id)
+        if not session:
+            raise RuntimeError("Session not found")
+        await self._session_repository.update_task_mode(session_id, task_mode)
+
     async def get_library_files(self, user_id: str, limit: int = 100) -> List[dict]:
         """Aggregate recent files across the user's sessions for Library view"""
         sessions = await self._session_repository.find_by_user_id(user_id)

@@ -78,6 +78,8 @@ class AgentTaskRunner(TaskRunner):
             self._llm,
             self._search_engine,
         )
+        # Snapshot file contents before mutating file tools (for Diff/Original views).
+        self._file_old_by_call: Dict[str, str] = {}
 
     async def _put_and_add_event(self, task: Task, event: AgentEvent) -> None:
         event_id = await task.output_stream.put(event.model_dump_json())
@@ -157,6 +159,24 @@ class AgentTaskRunner(TaskRunner):
     async def _handle_tool_event(self, event: ToolEvent):
         """Generate tool content"""
         try:
+            # Capture pre-write file content so the UI can show Diff / Original.
+            if (
+                event.status == ToolStatus.CALLING
+                and event.tool_name == "file"
+                and event.function_name in ("file_write", "file_str_replace")
+                and "file" in event.function_args
+            ):
+                try:
+                    file_path = event.function_args["file"]
+                    prior = await self._sandbox.file_read(file_path)
+                    if prior and prior.success and isinstance(prior.data, dict):
+                        self._file_old_by_call[event.tool_call_id] = prior.data.get("content", "") or ""
+                except Exception:
+                    # New file / missing file — no original content.
+                    logger.debug(
+                        f"Agent {self._agent_id} no prior content for {event.function_args.get('file')}"
+                    )
+
             if event.status == ToolStatus.CALLED:
                 if event.tool_name == "browser":
                     event.tool_content = BrowserToolContent(screenshot=await self._get_browser_screenshot())
@@ -175,7 +195,12 @@ class AgentTaskRunner(TaskRunner):
                         file_path = event.function_args["file"]
                         file_read_result = await self._sandbox.file_read(file_path)
                         file_content: str = file_read_result.data.get("content", "")
-                        event.tool_content = FileToolContent(content=file_content)
+                        old_content = self._file_old_by_call.pop(event.tool_call_id, None)
+                        # Only expose old_content when there was a prior snapshot (enables Diff tabs).
+                        event.tool_content = FileToolContent(
+                            content=file_content,
+                            old_content=old_content,
+                        )
                         await self._sync_file_to_storage(file_path)
                     else:
                         event.tool_content = FileToolContent(content="(No Content)")

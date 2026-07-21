@@ -63,6 +63,7 @@ class ShellToolContent(BaseModel):
 class FileToolContent(BaseModel):
     """File tool content"""
     content: str
+    old_content: Optional[str] = None
 
 class McpToolContent(BaseModel):
     """MCP tool content"""

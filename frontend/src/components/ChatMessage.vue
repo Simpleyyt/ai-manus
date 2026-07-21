@@ -22,7 +22,6 @@
         <span v-if="assistantName" class="text-base text-[var(--text-primary)] tracking-tight leading-none ml-0.5">{{ assistantName }}</span>
         <template v-else-if="!assistantIcon">
           <ManusTextIcon />
-          <span class="ms-1 inline-flex items-center rounded-[6px] px-1.5 py-0.5 text-[11px] font-medium leading-none bg-[var(--fill-tsp-white-dark)] text-[var(--text-tertiary)]">Lite</span>
         </template>
       </div>
       <div class="flex items-center gap-[2px] invisible group-hover:visible">
@@ -83,7 +82,6 @@
         <span v-if="assistantName" class="text-base text-[var(--text-primary)] tracking-tight leading-none ml-0.5">{{ assistantName }}</span>
         <template v-else-if="!assistantIcon">
           <ManusTextIcon />
-          <span class="ms-1 inline-flex items-center rounded-[6px] px-1.5 py-0.5 text-[11px] font-medium leading-none bg-[var(--fill-tsp-white-dark)] text-[var(--text-tertiary)]">Lite</span>
         </template>
       </div>
       <div class="flex items-center gap-[2px] invisible group-hover:visible">

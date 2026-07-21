@@ -2,44 +2,27 @@
   <SimpleBar ref="simpleBarRef" @scroll="handleScroll">
     <!-- Chat column: full-bleed header (Manus) + centered message column -->
     <div ref="chatContainerRef" class="relative flex flex-col h-full flex-1 min-w-0">
-      <!-- Session chrome — full width of chat pane (not constrained to 768) -->
+      <!-- Official session chrome (scraped from manus.im/app/...): h-56 bar + brand left + actions right -->
       <div ref="observerRef"
-        class="sticky top-0 z-10 flex-shrink-0 flex items-center justify-between gap-3 h-[52px] px-4 bg-[var(--background-gray-main)]">
-        <div class="relative shrink-0 min-w-0" ref="modeMenuRef">
-          <button type="button"
-            class="inline-flex items-center gap-1 max-w-full rounded-[8px] px-2 py-1.5 hover:bg-[var(--fill-tsp-white-main)] text-[var(--text-primary)] text-[15px] font-medium"
-            @click="showModeMenu = !showModeMenu">
-            <span class="truncate">{{ modelLabel }}</span>
-            <ChevronDown :size="16" class="text-[var(--icon-tertiary)] shrink-0" />
-          </button>
-          <div v-if="showModeMenu"
-            class="absolute left-0 top-[calc(100%+6px)] z-50 min-w-[260px] rounded-[12px] border border-[var(--border-light)] bg-[var(--background-menu-white)] shadow-[0px_8px_32px_0px_var(--shadow-S)] py-1">
-            <button type="button"
-              class="flex w-full flex-col items-start px-3 py-2.5 hover:bg-[var(--fill-tsp-white-main)]"
-              :class="taskMode === 'agent' ? 'bg-[var(--fill-tsp-white-light)]' : ''"
-              @click="setTaskMode('agent')">
-              <span class="text-sm font-medium text-[var(--text-primary)]">{{ t('Manus 1.6') }}</span>
-              <span class="text-[12px] text-[var(--text-tertiary)]">{{ t('Autonomous planning and tool use') }}</span>
-            </button>
-            <button type="button"
-              class="flex w-full flex-col items-start px-3 py-2.5 hover:bg-[var(--fill-tsp-white-main)]"
-              :class="taskMode === 'chat' ? 'bg-[var(--fill-tsp-white-light)]' : ''"
-              @click="setTaskMode('chat')">
-              <span class="text-sm font-medium text-[var(--text-primary)]">{{ t('Manus 1.6 Lite') }}</span>
-              <span class="text-[12px] text-[var(--text-tertiary)]">{{ t('Fast answers and discussion') }}</span>
-            </button>
+        class="flex h-[56px] w-full shrink-0 items-center justify-between py-[12px] ps-[14px] pe-[20px] md:px-[24px] gap-1 border-b sticky top-0 z-10 flex-shrink-0 bg-[var(--background-gray-main)] border-[var(--border-main)]">
+        <div class="flex min-w-0 flex-1 items-center gap-1">
+          <div class="flex items-center pointer-events-auto overflow-hidden">
+            <div class="flex h-8 pt-[7px] md:pr-[6px] pr-[4px] pb-[7px] md:pl-[8px] pl-[6px] justify-center items-center gap-1 rounded-[8px]">
+              <span class="text-[var(--text-primary)] md:text-[18px] text-[16px] font-[500] md:leading-[22px] leading-[20px] truncate">Manus</span>
+            </div>
           </div>
+          <div class="flex-1 min-w-[16px]"></div>
         </div>
 
-        <div class="flex items-center gap-0.5 flex-shrink-0">
+        <div class="flex flex-shrink-0 items-center gap-1 pointer-events-auto">
           <!-- Share — Manus SharePermission layout -->
           <Popover>
             <PopoverTrigger>
               <button type="button"
-                class="h-8 px-3 rounded-[100px] inline-flex items-center gap-1 clickable hover:bg-[var(--fill-tsp-white-light)]"
+                class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors active:opacity-80 bg-transparent text-[var(--text-primary)] hover:opacity-100 hover:bg-[var(--fill-tsp-white-main)] h-[32px] min-w-[64px] px-[8px] rounded-[8px] gap-[4px] text-[14px] leading-[18px]"
                 :class="shareMode === 'public' ? 'bg-[var(--fill-tsp-white-main)]' : ''">
                 <ShareIcon color="var(--icon-secondary)" />
-                <span class="text-[var(--text-secondary)] text-sm font-medium">{{ t('Share') }}</span>
+                <span class="text-[var(--text-secondary)]">{{ t('Share') }}</span>
               </button>
             </PopoverTrigger>
             <PopoverContent align="end">
@@ -112,16 +95,16 @@
           </Popover>
 
           <button type="button" @click="handleFileListShow"
-            class="size-8 flex items-center justify-center hover:bg-[var(--fill-tsp-white-dark)] rounded-[8px] cursor-pointer"
+            class="flex items-center justify-center cursor-pointer rounded-md hover:bg-[var(--fill-tsp-white-light)] size-8"
             :title="t('View all files in this task')">
-            <FileSearch class="text-[var(--icon-secondary)]" :size="18" />
+            <FileSearch class="size-[18px] text-[var(--icon-secondary)]" :size="18" />
           </button>
 
           <button type="button" ref="moreBtnRef"
-            class="size-8 flex items-center justify-center hover:bg-[var(--fill-tsp-white-dark)] rounded-[8px] cursor-pointer"
+            class="flex items-center justify-center cursor-pointer rounded-md hover:bg-[var(--fill-tsp-white-light)] size-8"
             :title="t('More options')"
             @click="handleMoreClick">
-            <Ellipsis class="text-[var(--icon-secondary)]" :size="18" />
+            <Ellipsis class="size-[18px] text-[var(--icon-secondary)]" :size="18" />
           </button>
         </div>
       </div>
@@ -140,17 +123,16 @@
             class="flex items-center justify-center w-[36px] h-[36px] rounded-full bg-[var(--background-white-main)] hover:bg-[var(--background-gray-main)] clickable border border-[var(--border-main)] shadow-[0px_5px_16px_0px_var(--shadow-S),0px_0px_1.25px_0px_var(--shadow-S)] absolute -top-20 left-1/2 -translate-x-1/2">
             <ArrowDown class="text-[var(--icon-primary)]" :size="20" />
           </button>
-          <PlanPanel v-if="plan && plan.steps.length > 0" :plan="plan" />
           <ChatBox v-model="inputMessage" v-model:attachments="attachments" :rows="1" @submit="handleSubmit"
             :isRunning="isLoading" @stop="handleStop" :placeholder="chatPlaceholder" />
         </div>
       </div>
     </div>
     <ComputerPanel ref="computerPanel" :size="computerPanelSize" :sessionId="sessionId" :realTime="realTime"
-      :isShare="false" :toolHistory="toolHistory"
+      :isShare="false" :toolHistory="toolHistory" :plan="plan"
       @jumpToRealTime="jumpToRealTime"
       @selectTool="handleSelectTool"
-      @selectApp="handleSelectApp" />
+      @useComputer="handleTakeControl" />
   </SimpleBar>
 </template>
 
@@ -167,9 +149,7 @@ import { Message, MessageContent, ToolContent, AttachmentsContent, StepContent, 
 import { PlanEventData, AgentSSEEvent } from '../types/event';
 import { useAgentEvents } from '../composables/useAgentEvents';
 import ComputerPanel from '../components/ComputerPanel.vue'
-import type { ComputerApp } from '../components/ComputerPanelContent.vue'
-import PlanPanel from '../components/PlanPanel.vue';
-import { ArrowDown, FileSearch, Lock, Globe, Link, Check, Ellipsis, ExternalLink, Copy, ChevronDown, CircleHelp } from 'lucide-vue-next';
+import { ArrowDown, FileSearch, Lock, Globe, Link, Check, Ellipsis, ExternalLink, Copy, CircleHelp } from 'lucide-vue-next';
 import ShareIcon from '@/components/icons/ShareIcon.vue';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
 import type { FileInfo } from '../api/file';
@@ -238,9 +218,6 @@ const simpleBarRef = ref<InstanceType<typeof SimpleBar>>();
 const observerRef = ref<HTMLDivElement>();
 const chatContainerRef = ref<HTMLDivElement>();
 const moreBtnRef = ref<HTMLElement | null>(null);
-const modeMenuRef = ref<HTMLElement | null>(null);
-const showModeMenu = ref(false);
-const taskMode = ref<'agent' | 'chat'>('agent');
 const sessionStatus = ref<SessionStatus | undefined>(undefined);
 const { showContextMenu } = useContextMenu();
 
@@ -259,43 +236,7 @@ const toolHistory = computed(() => {
 
 const showTakeControlBanner = computed(() => sessionStatus.value === SessionStatus.WAITING);
 
-const modelLabel = computed(() =>
-  taskMode.value === 'chat' ? t('Manus 1.6 Lite') : t('Manus 1.6')
-);
-
 const chatPlaceholder = computed(() => t('Send message to Manus'));
-
-const setTaskMode = async (mode: 'agent' | 'chat') => {
-  if (!sessionId.value || taskMode.value === mode) {
-    showModeMenu.value = false;
-    return;
-  }
-  const previous = taskMode.value;
-  taskMode.value = mode;
-  showModeMenu.value = false;
-  try {
-    // Stop in-flight agent/chat so the next message picks up the new mode
-    if (sessionStatus.value === SessionStatus.RUNNING || sessionStatus.value === SessionStatus.PENDING) {
-      try {
-        await agentApi.stopSession(sessionId.value);
-      } catch (error) {
-        console.warn('Failed to stop session before mode switch:', error);
-      }
-      if (cancelCurrentChat.value) {
-        cancelCurrentChat.value();
-        cancelCurrentChat.value = null;
-      }
-      isLoading.value = false;
-      sessionStatus.value = SessionStatus.COMPLETED;
-    }
-    await agentApi.updateSessionTaskMode(sessionId.value, mode);
-    localStorage.setItem('manus-task-mode', mode);
-  } catch (error) {
-    console.error('Failed to update task mode:', error);
-    taskMode.value = previous;
-    showErrorToast(t('Failed to update task mode'));
-  }
-};
 
 // Shared SSE event -> message list conversion
 const { handleEvent } = useAgentEvents(
@@ -423,7 +364,6 @@ const restoreSession = async () => {
   // Initialize share mode based on session state
   shareMode.value = session.is_shared ? 'public' : 'private';
   sessionStatus.value = session.status as SessionStatus;
-  taskMode.value = session.task_mode === 'chat' ? 'chat' : 'agent';
   realTime.value = false;
   for (const event of session.events) {
     handleEvent(event);
@@ -452,7 +392,6 @@ onBeforeRouteUpdate((to, _, next) => {
 // Initialize active conversation
 onMounted(() => {
   hideFilePanel();
-  document.addEventListener('mousedown', handleModeMenuOutside);
   const routeParams = router.currentRoute.value.params;
   if (routeParams.sessionId) {
     // If sessionId is included in URL, use it directly
@@ -462,39 +401,19 @@ onMounted(() => {
     const files: FileInfo[] = history.state?.files;
     history.replaceState({}, document.title);
     if (message) {
-      // Load persisted task_mode before first chat so Chat preference from home applies
-      void (async () => {
-        try {
-          const session = await agentApi.getSession(sessionId.value!);
-          taskMode.value = session.task_mode === 'chat' ? 'chat' : 'agent';
-          shareMode.value = session.is_shared ? 'public' : 'private';
-          sessionStatus.value = session.status as SessionStatus;
-        } catch (error) {
-          console.error('Failed to load session mode:', error);
-        }
-        await chat(message, files);
-      })();
+      void chat(message, files);
     } else {
       restoreSession();
     }
   }
-
-
 });
 
 onUnmounted(() => {
-  document.removeEventListener('mousedown', handleModeMenuOutside);
   if (cancelCurrentChat.value) {
     cancelCurrentChat.value();
     cancelCurrentChat.value = null;
   }
 })
-
-const handleModeMenuOutside = (event: MouseEvent) => {
-  if (showModeMenu.value && modeMenuRef.value && !modeMenuRef.value.contains(event.target as Node)) {
-    showModeMenu.value = false;
-  }
-}
 
 const isLastNoMessageTool = (tool: ToolContent) => {
   return tool.tool_call_id === lastNoMessageTool.value?.tool_call_id;
@@ -631,21 +550,6 @@ const handleTakeControl = () => {
 const handleSelectTool = (tool: ToolContent) => {
   realTime.value = false;
   computerPanel.value?.showComputerPanel(tool, false);
-}
-
-const handleSelectApp = (app: ComputerApp) => {
-  const match = [...toolHistory.value].reverse().find((tool) => {
-    if (app === 'terminal') return tool.name === 'shell';
-    if (app === 'file') return tool.name === 'file';
-    if (app === 'search') return tool.name === 'info';
-    return tool.name === 'browser';
-  });
-  if (match) {
-    realTime.value = false;
-    computerPanel.value?.showComputerPanel(match, false);
-  } else if (lastNoMessageTool.value) {
-    computerPanel.value?.showComputerPanel(lastNoMessageTool.value, isLiveTool(lastNoMessageTool.value));
-  }
 }
 
 const getShareUrl = () => {

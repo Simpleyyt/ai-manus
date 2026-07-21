@@ -18,6 +18,8 @@
     "@novnc/novnc": "^1.5.0",
     "@types/dompurify": "^3.2.0",
     "@vueuse/core": "^10.11.1",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
     "axios": "^1.8.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

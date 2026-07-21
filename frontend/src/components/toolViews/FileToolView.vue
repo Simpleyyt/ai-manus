@@ -1,35 +1,60 @@
 <template>
-  <ToolViewHeader :title="fileName" />
-  <div class="flex-1 min-h-0 w-full overflow-y-auto">
-    <div dir="ltr" data-orientation="horizontal" class="flex flex-col min-h-0 h-full relative">
-      <div
-        class="flex-1 min-h-0 h-full text-sm flex flex-col py-0 outline-none overflow-auto"
-      >
-        <section class="flex relative w-full h-full" style="text-align: initial">
-          <MonacoEditor
-            :value="fileContent"
-            :filename="fileName"
-            :read-only="true"
-            theme="vs"
-            :line-numbers="'off'"
-            :word-wrap="'on'"
-            :minimap="false"
-            :scroll-beyond-last-line="false"
-            :automatic-layout="true"
-          />
-        </section>
+  <div dir="ltr" class="computer-monaco-panel flex flex-col min-h-0 h-full relative flex-1 w-full bg-[var(--background-gray-main)]">
+    <div
+      class="flex items-center justify-center px-[16px] py-[8px]"
+      :class="{ hidden: !hasOldContent }">
+      <div class="backdrop-blur-3xl inline-flex h-7 items-center rounded-lg bg-[var(--tab-fill)] p-0.5">
+        <button
+          v-for="tab in tabs"
+          :key="tab.value"
+          type="button"
+          class="inline-flex items-center justify-center rounded-md px-3 py-1 text-xs transition-colors text-[var(--text-tertiary)] hover:cursor-pointer data-[state=on]:bg-[var(--fill-white)] data-[state=on]:text-[var(--text-primary)] data-[state=on]:shadow-[0px_0px_2px_0px_var(--shadow-S)]"
+          :data-state="activeTab === tab.value ? 'on' : 'off'"
+          @click="activeTab = tab.value">
+          {{ tab.label }}
+        </button>
       </div>
+    </div>
+
+    <div class="focus-visible:outline-none flex-1 min-h-0 h-full text-sm flex flex-col py-0 outline-none overflow-auto">
+      <div v-if="activeView === 'diff' && hasOldContent" class="flex-1 min-h-0 h-full">
+        <MonacoDiffEditor
+          class="w-full h-full"
+          :original="oldContent || ''"
+          :modified="fileContent"
+          :filename="fileName"
+        />
+      </div>
+      <section
+        v-else
+        class="flex relative w-full h-full flex-1 min-h-0"
+        style="text-align: initial">
+        <MonacoEditor
+          :value="activeView === 'oldContent' ? (oldContent || '') : fileContent"
+          :filename="fileName"
+          :read-only="true"
+          theme="vs"
+          :line-numbers="'off'"
+          :word-wrap="'on'"
+          :minimap="false"
+          :scroll-beyond-last-line="false"
+          :automatic-layout="true"
+        />
+      </section>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, toRef } from "vue";
-import { ToolContent } from "@/types/message";
-import { viewFile } from "@/api/agent";
-import MonacoEditor from "@/components/ui/MonacoEditor.vue";
-import ToolViewHeader from "./ToolViewHeader.vue";
-import { useLiveToolContent } from "@/composables/useLiveToolContent";
+import { ref, computed, toRef, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { ToolContent } from '@/types/message';
+import { viewFile } from '@/api/agent';
+import MonacoEditor from '@/components/ui/MonacoEditor.vue';
+import MonacoDiffEditor from '@/components/ui/MonacoDiffEditor.vue';
+import { useLiveToolContent } from '@/composables/useLiveToolContent';
+
+type FileTab = 'diff' | 'oldContent' | 'newContent';
 
 const props = defineProps<{
   sessionId: string;
@@ -43,26 +68,55 @@ defineExpose({
   },
 });
 
-const fileContent = ref("");
+const { t } = useI18n();
+const fileContent = ref('');
+const oldContent = ref<string | null>(null);
+/** Official default selected tab is Modified / 已修改 */
+const activeTab = ref<FileTab>('newContent');
+
+const tabs = computed(() => [
+  { label: t('Diff'), value: 'diff' as const },
+  { label: t('Original'), value: 'oldContent' as const },
+  { label: t('Modified'), value: 'newContent' as const },
+]);
+
+const hasOldContent = computed(() => oldContent.value != null);
+
+const activeView = computed<FileTab>(() => {
+  if (!hasOldContent.value) return 'newContent';
+  return activeTab.value;
+});
 
 const filePath = computed(() => {
   if (props.toolContent && props.toolContent.args.file) {
     return props.toolContent.args.file;
   }
-  return "";
+  return '';
 });
 
 const fileName = computed(() => {
   if (filePath.value) {
-    return filePath.value.split("/").pop() || "";
+    return filePath.value.split('/').pop() || '';
   }
-  return "";
+  return '';
 });
 
-// Load file content
-const loadFileContent = async () => {
+const applyContentPayload = () => {
+  const payload = props.toolContent.content;
   if (!props.live) {
-    fileContent.value = props.toolContent.content?.content || "";
+    fileContent.value = payload?.content || '';
+  }
+  if (payload && 'old_content' in payload) {
+    oldContent.value = payload.old_content ?? '';
+  } else if (!props.live) {
+    oldContent.value = null;
+  }
+};
+
+const loadFileContent = async () => {
+  applyContentPayload();
+
+  if (!props.live) {
     return;
   }
 
@@ -71,14 +125,25 @@ const loadFileContent = async () => {
   try {
     const response = await viewFile(props.sessionId, filePath.value);
     fileContent.value = response.content;
+    if (props.toolContent.content && 'old_content' in props.toolContent.content) {
+      oldContent.value = props.toolContent.content.old_content ?? '';
+    }
   } catch (error) {
-    console.error("Failed to load file content:", error);
+    console.error('Failed to load file content:', error);
   }
 };
 
+watch(
+  () => props.toolContent.content,
+  () => {
+    applyContentPayload();
+  },
+  { immediate: true, deep: true },
+);
+
 useLiveToolContent({
-  toolContent: toRef(props, "toolContent"),
-  live: toRef(props, "live"),
+  toolContent: toRef(props, 'toolContent'),
+  live: toRef(props, 'live'),
   targetKey: filePath,
   load: loadFileContent,
 });

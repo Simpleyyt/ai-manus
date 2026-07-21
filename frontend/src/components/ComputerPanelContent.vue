@@ -1,131 +1,187 @@
 <template>
-  <!-- Manus agentWorkspace / computer detail shell -->
+  <!-- ManusComputer shell: Header | Panel | Timeline -->
   <div
-    id="manus-computer-detail"
-    class="bg-[var(--background-gray-main)] sm:bg-[var(--background-menu-white)] sm:rounded-[16px] shadow-[0px_0px_8px_0px_rgba(0,0,0,0.02)] border border-black/8 dark:border-[var(--border-light)] flex h-full w-full overflow-hidden min-w-0">
-    <div class="flex-1 min-w-0 flex flex-col h-full">
-      <!-- Header — aligned with Manus FilePreviewerHeader: h-56 px-16 -->
-      <div class="flex h-[56px] shrink-0 items-center justify-between gap-[16px] px-[16px] py-[12px] border-b border-[var(--border-main)]">
-        <div class="text-[var(--text-primary)] text-lg font-semibold flex-1 truncate leading-[24px]">
-          {{ $t("Manus's Computer") }}
+    id="manus-agent-workspace"
+    class="h-full w-full min-w-0 flex flex-col bg-[var(--background-gray-main)] border-l border-[var(--border-main)] overflow-hidden">
+    <!-- ManusComputerHeader -->
+    <div class="flex h-[56px] shrink-0 items-center gap-[8px] border-b border-[var(--border-main)] px-[16px] py-[12px]">
+      <div class="flex min-w-0 flex-1 flex-col justify-center">
+        <h2 class="truncate text-[14px] font-[500] text-[var(--text-primary)]">
+          {{ $t("{name}'s computer", { name: 'Manus' }) }}
+        </h2>
+        <div class="flex min-w-0 items-center gap-[8px] text-[var(--text-tertiary)] text-xs">
+          <div class="shrink-0 truncate" :title="usingLabel">
+            <template v-if="toolInfo">
+              {{ $t('Manus is using') }}
+              <span class="font-medium text-[var(--text-secondary)]">{{ toolInfo.name }}</span>
+            </template>
+            <template v-else>
+              {{ $t('Waiting for instructions') }}
+            </template>
+          </div>
+          <div class="h-[12px] w-px shrink-0 bg-[var(--border-main)]" />
+          <div
+            class="min-w-0 flex-1 truncate"
+            :class="{ 'animate-shimmer bg-[linear-gradient(110deg,var(--text-tertiary),35%,var(--text-shining),50%,var(--text-tertiary),75%,var(--text-tertiary))] bg-[length:200%_100%] bg-clip-text text-transparent': isStreamingAction }"
+            :title="actionLabel">
+            <span>{{ toolInfo?.function || $t('Waiting for instructions') }}</span>
+            <span
+              v-if="toolInfo?.functionArg"
+              class="ms-[4px] font-mono">
+              {{ toolInfo.functionArg }}
+            </span>
+          </div>
         </div>
+      </div>
 
-        <div class="flex items-center gap-1 shrink-0">
+      <div class="flex shrink-0 items-center gap-[4px]">
+        <!-- Use Manus's computer -->
+        <div v-if="!isShare" class="relative" ref="useComputerRef">
           <button
             type="button"
-            class="size-[32px] rounded-[8px] inline-flex items-center justify-center hover:bg-[var(--fill-tsp-white-main)]"
-            :title="viewMode === 'side' ? t('Center view') : t('Side view')"
-            @click="toggleViewMode">
-            <Columns2 v-if="viewMode === 'side'" :size="18" class="text-[var(--icon-tertiary)]" />
-            <PanelRight v-else :size="18" class="text-[var(--icon-tertiary)]" />
+            class="flex items-center justify-center size-[32px] rounded-[8px] p-0 text-[var(--icon-secondary)] hover:bg-[var(--fill-tsp-white-light)] cursor-pointer"
+            :class="{ 'bg-[var(--fill-tsp-gray-main)]': showUseComputer }"
+            :title="useComputerTitle"
+            @click="showUseComputer = !showUseComputer">
+            <Monitor :size="18" />
           </button>
-
-          <div class="relative" ref="appMenuRef">
-            <button
-              type="button"
-              class="h-8 px-2 rounded-[8px] inline-flex items-center gap-1 cursor-pointer hover:bg-[var(--fill-tsp-white-main)] text-[var(--text-secondary)] text-xs"
-              :title="t('Select an application to use')"
-              @click="showAppMenu = !showAppMenu">
-              <Monitor :size="16" />
-              <ChevronDown :size="14" />
-            </button>
-            <div v-if="showAppMenu"
-              class="absolute right-0 top-[calc(100%+6px)] z-50 min-w-[200px] rounded-[12px] border border-[var(--border-light)] bg-[var(--background-menu-white)] shadow-[0px_8px_32px_0px_var(--shadow-S)] py-1">
-              <div class="px-3 py-1.5 text-[12px] text-[var(--text-tertiary)]">{{ t('Select an application to use') }}</div>
+          <div
+            v-if="showUseComputer"
+            class="absolute right-0 top-[calc(100%+10px)] z-50 w-[min(480px,calc(100vw-32px))] rounded-[20px] border border-[var(--border-main)] bg-[var(--background-menu-white)] shadow-[0px_8px_32px_0px_var(--shadow-S)] p-4 flex flex-col gap-3">
+            <div class="flex justify-between items-center">
+              <div class="flex items-center gap-1.5 min-w-0">
+                <Monitor :size="20" class="text-[var(--icon-primary)] shrink-0" />
+                <h2 class="text-lg text-[var(--text-primary)] font-semibold truncate">
+                  {{ t("Use application on {product}'s computer", { product: 'Manus' }) }}
+                </h2>
+              </div>
               <button
-                v-for="app in apps"
-                :key="app.key"
                 type="button"
-                class="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-[var(--fill-tsp-white-main)]"
-                :class="preferredApp === app.key ? 'text-[var(--text-primary)] font-medium' : 'text-[var(--text-secondary)]'"
-                @click="selectApp(app.key)">
-                <component :is="app.icon" :size="16" />
-                {{ app.label }}
-                <Check v-if="preferredApp === app.key" :size="16" class="ml-auto" />
+                class="size-8 rounded-[8px] inline-flex items-center justify-center hover:bg-[var(--fill-tsp-white-main)]"
+                :title="t('Close')"
+                @click="showUseComputer = false">
+                <X :size="16" class="text-[var(--icon-tertiary)]" />
+              </button>
+            </div>
+            <div class="text-[var(--text-secondary)] text-[13px] leading-[18px]">
+              <span>{{ t("You're about to use {product}'s computer. ", { product: 'Manus' }) }}</span>
+              <span class="text-[var(--text-primary)]">{{ t('When finished, please inform {product} of your changes to help it work effectively.', { product: 'Manus' }) }}</span>
+            </div>
+            <div class="flex justify-end gap-2 mt-[4px]">
+              <button
+                type="button"
+                class="h-9 px-4 rounded-[10px] text-sm text-[var(--text-secondary)] hover:bg-[var(--fill-tsp-white-main)]"
+                @click="showUseComputer = false">
+                {{ t('Cancel') }}
+              </button>
+              <button
+                type="button"
+                class="h-9 px-4 rounded-[10px] text-sm bg-[var(--Button-primary-black)] text-[var(--text-onblack)] hover:opacity-90"
+                @click="confirmUseComputer">
+                {{ t('Use application') }}
               </button>
             </div>
           </div>
-
-          <button
-            type="button"
-            class="size-[32px] rounded-[8px] relative inline-flex items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-white-main)]"
-            @click="hide">
-            <X class="w-5 h-5 text-[var(--icon-tertiary)]" />
-          </button>
-        </div>
-      </div>
-
-      <div class="flex-1 min-h-0 flex flex-col px-[16px] pt-3 pb-4">
-        <!-- Manus is using … -->
-        <div v-if="toolInfo" class="flex items-center gap-2 mb-3">
-          <div class="w-[40px] h-[40px] bg-[var(--fill-tsp-gray-main)] rounded-[10px] flex items-center justify-center flex-shrink-0">
-            <component :is="toolInfo.icon" :size="28" />
-          </div>
-          <div class="flex-1 flex flex-col gap-1 min-w-0">
-            <div class="text-[12px] leading-[16px] text-[var(--text-tertiary)]">
-              {{ $t('Manus is using') }}
-              <span class="text-[var(--text-secondary)]">{{ toolInfo.name }}</span>
-            </div>
-            <div
-              class="max-w-[100%] w-[max-content] truncate text-[13px] rounded-full inline-flex items-center px-[10px] py-[3px] border border-[var(--border-light)] bg-[var(--fill-tsp-gray-main)] text-[var(--text-secondary)]">
-              {{ toolInfo.function }}
-              <span class="flex-1 min-w-0 px-1 ml-1 text-[12px] font-mono max-w-full text-ellipsis overflow-hidden whitespace-nowrap text-[var(--text-tertiary)]">
-                <code>{{ toolInfo.functionArg }}</code>
-              </span>
-            </div>
-          </div>
         </div>
 
-        <div
-          class="flex flex-col rounded-[12px] overflow-hidden bg-[var(--background-gray-main)] border border-[var(--border-main)] dark:border-black/30 shadow-[0px_4px_32px_0px_rgba(0,0,0,0.04)] flex-1 min-h-0">
-          <component
-            v-if="toolInfo"
-            :is="toolInfo.view"
-            :live="live"
-            :sessionId="sessionId"
-            :toolContent="toolContent"
-            :isShare="isShare" />
-
-          <!-- Timeline — Manus live / replay bar -->
-          <div class="mt-auto flex w-full items-center gap-2 px-3 h-[48px] border-t border-[var(--border-main)] bg-[var(--background-menu-white)] shrink-0">
-            <button type="button" class="size-8 rounded-full flex items-center justify-center hover:bg-[var(--fill-tsp-white-main)] disabled:opacity-40" :disabled="!canGoPrev" :title="t('Previous')" @click="goPrev">
-              <SkipBack :size="16" class="text-[var(--icon-secondary)]" />
-            </button>
-            <button type="button" class="size-8 rounded-full flex items-center justify-center hover:bg-[var(--fill-tsp-white-main)]" :title="isPlaying ? t('Pause') : t('Play')" @click="togglePlay">
-              <Pause v-if="isPlaying" :size="16" class="text-[var(--icon-secondary)]" />
-              <PlayIcon v-else :size="16" class="text-[var(--icon-secondary)]" />
-            </button>
-            <button type="button" class="size-8 rounded-full flex items-center justify-center hover:bg-[var(--fill-tsp-white-main)] disabled:opacity-40" :disabled="!canGoNext" :title="t('Next')" @click="goNext">
-              <SkipForward :size="16" class="text-[var(--icon-secondary)]" />
-            </button>
-
-            <div class="flex-1 mx-2 h-1.5 rounded-full bg-[var(--fill-tsp-white-dark)] relative overflow-hidden cursor-pointer" @click="seekByClick">
-              <div
-                class="absolute inset-y-0 left-0 bg-[var(--text-primary)] rounded-full"
-                :class="{ 'transition-[width]': !isPlaying && !isScrubbing }"
-                :style="{ width: `${progressPercent}%` }" />
-            </div>
-
-            <span class="font-mono text-[11px] tabular-nums text-[var(--text-tertiary)] shrink-0 min-w-[4.5rem] text-right">
-              {{ clockLabel }}
-            </span>
-
-            <button
-              v-if="!realTime"
-              type="button"
-              class="h-8 px-3 border border-[var(--border-main)] flex items-center gap-1 bg-[var(--background-white-main)] hover:bg-[var(--background-gray-main)] rounded-full cursor-pointer"
-              @click="jumpToRealTime">
-              <span class="text-[var(--text-primary)] text-xs font-medium">{{ $t('Jump to live') }}</span>
-            </button>
-
-            <div class="flex items-center gap-1.5 text-[12px] text-[var(--text-tertiary)] shrink-0">
-              <span class="inline-block size-2 rounded-full" :class="live || realTime ? 'bg-[var(--function-success)]' : 'bg-[var(--icon-tertiary)]'" />
-              {{ live || realTime ? t('live') : t('Replay') }}
-            </div>
-          </div>
+        <div v-if="!isShare" class="flex items-center px-[4px]">
+          <div class="h-[16px] w-px bg-[var(--border-dark)]" />
         </div>
+
+        <button
+          type="button"
+          class="size-[32px] rounded-[8px] inline-flex items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-white-main)]"
+          :title="t('Close')"
+          @click="hide">
+          <X :size="18" class="text-[var(--icon-secondary)]" />
+        </button>
       </div>
     </div>
+
+    <!-- ManusComputerPanel -->
+    <div class="flex-1 min-h-0 flex flex-col overflow-hidden bg-[var(--background-gray-main)]">
+      <component
+        v-if="toolInfo?.view"
+        :is="toolInfo.view"
+        :live="live"
+        :sessionId="sessionId"
+        :toolContent="toolContent"
+        :isShare="isShare" />
+      <ComputerInactiveEmpty v-else />
+    </div>
+
+    <!-- ManusComputerTimeline -->
+    <div
+      class="mt-auto flex h-[45px] w-full items-center gap-[8px] py-[12px] ps-[16px] pe-[8px] relative bg-[var(--background-gray-main)] border-t border-b border-[var(--border-main)] shrink-0">
+      <div class="flex shrink-0 items-center gap-[8px]" dir="ltr">
+        <button
+          type="button"
+          class="flex size-[24px] items-center justify-center text-[var(--icon-secondary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:enabled:text-[var(--icon-brand)]"
+          :disabled="!canGoPrev"
+          :title="t('Previous')"
+          @click="goPrev">
+          <SkipBack :size="16" />
+        </button>
+        <button
+          type="button"
+          class="flex size-[24px] items-center justify-center text-[var(--icon-secondary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:enabled:text-[var(--icon-brand)]"
+          :disabled="!canGoNext"
+          :title="t('Next')"
+          @click="goNext">
+          <SkipForward :size="16" />
+        </button>
+      </div>
+
+      <div
+        class="group relative flex h-[4px] min-w-0 flex-1 cursor-pointer select-none items-center hover:z-10"
+        @click="seekByClick"
+        @mousedown="startScrub"
+        @mousemove="onSliderHover"
+        @mouseleave="hoverTooltip = false">
+        <div class="absolute inset-x-0 h-[4px] rounded-full bg-[var(--fill-tsp-gray-dark)]" />
+        <div
+          class="absolute left-0 h-[4px] rounded-full bg-[var(--text-blue)]"
+          :class="{ 'transition-[width]': !isScrubbing }"
+          :style="{ width: `${progressPercent}%` }" />
+        <div
+          class="absolute top-1/2 size-[14px] -translate-y-1/2 -translate-x-1/2 rounded-full border-2 border-[var(--background-menu-white)] bg-[var(--text-blue)] drop-shadow-[0px_1px_4px_rgba(0,0,0,0.06)]"
+          :style="{ left: `${progressPercent}%` }" />
+        <div
+          v-if="hoverTooltip"
+          class="pointer-events-none absolute -top-10 z-20 flex h-[28px] items-center rounded bg-[var(--text-blue)] px-[10px] text-xs text-[var(--text-white)] whitespace-nowrap -translate-x-1/2"
+          :style="{ left: `${hoverPercent}%` }">
+          {{ hoverTimeLabel }}
+        </div>
+      </div>
+
+      <div
+        class="flex h-full shrink-0 items-center justify-center gap-[4px] px-[7px]"
+        :class="realTime ? 'cursor-default' : 'cursor-pointer'"
+        @click="!realTime && jumpToRealTime()">
+        <div
+          class="size-[6px] rounded-full"
+          :class="(live || realTime) ? 'bg-[var(--function-success)]' : 'bg-[var(--text-tertiary)]'" />
+        <span
+          class="text-[12px] font-[500]"
+          :class="(live || realTime) ? 'text-[var(--text-primary)]' : 'text-[var(--text-tertiary)]'">
+          {{ $t('Live') }}
+        </span>
+      </div>
+
+      <!-- Floating Jump to live -->
+      <button
+        v-if="!realTime"
+        type="button"
+        class="h-10 px-3 border border-[var(--border-main)] flex items-center gap-1 bg-[var(--background-menu-white)] hover:bg-[var(--background-gray-main)] shadow-[0px_5px_16px_0px_var(--shadow-S),0px_0px_1.25px_0px_var(--shadow-S)] rounded-full cursor-pointer absolute left-[50%] translate-x-[-50%]"
+        style="bottom: calc(100% + 10px)"
+        @click="jumpToRealTime">
+        <PlayIcon :size="16" class="text-[var(--text-primary)]" />
+        <span class="text-[var(--text-primary)] text-sm font-medium">{{ $t('Jump to live') }}</span>
+      </button>
+    </div>
+
+    <!-- ManusComputerPlanner -->
+    <PlanPanel v-if="plan && plan.steps.length > 0" :plan="plan" />
   </div>
 </template>
 
@@ -133,13 +189,14 @@
 import { toRef, ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
-  PlayIcon, Monitor, ChevronDown, Globe, Terminal, Check, X,
-  SkipBack, SkipForward, Pause, Columns2, PanelRight, FileText, Search,
+  PlayIcon, X, Monitor,
+  SkipBack, SkipForward,
 } from 'lucide-vue-next';
 import type { ToolContent } from '@/types/message';
+import type { PlanEventData } from '@/types/event';
 import { useToolInfo } from '@/composables/useTool';
-
-export type ComputerApp = 'browser' | 'terminal' | 'file' | 'search';
+import PlanPanel from './PlanPanel.vue';
+import ComputerInactiveEmpty from './ComputerInactiveEmpty.vue';
 
 const props = withDefaults(defineProps<{
   sessionId?: string;
@@ -148,34 +205,56 @@ const props = withDefaults(defineProps<{
   live: boolean;
   isShare: boolean;
   toolHistory?: ToolContent[];
+  plan?: PlanEventData | null;
 }>(), {
   toolHistory: () => [],
+  plan: null,
 });
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { toolInfo } = useToolInfo(toRef(props, 'toolContent'));
 
-const showAppMenu = ref(false);
-const appMenuRef = ref<HTMLElement | null>(null);
-const preferredApp = ref<ComputerApp>('browser');
-const viewMode = ref<'side' | 'center'>('side');
-const isPlaying = ref(false);
 const isScrubbing = ref(false);
+const showUseComputer = ref(false);
+const useComputerRef = ref<HTMLElement | null>(null);
+const hoverTooltip = ref(false);
+const hoverPercent = ref(0);
+const hoverTs = ref(0);
 /** Absolute playhead in Unix seconds (manual / replay). Ignored while realTime. */
 const playheadTs = ref(0);
 /** Wall-clock tick so live end / playhead can advance in real time. */
 const nowSec = ref(Math.floor(Date.now() / 1000));
-let playRaf: number | null = null;
 let clockTimer: ReturnType<typeof setInterval> | null = null;
-let playWallStartMs = 0;
-let playheadStartTs = 0;
 
-const apps = computed(() => [
-  { key: 'browser' as const, label: t('Browser'), icon: Globe },
-  { key: 'terminal' as const, label: t('Terminal'), icon: Terminal },
-  { key: 'file' as const, label: t('File'), icon: FileText },
-  { key: 'search' as const, label: t('Information'), icon: Search },
-]);
+const isStreamingAction = computed(() => props.toolContent?.status === 'calling');
+
+const usingLabel = computed(() => {
+  if (!toolInfo.value) return t('Waiting for instructions');
+  return `${t('Manus is using')} ${toolInfo.value.name}`;
+});
+
+const actionLabel = computed(() => {
+  if (!toolInfo.value) return t('Waiting for instructions');
+  const arg = toolInfo.value.functionArg;
+  return arg ? `${toolInfo.value.function} ${arg}` : toolInfo.value.function;
+});
+
+const useComputerTitle = computed(() => t("Use {product}'s computer", { product: 'Manus' }));
+
+const hoverTimeLabel = computed(() => {
+  const d = new Date(hoverTs.value * 1000);
+  try {
+    return new Intl.DateTimeFormat(locale.value === 'zh' ? 'zh-CN' : 'en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }).format(d);
+  } catch {
+    return d.toLocaleString();
+  }
+});
 
 /** Normalize event timestamps to Unix seconds (backend sends seconds; tolerate ms). */
 const toUnixSec = (ts?: number): number => {
@@ -203,7 +282,6 @@ const timelineStart = computed(() => {
 const timelineEnd = computed(() => {
   if (!history.value.length) return nowSec.value;
   const last = toUnixSec(history.value[history.value.length - 1].timestamp);
-  // While live at the edge, grow the end with wall clock so the bar is real time.
   if (props.realTime && props.live) {
     return Math.max(last, nowSec.value);
   }
@@ -222,22 +300,6 @@ const progressPercent = computed(() => {
   return ((effectivePlayhead.value - timelineStart.value) / timelineDuration.value) * 100;
 });
 
-const formatClock = (seconds: number): string => {
-  const s = Math.max(0, Math.floor(seconds));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  if (h > 0) {
-    return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-  }
-  return `${m}:${String(sec).padStart(2, '0')}`;
-};
-
-const clockLabel = computed(() => {
-  const elapsed = effectivePlayhead.value - timelineStart.value;
-  return `${formatClock(elapsed)} / ${formatClock(timelineDuration.value)}`;
-});
-
 const currentIndex = computed(() => {
   const id = props.toolContent?.tool_call_id;
   if (!id) return Math.max(0, history.value.length - 1);
@@ -252,24 +314,18 @@ const emit = defineEmits<{
   (e: 'jumpToRealTime'): void;
   (e: 'hide'): void;
   (e: 'selectTool', tool: ToolContent): void;
-  (e: 'selectApp', app: ComputerApp): void;
+  (e: 'useComputer'): void;
 }>();
 
 const hide = () => emit('hide');
 const jumpToRealTime = () => {
-  stopPlay();
   playheadTs.value = timelineEnd.value;
   emit('jumpToRealTime');
 };
 
-const selectApp = (app: ComputerApp) => {
-  preferredApp.value = app;
-  showAppMenu.value = false;
-  emit('selectApp', app);
-};
-
-const toggleViewMode = () => {
-  viewMode.value = viewMode.value === 'side' ? 'center' : 'side';
+const confirmUseComputer = () => {
+  showUseComputer.value = false;
+  emit('useComputer');
 };
 
 /** Last tool whose timestamp is <= t (timeline scrub mapping). */
@@ -293,7 +349,6 @@ const selectAtPlayhead = (t: number) => {
 
 const goPrev = () => {
   if (!canGoPrev.value) return;
-  stopPlay();
   const tool = history.value[currentIndex.value - 1];
   playheadTs.value = toUnixSec(tool.timestamp);
   emit('selectTool', tool);
@@ -301,78 +356,54 @@ const goPrev = () => {
 
 const goNext = () => {
   if (!canGoNext.value) return;
-  stopPlay();
   const tool = history.value[currentIndex.value + 1];
   playheadTs.value = toUnixSec(tool.timestamp);
   emit('selectTool', tool);
 };
 
-const stopPlay = () => {
-  isPlaying.value = false;
-  if (playRaf != null) {
-    cancelAnimationFrame(playRaf);
-    playRaf = null;
-  }
-};
-
-const tickPlay = () => {
-  const elapsedSec = (Date.now() - playWallStartMs) / 1000;
-  const next = playheadStartTs + elapsedSec;
-  if (next >= timelineEnd.value) {
-    playheadTs.value = timelineEnd.value;
-    const tool = toolAtTime(timelineEnd.value);
-    if (tool) emit('selectTool', tool);
-    stopPlay();
-    if (props.live) emit('jumpToRealTime');
-    return;
-  }
-  selectAtPlayhead(next);
-  playRaf = requestAnimationFrame(tickPlay);
-};
-
-const togglePlay = () => {
-  if (isPlaying.value) {
-    stopPlay();
-    return;
-  }
-  // Already at the live edge — nothing to play forward.
-  if (props.realTime && props.live) return;
-  if (effectivePlayhead.value >= timelineEnd.value - 0.05) {
-    // Restart from the beginning of the timeline.
-    playheadTs.value = timelineStart.value;
-    const first = history.value[0];
-    if (first) emit('selectTool', first);
-  }
-  isPlaying.value = true;
-  playWallStartMs = Date.now();
-  playheadStartTs = playheadTs.value || timelineStart.value;
-  playRaf = requestAnimationFrame(tickPlay);
+const seekToClientX = (clientX: number, el: HTMLElement) => {
+  const rect = el.getBoundingClientRect();
+  const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+  const t = timelineStart.value + ratio * timelineDuration.value;
+  selectAtPlayhead(t);
 };
 
 const seekByClick = (event: MouseEvent) => {
   const el = event.currentTarget as HTMLElement;
-  const rect = el.getBoundingClientRect();
-  const ratio = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
-  const t = timelineStart.value + ratio * timelineDuration.value;
-  stopPlay();
   isScrubbing.value = true;
-  selectAtPlayhead(t);
+  seekToClientX(event.clientX, el);
   requestAnimationFrame(() => {
     isScrubbing.value = false;
   });
 };
 
-const inferApp = (tool?: ToolContent): ComputerApp => {
-  const name = (tool?.name || '').toLowerCase();
-  if (name.includes('shell')) return 'terminal';
-  if (name.includes('file')) return 'file';
-  if (name.includes('info') || name.includes('search')) return 'search';
-  return 'browser';
+const onSliderHover = (event: MouseEvent) => {
+  const el = event.currentTarget as HTMLElement;
+  const rect = el.getBoundingClientRect();
+  const ratio = Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width));
+  hoverPercent.value = ratio * 100;
+  hoverTs.value = timelineStart.value + ratio * timelineDuration.value;
+  hoverTooltip.value = true;
+};
+
+const startScrub = (event: MouseEvent) => {
+  event.preventDefault();
+  const el = event.currentTarget as HTMLElement;
+  isScrubbing.value = true;
+  seekToClientX(event.clientX, el);
+
+  const onMove = (e: MouseEvent) => seekToClientX(e.clientX, el);
+  const onUp = () => {
+    isScrubbing.value = false;
+    window.removeEventListener('mousemove', onMove);
+    window.removeEventListener('mouseup', onUp);
+  };
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
 };
 
 watch(() => props.toolContent, (tool) => {
-  preferredApp.value = inferApp(tool);
-  if (!isPlaying.value && !props.realTime && tool) {
+  if (!props.realTime && tool) {
     playheadTs.value = toUnixSec(tool.timestamp);
   }
 });
@@ -381,7 +412,6 @@ watch(
   () => props.realTime,
   (rt) => {
     if (rt) {
-      stopPlay();
       playheadTs.value = timelineEnd.value;
     } else if (props.toolContent) {
       playheadTs.value = toUnixSec(props.toolContent.timestamp);
@@ -390,14 +420,29 @@ watch(
 );
 
 const handleClickOutside = (event: MouseEvent) => {
-  if (showAppMenu.value && appMenuRef.value && !appMenuRef.value.contains(event.target as Node)) {
-    showAppMenu.value = false;
+  if (showUseComputer.value && useComputerRef.value && !useComputerRef.value.contains(event.target as Node)) {
+    showUseComputer.value = false;
+  }
+};
+
+const handleKeydown = (event: KeyboardEvent) => {
+  const root = document.getElementById('manus-agent-workspace');
+  if (!root) return;
+  const sel = window.getSelection();
+  const end = sel && sel.rangeCount > 0 ? sel.getRangeAt(0).endContainer : null;
+  if (!end || !root.contains(end)) return;
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+    event.preventDefault();
+    goPrev();
+  } else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+    event.preventDefault();
+    goNext();
   }
 };
 
 onMounted(() => {
   document.addEventListener('mousedown', handleClickOutside);
-  preferredApp.value = inferApp(props.toolContent);
+  document.addEventListener('keydown', handleKeydown);
   playheadTs.value = props.toolContent
     ? toUnixSec(props.toolContent.timestamp)
     : timelineEnd.value;
@@ -408,7 +453,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('mousedown', handleClickOutside);
-  stopPlay();
+  document.removeEventListener('keydown', handleKeydown);
   if (clockTimer) {
     clearInterval(clockTimer);
     clockTimer = null;

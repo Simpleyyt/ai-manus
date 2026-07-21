@@ -3,8 +3,8 @@
     ref="computerPanelRef"
     v-if="visible"
     :class="{
-      'h-full w-full top-0 ltr:right-0 rtl:left-0 z-50 fixed sm:sticky sm:top-0 sm:right-0 sm:h-[100vh] sm:ml-3 sm:py-3 sm:mr-4 sm:min-w-[520px]': isShow,
-      'h-full overflow-hidden': !isShow 
+      'h-full w-full top-0 ltr:right-0 rtl:left-0 z-50 fixed sm:sticky sm:top-0 sm:right-0 sm:h-[100vh] sm:min-w-[520px]': isShow,
+      'h-full overflow-hidden': !isShow
     }"
     :style="{ 'width': isShow ? `${Math.min(Math.max(parentSize / 2, Math.min(520, parentSize || 520)), parentSize || 520)}px` : '0px', 'opacity': isShow ? '1' : '0', 'transition': '0.2s ease-in-out' }">
     <div class="h-full" :style="{ 'width': isShow ? '100%' : '0px' }">
@@ -16,10 +16,11 @@
         :live="live"
         :isShare="isShare"
         :toolHistory="toolHistory"
+        :plan="plan"
         @hide="hideComputerPanel"
         @jumpToRealTime="jumpToRealTime"
         @selectTool="onSelectTool"
-        @selectApp="onSelectApp"
+        @useComputer="onUseComputer"
       />
     </div>
   </div>
@@ -28,7 +29,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import type { ToolContent } from '../types/message'
-import ComputerPanelContent, { type ComputerApp } from './ComputerPanelContent.vue'
+import type { PlanEventData } from '../types/event'
+import ComputerPanelContent from './ComputerPanelContent.vue'
 import { useResizeObserver } from '../composables/useResizeObserver'
 import { eventBus } from '../utils/eventBus'
 import { EVENT_SHOW_FILE_PANEL, EVENT_SHOW_COMPUTER_PANEL } from '../constants/event'
@@ -47,7 +49,7 @@ const visible = ref(true)
 const emit = defineEmits<{
   (e: 'jumpToRealTime'): void
   (e: 'selectTool', tool: ToolContent): void
-  (e: 'selectApp', app: ComputerApp): void
+  (e: 'useComputer'): void
 }>()
 
 defineProps<{
@@ -55,6 +57,7 @@ defineProps<{
   realTime: boolean
   isShare: boolean
   toolHistory?: ToolContent[]
+  plan?: PlanEventData | null
 }>()
 
 const showComputerPanel = (content: ToolContent, isLive: boolean = false) => {
@@ -79,8 +82,8 @@ const onSelectTool = (tool: ToolContent) => {
   emit('selectTool', tool)
 }
 
-const onSelectApp = (app: ComputerApp) => {
-  emit('selectApp', app)
+const onUseComputer = () => {
+  emit('useComputer')
 }
 
 onMounted(() => {

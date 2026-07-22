@@ -17,12 +17,13 @@
     --background-menu-white: #fff;
     --background-tsp-menu-white: #ffffff14;
     --background-tsp-card-gray: #37352f0a;
-    --background-nav: #ebebeb;
+    --background-nav: #f0f0f0;
     --background-card: #fff;
     --background-mask: #000000a6;
     --border-main: #0000000f;
     --border-white: #ffffff0a;
     --border-btn-main: #0000001f;
+    --border-primary: #0000001f;
     --border-input-active: #0081f280;
     --border-light: #0000000a;
     --border-dark: #0000001f;
@@ -31,6 +32,7 @@
     --icon-tertiary: #858481;
     --icon-disable: #b9b9b7;
     --icon-brand: #0081f2;
+    --icon-blue: #0081f2;
     --icon-onblack: #fff;
     --icon-white: #fff;
     --icon-white-tsp: #ffffff99;
@@ -56,6 +58,7 @@
     --Button-secondary-error-fill: #fff;
     --Button-secondary-main: #fff;
     --Button-secondary-gray: #37352f0f;
+    --Button-border-secondary: #0000001f;
     --tab-fill: rgba(0,0,0,.004);
     --tab-active-black: #1a1a19;
     --shadow-L: #0000003d;
@@ -94,6 +97,7 @@
     --border-main: #ffffff14;
     --border-white: #ffffff0a;
     --border-btn-main: #ffffff1a;
+    --border-primary: #ffffff29;
     --border-input-active: #1a93fe80;
     --border-light: #ffffff0f;
     --border-dark: #ffffff29;
@@ -102,6 +106,7 @@
     --icon-tertiary: #7f7f7f;
     --icon-disable: #5f5f5f;
     --icon-brand: #1a93fe;
+    --icon-blue: #1a93fe;
     --icon-onblack: #000000d9;
     --icon-white: #fff;
     --icon-white-tsp: #ffffff99;
@@ -127,6 +132,7 @@
     --Button-secondary-error-fill: #eb4d4d1f;
     --Button-secondary-main: #ffffff1f;
     --Button-secondary-gray: #ffffff0f;
+    --Button-border-secondary: #ffffff29;
     --tab-fill: hsla(0,0%,100%,.006);
     --tab-active-black: #fff;
     --shadow-L: #00000066;

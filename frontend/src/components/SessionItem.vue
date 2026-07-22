@@ -1,7 +1,7 @@
 <template>
   <div
     @click="handleSessionClick"
-    class="group flex items-center rounded-[10px] cursor-pointer transition-colors w-full gap-[12px] h-[36px] flex-shrink-0 pointer-events-auto ps-[9px] pe-[2px] active:bg-[var(--fill-tsp-white-dark)]"
+    class="group flex items-center rounded-[10px] cursor-pointer transition-colors w-full gap-[8px] h-[36px] flex-shrink-0 pointer-events-auto ps-[8px] pe-[2px] active:bg-[var(--fill-tsp-white-dark)]"
     :class="isCurrentSession ? 'bg-[var(--fill-tsp-white-main)]' : 'hover:bg-[var(--fill-tsp-white-light)]'">
 
     <div class="shrink-0 size-[18px] flex items-center justify-center relative">

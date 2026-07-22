@@ -127,10 +127,15 @@ Do not confuse with chat **Plain Text** blocks (`rounded-lg border … bg-[var(-
 | Terminal view | `frontend/src/components/toolViews/ShellToolView.vue` |
 | File view | `frontend/src/components/toolViews/FileToolView.vue` |
 | Monaco | `frontend/src/components/ui/MonacoEditor.vue`, `MonacoDiffEditor.vue` |
+| Sidebar | `frontend/src/components/SessionSidebar.vue`, `SessionItem.vue` |
+| Search modal | `frontend/src/components/SearchDialog.vue` |
+| Library page | `frontend/src/pages/LibraryPage.vue`, `components/LibraryFileCard.vue` |
+| File type icons | `frontend/src/components/icons/CodeFileIcon.vue`, `FileIcon.vue` |
 | Chat page wire-up | `frontend/src/pages/ChatPage.vue` |
 | Share page | `frontend/src/pages/SharePage.vue` |
-| Theme tokens | `frontend/src/assets/theme.css` |
-| Terminal/File CSS | `frontend/src/assets/global.css` (xterm + `.computer-monaco-panel`) |
+| Router | `frontend/src/router/index.ts` (`/library`) |
+| Theme tokens | `frontend/src/assets/theme.css` (`--Button-border-secondary`, `--shadow-S`, …) |
+| Terminal/File CSS | `frontend/src/assets/global.css` (xterm + `.computer-monaco-panel` + `shadow-menu`) |
 | Locales | `frontend/src/locales/en.ts`, `zh.ts` |
 
 ## Mining recipe (Python sketch)
@@ -143,7 +148,173 @@ pos = chunk.rfind("h-[56px]")
 print(chunk[pos : pos + 2500])
 ```
 
-Search strings that work well: `Manus is using`, `Jump to live`, `Task progress`, `Use {product}'s computer`, `manus-agent-workspace`.
+Search strings that work well: `Manus is using`, `Jump to live`, `Task progress`, `Use {product}'s computer`, `manus-agent-workspace`, `搜索文件`, `我的收藏`, `manus-home-page-session-content`, `{count} more files`, `md:grid-cols-3`, `md:max-w-[200px]`.
+
+Library mine targets: `function e7(`, `function eW(`, `function eG(`, `function eT(`, `function eR(`, `function eD(`, `ei=R!==` (file vs session mode).
+
+CDP dump checklist for Library:
+
+1. Screenshot of full `/app/library` viewport (**All** + **search/favorites** flat state)
+2. Toolbar parent `outerHTML` (全部 → view tabs) — **untruncated**
+3. One **grid card** `outerHTML` including header + preview (must include `</svg>` and basename/`.ext`)
+4. One **list row** dump (confirm `eD`, not a card)
+5. Confirm page title node is `text-lg font-[500] leading-[28px]`, not session `md:text-[16px]`
+6. Confirm scroll content has a **single** flex-col wrapper (not toolbar ‖ groups as flex-row siblings)
+
+## Session sidebar (canonical)
+
+Official `<nav>`:
+
+```
+bg-[var(--background-nav)] flex flex-col transition-[width,transform] duration-200
+h-full border-e border-[var(--border-main)]
+width: SESSION_LIST_WIDTH_FOLD 52 | UNFOLD 300
+```
+
+| Piece | Official |
+|---|---|
+| Header | `h-[56px] pe-[10px] ps-[12px]` — logo + **Search** + Collapse |
+| Body | `p-[8px] pb-0 gap-px` |
+| Nav rows | New Task → Agent → Plugins → Scheduled → Library (+ Claw product) |
+| Library icon | `LibraryBig` (not `Library`) |
+| New Task shortcut | hover-only `text-[11px] … opacity-0 group-hover:opacity-100` (local ⌘K) |
+| Row chrome | `ps-[8px] pe-[2px] h-[36px] gap-[8px] rounded-[10px]` |
+| Active row | `bg-[var(--fill-tsp-white-main)]` when route matches (e.g. `/library`) |
+| Scroll | `-mx-[8px]`; sticky **Projects** / **Tasks** headers `z-[3]` |
+| Tasks filter | size-32 `ListFilter` on header (not chevron-as-label) |
+| Footer | fade mask + avatar + Desktop/Bell placeholders |
+
+Local: `SessionSidebar.vue` + `SessionItem.vue`. Skip invite/share-friend banner (product).
+
+Search opens **`SearchDialog`** (modal), not an inline sidebar filter.
+
+## Search dialog (canonical)
+
+Centered modal (not a page):
+
+```
+@container/dialog w-[680px] h-[440px] rounded-[20px]
+bg-[var(--background-menu-white)] shadow-menu
+```
+
+- Placeholder: Search tasks / 搜索任务
+- Groups: Today / Yesterday / Past 7 days / …
+- Top row can include New Task
+- Local: `SearchDialog.vue`; CSS `shadow-menu` in `global.css`
+
+## Library (canonical)
+
+Official URL: `https://manus.im/app/library` — **full page**, never a dialog.  
+Source chunk (example): `/tmp/manus-js/2930l2ba6yrcn.js` — exports/helpers: `e7` toolbar, `e9` tabs, `eW`/`eG` groups, `eT` flat list, `eR` grid card, `eD` list row, `ey` name, `ev` code preview.
+
+```
+#manus-home-page-session-content
+  bg-[var(--background-gray-main)]
+  └─ flex size-full min-h-0 flex-col bg-gray-main
+     ├─ header h-[56px] … ps-[14px] pe-[20px] md:px-[24px]
+     │    title: text-lg font-[500] leading-[28px]  → 库 / Library
+     └─ scroll (SimpleBar OR overflow-y-auto)
+        └─ ONE child: flex min-h-full flex-col   ← critical
+           ├─ sticky toolbar wrapper px-5 md:px-6 → e7 (max-w-[1000px])
+           └─ body: eW (session) OR eT (file)     ← mode switch
+```
+
+**Local wiring:** route `/library` → `LibraryPage.vue` + `LibraryFileCard.vue`; `MainLayout` **must not** render `FilePanel` on `/library`. Sidebar Library → `router.push('/library')` + active row highlight.
+
+### Browse mode (official `ei`)
+
+```
+ei = (docType !== All) || isFavorite || searchTrimmed ? "file" : "session"
+```
+
+| Mode | When | UI |
+|---|---|---|
+| `session` | All + empty search + favorites off | `eW` → per-session `eG` (title + time + grid/list) |
+| `file` | type filter / 我的收藏 / search text | `eT` flat `md:grid-cols-3` (or list rows) — **no** session headers |
+
+Always grouping in filter/search → sparse one-card-per-group rows that look 「乱」.
+
+### Toolbar (`e7`)
+
+```
+flex md:flex-wrap gap-[8px] pb-[12px] md:pb-[20px] items-center
+max-w-[1000px] mx-auto w-full
+├─ 全部 — h-8 rounded-lg border-[var(--Button-border-secondary)]
+│        active only when type ≠ All: bg-[var(--fill-blue)] text-[var(--text-blue)]
+├─ 我的收藏 — same border; active: bg-[var(--function-warning-tsp)]
+├─ Search — order-first w-full md:order-none md:ms-auto md:min-w-[160px] md:max-w-[200px]
+│           h-8 rounded-[8px] … placeholder 搜索文件
+└─ e9 Tabs — item h-full w-[32px] min-w-[32px]; LayoutGrid | List icons
+```
+
+Theme: `--Button-border-secondary`, `--icon-blue`, `--border-primary` (search focus), `--function-warning-tsp`, `--shadow-S`.
+
+### Groups (`eW` / `eG`) + grid
+
+```
+eW: flex flex-col pb-6 px-[20px]  + gap-3 (grid) | gap-[17px] (list)
+  └─ max-w-[1000px] mx-auto w-full flex flex-col md:gap-[24px] gap-[12px]
+     └─ eG × N
+```
+
+| Piece | Token |
+|---|---|
+| Group title | `md:text-[16px] text-[14px] font-medium leading-[22px]` + hover underline |
+| Time | `text-[13px] leading-[18px] text-secondary`; grid header `justify-between gap-[8px]` |
+| Grid | `grid gap-3 items-start grid-cols-1 md:grid-cols-3` (~278–325px cols) |
+| Cap | show first 3; button `{count} more files` |
+| List mode | **`eD` rows** — not 1-col `eR` cards |
+
+### File card `eR` / name `ey` / preview `ev`
+
+```
+clickable relative flex flex-col overflow-hidden
+rounded-[12px] border-[0.5px] border-[var(--border-dark)]
+bg-[var(--background-menu-white)]
+hover:shadow-[0_7px_16px_0_var(--shadow-S)]
+├─ header: flex items-center gap-2 px-2 py-[10px] border-b border-main
+│  ├─ FileIcon 24
+│  ├─ flex flex-1 min-w-0 items-center gap-1
+│  │  └─ text-sm truncate — ey: basename + .ext INLINE (flex row, not two blocks)
+│  │     + optional StarFill when favorite
+│  └─ ⋯ menu
+└─ preview: aspect-[16/9] overflow-hidden relative
+   code: canvas #F7F7F7 (dark #1c1c1c) + p-[12px] + scale-[0.8] origin-top-left
+         + pre w-[125%] + bottom fade gradient
+```
+
+### List row `eD`
+
+```
+clickable group flex … hover:bg-[var(--fill-tsp-white-light)]
+md:w-[calc(100%+24px)] md:px-[12px] md:-ms-[12px] rounded-lg
+└─ w-full flex … border-b border-main gap-10 py-[12px] md:ps-[8px]
+   ├─ icon 24 + text-[14px] leading-[20px] (+ star)
+   └─ hover actions / ⋯
+```
+
+### Library failure modes (learned)
+
+| Mistake | Why it happened | Fix |
+|---|---|---|
+| Modal `LibraryDialog` | Assumed Search-like UX | Full page route `/library` |
+| Truncated CDP mid-SVG | Coded from incomplete dump | Mine full `eR`/`e7` from JS chunk |
+| Two-line filename blocks | Misread `innerText` newlines | Official `ey` inline basename+ext |
+| List = 1-col cards | Guessed list mode | Copy `eD` row classes |
+| Fixed `h-[166px]` preview | Guessed from card height | `aspect-[16/9]` + `scale-[0.8]` |
+| Search `flex-1` on desktop | Guessed toolbar | `md:max-w-[200px] md:ms-auto` |
+| Always session-group | Missed `ei` file/session switch | Flat `eT` when filter/search/favorites |
+| SimpleBar siblings sideways | Content node is `flex-row` | One `flex-col` child, or drop SimpleBar |
+| FilePanel still open | Shared MainLayout with chat | `v-if="!isLibraryRoute"` |
+| 「布局很乱」= empty columns | 1 file / session in 3-col grid | Expected; use flat mode or richer data |
+| Wrong title node | Mined session `text-[14px]` | Page title is `text-lg … leading-[28px]` |
+
+CDP dump checklist:
+
+1. Full `/app/library` screenshot (All + one filtered/search state)
+2. Toolbar `outerHTML` untruncated; one `eR` card including `</svg>` + preview
+3. Confirm list mode dumps **`eD` row**, not a card
+4. Confirm page title vs session group title nodes
 
 ## Chat header (brief)
 

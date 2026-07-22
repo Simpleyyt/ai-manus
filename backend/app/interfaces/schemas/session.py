@@ -133,6 +133,11 @@ class LibraryFileItem(BaseModel):
     file_id: Optional[str] = None
     filename: Optional[str] = None
     file_path: Optional[str] = None
+    content_type: Optional[str] = None
+    size: Optional[int] = None
+    upload_date: Optional[str] = None
+    is_favorite: bool = False
+    latest_message_at: Optional[int] = None
 
 
 class LibraryResponse(BaseModel):

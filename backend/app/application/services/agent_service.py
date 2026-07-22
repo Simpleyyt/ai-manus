@@ -167,15 +167,30 @@ class AgentService:
     async def get_library_files(self, user_id: str, limit: int = 100) -> List[dict]:
         """Aggregate recent files across the user's sessions for Library view"""
         sessions = await self._session_repository.find_by_user_id(user_id)
+        sessions = sorted(
+            sessions,
+            key=lambda s: s.latest_message_at or s.updated_at,
+            reverse=True,
+        )
         items: List[dict] = []
         for session in sessions:
             for file_info in session.files or []:
+                upload_date = getattr(file_info, "upload_date", None)
                 items.append({
                     "session_id": session.id,
                     "session_title": session.title,
                     "file_id": file_info.file_id,
                     "filename": file_info.filename,
                     "file_path": getattr(file_info, "file_path", None),
+                    "content_type": getattr(file_info, "content_type", None),
+                    "size": getattr(file_info, "size", None),
+                    "upload_date": upload_date.isoformat() if upload_date else None,
+                    "is_favorite": bool(getattr(session, "is_favorite", False)),
+                    "latest_message_at": (
+                        int(session.latest_message_at.timestamp())
+                        if session.latest_message_at
+                        else None
+                    ),
                 })
                 if len(items) >= limit:
                     return items

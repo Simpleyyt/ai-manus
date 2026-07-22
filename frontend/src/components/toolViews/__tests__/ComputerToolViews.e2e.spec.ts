@@ -42,8 +42,7 @@ beforeAll(() => {
     unobserve() {}
     disconnect() {}
   }
-  // @ts-expect-error test polyfill
-  global.ResizeObserver = RO
+  globalThis.ResizeObserver = RO as unknown as typeof ResizeObserver
 })
 
 function fileTool(partial: Partial<ToolContent> & { content?: any }): ToolContent {

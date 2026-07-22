@@ -1,101 +1,131 @@
 <template>
-  <div class="h-full flex flex-col flex-shrink-0"
-    :style="'width: ' + (isSessionSidebarShow ? 300 : 52) + 'px; transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);'">
-    <div class="flex flex-col overflow-hidden bg-[var(--background-nav)] h-full w-full">
+  <nav
+    class="bg-[var(--background-nav)] flex flex-col transition-[width,transform] duration-200 h-full border-e border-[var(--border-main)] flex-shrink-0"
+    :style="'width: ' + (isSessionSidebarShow ? 300 : 52) + 'px'">
+    <div class="flex flex-col flex-1 min-h-0">
 
-      <!-- Header — Manus SESSION_LIST: h-56, ps-13 pe-11 -->
+      <!-- Header — official: h-56 ps-12 pe-10; Search + Collapse on the right -->
       <div
         class="flex items-center justify-between pointer-events-auto h-[56px] py-[12px] flex-shrink-0"
-        :class="isSessionSidebarShow ? 'ps-[13px] pe-[11px]' : 'px-[8px]'">
-        <div class="flex gap-0.5 items-center min-w-0">
+        :class="isSessionSidebarShow ? 'pe-[10px] ps-[12px]' : 'px-[8px]'">
+        <div class="flex gap-0.5 items-center min-w-0" :class="isSessionSidebarShow ? 'clickable' : ''">
           <template v-if="isSessionSidebarShow">
-            <div class="flex items-center justify-center flex-shrink-0 size-[32px]">
+            <div class="flex items-center justify-center flex-shrink-0">
               <Bot :size="28" class="text-[var(--icon-primary)]" />
             </div>
             <ManusLogoTextIcon :width="64.8" :height="28" />
           </template>
           <template v-else>
             <div
-              class="group flex items-center justify-center flex-shrink-0 size-[32px] cursor-pointer rounded-md hover:bg-[var(--fill-tsp-gray-main)]"
+              class="group flex items-center justify-center flex-shrink-0 size-[32px] mx-[2px] cursor-pointer rounded-md hover:bg-[var(--fill-tsp-gray-main)]"
               :title="t('Expand sidebar')"
               @click="toggleSessionSidebar">
               <Bot :size="28" class="text-[var(--icon-primary)] group-hover:hidden" />
-              <PanelLeft class="h-5 w-5 text-[var(--icon-secondary)] hidden group-hover:block" />
+              <PanelLeft class="h-[18px] w-[18px] text-[var(--icon-secondary)] hidden group-hover:block" />
             </div>
           </template>
         </div>
-        <div v-if="isSessionSidebarShow"
-          class="flex size-8 items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-gray-main)] rounded-[8px] shrink-0"
-          :title="t('Collapse sidebar')"
-          @click="toggleSessionSidebar">
-          <PanelLeft class="h-5 w-5 text-[var(--icon-secondary)]" />
-        </div>
+        <template v-if="isSessionSidebarShow">
+          <div
+            class="flex items-center justify-center cursor-pointer rounded-md hover:bg-[var(--fill-tsp-white-light)] size-[32px] ms-auto me-[4px]"
+            :title="t('Search')"
+            @click="handleSearchClick">
+            <Search class="size-[18px] text-[var(--icon-secondary)]" />
+          </div>
+          <div
+            class="flex items-center justify-center rounded-md hover:bg-[var(--fill-tsp-white-light)] cursor-pointer size-[32px]"
+            :title="t('Collapse sidebar')"
+            @click="toggleSessionSidebar">
+            <PanelLeft class="size-[18px] text-[var(--icon-secondary)]" />
+          </div>
+        </template>
       </div>
 
-      <!-- 快捷入口 — Manus skeleton: px-14 gap-2 when expanded -->
+      <!-- Body — official: p-[8px] pb-0 gap-px -->
       <div
-        class="flex flex-col flex-1 min-h-0 pb-0 overflow-hidden"
-        :class="isSessionSidebarShow ? 'px-[14px] gap-[2px]' : 'px-[8px] gap-px'">
+        class="flex flex-col flex-1 min-h-0 pb-0 gap-px overflow-hidden"
+        :class="isSessionSidebarShow ? 'p-[8px]' : 'p-[8px]'">
 
         <!-- New Task -->
         <div
           @click="handleNewTaskClick"
           :title="isSessionSidebarShow ? undefined : t('New Task')"
-          class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] pointer-events-auto p-[9px]"
-          :class="route.path === '/' && !isSearchMode ? 'bg-[var(--fill-tsp-white-main)]' : 'hover:bg-[var(--fill-tsp-white-light)]'">
-          <div class="shrink-0 size-[20px] flex items-center justify-center ltr:-translate-x-px rtl:translate-x-px">
+          class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] pointer-events-auto ps-[8px] pe-[2px] group"
+          :class="route.path === '/' ? 'bg-[var(--fill-tsp-white-main)]' : 'hover:bg-[var(--fill-tsp-white-light)]'">
+          <div class="shrink-0 size-[20px] flex items-center justify-center">
             <SquarePen :size="18" class="text-[var(--text-primary)]" />
           </div>
           <template v-if="isSessionSidebarShow">
             <div class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
               <span class="truncate">{{ t('New Task') }}</span>
             </div>
-            <div class="shrink-0 flex items-center gap-1">
-              <span class="flex text-[var(--text-tertiary)] justify-center items-center h-5 px-1 rounded-[4px] bg-[var(--fill-tsp-white-light)] border border-[var(--border-light)]">
-                <Command :size="12" />
-              </span>
-              <span class="flex justify-center items-center w-5 h-5 px-1 rounded-[4px] bg-[var(--fill-tsp-white-light)] border border-[var(--border-light)] text-xs text-[var(--text-tertiary)]">
-                K
-              </span>
-            </div>
+            <span class="shrink-0 text-[11px] text-[var(--text-tertiary)] ms-auto pe-[6px] opacity-0 group-hover:opacity-100 transition-opacity">
+              {{ newTaskShortcut }}
+            </span>
           </template>
         </div>
 
-        <!-- Search -->
+        <!-- Agent (visual parity; not yet wired) -->
         <div
-          @click="handleSearchClick"
-          :title="isSessionSidebarShow ? undefined : t('Search')"
-          class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] pointer-events-auto p-[9px]"
-          :class="isSearchMode ? 'bg-[var(--fill-tsp-white-main)]' : 'hover:bg-[var(--fill-tsp-white-light)]'">
-          <div class="shrink-0 size-[20px] flex items-center justify-center ltr:-translate-x-px rtl:translate-x-px">
-            <Search :size="18" class="text-[var(--text-primary)]" />
+          @click="handleComingSoon(t('Agent'))"
+          :title="isSessionSidebarShow ? undefined : t('Agent')"
+          class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] hover:bg-[var(--fill-tsp-white-light)] pointer-events-auto ps-[8px] pe-[2px]">
+          <div class="shrink-0 size-[20px] flex items-center justify-center">
+            <ScanEye :size="18" class="text-[var(--text-primary)]" />
           </div>
           <div v-if="isSessionSidebarShow" class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
-            <span class="truncate">{{ t('Search') }}</span>
+            <span class="truncate">{{ t('Agent') }}</span>
           </div>
         </div>
 
-        <!-- Library（占位，对齐官方导航） -->
+        <!-- Plugins -->
+        <div
+          @click="handleComingSoon(t('Plugins'))"
+          :title="isSessionSidebarShow ? undefined : t('Plugins')"
+          class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] hover:bg-[var(--fill-tsp-white-light)] pointer-events-auto ps-[8px] pe-[2px]">
+          <div class="shrink-0 size-[20px] flex items-center justify-center">
+            <LayoutGrid :size="18" class="text-[var(--text-primary)]" />
+          </div>
+          <div v-if="isSessionSidebarShow" class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
+            <span class="truncate">{{ t('Plugins') }}</span>
+          </div>
+        </div>
+
+        <!-- Scheduled tasks -->
+        <div
+          @click="handleComingSoon(t('Scheduled tasks'))"
+          :title="isSessionSidebarShow ? undefined : t('Scheduled tasks')"
+          class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] hover:bg-[var(--fill-tsp-white-light)] pointer-events-auto ps-[8px] pe-[2px]">
+          <div class="shrink-0 size-[20px] flex items-center justify-center">
+            <Clock :size="18" class="text-[var(--text-primary)]" />
+          </div>
+          <div v-if="isSessionSidebarShow" class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
+            <span class="truncate">{{ t('Scheduled tasks') }}</span>
+          </div>
+        </div>
+
+        <!-- Library — full page /library -->
         <div
           @click="handleLibraryClick"
           :title="isSessionSidebarShow ? undefined : t('Library')"
-          class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] pointer-events-auto p-[9px] hover:bg-[var(--fill-tsp-white-light)]">
-          <div class="shrink-0 size-[20px] flex items-center justify-center ltr:-translate-x-px rtl:translate-x-px">
-            <Library :size="18" class="text-[var(--text-primary)]" />
+          class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] pointer-events-auto ps-[8px] pe-[2px]"
+          :class="route.path === '/library' ? 'bg-[var(--fill-tsp-white-main)]' : 'hover:bg-[var(--fill-tsp-white-light)]'">
+          <div class="shrink-0 size-[20px] flex items-center justify-center">
+            <LibraryBig :size="18" class="text-[var(--text-primary)]" />
           </div>
           <div v-if="isSessionSidebarShow" class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
             <span class="truncate">{{ t('Library') }}</span>
           </div>
         </div>
 
-        <!-- Claw -->
+        <!-- Claw (product-specific) -->
         <div
           v-if="clawEnabled"
           @click="handleClawClick"
           :title="isSessionSidebarShow ? undefined : 'Manus Claw'"
-          class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] pointer-events-auto p-[9px]"
+          class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] pointer-events-auto ps-[8px] pe-[2px]"
           :class="route.path === '/chat/claw' ? 'bg-[var(--fill-tsp-white-main)]' : 'hover:bg-[var(--fill-tsp-white-light)]'">
-          <div class="shrink-0 size-[20px] flex items-center justify-center ltr:-translate-x-px rtl:translate-x-px">
+          <div class="shrink-0 size-[20px] flex items-center justify-center">
             <div class="claw-nav-icon w-[18px] h-[18px]" />
           </div>
           <div v-if="isSessionSidebarShow" class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
@@ -103,110 +133,121 @@
           </div>
         </div>
 
-        <!-- 任务列表区 — Projects 距快捷入口 mt-6（官方 skeleton） -->
-        <div v-if="isSessionSidebarShow" class="flex flex-col flex-1 min-h-0 -mx-[14px] mt-6 overflow-hidden">
-          <div class="w-full border-t border-[var(--border-main)] transition-opacity duration-200" :class="isListScrolled ? 'opacity-100' : 'opacity-0'"></div>
+        <!-- Scroll: Projects + Tasks -->
+        <div v-if="isSessionSidebarShow" class="flex flex-col flex-1 min-h-0 -mx-[8px] overflow-hidden">
+          <div
+            class="w-full border-t-[1px] border-[var(--border-light)] transition-opacity duration-200"
+            :class="isListScrolled ? 'opacity-100' : 'opacity-0'"></div>
 
-          <div ref="scrollContainerRef" class="flex flex-col flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-5 px-[14px]" @scroll="handleListScroll">
+          <div
+            ref="scrollContainerRef"
+            class="relative flex flex-col flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-5 px-[8px]"
+            @scroll="handleListScroll">
 
-            <!-- Search 输入 -->
-            <div v-if="isSearchMode" class="mt-[4px] mb-[8px] px-[2px]">
-              <input
-                ref="searchInputRef"
-                v-model="searchQuery"
-                type="text"
-                class="w-full h-[36px] px-3 rounded-[10px] border border-[var(--border-main)] bg-[var(--fill-tsp-white-main)] text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--border-dark)]"
-                :placeholder="t('Search for task')"
-                @keydown.escape="exitSearchMode"
-              />
-            </div>
-
-            <!-- Projects 分区 -->
-            <template v-if="!isSearchMode">
-              <div class="group flex items-center justify-between ps-[10px] pe-[2px] py-[2px] h-[36px] gap-[12px] flex-shrink-0">
-                <span class="text-[13px] leading-[18px] text-[var(--text-tertiary)] font-medium min-w-0 truncate tracking-[-0.091px]">
-                  {{ t('Projects') }}
-                </span>
+            <!-- Projects -->
+              <div
+                class="group flex items-center justify-between ps-[10px] pe-[2px] py-[2px] h-[36px] gap-[12px] clickable sticky top-0 z-[3] bg-[var(--background-nav)] cursor-pointer"
+                @click="projectsCollapsed = !projectsCollapsed">
+                <div class="absolute inset-0 rounded-[10px] opacity-0 group-hover:opacity-100 group-hover:bg-[var(--fill-tsp-white-light)] transition-opacity pointer-events-none"></div>
+                <div class="flex items-center flex-1 min-w-0 gap-0.5 relative">
+                  <span class="text-[13px] leading-[18px] text-[var(--text-tertiary)] font-medium min-w-0 truncate tracking-[-0.091px]">
+                    {{ t('Projects') }}
+                  </span>
+                  <ChevronUp
+                    :size="14"
+                    class="transition-transform shrink-0 opacity-0 group-hover:opacity-100"
+                    :class="projectsCollapsed ? '' : 'rotate-180'"
+                    stroke="var(--icon-tertiary)" />
+                </div>
                 <button
                   type="button"
-                  class="flex size-7 items-center justify-center rounded-md hover:bg-[var(--fill-tsp-white-light)] text-[var(--icon-tertiary)]"
+                  class="relative flex items-center justify-center size-[32px] rounded-[8px] hover:bg-[var(--fill-tsp-white-main)] clickable text-[var(--icon-tertiary)]"
                   :title="t('New project')"
                   @click.stop="handleNewProjectClick">
                   <Plus :size="16" />
                 </button>
               </div>
 
-              <div
-                v-if="projects.length === 0"
-                class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] pointer-events-auto p-[9px] hover:bg-[var(--fill-tsp-white-light)]"
-                @click="handleNewProjectClick">
-                <div class="shrink-0 size-[20px] flex items-center justify-center">
-                  <FolderPlus :size="18" class="text-[var(--icon-tertiary)]" />
-                </div>
-                <span class="text-[14px] text-[var(--text-tertiary)] truncate">{{ t('New project') }}</span>
-              </div>
-
-              <template v-for="project in projects" :key="project.project_id">
+              <template v-if="!projectsCollapsed">
                 <div
-                  class="group flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] pointer-events-auto ps-[9px] pe-[2px] hover:bg-[var(--fill-tsp-white-light)]"
-                  @click="toggleProjectExpand(project.project_id)">
+                  v-if="projects.length === 0"
+                  class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] pointer-events-auto ps-[8px] pe-[2px] hover:bg-[var(--fill-tsp-white-light)]"
+                  @click="handleNewProjectClick">
                   <div class="shrink-0 size-[20px] flex items-center justify-center">
-                    <Folder :size="18" class="text-[var(--icon-tertiary)]" />
+                    <FolderPlus :size="18" class="text-[var(--icon-tertiary)]" />
                   </div>
-                  <span class="flex-1 min-w-0 truncate text-[14px] text-[var(--text-primary)]">{{ project.name }}</span>
-                  <Pin
-                    v-if="project.is_pinned"
-                    :size="12"
-                    class="shrink-0 text-[var(--icon-tertiary)]"
-                    fill="var(--icon-tertiary)" />
-                  <button
-                    type="button"
-                    class="hidden group-hover:flex size-7 items-center justify-center rounded-md hover:bg-[var(--fill-tsp-white-main)] text-[var(--icon-tertiary)]"
-                    :title="project.is_pinned ? t('Unpin') : t('Pin')"
-                    @click.stop="handlePinProject(project)">
-                    <Pin :size="14" />
-                  </button>
+                  <span class="text-[14px] text-[var(--text-tertiary)] truncate">{{ t('New project') }}</span>
                 </div>
-                <div v-if="expandedProjectIds.has(project.project_id)" class="ps-[12px] flex flex-col gap-px">
-                  <SessionItem
-                    v-for="session in sessionsForProject(project.project_id)"
-                    :key="session.session_id"
-                    :session="session"
-                    :projects="projects"
-                    @deleted="handleSessionDeleted"
-                    @renamed="handleSessionRenamed"
-                    @shared="handleSessionShared"
-                    @favorited="handleSessionFavorited"
-                    @moved="handleSessionMoved" />
-                  <div
-                    v-if="sessionsForProject(project.project_id).length === 0"
-                    class="px-[9px] py-2 text-[12px] text-[var(--text-tertiary)]">
-                    {{ t('No tasks in project') }}
-                  </div>
-                </div>
-              </template>
-            </template>
 
-            <!-- All tasks + 筛选 -->
-            <div ref="filterMenuRef" class="relative mt-[4px]">
+                <template v-for="project in projects" :key="project.project_id">
+                  <div
+                    class="nav-bar-project-item-header group w-full flex items-center overflow-hidden h-[36px] ps-[8px] pe-[2px] gap-[12px] clickable hover:rounded-[10px] cursor-pointer"
+                    @click="toggleProjectExpand(project.project_id)">
+                    <div class="shrink-0 size-[20px] flex items-center justify-center">
+                      <Folder :size="18" class="text-[var(--icon-tertiary)]" />
+                    </div>
+                    <span class="flex-1 min-w-0 truncate text-[14px] text-[var(--text-primary)]">{{ project.name }}</span>
+                    <Pin
+                      v-if="project.is_pinned"
+                      :size="12"
+                      class="shrink-0 text-[var(--icon-tertiary)]"
+                      fill="var(--icon-tertiary)" />
+                    <button
+                      type="button"
+                      class="hidden group-hover:flex size-7 items-center justify-center rounded-md hover:bg-[var(--fill-tsp-white-main)] text-[var(--icon-tertiary)]"
+                      :title="project.is_pinned ? t('Unpin') : t('Pin')"
+                      @click.stop="handlePinProject(project)">
+                      <Pin :size="14" />
+                    </button>
+                  </div>
+                  <div v-if="expandedProjectIds.has(project.project_id)" class="ps-[12px] flex flex-col gap-px">
+                    <SessionItem
+                      v-for="session in sessionsForProject(project.project_id)"
+                      :key="session.session_id"
+                      :session="session"
+                      :projects="projects"
+                      @deleted="handleSessionDeleted"
+                      @renamed="handleSessionRenamed"
+                      @shared="handleSessionShared"
+                      @favorited="handleSessionFavorited"
+                      @moved="handleSessionMoved" />
+                    <div
+                      v-if="sessionsForProject(project.project_id).length === 0"
+                      class="px-[9px] py-2 text-[12px] text-[var(--text-tertiary)]">
+                      {{ t('No tasks in project') }}
+                    </div>
+                  </div>
+                </template>
+              </template>
+
+            <!-- Tasks + filter -->
+            <div ref="filterMenuRef" class="relative">
               <div
-                class="group flex items-center justify-between ps-[10px] pe-[2px] py-[2px] h-[36px] gap-[12px] flex-shrink-0 cursor-pointer hover:bg-[var(--fill-tsp-white-light)] transition-colors rounded-[10px]"
-                @click="toggleFilterMenu">
-                <div class="flex items-center flex-1 min-w-0 gap-0.5">
+                class="group flex items-center justify-between ps-[10px] pe-[2px] py-[2px] h-[36px] gap-[12px] clickable sticky top-0 z-[3] bg-[var(--background-nav)] cursor-pointer"
+                @click="tasksCollapsed = !tasksCollapsed">
+                <div class="absolute inset-0 rounded-[10px] opacity-0 group-hover:opacity-100 group-hover:bg-[var(--fill-tsp-white-light)] transition-opacity pointer-events-none"></div>
+                <div class="flex items-center flex-1 min-w-0 gap-0.5 relative">
                   <span class="text-[13px] leading-[18px] text-[var(--text-tertiary)] font-medium min-w-0 truncate tracking-[-0.091px]">
-                    {{ taskFilterLabel }}
+                    {{ taskFilter === 'all' ? t('Tasks') : taskFilterLabel }}
                   </span>
-                  <ChevronDown
+                  <ChevronUp
                     :size="14"
-                    class="shrink-0 transition-transform"
-                    :class="showFilterMenu ? 'rotate-180' : ''"
+                    class="transition-transform shrink-0 opacity-0 group-hover:opacity-100"
+                    :class="tasksCollapsed ? '' : 'rotate-180'"
                     stroke="var(--icon-tertiary)" />
                 </div>
+                <button
+                  type="button"
+                  class="relative flex items-center justify-center size-[32px] rounded-[8px] clickable hover:bg-[var(--fill-tsp-white-main)] text-[var(--icon-tertiary)]"
+                  :title="t('Filter')"
+                  @click.stop="toggleFilterMenu">
+                  <ListFilter :size="16" />
+                </button>
               </div>
 
               <div
                 v-if="showFilterMenu"
-                class="absolute start-0 top-[36px] z-20 w-[200px] rounded-[12px] border border-[var(--border-dark)] bg-[var(--background-menu-white)] p-1 shadow-lg">
+                class="absolute end-0 top-[36px] z-20 w-[200px] rounded-[12px] border border-[var(--border-dark)] bg-[var(--background-menu-white)] p-1 shadow-lg">
                 <button
                   v-for="option in filterOptions"
                   :key="option.key"
@@ -219,38 +260,42 @@
               </div>
             </div>
 
-            <!-- 会话列表 -->
-            <div v-if="filteredSessions.length > 0" class="flex flex-col gap-px">
-              <SessionItem
-                v-for="session in filteredSessions"
-                :key="session.session_id"
-                :session="session"
-                :projects="projects"
-                @deleted="handleSessionDeleted"
-                @renamed="handleSessionRenamed"
-                @shared="handleSessionShared"
-                @favorited="handleSessionFavorited"
-                @moved="handleSessionMoved" />
-            </div>
-            <div v-else class="flex flex-col items-center justify-center gap-4 py-8">
-              <div class="flex flex-col items-center gap-2 text-[var(--text-tertiary)]">
-                <MessageSquareDashed :size="38" />
-                <span class="text-sm font-medium">{{ emptyListText }}</span>
+            <template v-if="!tasksCollapsed">
+              <div v-if="filteredSessions.length > 0" class="flex flex-col gap-px">
+                <SessionItem
+                  v-for="session in filteredSessions"
+                  :key="session.session_id"
+                  :session="session"
+                  :projects="projects"
+                  @deleted="handleSessionDeleted"
+                  @renamed="handleSessionRenamed"
+                  @shared="handleSessionShared"
+                  @favorited="handleSessionFavorited"
+                  @moved="handleSessionMoved" />
               </div>
-            </div>
-
+              <div v-else class="flex flex-col items-center justify-center gap-4 py-8">
+                <div class="flex flex-col items-center gap-2 text-[var(--text-tertiary)]">
+                  <MessageSquareDashed :size="38" />
+                  <span class="text-sm font-medium">{{ emptyListText }}</span>
+                </div>
+              </div>
+            </template>
           </div>
         </div>
+
         <template v-else>
           <div class="mx-auto my-[10px] w-[28px] h-[1px] bg-[var(--border-main)]"></div>
           <div class="flex-1"></div>
         </template>
-
       </div>
 
-      <!-- 底部 Profile -->
-      <div ref="profileRef" class="relative flex flex-col justify-center items-start gap-[8px] bg-[var(--background-nav)] flex-shrink-0"
-        :class="isSessionSidebarShow ? 'px-[14px] py-[8px]' : 'p-[8px]'">
+      <!-- Profile footer -->
+      <div
+        ref="profileRef"
+        class="relative flex flex-col justify-center items-start gap-[8px] bg-[var(--background-nav)] flex-shrink-0 p-[8px]">
+        <div
+          class="pointer-events-none absolute inset-x-0 top-[-20px] h-[24px] bg-[var(--background-nav)]"
+          style="mask-image: linear-gradient(180deg, transparent 0%, #000 100%); -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 100%)"></div>
         <div v-if="showUserMenu" class="fixed z-50"
           :class="isSessionSidebarShow ? 'start-2 bottom-[52px]' : 'start-[56px] bottom-3'">
           <UserMenu />
@@ -274,23 +319,48 @@
               </span>
             </div>
           </div>
+          <div v-if="isSessionSidebarShow" class="flex shrink-0 items-center gap-[4px]">
+            <button
+              type="button"
+              class="flex items-center justify-center size-[32px] rounded-[8px] hover:bg-[var(--fill-tsp-white-light)] text-[var(--icon-secondary)]"
+              :title="t('Coming soon')"
+              @click="handleComingSoon(t('Desktop'))">
+              <Monitor :size="18" />
+            </button>
+            <button
+              type="button"
+              class="flex items-center justify-center size-[32px] rounded-[8px] hover:bg-[var(--fill-tsp-white-light)] text-[var(--icon-secondary)]"
+              :title="t('Coming soon')"
+              @click="handleComingSoon(t('Notifications'))">
+              <Bell :size="18" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-  <LibraryDialog :visible="showLibrary" @close="showLibrary = false" />
+  </nav>
+  <SearchDialog
+    :visible="showSearch"
+    :sessions="sessions"
+    @close="showSearch = false"
+    @new-task="handleNewTaskClick"
+  />
 </template>
 
 <script setup lang="ts">
-import { Bot, PanelLeft, SquarePen, Command, MessageSquareDashed, ChevronDown, Search, Library, Plus, FolderPlus, Check, Pin, Folder } from 'lucide-vue-next';
+import {
+  Bot, PanelLeft, SquarePen, MessageSquareDashed, ChevronUp, Search, LibraryBig,
+  Plus, FolderPlus, Check, Pin, Folder, ScanEye, LayoutGrid, Clock, ListFilter,
+  Monitor, Bell,
+} from 'lucide-vue-next';
 import SessionItem from './SessionItem.vue';
 import UserMenu from './UserMenu.vue';
-import LibraryDialog from './LibraryDialog.vue';
+import SearchDialog from './SearchDialog.vue';
 import ManusLogoTextIcon from './icons/ManusLogoTextIcon.vue';
 import { useSessionSidebar } from '../composables/useSessionSidebar';
 import { useAuth } from '../composables/useAuth';
 import { useDialog } from '../composables/useDialog';
-import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue';
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getSessionsSSE, getSessions } from '../api/agent';
 import { getProjects, createProject, pinProject } from '../api/project';
@@ -313,19 +383,21 @@ const cancelGetSessionsSSE = ref<(() => void) | null>(null)
 const isListScrolled = ref(false)
 const clawEnabled = ref(false)
 const scrollContainerRef = ref<HTMLElement | null>(null)
-const searchInputRef = ref<HTMLInputElement | null>(null)
 const filterMenuRef = ref<HTMLElement | null>(null)
 
-const isSearchMode = ref(false)
-const searchQuery = ref('')
+const showSearch = ref(false)
 const taskFilter = ref<TaskFilter>('all')
 const showFilterMenu = ref(false)
-const showLibrary = ref(false)
 const expandedProjectIds = ref<Set<string>>(new Set())
+const projectsCollapsed = ref(false)
+const tasksCollapsed = ref(false)
 
 const { currentUser } = useAuth()
 const showUserMenu = ref(false)
 const profileRef = ref<HTMLElement | null>(null)
+
+const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
+const newTaskShortcut = computed(() => (isMac ? '⌘K' : 'Ctrl K'))
 
 const avatarLetter = computed(() => {
   return currentUser.value?.fullname?.charAt(0)?.toUpperCase() || 'M'
@@ -339,7 +411,7 @@ const filterOptions = computed(() => [
 ])
 
 const taskFilterLabel = computed(() => {
-  return filterOptions.value.find(o => o.key === taskFilter.value)?.label || t('All Tasks')
+  return filterOptions.value.find(o => o.key === taskFilter.value)?.label || t('Tasks')
 })
 
 const filteredSessions = computed(() => {
@@ -353,20 +425,10 @@ const filteredSessions = computed(() => {
     list = list.filter(s => !s.project_id)
   }
 
-  const q = searchQuery.value.trim().toLowerCase()
-  if (isSearchMode.value && q) {
-    list = list.filter(s => (s.title || '').toLowerCase().includes(q))
-  }
-
-  // When showing all tasks without search, hide sessions already nested under expanded projects
-  // Keep them in list for "all" - Manus shows all tasks separately from projects. Keep flat list for all/noProject/favorites/shared.
   return list
 })
 
 const emptyListText = computed(() => {
-  if (isSearchMode.value && searchQuery.value.trim()) {
-    return t('No matching tasks')
-  }
   if (taskFilter.value === 'favorites') {
     return t('No favorite tasks')
   }
@@ -381,6 +443,10 @@ const emptyListText = computed(() => {
 
 const sessionsForProject = (projectId: string) => {
   return sessions.value.filter(s => s.project_id === projectId)
+}
+
+const handleComingSoon = (name: string) => {
+  showSuccessToast(`${name} — ${t('Coming soon')}`)
 }
 
 const handleClickOutside = (event: MouseEvent) => {
@@ -427,27 +493,19 @@ const fetchSessions = async () => {
 }
 
 const handleNewTaskClick = () => {
-  isSearchMode.value = false
-  searchQuery.value = ''
+  showSearch.value = false
   router.push('/')
 }
 
-const handleSearchClick = async () => {
+const handleSearchClick = () => {
   if (!isSessionSidebarShow.value) {
     toggleSessionSidebar()
   }
-  isSearchMode.value = true
-  await nextTick()
-  searchInputRef.value?.focus()
-}
-
-const exitSearchMode = () => {
-  isSearchMode.value = false
-  searchQuery.value = ''
+  showSearch.value = true
 }
 
 const handleLibraryClick = () => {
-  showLibrary.value = true
+  router.push('/library')
 }
 
 const handleNewProjectClick = () => {
@@ -577,11 +635,11 @@ watch(() => route.path, async () => {
 
 <style scoped>
 .claw-nav-icon {
-  background: url("data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='20'%20height='20'%20fill='none'%20viewBox='0%200%2020%2020'%20opacity='0.84'%3e%3cpath%20fill='%23333'%20fill-opacity='.9'%20fill-rule='evenodd'%20d='M5.724%204.379c3.934-3.078%207.519-2.009%208.808-.972.675.543%201.05%201.332.97%202.126-.082.823-.64%201.509-1.529%201.805-.463.155-.831.552-.998%201.034-.168.485-.1.942.144%201.24l.027.035a1%201%200%200%201%20.077.018c.265.08.413.122.617.076.202-.046.58-.215%201.13-.88l.127-.136a1.44%201.44%200%200%201%201.082-.402c.418.022.797.215%201.075.482.32.31.466.77.526%201.17.065.43.051.928-.057%201.434-.217%201.017-.837%202.142-2.09%202.82-.402.217-1.098.61-2.146.663a5%205%200%200%201-.376.504c-1.007%201.196-2.394%201.608-3.628%201.57a5.1%205.1%200%200%201-1.6-.312%203.4%203.4%200%200%201-.612.59c-.413.298-.985.518-1.667.347-1.319-.33-2.607-1.6-3.249-3.17-.344-.843-.14-1.573.285-2.087.228-.275.509-.48.777-.624a7.4%207.4%200%200%201-.33-2.307c.037-1.671.705-3.512%202.637-5.024m7.867.197c-.748-.602-3.56-1.662-6.942.985-1.551%201.213-2.034%202.618-2.061%203.874a6.1%206.1%200%200%200%20.805%203.094.75.75%200%200%201-1.29.766q-.05-.09-.103-.188a1%201%200%200%200-.203.182.47.47%200%200%200-.11.22.6.6%200%200%200%20.057.343c.515%201.26%201.491%202.1%202.225%202.285.138.035.262.008.425-.11q.096-.07.188-.167a3%203%200%200%201-.137-.145.75.75%200%200%201%201.136-.98c.294.34%201.034.704%201.948.732.877.027%201.782-.262%202.435-1.037.652-.774.809-1.508.746-2.142-.063-.632-.354-1.218-.711-1.672-.13-.103-.398-.251-.777-.376a4.1%204.1%200%200%200-1.234-.213.75.75%200%200%201%200-1.5c.469%200%20.955.077%201.4.198.017-.29.076-.576.169-.844.297-.856.974-1.644%201.942-1.966.378-.127.492-.348.51-.532.022-.213-.074-.53-.418-.807m2.527%205.25c-.675.81-1.314%201.235-1.947%201.378q-.082.017-.16.027c.093.287.16.591.192.91a4%204%200%200%201-.046%201.116c.299-.098.542-.23.763-.349.79-.428%201.19-1.134%201.336-1.812.073-.341.077-.657.04-.898-.033-.222-.087-.31-.09-.319a.3.3%200%200%200-.067-.046q-.013-.006-.021-.007'%20clip-rule='evenodd'%20/%3e%3c%2fsvg%3e") no-repeat center;
+  background: url("data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='20'%20height='20'%20fill='none'%20viewBox='0%200%2020%2020'%20opacity='0.84'%3e%3cpath%20fill='%23333'%20fill-opacity='.9'%20fill-rule='evenodd'%20d='M5.724%204.379c3.934-3.078%207.519-2.009%208.808-.972.675.543%201.05%201.332.97%202.126-.082.823-.64%201.509-1.529%201.805-.463.155-.831.552-.998%201.034-.168.485-.1.942.144%201.24l.027.035a1%201%200%200%201%20.077.018c.265.08.413.122.617.076.202-.046.58-.215%201.13-.88l.127-.136a1.44%201.44%200%200%201%201.082-.402c.418.022.797.215%201.075.482.32.31.466.77.526%201.17.065.43.051.928-.057%201.434-.217%201.017-.837%202.142-2.09%202.82-.402.217-1.098.61-2.146.663a5%205%200%200%201-.376.504c-1.007%201.196-2.394%201.608-3.628%201.57a5.1%205.1%200%200%201-1.6-.312%203.4%203.4%200%200%201-.612.59c-.413.298-.985.518-1.667.347-1.319-.33-2.607-1.6-3.249-3.17-.344-.843-.14-1.573.285-2.087.228-.275.509-.48.777-.624a7.4%207.4%200%200%201-.33-2.307c.037-1.671.705-3.512%202.637-5.024m7.867.197c-.748-.602-3.56-1.662-6.942.985-1.551%201.213-2.034%202.618-2.061%203.874a6.1%206.1%200%200%200%20.805%203.094.75.75%200%200%201-1.29.766q-.05-.09-.103-.188a1%201%200%200%200-.203.182.47.47%200%200%200-.11.22.6.6%200%200%200%20.057.343c.515%201.26%201.491%202.1%202.225%202.285.138.035.262.008.425-.11q.096-.07.188-.167a3%203%200%200%201-.137-.145.75.75%200%200%201%201.136-.98c.294.34%201.034.704%201.948.732.877.027%201.782-.262%202.435-1.037.652-.774.809-1.508.746-2.142-.063-.632-.354-1.218-.711-1.672-.13-.103-.398-.251-.777-.376a4.1%204.1%200%200%200-1.234-.213.75.75%200%200%201%200-1.5c.469%200%20.955.077%201.4.198.017-.29.076-.576.169-.844.297-.856.974-1.644%201.942-1.966.378-.127.492-.348.51-.532.022-.213-.074-.53-.418-.807m2.527%205.25c-.675.81-1.314%201.235-1.947%201.378q-.082.017-.160.027c.093.287.16.591.192.91a4%204%200%200%201-.046%201.116c.299-.098.542-.23.763-.349.79-.428%201.19-1.134%201.336-1.812.073-.341.077-.657.04-.898-.033-.222-.087-.31-.09-.319a.3.3%200%200%200-.067-.046q-.013-.006-.021-.007'%20clip-rule='evenodd'%20/%3e%3c%2fsvg%3e") no-repeat center;
   background-size: contain;
 }
 
 :global(.dark) .claw-nav-icon {
-  background-image: url("data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='20'%20height='20'%20fill='none'%20viewBox='0%200%2020%2020'%20opacity='0.84'%3e%3cpath%20fill='%23fff'%20fill-opacity='.9'%20fill-rule='evenodd'%20d='M5.724%204.379c3.934-3.078%207.519-2.009%208.808-.972.675.543%201.05%201.332.97%202.126-.082.823-.64%201.509-1.529%201.805-.463.155-.831.552-.998%201.034-.168.485-.1.942.144%201.24l.027.035a1%201%200%200%201%20.077.018c.265.08.413.122.617.076.202-.046.58-.215%201.13-.88l.127-.136a1.44%201.44%200%200%201%201.082-.402c.418.022.797.215%201.075.482.32.31.466.77.526%201.17.065.43.051.928-.057%201.434-.217%201.017-.837%202.142-2.09%202.82-.402.217-1.098.61-2.146.663a5%205%200%200%201-.376.504c-1.007%201.196-2.394%201.608-3.628%201.57a5.1%205.1%200%200%201-1.6-.312%203.4%203.4%200%200%201-.612.59c-.413.298-.985.518-1.667.347-1.319-.33-2.607-1.6-3.249-3.17-.344-.843-.14-1.573.285-2.087.228-.275.509-.48.777-.624a7.4%207.4%200%200%201-.33-2.307c.037-1.671.705-3.512%202.637-5.024m7.867.197c-.748-.602-3.56-1.662-6.942.985-1.551%201.213-2.034%202.618-2.061%203.874a6.1%206.1%200%200%200%20.805%203.094.75.75%200%200%201-1.29.766q-.05-.09-.103-.188a1%201%200%200%200-.203.182.47.47%200%200%200-.11.22.6.6%200%200%200%20.057.343c.515%201.26%201.491%202.1%202.225%202.285.138.035.262.008.425-.11q.096-.07.188-.167a3%203%200%200%201-.137-.145.75.75%200%200%201%201.136-.98c.294.34%201.034.704%201.948.732.877.027%201.782-.262%202.435-1.037.652-.774.809-1.508.746-2.142-.063-.632-.354-1.218-.711-1.672-.13-.103-.398-.251-.777-.376a4.1%204.1%200%200%200-1.234-.213.75.75%200%200%201%200-1.5c.469%200%20.955.077%201.4.198.017-.29.076-.576.169-.844.297-.856.974-1.644%201.942-1.966.378-.127.492-.348.51-.532.022-.213-.074-.53-.418-.807m2.527%205.25c-.675.81-1.314%201.235-1.947%201.378q-.082.017-.16.027c.093.287.16.591.192.91a4%204%200%200%201-.046%201.116c.299-.098.542-.23.763-.349.79-.428%201.19-1.134%201.336-1.812.073-.341.077-.657.04-.898-.033-.222-.087-.31-.09-.319a.3.3%200%200%200-.067-.046q-.013-.006-.021-.007'%20clip-rule='evenodd'%20/%3e%3c%2fsvg%3e");
+  background-image: url("data:image/svg+xml,%3csvg%20xmlns='http://www.w3.org/2000/svg'%20width='20'%20height='20'%20fill='none'%20viewBox='0%200%2020%2020'%20opacity='0.84'%3e%3cpath%20fill='%23fff'%20fill-opacity='.9'%20fill-rule='evenodd'%20d='M5.724%204.379c3.934-3.078%207.519-2.009%208.808-.972.675.543%201.05%201.332.97%202.126-.082.823-.64%201.509-1.529%201.805-.463.155-.831.552-.998%201.034-.168.485-.1.942.144%201.24l.027.035a1%201%200%200%201%20.077.018c.265.08.413.122.617.076.202-.046.58-.215%201.13-.88l.127-.136a1.44%201.44%200%200%201%201.082-.402c.418.022.797.215%201.075.482.32.31.466.77.526%201.17.065.43.051.928-.057%201.434-.217%201.017-.837%202.142-2.09%202.82-.402.217-1.098.61-2.146.663a5%205%200%200%201-.376.504c-1.007%201.196-2.394%201.608-3.628%201.57a5.1%205.1%200%200%201-1.6-.312%203.4%203.4%200%200%201-.612.59c-.413.298-.985.518-1.667.347-1.319-.33-2.607-1.6-3.249-3.17-.344-.843-.14-1.573.285-2.087.228-.275.509-.48.777-.624a7.4%207.4%200%200%201-.33-2.307c.037-1.671.705-3.512%202.637-5.024m7.867.197c-.748-.602-3.56-1.662-6.942.985-1.551%201.213-2.034%202.618-2.061%203.874a6.1%206.1%200%200%200%20.805%203.094.75.75%200%200%201-1.29.766q-.05-.09-.103-.188a1%201%200%200%200-.203.182.47.47%200%200%200-.11.22.6.6%200%200%200%20.057.343c.515%201.26%201.491%202.1%202.225%202.285.138.035.262.008.425-.11q.096-.07.188-.167a3%203%200%200%201-.137-.145.75.75%200%200%201%201.136-.98c.294.34%201.034.704%201.948.732.877.027%201.782-.262%202.435-1.037.652-.774.809-1.508.746-2.142-.063-.632-.354-1.218-.711-1.672-.13-.103-.398-.251-.777-.376a4.1%204.1%200%200%200-1.234-.213.75.75%200%200%201%200-1.5c.469%200%20.955.077%201.4.198.017-.29.076-.576.169-.844.297-.856.974-1.644%201.942-1.966.378-.127.492-.348.51-.532.022-.213-.074-.53-.418-.807m2.527%205.25c-.675.81-1.314%201.235-1.947%201.378q-.082.017-.160.027c.093.287.16.591.192.91a4%204%200%200%201-.046%201.116c.299-.098.542-.23.763-.349.79-.428%201.19-1.134%201.336-1.812.073-.341.077-.657.04-.898-.033-.222-.087-.31-.09-.319a.3.3%200%200%200-.067-.046q-.013-.006-.021-.007'%20clip-rule='evenodd'%20/%3e%3c%2fsvg%3e");
 }
 </style>

@@ -2,6 +2,7 @@ import type { Component } from 'vue';
 import { useI18n } from 'vue-i18n';
 import FileIcon from '../components/icons/FileIcon.vue';
 import CodeFileIcon from '../components/icons/CodeFileIcon.vue';
+import ImageFileIcon from '../components/icons/ImageFileIcon.vue';
 import UnknownFilePreview from '../components/filePreviews/UnknownFilePreview.vue';
 import MarkdownFilePreview from '../components/filePreviews/MarkdownFilePreview.vue';
 import CodeFilePreview from '../components/filePreviews/CodeFilePreview.vue';
@@ -63,7 +64,7 @@ export const getFileType = (filename: string): FileType => {
 
   if (file_extension && imageFileExtensions.includes(file_extension)) {
     return {
-      icon: FileIcon,
+      icon: ImageFileIcon,
       preview: ImageFilePreview,
     };
   }

@@ -55,6 +55,11 @@ export interface LibraryFileItem {
     file_id: string | null;
     filename: string | null;
     file_path: string | null;
+    content_type: string | null;
+    size: number | null;
+    upload_date: string | null;
+    is_favorite: boolean;
+    latest_message_at: number | null;
 }
 
 export interface LibraryResponse {

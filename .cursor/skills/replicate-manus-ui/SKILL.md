@@ -3,9 +3,9 @@ name: replicate-manus-ui
 description: >-
   Replicate manus.im / manus.ai UI into ai-manus by mining official JS bundles
   and live DOM (Chrome CDP), then mapping classNames and structure onto Vue
-  components. Use when aligning SessionSidebar, Computer panel, Chat header,
-  Share popover, or any Manus UI parity work; when the user says 对齐官方、复刻、
-  抄源码、manus.im, or asks what is still not aligned.
+  components. Use when aligning SessionSidebar, Library page, Search dialog,
+  Computer panel, Chat header, Share popover, or any Manus UI parity work; when
+  the user says 对齐官方、复刻、抄源码、manus.im, or asks what is still not aligned.
 ---
 
 # Replicate Manus UI
@@ -47,11 +47,17 @@ Prefer a **logged-in** session (guest marketing pages lack Computer / sidebar).
 
 ```bash
 # Example: Chrome with --remote-debugging-port=9222
-# Dump nodes matching computer / sidebar / header
+# Dump nodes matching computer / sidebar / header / library
 # Save under tmp/screenshots/manus-live/ (gitignored)
 ```
 
 Also save screenshots under `tmp/screenshots/` for visual diff. Never commit binaries.
+
+**Dump quality (mandatory):**
+
+- Do **not** implement from truncated HTML/class strings. Card/toolbar dumps cut mid-`<svg>` or mid-`text-[var(--` are incomplete — re-dump until header, filename row, preview body, and trailing chrome (e.g. `⋯`) are fully present.
+- Verify you selected the **right node** (page title `库` ≠ session group title `text-[14px]`).
+- Prefer screenshot + full outerHTML of one card + toolbar parent over a shallow class list.
 
 ### 2. Mine official JS
 
@@ -164,11 +170,44 @@ Local mapping:
 - **File**: tabs Diff / Original / **Modified** (`已修改`); **default = Modified**; Monaco on gray-main, line numbers off. Not the chat “Plain Text” card.
 - Full tokens: [reference.md](reference.md#tool-content-panels-inside-computer-panel).
 
+## Library page (canonical)
+
+Official **`/app/library` is a full page**, not a modal (Search is the modal). Local: `/library` → `LibraryPage.vue` + `LibraryFileCard.vue`. Mine from chunk `2930l2ba6yrcn.js`: **`e7` toolbar · `e9` view tabs · `eW`/`eG` groups · `eT` flat · `eR` grid card · `eD` list row · `ey`/`ev` filename/preview**.
+
+| Piece | Official |
+|---|---|
+| Shell | `flex size-full min-h-0 flex-col` under sidebar; title **库** `text-lg font-[500] leading-[28px]` in `h-[56px]`; **hide `FilePanel`** on `/library` |
+| Scroll | Official wraps **one** `flex min-h-full flex-col` under SimpleBar. Local prefers `overflow-y-auto` — **never** put toolbar + groups as **siblings** under a `flex-row` SimpleBar content (they lay out sideways → 「布局很乱」) |
+| Toolbar `e7` | sticky; own `max-w-[1000px] mx-auto` inside `px-5 md:px-6` — **全部** dropdown \| **我的收藏** \| search `md:ms-auto md:max-w-[200px]` \| Grid/List **`e9` 32×32 icon tabs** (not filled pills) |
+| Browse mode | **`session`** (All, no query): grouped `eW`/`eG`. **`file`** (type ≠ All **or** favorites **or** search text): flat `eT` — **no** session headers, one `md:grid-cols-3` |
+| Groups `eG` | title `md:text-[16px] … font-medium leading-[22px]` + time (`justify-between` in grid); first **3** cards + “{count} more files” |
+| Grid `eR` | `rounded-[12px] border-[0.5px] border-dark` + hover `shadow-S`; header `gap-2 px-2 py-[10px]`; **24px** type SVG; filename **`ey` basename+ext inline** single `text-sm` truncate row; preview **`aspect-[16/9]`** + code `scale-[0.8]` on `#F7F7F7` |
+| List `eD` | **horizontal rows** (`hover:bg-fill-tsp-white-light`, `border-b`, icon + `text-[14px]`), **not** 1-col grid cards |
+
+Active chrome: type filter → `bg-[var(--fill-blue)] text-[var(--text-blue)]` (only when **not** All); favorites → `bg-[var(--function-warning-tsp)]`. Favorites = session `is_favorite` on `/library/files`. Full tokens: [reference.md](reference.md#library-canonical).
+
+### Library — do not invent / classic mistakes
+
+| Mistake | What went wrong |
+|---|---|
+| `LibraryDialog` modal | Official is a **route page**; Search is the `680×440` modal |
+| Truncated CDP → guess chrome | Mid-SVG dumps invent padding / wrong tabs / fake list |
+| Filename two block lines | Official `ey` is **inline** basename + `.ext` |
+| List = 1-col cards | Official list is **`eD` rows** |
+| Fixed `h-[166px]` preview | Official `aspect-[16/9]` + `scale-[0.8]` |
+| Search `flex-1` grow | Official `md:max-w-[200px] md:ms-auto` |
+| Always session-group | Search / favorites / type filter → **flat `eT`** |
+| SimpleBar multi-child | Content `flex-row` → toolbar left, groups shoved right |
+| Leave `FilePanel` open | Chat workspace column steals width on `/library` |
+| Blame sparse 3-col for “乱” | 1 file / session → left column only is **correct**; denser when flat mode or multi-file sessions |
+
 ## Other surfaces (pointers)
 
 | Surface | Start here |
 |---|---|
 | Session list / sidebar | `SessionSidebar` (+ related list components) |
+| Library | `LibraryPage.vue` + `LibraryFileCard.vue` (route `/library`) |
+| Search tasks | `SearchDialog.vue` (centered `680×440` modal — not Library) |
 | Chat top bar | `ChatPage.vue` header (`h-[56px]`, Share popover) |
 | Input | `ChatBox.vue` |
 | Take control banner | `TakeControlBanner.vue` + browser takeover events |
@@ -183,8 +222,25 @@ When starting a new surface, repeat the workflow — do not reuse Computer assum
 - **Terminal white / mono / wrong size** — live uses gray-main + **ui-monospace 14 / 1.15**; system UI 16 causes mid-word wrap.
 - **File default Diff / 修改后** — live default is Modified / `已修改`.
 - **Chat Plain Text ≠ Computer File** — left-column code card is a different surface.
-- **Screenshot-only copy** — misses hover states, empty states, and exact tokens; always mine JS for the component name.
+- **Library ≠ dialog** — full page `/library`; Search is the `680×440` modal.
+- **Library SimpleBar / scroll** — one flex-col child only; multi-sibling under flex-row content = sideways mess.
+- **Library browse mode** — `file` (flat) vs `session` (grouped); do not always group.
+- **Library list ≠ 1-col cards** — copy `eD` rows from source.
+- **Truncated dump → invented chrome** — incomplete card/toolbar HTML caused wrong padding, fake list layout, wrong view tabs; re-mine before coding.
+- **Wrong mined node** — session group `text-[14px]`/`md:text-[16px]` is not the page title `text-lg`.
+- **Screenshot-only copy** — misses hover states, empty states, and exact tokens; always mine JS/DOM for the component name.
 - **Over-building** — dialog/center layout, Cloud/Local computer titles, policy error panels: only when source + user priority say so.
+
+## Library verify checklist
+
+```
+Library verify:
+- [ ] Route /library; FilePanel hidden; no LibraryDialog
+- [ ] All → session groups; search/favorites/type → flat 3-col (no group titles)
+- [ ] Grid cards aspect-16/9 + inline filename; List = full-width rows (not pushed right)
+- [ ] Toolbar max-w-1000; search ≤200px ms-auto; view tabs 32px
+- [ ] Re-check e7/eW/eT/eR/eD in 2930l2ba6yrcn.js (or current chunk)
+```
 
 ## Additional resources
 

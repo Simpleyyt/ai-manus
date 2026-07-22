@@ -37,6 +37,13 @@ body,html {
   animation: manus-text-shimmer 2.2s linear infinite;
 }
 
+.shadow-menu {
+  box-shadow:
+    0 0 0 1px var(--border-dark),
+    0 8px 40px rgba(0, 0, 0, 0.12),
+    0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
 /* Manus Computer terminal (xterm) — match agent-workspace-terminal-panel-* */
 .agent-workspace-terminal-panel .xterm {
   padding: 8px 4px 8px 12px;

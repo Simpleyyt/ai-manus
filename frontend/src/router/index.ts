@@ -8,6 +8,30 @@ export const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
+      path: '/library',
+      component: () => import('../pages/MainLayout.vue'),
+      meta: { requiresAuth: true },
+      children: [
+        {
+          path: '',
+          component: () => import('../pages/LibraryPage.vue'),
+          meta: { requiresAuth: true }
+        }
+      ]
+    },
+    {
+      path: '/project/:projectId',
+      component: () => import('../pages/MainLayout.vue'),
+      meta: { requiresAuth: true },
+      children: [
+        {
+          path: '',
+          component: () => import('../pages/ProjectPage.vue'),
+          meta: { requiresAuth: true }
+        }
+      ]
+    },
+    {
       path: '/chat',
       component: () => import('../pages/MainLayout.vue'),
       meta: { requiresAuth: true },

@@ -1,0 +1,113 @@
+# Short script for Computer File + Terminal UI recording
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: create_plan
+              arguments: |
+                {
+                  "message": "I'll create a small script and run it.",
+                  "language": "en",
+                  "goal": "demo computer file and terminal",
+                  "title": "File and Terminal demo",
+                  "steps": [
+                    { "id": "1", "description": "Write and edit a Python file" },
+                    { "id": "2", "description": "Run the script in the terminal" }
+                  ]
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: file_write
+              arguments: |
+                {
+                    "file": "/home/ubuntu/student_grade_system.py",
+                    "content": "print('hello v1')\n",
+                    "append": false
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: file_write
+              arguments: |
+                {
+                    "file": "/home/ubuntu/student_grade_system.py",
+                    "content": "print('hello v2 - modified')\nprint('done')\n",
+                    "append": false
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: shell_exec
+              arguments: |
+                {
+                    "id": "shell-1",
+                    "exec_dir": "/home/ubuntu",
+                    "command": "python3 /home/ubuntu/student_grade_system.py"
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: complete_step
+              arguments: |
+                {
+                  "success": true,
+                  "result": "File and terminal demo complete"
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: update_plan
+              arguments: |
+                {
+                  "steps": []
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: deliver_result
+              arguments: |
+                {
+                  "message": "Done — check the Computer panel for file and terminal.",
+                  "attachments": ["/home/ubuntu/student_grade_system.py"]
+                }

@@ -20,6 +20,7 @@ from app.domain.external.search import SearchEngine
 from app.domain.external.llm import LLM
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.repositories.session_repository import SessionRepository
+from app.domain.repositories.project_repository import ProjectRepository
 from app.domain.models.session import SessionStatus
 from app.domain.services.tools.mcp import MCPToolkit
 from app.domain.services.tools.shell import ShellToolkit
@@ -50,11 +51,13 @@ class PlanActFlow(BaseFlow):
         mcp_tool: MCPToolkit,
         llm: LLM,
         search_engine: Optional[SearchEngine] = None,
+        project_repository: Optional[ProjectRepository] = None,
     ):
         self._agent_id = agent_id
         self._repository = agent_repository
         self._session_id = session_id
         self._session_repository = session_repository
+        self._project_repository = project_repository
         self._llm = llm
         self.status = AgentStatus.IDLE
         self.plan = None
@@ -89,13 +92,26 @@ class PlanActFlow(BaseFlow):
         )
         logger.debug(f"Created execution agent for Agent {self._agent_id}")
 
+    async def _apply_project_instruction(self, project_id: Optional[str]) -> None:
+        instruction: Optional[str] = None
+        if project_id and self._project_repository:
+            project = await self._project_repository.find_by_id(project_id)
+            if project and project.instruction:
+                instruction = project.instruction
+        self.planner.set_project_instruction(instruction)
+        self.executor.set_project_instruction(instruction)
+        await self.planner.sync_system_prompt()
+        await self.executor.sync_system_prompt()
+
     async def run(self, message: Message) -> AsyncGenerator[BaseEvent, None]:
 
         # TODO: move to task runner
         session = await self._session_repository.find_by_id(self._session_id)
         if not session:
             raise ValueError(f"Session {self._session_id} not found")
-        
+
+        await self._apply_project_instruction(session.project_id)
+
         if session.status != SessionStatus.PENDING:
             logger.debug(f"Session {self._session_id} is not in PENDING status, rolling back")
             await self.executor.roll_back(message)
@@ -125,8 +141,11 @@ class PlanActFlow(BaseFlow):
                     if isinstance(event, PlanEvent) and event.status == PlanStatus.CREATED:
                         self.plan = event.plan
                         logger.info(f"Agent {self._agent_id} created plan successfully with {len(event.plan.steps)} steps")
-                        yield TitleEvent(title=event.plan.title)
-                        yield MessageEvent(role="assistant", message=event.plan.message)
+                        if event.plan.title and event.plan.title.strip():
+                            yield TitleEvent(title=event.plan.title)
+                        # Skip empty planner acknowledgements (bad LLM stubs)
+                        if event.plan.message and event.plan.message.strip():
+                            yield MessageEvent(role="assistant", message=event.plan.message)
                     yield event
                 logger.info(f"Agent {self._agent_id} state changed from {AgentStatus.PLANNING} to {AgentStatus.EXECUTING}")
                 self.status = AgentStatus.EXECUTING

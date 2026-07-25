@@ -48,6 +48,7 @@ https://github.com/user-attachments/assets/7b39b828-ec27-4b8f-b5f7-527e29efbe48
  * Claw：集成 [OpenClaw](https://github.com/anthropics/openclaw) AI 助手，一键部署、用户隔离容器、自动过期倒计时、完整聊天历史。
  * 沙盒：每个 Task 会分配单独的一个沙盒，沙盒在本地 Docker 环境里面运行。
  * 任务会话：通过 Mongo/Redis 对会话历史进行管理，支持后台任务。
+ * 库：侧栏「库」聚合各会话产生的附件与产物，支持类型筛选、搜索、文件收藏与预览，并可定位回原任务。
  * 对话：支持停止与打断，支持文件上传与下载。
  * 多语言：支持中文与英文。
  * 认证：用户登录与认证。

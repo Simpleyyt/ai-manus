@@ -48,6 +48,7 @@ https://github.com/user-attachments/assets/83d9549b-1a99-4c06-b39e-1bc0b48b3055
  * Claw: Integrated [OpenClaw](https://github.com/anthropics/openclaw) AI assistant with one-click deployment, per-user isolated containers, auto-expiry countdown, and full chat history.
  * Sandbox: Each task is allocated a separate sandbox that runs in a local Docker environment.
  * Task Sessions: Session history is managed through MongoDB/Redis, supporting background tasks.
+ * Library: The sidebar Library aggregates attachments and artifacts across your sessions, with type filters, search, per-file favorites, preview, and jump-back to the source task.
  * Conversations: Supports stopping and interrupting, file upload and download.
  * Multilingual: Supports both Chinese and English.
  * Authentication: User login and authentication.

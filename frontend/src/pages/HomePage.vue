@@ -84,7 +84,7 @@ import {
 } from 'lucide-vue-next';
 import type { Component } from 'vue';
 import type { FileInfo } from '../api/file';
-import { useFilePanel } from '../composables/useFilePanel';
+import { useFilePreviewer } from '../composables/useFilePreviewer';
 import { useAuth } from '../composables/useAuth';
 import { getCachedClientConfig } from '../api/config';
 
@@ -93,7 +93,7 @@ const router = useRouter();
 const message = ref('');
 const isSubmitting = ref(false);
 const attachments = ref<FileInfo[]>([]);
-const { hideFilePanel } = useFilePanel();
+const { hideFilePreviewer } = useFilePreviewer();
 const { currentUser } = useAuth();
 const showGithubButton = ref(false);
 const githubRepositoryUrl = ref('https://github.com/simpleyyt/ai-manus');
@@ -129,7 +129,7 @@ const handleSuggestionClick = (suggestion: Suggestion) => {
 };
 
 onMounted(async () => {
-  hideFilePanel();
+  hideFilePreviewer();
   const clientConfig = await getCachedClientConfig();
   if (clientConfig) {
     showGithubButton.value = clientConfig.show_github_button;

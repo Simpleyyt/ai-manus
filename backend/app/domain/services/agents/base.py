@@ -59,10 +59,29 @@ class BaseAgent(ABC):
         self.toolkits = tools
         self.memory = None
         self._output_tool: Optional[OutputTool] = None
+        self._project_instruction: Optional[str] = None
+
+    def set_project_instruction(self, instruction: Optional[str]) -> None:
+        """Bind project-level guidance used when assembling the system prompt."""
+        text = (instruction or "").strip()
+        self._project_instruction = text or None
 
     def build_system_prompt(self) -> str:
         """Assemble the system prompt for this agent; overridden by subclasses."""
         return ""
+
+    async def sync_system_prompt(self) -> None:
+        """Insert or refresh the leading system message so project edits apply."""
+        await self._ensure_memory()
+        prompt = self.build_system_prompt()
+        if self.memory.empty:
+            self.memory.add_message(LLMMessage.system(prompt))
+            await self._repository.save_memory(self._agent_id, self.name, self.memory)
+            return
+        first = self.memory.messages[0]
+        if first.role == Role.SYSTEM and first.content != prompt:
+            first.content = prompt
+            await self._repository.save_memory(self._agent_id, self.name, self.memory)
 
     def get_tool(self, name: str) -> Optional[Tool]:
         """Get specified tool"""

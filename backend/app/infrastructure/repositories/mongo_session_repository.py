@@ -1,6 +1,6 @@
 from typing import Optional, List
 from datetime import datetime, UTC
-from app.domain.models.session import Session, SessionStatus, SessionSummary
+from app.domain.models.session import Session, SessionStatus, SessionSummary, TaskMode
 from app.domain.models.file import FileInfo
 from app.domain.repositories.session_repository import SessionRepository
 from app.domain.models.event import BaseEvent
@@ -20,6 +20,7 @@ SESSION_LIST_PROJECTION = {
     "is_shared": 1,
     "is_favorite": 1,
     "project_id": 1,
+    "task_mode": 1,
 }
 
 class MongoSessionRepository(SessionRepository):
@@ -75,6 +76,7 @@ class MongoSessionRepository(SessionRepository):
                 is_shared=doc.get("is_shared", False),
                 is_favorite=doc.get("is_favorite", False),
                 project_id=doc.get("project_id"),
+                task_mode=doc.get("task_mode") or TaskMode.AGENT,
             ))
         return summaries
     
@@ -240,4 +242,14 @@ class MongoSessionRepository(SessionRepository):
         ).update(
             {"$set": {"project_id": None, "updated_at": datetime.now(UTC)}}
         )
+
+    async def update_task_mode(self, session_id: str, task_mode: str) -> None:
+        """Update session task mode (agent | chat)"""
+        result = await SessionDocument.find_one(
+            SessionDocument.session_id == session_id
+        ).update(
+            {"$set": {"task_mode": task_mode, "updated_at": datetime.now(UTC)}}
+        )
+        if not result:
+            raise ValueError(f"Session {session_id} not found")
 

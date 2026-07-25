@@ -42,7 +42,6 @@
             class="flex items-center justify-center w-[36px] h-[36px] rounded-full bg-[var(--background-white-main)] hover:bg-[var(--background-gray-main)] clickable border border-[var(--border-main)] shadow-[0px_5px_16px_0px_var(--shadow-S),0px_0px_1.25px_0px_var(--shadow-S)] absolute -top-20 left-1/2 -translate-x-1/2">
             <ArrowDown class="text-[var(--icon-primary)]" :size="20" />
           </button>
-          <PlanPanel v-if="plan && plan.steps.length > 0" :plan="plan" />
           <div
             class="bg-[var(--background-white-main)] rounded-xl border border-[var(--border-main)] shadow-[0px_5px_16px_0px_var(--shadow-S),0px_0px_1.25px_0px_var(--shadow-XS)] backdrop-blur-3xl flex items-center justify-between py-[9px] pr-3 pl-4 sm:flex-row flex-col max-sm:gap-3 max-sm:p-2">
             <div class="flex items-center gap-0.5 w-full sm:flex-1">
@@ -84,37 +83,37 @@
         </div>
       </div>
     </div>
-    <ToolPanel ref="toolPanel" :size="toolPanelSize" :sessionId="sessionId" :realTime="realTime"
-      :isShare="true"
-      @jumpToRealTime="jumpToRealTime" />
+    <ComputerPanel ref="computerPanel" :size="computerPanelSize" :sessionId="sessionId" :realTime="realTime"
+      :isShare="true" :toolHistory="toolHistory" :plan="plan"
+      @jumpToRealTime="jumpToRealTime"
+      @selectTool="handleSelectTool" />
   </SimpleBar>
 </template>
 
 <script setup lang="ts">
 import SimpleBar from '../components/SimpleBar.vue';
-import { ref, onMounted, onUnmounted, watch, nextTick, reactive, toRefs } from 'vue';
+import { ref, onMounted, onUnmounted, watch, nextTick, reactive, toRefs, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import ChatMessage from '../components/ChatMessage.vue';
 import * as agentApi from '../api/agent';
-import { Message, ToolContent, isConsecutiveAssistant } from '../types/message';
+import { Message, ToolContent, StepContent, isConsecutiveAssistant } from '../types/message';
 import { PlanEventData } from '../types/event';
 import { useAgentEvents } from '../composables/useAgentEvents';
-import ToolPanel from '../components/ToolPanel.vue'
-import PlanPanel from '../components/PlanPanel.vue';
+import ComputerPanel from '../components/ComputerPanel.vue'
 import { ArrowDown, FileSearch, Link, Bot } from 'lucide-vue-next';
 import ManusLogoTextIcon from '../components/icons/ManusLogoTextIcon.vue';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
 import type { FileInfo } from '../api/file';
 import { useSessionFileList } from '../composables/useSessionFileList'
-import { useFilePanel } from '../composables/useFilePanel'
+import { useFilePreviewer } from '../composables/useFilePreviewer'
 import LoadingIndicator from '@/components/ui/LoadingIndicator.vue';
 import { copyToClipboard } from '../utils/dom'
 
 const router = useRouter()
 const { t } = useI18n()
 const { showSessionFileList } = useSessionFileList()
-const { hideFilePanel } = useFilePanel()
+const { hideFilePreviewer } = useFilePreviewer()
 
 // Create initial state factory
 const createInitialState = () => ({
@@ -122,7 +121,7 @@ const createInitialState = () => ({
   isLoading: false,
   sessionId: undefined as string | undefined,
   messages: [] as Message[],
-  toolPanelSize: 0,
+  computerPanelSize: 0,
   realTime: true,
   follow: true,
   title: t('New Chat'),
@@ -146,7 +145,7 @@ const {
   isLoading,
   sessionId,
   messages,
-  toolPanelSize,
+  computerPanelSize,
   realTime,
   follow,
   title,
@@ -161,9 +160,22 @@ const {
 } = toRefs(state);
 
 // Non-state refs that don't need reset
-const toolPanel = ref<InstanceType<typeof ToolPanel>>()
+const computerPanel = ref<InstanceType<typeof ComputerPanel>>()
 const simpleBarRef = ref<InstanceType<typeof SimpleBar>>();
 let countdownTimer: number | null = null;
+
+const toolHistory = computed(() => {
+  const tools: ToolContent[] = [];
+  for (const message of messages.value) {
+    if (message.type === 'tool') {
+      tools.push(message.content as ToolContent);
+    } else if (message.type === 'step') {
+      const step = message.content as StepContent;
+      if (step.tools?.length) tools.push(...step.tools);
+    }
+  }
+  return tools;
+});
 
 // Shared SSE event -> message list conversion
 const { handleEvent } = useAgentEvents(
@@ -171,7 +183,7 @@ const { handleEvent } = useAgentEvents(
   {
     onToolActivity: (tool: ToolContent) => {
       if (realTime.value) {
-        toolPanel.value?.showToolPanel(tool, false);
+        computerPanel.value?.showComputerPanel(tool, false);
       }
     },
   }
@@ -198,8 +210,8 @@ const replay = async () => {
     showErrorToast(t('Session not found'));
     return;
   }
-  hideFilePanel();
-  toolPanel.value?.hideToolPanel();
+  hideFilePreviewer();
+  computerPanel.value?.hideComputerPanel();
   resetState();
   sessionId.value = String(router.currentRoute.value.params.sessionId) as string;
   const session = await agentApi.getSharedSession(sessionId.value);
@@ -256,7 +268,7 @@ const startReplay = () => {
 
 // Initialize active conversation
 onMounted(() => {
-  hideFilePanel();
+  hideFilePreviewer();
   const routeParams = router.currentRoute.value.params;
   if (routeParams.sessionId) {
     // If sessionId is included in URL, use it directly
@@ -280,14 +292,19 @@ onUnmounted(() => {
 const handleToolClick = (tool: ToolContent) => {
   realTime.value = false;
   if (sessionId.value) {
-    toolPanel.value?.showToolPanel(tool, false);
+    computerPanel.value?.showComputerPanel(tool, false);
   }
+}
+
+const handleSelectTool = (tool: ToolContent) => {
+  realTime.value = false;
+  computerPanel.value?.showComputerPanel(tool, false);
 }
 
 const jumpToRealTime = () => {
   realTime.value = true;
   if (lastNoMessageTool.value) {
-    toolPanel.value?.showToolPanel(lastNoMessageTool.value, false);
+    computerPanel.value?.showComputerPanel(lastNoMessageTool.value, false);
   }
 }
 

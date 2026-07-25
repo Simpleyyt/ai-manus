@@ -17,6 +17,7 @@ export interface GetSessionResponse {
     status: SessionStatus;
     events: AgentSSEEvent[];
     is_shared: boolean;
+    task_mode: 'agent' | 'chat';
 }
 
 export interface ListSessionItem {
@@ -29,6 +30,7 @@ export interface ListSessionItem {
     is_shared: boolean;
     is_favorite: boolean;
     project_id: string | null;
+    task_mode?: 'agent' | 'chat';
 }
 
 export interface ListSessionResponse {
@@ -41,6 +43,8 @@ export interface ProjectItem {
     instruction: string | null;
     is_pinned: boolean;
     sort_order: number;
+    created_at?: string | null;
+    updated_at?: string | null;
 }
 
 export interface ListProjectsResponse {
@@ -53,6 +57,11 @@ export interface LibraryFileItem {
     file_id: string | null;
     filename: string | null;
     file_path: string | null;
+    content_type: string | null;
+    size: number | null;
+    upload_date: string | null;
+    is_favorite: boolean;
+    latest_message_at: number | null;
 }
 
 export interface LibraryResponse {

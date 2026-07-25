@@ -16,6 +16,12 @@ class SessionStatus(str, Enum):
     COMPLETED = "completed"
 
 
+class TaskMode(str, Enum):
+    """Manus-style task mode: agent (plan-act) vs chat (lightweight Q&A)"""
+    AGENT = "agent"
+    CHAT = "chat"
+
+
 class SessionSummary(BaseModel):
     """Lightweight session model for list views (excludes heavy events/files)"""
     id: str
@@ -28,6 +34,7 @@ class SessionSummary(BaseModel):
     is_shared: bool = False
     is_favorite: bool = False
     project_id: Optional[str] = None
+    task_mode: TaskMode = TaskMode.AGENT
 
 
 class Session(BaseModel):
@@ -49,6 +56,7 @@ class Session(BaseModel):
     is_shared: bool = False  # Whether this session is shared publicly
     is_favorite: bool = False
     project_id: Optional[str] = None
+    task_mode: TaskMode = TaskMode.AGENT
 
     def get_last_plan(self) -> Optional[Plan]:
         """Get the last plan from the events"""

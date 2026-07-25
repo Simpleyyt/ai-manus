@@ -69,12 +69,12 @@ import { getSessionFiles, getSharedSessionFiles } from '../api/agent';
 import { formatRelativeTime, parseISODateTime } from '../utils/time';
 import { getFileType } from '../utils/fileType';
 import { useSessionFileList } from '../composables/useSessionFileList';
-import { useFilePanel } from '../composables/useFilePanel';
+import { useFilePreviewer } from '../composables/useFilePreviewer';
 
 const route = useRoute();
 const files = ref<FileInfo[]>([]);
 
-const { showFilePanel } = useFilePanel();
+const { showFilePreviewer } = useFilePreviewer();
 
 const { visible, hideSessionFileList, shared } = useSessionFileList();
 
@@ -93,7 +93,7 @@ const downloadFile = async (fileInfo: FileInfo) => {
 }
 
 const showFile = (file: FileInfo) => {
-    showFilePanel(file);
+    showFilePreviewer(file);
     hideSessionFileList();
 }
 

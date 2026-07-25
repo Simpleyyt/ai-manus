@@ -57,7 +57,7 @@ PY
 ```
 
 Then open `/` (not `/chat/<old-id>`). Expand the sidebar if the demo needs it
-(`localStorage.manus-left-panel-state = true`). Confirm **All Tasks** is empty before typing the first prompt.
+(`localStorage.manus-session-sidebar-state = true`). Confirm **All Tasks** is empty before typing the first prompt.
 
 Fallback (wipes all DB sessions for the stack):
 
@@ -206,7 +206,7 @@ Produce MP4s under `tmp/videos/`. Prefer short, clear demos:
 
 **Basic Features** should showcase **multi-session switching**, not a single agent run:
 clear the session list first (see Clean initial state), expand the sidebar
-(`localStorage.manus-left-panel-state = true`), then create short sessions that
+(`localStorage.manus-session-sidebar-state = true`), then create short sessions that
 mirror the other demos (e.g. a Code Use–style prompt, then **New Task**, then a
 Browser Use–style prompt such as “找一下最新新闻” / “Find latest news”), and
 switch between them via **All Tasks**.

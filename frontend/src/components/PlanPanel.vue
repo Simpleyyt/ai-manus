@@ -1,109 +1,96 @@
 <template>
-  <div class="[&:not(:empty)]:pb-2 bg-[var(--background-gray-main)] rounded-[22px_22px_0px_0px]">
-    <div v-if="isExpanded"
-      class="border border-black/8 dark:border-[var(--border-main)] bg-[var(--background-menu-white)] rounded-[16px] sm:rounded-[12px] shadow-[0px_0px_1px_0px_rgba(0,_0,_0,_0.05),_0px_8px_32px_0px_rgba(0,_0,_0,_0.04)] z-99 flex flex-col py-4">
-      <div class="flex px-4 mb-4 w-full">
-        <div class="flex items-start ml-auto">
-          <div class="flex items-center justify-center gap-2">
-            <div @click="togglePanel"
-              class="flex h-7 w-7 items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-gray-main)] rounded-md">
-              <ChevronDown class="text-[var(--icon-tertiary)]" :size="16" />
-            </div>
-          </div>
+  <!-- ManusComputerPlanner — lives under Computer timeline -->
+  <button
+    v-if="plan?.steps?.length"
+    type="button"
+    class="clickable flex w-full flex-col p-[16px] pe-0 text-start hover:bg-[var(--fill-tsp-gray-main)] shrink-0 border-0 bg-transparent cursor-pointer"
+    :class="{ 'gap-[8px]': isExpanded }"
+    :aria-label="isExpanded ? t('Collapse task progress') : t('Expand task progress')"
+    :aria-expanded="isExpanded"
+    @click="togglePanel">
+    <div class="flex w-full items-center justify-between gap-[12px] pe-[16px]">
+      <span
+        v-if="isExpanded"
+        class="shrink-0 text-sm font-[500] text-[var(--text-primary)]">
+        {{ t('Task progress') }}
+      </span>
+      <div v-else class="relative min-w-0 flex-1 overflow-hidden">
+        <div class="flex min-w-0 items-center gap-[8px]">
+          <PlanStepIcon :status="currentStepStatus" />
+          <span
+            class="min-w-0 truncate text-sm text-[var(--text-primary)]"
+            :title="currentStepTitle">
+            {{ currentStepTitle }}
+          </span>
         </div>
       </div>
-      <div class="px-4">
-        <div class="bg-[var(--fill-tsp-gray-main)] rounded-lg pt-4 pb-2">
-          <div class="flex justify-between w-full px-4">
-            <span class="text-[var(--text-primary)] font-bold">{{ $t('Task Progress') }}</span>
-            <div class="flex items-center gap-3">
-              <span class="text-xs text-[var(--text-tertiary)]">{{ planProgress }}</span>
-            </div>
-          </div>
-          <div class="max-h-[min(calc(100vh-360px),400px)] overflow-y-auto">
-            <div v-for="step in plan.steps" :key="step.id"
-              class="flex items-start gap-2.5 w-full px-4 py-2 truncate">
-              <StepSuccessIcon v-if="step.status === 'completed'" />
-              <Clock v-else class="relative top-[2px] flex-shrink-0" :size="16" />
-              <div class="flex flex-col w-full gap-[2px] truncate">
-                <div class="text-sm truncate" :title="step.description"
-                  style="color: var(--text-primary);">
-                  {{ step.description }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      <span class="flex shrink-0 items-center justify-center gap-[4px]">
+        <span class="text-xs text-[var(--text-tertiary)]">{{ planProgress }}</span>
+        <ChevronUp v-if="isExpanded" :size="16" class="text-[var(--icon-tertiary)]" />
+        <ChevronDown v-else :size="16" class="text-[var(--icon-tertiary)]" />
+      </span>
+    </div>
+
+    <div
+      v-if="isExpanded"
+      class="flex max-h-[260px] w-full flex-col items-start gap-[4px] overflow-y-auto overscroll-contain pe-[16px]">
+      <div
+        v-for="step in plan.steps"
+        :key="step.id"
+        class="flex min-h-[20px] min-w-0 max-w-full items-center gap-[8px]">
+        <PlanStepIcon :status="step.status" />
+        <span
+          class="min-w-0 truncate text-sm text-[var(--text-primary)]"
+          :title="step.description">
+          {{ step.description }}
+        </span>
       </div>
     </div>
-    <div v-if="!isExpanded" @click="togglePanel"
-      class="flex flex-row items-start justify-between pe-3 relative clickable border border-black/8 dark:border-[var(--border-main)] bg-[var(--background-menu-white)] rounded-[16px] sm:rounded-[12px] shadow-[0px_0px_1px_0px_rgba(0,_0,_0,_0.05),_0px_8px_32px_0px_rgba(0,_0,_0,_0.04)] z-99">
-      <div class="flex-1 min-w-0 relative overflow-hidden">
-        <div class="w-full" style="height: 36px; --offset: -36px;">
-          <div class="w-full">
-            <div class="flex items-start gap-2.5 w-full px-4 py-2 truncate">
-              <StepSuccessIcon v-if="isCompleted" />
-              <Clock v-else class="relative top-[2px] flex-shrink-0" :size="16" />
-              <div class="flex flex-col w-full gap-[2px] truncate">
-                <div class="text-sm truncate" :title="currentStep" style="color: var(--text-tertiary);">
-                  {{ currentStep }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <button
-        class="flex h-full cursor-pointer justify-center gap-2 hover:opacity-80 flex-shrink-0 items-start py-2.5">
-        <span class="text-xs text-[var(--text-tertiary)] hidden sm:flex">{{ planProgress }}</span>
-        <ChevronUp class="text-[var(--icon-tertiary)]" :size="16" />
-      </button>
-    </div>
-  </div>
+  </button>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { ChevronUp, ChevronDown, Clock } from 'lucide-vue-next';
-import StepSuccessIcon from './icons/StepSuccessIcon.vue';
-import type { PlanEventData } from '../types/event';
+import { ChevronUp, ChevronDown } from 'lucide-vue-next';
+import PlanStepIcon from './PlanStepIcon.vue';
+import type { PlanEventData, StepEventData } from '../types/event';
 
-interface Props {
+const props = defineProps<{
   plan: PlanEventData;
-}
-
-const props = defineProps<Props>();
+}>();
 
 const { t } = useI18n();
-
 const isExpanded = ref(false);
 
 const togglePanel = () => {
   isExpanded.value = !isExpanded.value;
 };
 
-const planProgress = computed((): string => {
-  const completedSteps = props.plan?.steps.filter(step => step.status === 'completed').length ?? 0;
-  return `${completedSteps} / ${props.plan?.steps.length ?? 1}`;
-});
+const steps = computed(() => props.plan?.steps ?? []);
 
-const isCompleted = computed((): boolean => {
-  return props.plan?.steps.every(step => step.status === 'completed') ?? false;
-});
-
-const currentStep = computed((): string => {
-  for (const step of props.plan?.steps ?? []) {
-    if (step.status === 'running' || step.status === 'pending') {
-      return step.description;
-    }
+const currentIndex = computed(() => {
+  const list = steps.value;
+  if (!list.length) return 0;
+  let lastDone = -1;
+  for (let i = 0; i < list.length; i++) {
+    if (list[i].status === 'completed') lastDone = i;
   }
-  return t('Task Completed');
+  return Math.min(list.length - 1, lastDone + 1);
+});
+
+const planProgress = computed(() => `${currentIndex.value + 1} / ${steps.value.length || 1}`);
+
+const currentStep = computed((): StepEventData | undefined => steps.value[currentIndex.value]);
+
+const currentStepTitle = computed(() => {
+  if (!currentStep.value) return t('Task Completed');
+  if (steps.value.every((s) => s.status === 'completed')) return t('Task Completed');
+  return currentStep.value.description;
+});
+
+const currentStepStatus = computed(() => {
+  if (steps.value.every((s) => s.status === 'completed')) return 'completed' as const;
+  return currentStep.value?.status ?? 'pending';
 });
 </script>
-
-<style scoped>
-.\[\&\:not\(\:empty\)\]\:pb-2:not(:empty) {
-  padding-bottom: .5rem;
-}
-</style> 

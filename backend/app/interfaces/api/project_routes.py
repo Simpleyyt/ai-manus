@@ -37,6 +37,16 @@ async def list_projects(
     return APIResponse.success(ListProjectsResponse(projects=[_to_item(p) for p in projects]))
 
 
+@router.get("/{project_id}", response_model=APIResponse[ProjectItem])
+async def get_project(
+    project_id: str,
+    current_user: User = Depends(get_current_user),
+    project_service: ProjectService = Depends(get_project_service),
+) -> APIResponse[ProjectItem]:
+    project = await project_service.get_project(project_id, current_user.id)
+    return APIResponse.success(_to_item(project))
+
+
 @router.post("", response_model=APIResponse[ProjectItem])
 async def create_project(
     request: CreateProjectRequest,

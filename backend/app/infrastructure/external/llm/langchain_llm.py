@@ -123,7 +123,12 @@ class LangchainLLM:
     ) -> LLMMessage:
         rf = {"type": response_format} if response_format else None
 
-        model = self._model.bind(response_format=rf, tool_choice=tool_choice)
+        bind_kwargs: Dict[str, Any] = {}
+        if rf is not None:
+            bind_kwargs["response_format"] = rf
+        if tool_choice is not None:
+            bind_kwargs["tool_choice"] = tool_choice
+        model = self._model.bind(**bind_kwargs) if bind_kwargs else self._model
         if tools:
             model = model.bind_tools(tools)
 

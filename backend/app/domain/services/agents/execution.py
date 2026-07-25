@@ -64,6 +64,7 @@ class ExecutionAgent(BaseAgent):
         return build_system_prompt(
             toolkits=self.toolkits,
             role_prompt=EXECUTION_ROLE_PROMPT,
+            project_instruction=self._project_instruction,
         )
 
     async def execute_step(self, plan: Plan, step: Step, message: Message) -> AsyncGenerator[BaseEvent, None]:

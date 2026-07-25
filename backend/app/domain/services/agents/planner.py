@@ -70,6 +70,7 @@ class PlannerAgent(BaseAgent):
             role_prompt=PLANNER_ROLE_PROMPT.format(
                 capabilities=describe_toolkits(self._capability_toolkits)
             ),
+            project_instruction=self._project_instruction,
         )
 
     async def create_plan(self, message: Message) -> AsyncGenerator[BaseEvent, None]:

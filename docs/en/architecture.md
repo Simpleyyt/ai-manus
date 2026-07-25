@@ -29,3 +29,14 @@ Claw is AI Manus's deeply integrated [OpenClaw](https://github.com/anthropics/op
 - **Backend integration:** Server dynamically creates per-user Claw Docker containers (or connects to a fixed dev instance), manages state in the MongoDB `claws` collection, merges MongoDB history with OpenClaw `.jsonl` session files, and exposes REST + WebSocket + file upload/resolve + OpenAI-compatible LLM proxy endpoints.
 - **Frontend integration:** When `claw_enabled` is turned on, a "Manus Claw" entry appears in the sidebar, routing to the `/chat/claw` page with real-time chat over WebSocket.
 - **manus-claw plugin:** Bridges the OpenClaw Gateway with the Manus backend, providing an HTTP server, the `manus_upload_file` tool, file resolution, and session history reads.
+
+## Library
+
+Library is a dedicated sidebar page (route `/library`) for browsing files the current user uploaded or produced across task sessions.
+
+**Overview:**
+
+- **Aggregation:** The backend collects files from all of the user's sessions (`session.files`) via `GET /api/v1/library/files`, ordered by recent session activity.
+- **Filter & search:** Filter by document type (documents, images, etc.), search by filename, and toggle **My favorites**.
+- **File favorites:** Favorite state is stored **per file id** in MongoDB `file_favorites` (`POST/DELETE /api/v1/library/files/{file_id}/favorite`), independent of session-level task favorites.
+- **Preview & locate:** Open FilePreviewer for content, or jump back to the source session.

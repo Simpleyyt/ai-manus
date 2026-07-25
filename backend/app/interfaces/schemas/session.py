@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from app.interfaces.schemas.event import AgentSSEEvent
 from app.domain.models.file import FileInfo
-from app.domain.models.session import SessionStatus, SessionSummary
+from app.domain.models.session import SessionStatus, SessionSummary, TaskMode
 
 
 class ChatAttachment(BaseModel):
@@ -39,6 +39,7 @@ class GetSessionResponse(BaseModel):
     status: SessionStatus
     events: List[AgentSSEEvent] = []
     is_shared: bool = False
+    task_mode: TaskMode = TaskMode.AGENT
 
 
 class ListSessionItem(BaseModel):
@@ -52,6 +53,7 @@ class ListSessionItem(BaseModel):
     is_shared: bool = False
     is_favorite: bool = False
     project_id: Optional[str] = None
+    task_mode: TaskMode = TaskMode.AGENT
 
     @staticmethod
     def from_domain(summary: SessionSummary) -> 'ListSessionItem':
@@ -65,6 +67,7 @@ class ListSessionItem(BaseModel):
             is_shared=summary.is_shared,
             is_favorite=summary.is_favorite,
             project_id=summary.project_id,
+            task_mode=summary.task_mode or TaskMode.AGENT,
         )
 
 
@@ -104,6 +107,12 @@ class FavoriteSessionResponse(BaseModel):
     is_favorite: bool
 
 
+class FavoriteLibraryFileResponse(BaseModel):
+    """Favorite library file response schema"""
+    file_id: str
+    is_favorite: bool
+
+
 class MoveSessionProjectRequest(BaseModel):
     """Move session to project (null to remove from project)"""
     project_id: Optional[str] = None
@@ -114,12 +123,27 @@ class MoveSessionProjectResponse(BaseModel):
     project_id: Optional[str] = None
 
 
+class UpdateSessionTaskModeRequest(BaseModel):
+    """Update session task mode (agent | chat)"""
+    task_mode: TaskMode
+
+
+class UpdateSessionTaskModeResponse(BaseModel):
+    session_id: str
+    task_mode: TaskMode
+
+
 class LibraryFileItem(BaseModel):
     session_id: str
     session_title: Optional[str] = None
     file_id: Optional[str] = None
     filename: Optional[str] = None
     file_path: Optional[str] = None
+    content_type: Optional[str] = None
+    size: Optional[int] = None
+    upload_date: Optional[str] = None
+    is_favorite: bool = False
+    latest_message_at: Optional[int] = None
 
 
 class LibraryResponse(BaseModel):

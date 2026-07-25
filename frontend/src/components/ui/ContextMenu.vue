@@ -83,7 +83,11 @@ watch(targetElement, () => {
 
 // Handle click outside to close menu
 const handleClickOutside = (event: MouseEvent) => {
-    if (contextMenuVisible.value && menuRef.value && !menuRef.value.contains(event.target as Node)) {
+    if (!contextMenuVisible.value || !menuRef.value) return;
+    const target = event.target as Node;
+    // Ignore the anchor that opened the menu (same click that opens it).
+    if (targetElement.value?.contains(target)) return;
+    if (!menuRef.value.contains(target)) {
         hideContextMenu();
     }
 };

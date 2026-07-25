@@ -30,6 +30,7 @@ Each service and tool in AI Manus includes a Built-in version that can be fully 
  * **Claw:** Integrated [OpenClaw](https://github.com/anthropics/openclaw) AI assistant with one-click deployment, per-user isolated containers, auto-expiry countdown, and full chat history.
  * **Sandbox:** Each Task is allocated a separate sandbox that runs in a local Docker environment.
  * **Task Sessions:** Manages session history through Mongo/Redis, supports background tasks.
+ * **Library:** The sidebar Library page aggregates attachments and artifacts across the user's sessions, with type filters, search, per-file favorites, preview, and navigation back to the source task.
  * **Conversations:** Supports stopping and interruption, supports file upload and download.
  * **Multi-language:** Supports Chinese and English. 
  * **Authentication:** User login and authentication.

@@ -29,3 +29,14 @@ Claw 是 AI Manus 深度集成的 [OpenClaw](https://github.com/anthropics/openc
 - **Backend 集成：**Server 为每个用户动态创建 Claw Docker 容器（或连接固定开发实例），通过 MongoDB `claws` 集合管理状态，并将 MongoDB 历史与 OpenClaw `.jsonl` 会话文件合并，提供 REST + WebSocket + 文件上传/解析 + OpenAI 兼容 LLM 代理等接口。
 - **Frontend 集成：**当 `claw_enabled` 配置开启时，左侧边栏出现 "Manus Claw" 入口，路由至 `/chat/claw` 页面，通过 WebSocket 实现实时聊天。
 - **manus-claw 插件：**桥接 OpenClaw Gateway 与 Manus 后端，提供 HTTP 服务、`manus_upload_file` 工具、文件解析与会话历史读取等能力。
+
+## 库（Library）
+
+「库」是侧栏中的独立页面（路由 `/library`），用于浏览当前用户在各任务会话中产生或上传的文件。
+
+**能力概览：**
+
+- **聚合来源：**后端从用户全部会话的 `session.files` 汇总文件列表（`GET /api/v1/library/files`），按会话最近活跃时间排序。
+- **筛选与搜索：**支持按文档类型（文档 / 图片等）筛选、关键词搜索文件名，以及「我的收藏」过滤。
+- **文件收藏：**收藏状态按 **文件 ID** 持久化在 MongoDB `file_favorites` 集合（`POST/DELETE /api/v1/library/files/{file_id}/favorite`），与会话级「收藏任务」相互独立。
+- **预览与定位：**卡片可打开 FilePreviewer 预览内容，或跳转到所属会话继续查看。

@@ -29,6 +29,7 @@
 ## UI
 
  * [x] Support settings
+ * [x] Support Library (aggregate session files, type filter / search, file favorites and preview)
  * [ ] Support timeline playback
 
 ## Task Sessions

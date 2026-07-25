@@ -1,19 +1,19 @@
 <template>
-  <!-- ManusComputer shell: Header | Panel | Timeline -->
+  <!-- Official ManusComputer: Header | Panel | Timeline | Planner -->
   <div
     id="manus-agent-workspace"
-    class="h-full w-full min-w-0 flex flex-col bg-[var(--background-gray-main)] border-l border-[var(--border-main)] overflow-hidden">
-    <!-- ManusComputerHeader -->
-    <div class="flex h-[56px] shrink-0 items-center gap-[8px] border-b border-[var(--border-main)] px-[16px] py-[12px]">
+    class="h-full flex flex-col bg-[var(--background-gray-main)]"
+    :class="shellClass">
+    <!-- ManusComputerHeader (mined eg) -->
+    <div class="flex h-[56px] items-center gap-[8px] border-b border-[var(--border-main)] px-[16px] py-[12px]">
       <div class="flex min-w-0 flex-1 flex-col justify-center">
         <h2 class="truncate text-[14px] font-[500] text-[var(--text-primary)]">
           {{ $t("{name}'s computer", { name: 'Manus' }) }}
         </h2>
         <div class="flex min-w-0 items-center gap-[8px] text-[var(--text-tertiary)] text-xs">
-          <div class="shrink-0 truncate" :title="usingLabel">
+          <div class="" :title="usingLabel">
             <template v-if="toolInfo">
-              {{ $t('Manus is using') }}
-              <span class="font-medium text-[var(--text-secondary)]">{{ toolInfo.name }}</span>
+              {{ $t('Manus is using') }}<span>{{ toolInfo.name }}</span>
             </template>
             <template v-else>
               {{ $t('Waiting for instructions') }}
@@ -24,23 +24,27 @@
             class="min-w-0 flex-1 truncate"
             :class="{ 'animate-shimmer bg-[linear-gradient(110deg,var(--text-tertiary),35%,var(--text-shining),50%,var(--text-tertiary),75%,var(--text-tertiary))] bg-[length:200%_100%] bg-clip-text text-transparent': isStreamingAction }"
             :title="actionLabel">
-            <span>{{ toolInfo?.function || $t('Waiting for instructions') }}</span>
-            <span
-              v-if="toolInfo?.functionArg"
-              class="ms-[4px] font-mono">
-              {{ toolInfo.functionArg }}
-            </span>
+            <template v-if="toolInfo">
+              {{ toolInfo.function }}<span
+                v-if="toolInfo.functionArg"
+                class="ms-[4px] font-mono">{{ toolInfo.functionArg }}</span>
+            </template>
+            <template v-else>
+              {{ $t('Waiting for instructions') }}
+            </template>
           </div>
         </div>
       </div>
 
       <div class="flex shrink-0 items-center gap-[4px]">
-        <!-- Use Manus's computer -->
+        <!-- Use {product}'s computer — official button tokens -->
         <div v-if="!isShare" class="relative" ref="useComputerRef">
           <button
             type="button"
-            class="flex items-center justify-center size-[32px] rounded-[8px] p-0 text-[var(--icon-secondary)] hover:bg-[var(--fill-tsp-white-light)] cursor-pointer"
+            class="flex items-center justify-end gap-[1px] clickable px-[6px] py-1 hover:bg-[var(--fill-tsp-white-light)] rounded-md !size-[32px] justify-center !rounded-[8px] !p-0 text-[var(--icon-secondary)] [&_svg]:!size-[18px]"
             :class="{ 'bg-[var(--fill-tsp-gray-main)]': showUseComputer }"
+            :aria-expanded="showUseComputer"
+            aria-haspopup="dialog"
             :title="useComputerTitle"
             @click="showUseComputer = !showUseComputer">
             <Monitor :size="18" />
@@ -51,7 +55,7 @@
             <div class="flex justify-between items-center">
               <div class="flex items-center gap-1.5 min-w-0">
                 <Monitor :size="20" class="text-[var(--icon-primary)] shrink-0" />
-                <h2 class="text-lg text-[var(--text-primary)] font-semibold truncate">
+                <h2 class="text-lg text-[var(--text-primary)] font-serif font-semibold truncate">
                   {{ t("Use application on {product}'s computer", { product: 'Manus' }) }}
                 </h2>
               </div>
@@ -88,18 +92,41 @@
           <div class="h-[16px] w-px bg-[var(--border-dark)]" />
         </div>
 
-        <button
-          type="button"
-          class="size-[32px] rounded-[8px] inline-flex items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-white-main)]"
+        <!-- Official IconButton Side/Center (!isMobile) -->
+        <div
+          v-if="!isMobile"
+          role="button"
+          tabindex="0"
+          class="flex h-7 w-7 items-center justify-center cursor-pointer rounded-md hover:bg-[var(--fill-tsp-white-light)] !size-[32px] !rounded-[8px]"
+          :title="presentation === 'dialog' ? t('Side view') : t('Center view')"
+          @click="emit('toggle-presentation')"
+          @keydown.enter.prevent="emit('toggle-presentation')">
+          <SideViewIcon
+            v-if="presentation === 'dialog'"
+            :size="18"
+            color="var(--icon-secondary)"
+            class="!size-[18px] text-[var(--icon-secondary)]" />
+          <CenterViewIcon
+            v-else
+            :size="18"
+            color="var(--icon-secondary)"
+            class="!size-[18px] text-[var(--icon-secondary)]" />
+        </div>
+
+        <div
+          role="button"
+          tabindex="0"
+          class="flex h-7 w-7 items-center justify-center cursor-pointer rounded-md hover:bg-[var(--fill-tsp-white-light)] !size-[32px] !rounded-[8px]"
           :title="t('Close')"
-          @click="hide">
-          <X :size="18" class="text-[var(--icon-secondary)]" />
-        </button>
+          @click="hide"
+          @keydown.enter.prevent="hide">
+          <X :size="18" class="!size-[18px] text-[var(--icon-secondary)]" />
+        </div>
       </div>
     </div>
 
     <!-- ManusComputerPanel -->
-    <div class="flex-1 min-h-0 flex flex-col overflow-hidden bg-[var(--background-gray-main)]">
+    <div class="flex-1 min-h-0">
       <component
         v-if="toolInfo?.view"
         :is="toolInfo.view"
@@ -112,11 +139,12 @@
 
     <!-- ManusComputerTimeline -->
     <div
-      class="mt-auto flex h-[45px] w-full items-center gap-[8px] py-[12px] ps-[16px] pe-[8px] relative bg-[var(--background-gray-main)] border-t border-b border-[var(--border-main)] shrink-0">
+      class="mt-auto flex h-[45px] w-full items-center gap-[8px] py-[12px] ps-[16px] pe-[8px] relative bg-[var(--background-gray-main)] border-t border-b border-[var(--border-main)]">
       <div class="flex shrink-0 items-center gap-[8px]" dir="ltr">
         <button
           type="button"
-          class="flex size-[24px] items-center justify-center text-[var(--icon-secondary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:enabled:text-[var(--icon-brand)]"
+          class="flex size-[24px] items-center justify-center text-[var(--icon-secondary)] transition-colors"
+          :class="canGoPrev ? 'clickable cursor-pointer hover:text-[var(--icon-blue)]' : 'opacity-50 cursor-not-allowed'"
           :disabled="!canGoPrev"
           :title="t('Previous')"
           @click="goPrev">
@@ -124,7 +152,8 @@
         </button>
         <button
           type="button"
-          class="flex size-[24px] items-center justify-center text-[var(--icon-secondary)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:enabled:text-[var(--icon-brand)]"
+          class="flex size-[24px] items-center justify-center text-[var(--icon-secondary)] transition-colors"
+          :class="canGoNext ? 'clickable cursor-pointer hover:text-[var(--icon-blue)]' : 'opacity-50 cursor-not-allowed'"
           :disabled="!canGoNext"
           :title="t('Next')"
           @click="goNext">
@@ -187,6 +216,7 @@
 
 <script setup lang="ts">
 import { toRef, ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { useMediaQuery } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
 import {
   PlayIcon, X, Monitor,
@@ -197,6 +227,8 @@ import type { PlanEventData } from '@/types/event';
 import { useToolInfo } from '@/composables/useTool';
 import PlanPanel from './PlanPanel.vue';
 import ComputerInactiveEmpty from './ComputerInactiveEmpty.vue';
+import CenterViewIcon from './icons/CenterViewIcon.vue';
+import SideViewIcon from './icons/SideViewIcon.vue';
 
 const props = withDefaults(defineProps<{
   sessionId?: string;
@@ -206,13 +238,24 @@ const props = withDefaults(defineProps<{
   isShare: boolean;
   toolHistory?: ToolContent[];
   plan?: PlanEventData | null;
+  presentation?: 'sidebar' | 'dialog';
 }>(), {
   toolHistory: () => [],
   plan: null,
+  presentation: 'sidebar',
 });
 
 const { t, locale } = useI18n();
 const { toolInfo } = useToolInfo(toRef(props, 'toolContent'));
+const isMobile = useMediaQuery('(max-width: 767px)');
+
+/** Official ManusComputer root cn(sidebar|dialog) + mobile border-none */
+const shellClass = computed(() => {
+  if (props.presentation === 'dialog') {
+    return 'rounded-[12px] border border-[var(--border-main)] bg-[var(--background-gray-main)] shadow-[0_24px_24px_-12px_var(--shadow-S),_0_0_0_1px_var(--shadow-M),_0_1px_1px_-0.5px_var(--shadow-M),_0_3px_3px_-1.5px_var(--shadow-M),_0_6px_6px_-3px_var(--shadow-M),_0_12px_12px_-6px_var(--shadow-S),_0_48px_48px_-24px_var(--shadow-XS),_0_10px_20px_1px_var(--shadow-S)]';
+  }
+  return isMobile.value ? 'border-none' : 'border-l border-[var(--border-main)]';
+});
 
 const isScrubbing = ref(false);
 const showUseComputer = ref(false);
@@ -315,6 +358,7 @@ const emit = defineEmits<{
   (e: 'hide'): void;
   (e: 'selectTool', tool: ToolContent): void;
   (e: 'useComputer'): void;
+  (e: 'toggle-presentation'): void;
 }>();
 
 const hide = () => emit('hide');

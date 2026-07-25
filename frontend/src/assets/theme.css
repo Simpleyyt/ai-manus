@@ -21,6 +21,7 @@
     --background-card: #fff;
     --background-mask: #000000a6;
     --background-mask-black: #000000a6;
+    --background-dialog-mask: #000000a6;
     --background-preview-mask: #1a1a1a;
     --border-main: #0000000f;
     --border-white: #ffffff0a;
@@ -97,6 +98,7 @@
     --background-card: #444345;
     --background-mask: #000000a6;
     --background-mask-black: #000000a6;
+    --background-dialog-mask: #000000a6;
     --background-preview-mask: #1a1a1a;
     --border-main: #ffffff14;
     --border-white: #ffffff0a;

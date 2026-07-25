@@ -1,114 +1,97 @@
 <template>
-  <!-- Official FilePreviewer side shell: function eb (3waye1i3878mv.js) -->
+  <!-- Measure parent width for side mode (always mounted when previewer is allowed) -->
   <div
-    ref="rootRef"
-    v-if="visible"
-    :class="{
-      'h-full w-full top-0 ltr:right-0 rtl:left-0 z-50 fixed sm:sticky sm:top-0 sm:h-[100vh]': isShow,
-      'h-full overflow-hidden': !isShow,
-    }"
+    ref="sideRootRef"
+    class="h-full overflow-hidden shrink-0"
     :style="{
-      width: isShow ? `${parentSize / 2}px` : '0px',
-      opacity: isShow ? '1' : '0',
+      width: viewMode === 'side' && isShow && fileInfo ? `${sideWidth}px` : '0px',
+      opacity: viewMode === 'side' && isShow && fileInfo ? '1' : '0',
       transition: '0.2s ease-in-out',
     }">
-    <div class="h-full" :style="{ width: isShow ? '100%' : '0px' }">
+    <div
+      v-if="viewMode === 'side' && isShow && fileInfo && fileType"
+      class="h-full w-full sticky top-0 h-[100vh]">
       <div
-        v-if="isShow && fileInfo && fileType"
         class="overflow-hidden shadow-[0px_0px_8px_0px_rgba(0,0,0,0.02)] ltr:border-l rtl:border-r border-black/8 dark:border-[var(--border-light)] flex flex-col h-full w-full relative"
-        :class="isImagePreview
-          ? 'bg-[var(--background-mask-black)] dark:bg-[var(--background-preview-mask)]'
-          : 'bg-[var(--background-gray-main)]'">
-
-        <!-- Official FilePreviewerHeader: null for image/svg -->
-        <div
-          v-if="!isImagePreview"
-          class="flex h-[56px] shrink-0 items-center justify-between gap-[16px] px-[16px] py-[12px] border-b border-[var(--border-main)]">
-          <!-- Official FilePreviewerBrief -->
-          <div class="flex min-w-0 flex-1 items-center justify-between">
-            <div
-              class="flex min-w-0 flex-row items-center gap-[8px] truncate text-[var(--text-secondary)] [&_svg]:flex-shrink-0">
-              <a
-                href=""
-                class="flex size-[36px] flex-shrink-0 items-center justify-center cursor-default"
-                target="_blank"
-                rel="noreferrer"
-                @click.prevent>
-                <div class="relative flex items-center justify-center [&_svg]:w-8 [&_svg]:h-8">
-                  <component :is="fileType.icon" />
-                </div>
-              </a>
-              <div class="flex min-w-0 flex-col truncate text-[var(--text-primary)]">
-                <span
-                  class="truncate text-[14px] font-medium leading-[20px] tracking-[-0.15px]"
-                  :title="fileInfo.filename">
-                  {{ fileInfo.filename }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex shrink-0 items-center justify-end gap-[4px] select-none">
-            <div class="flex items-center gap-[4px]">
-              <button
-                type="button"
-                class="flex size-[32px] items-center justify-center rounded-[8px] hover:bg-[var(--fill-tsp-white-main)]"
-                :title="t('Download')"
-                @click="download">
-                <Download class="size-[18px] text-[var(--icon-secondary)]" />
-              </button>
-            </div>
-            <div class="flex items-center gap-[4px]">
-              <!-- Official divider before Close (when not fullscreen) -->
-              <div class="flex h-[32px] items-center px-[4px]">
-                <div class="h-[16px] w-px bg-[var(--border-dark)]" />
-              </div>
-              <button
-                type="button"
-                class="flex size-[32px] items-center justify-center rounded-[8px] hover:bg-[var(--fill-tsp-white-main)]"
-                :title="t('Close')"
-                @click="hideFilePreviewer">
-                <X class="size-[18px] text-[var(--icon-secondary)]" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Official body -->
+        :class="panelToneClass">
+        <FilePreviewerChrome
+          :file-info="fileInfo"
+          :file-type="fileType"
+          :is-image="isImagePreview"
+          :view-mode="viewMode"
+          @download="download"
+          @close="hideFilePreviewer"
+        />
         <div class="flex flex-1 min-h-0 w-full relative">
           <component :is="fileType.preview" :file="fileInfo" @close="hideFilePreviewer" />
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Official portal: center mask + panel / fullscreen -->
+  <Teleport to="body">
+    <div
+      v-if="visible && isShow && fileInfo && fileType && (viewMode === 'center' || viewMode === 'fullscreen')"
+      class="fixed inset-0 pointer-events-none z-[1000]">
+      <div
+        v-if="viewMode === 'center'"
+        class="absolute inset-0 bg-[var(--background-dialog-mask)] backdrop-blur-[4px] pointer-events-auto"
+        @click="hideFilePreviewer"
+      />
+      <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div
+          class="overflow-hidden pointer-events-auto origin-center flex flex-col relative"
+          :class="[
+            panelToneClass,
+            viewMode === 'fullscreen'
+              ? 'size-full rounded-none'
+              : 'md:w-[calc(100vw-80px)] md:h-[calc(100vh-80px)] rounded-2xl w-[calc(100vw-32px)] h-[calc(100vh-32px)] max-w-[1200px] transition-[width,height] duration-220 border border-black/8 dark:border-[var(--border-light)]',
+            'shadow-[0px_0px_8px_0px_rgba(0,0,0,0.02)]',
+          ]">
+          <FilePreviewerChrome
+            :file-info="fileInfo"
+            :file-type="fileType"
+            :is-image="isImagePreview"
+            :view-mode="viewMode"
+            @download="download"
+            @close="hideFilePreviewer"
+          />
+          <div class="flex flex-1 min-h-0 w-full relative">
+            <component :is="fileType.preview" :file="fileInfo" @close="hideFilePreviewer" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { Download, X } from 'lucide-vue-next'
 import { useFilePreviewer } from '../composables/useFilePreviewer'
 import { getFileDownloadUrl } from '../api/file'
 import { getFileType } from '../utils/fileType'
 import { useResizeObserver } from '../composables/useResizeObserver'
 import { eventBus } from '../utils/eventBus'
 import { EVENT_SHOW_COMPUTER_PANEL } from '../constants/event'
-
-const { t } = useI18n()
+import FilePreviewerChrome from './FilePreviewerChrome.vue'
 
 const {
   isShow,
   fileInfo,
   visible,
+  viewMode,
   showFilePreviewer,
   hideFilePreviewer,
 } = useFilePreviewer()
 
-const rootRef = ref<HTMLElement>()
-const { size: parentSize } = useResizeObserver(rootRef, {
+const sideRootRef = ref<HTMLElement>()
+const { size: parentSize } = useResizeObserver(sideRootRef, {
   target: 'parent',
   property: 'width',
 })
+
+const sideWidth = computed(() => Math.max(320, Math.floor(parentSize.value / 2) || 480))
 
 const fileType = computed(() => {
   if (!fileInfo.value) return null
@@ -126,6 +109,12 @@ const isImagePreview = computed(() => {
   const ext = name.slice(i + 1).toLowerCase()
   return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico', 'tiff', 'tif', 'heic', 'heif'].includes(ext)
 })
+
+const panelToneClass = computed(() =>
+  isImagePreview.value
+    ? 'bg-[var(--background-mask-black)] dark:bg-[var(--background-preview-mask)]'
+    : 'bg-[var(--background-gray-main)]',
+)
 
 const download = async () => {
   if (!fileInfo.value) return

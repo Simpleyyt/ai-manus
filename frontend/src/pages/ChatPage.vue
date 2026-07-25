@@ -128,7 +128,7 @@
         </div>
       </div>
     </div>
-    <ComputerPanel ref="computerPanel" :size="computerPanelSize" :sessionId="sessionId" :realTime="realTime"
+    <ComputerPanel ref="computerPanel" :sessionId="sessionId" :realTime="realTime"
       :isShare="false" :toolHistory="toolHistory" :plan="plan"
       @jumpToRealTime="jumpToRealTime"
       @selectTool="handleSelectTool"
@@ -172,7 +172,6 @@ const createInitialState = () => ({
   isLoading: false,
   sessionId: undefined as string | undefined,
   messages: [] as Message[],
-  computerPanelSize: 0,
   realTime: true,
   follow: true,
   title: t('New Chat'),
@@ -197,7 +196,6 @@ const {
   isLoading,
   sessionId,
   messages,
-  computerPanelSize,
   realTime,
   follow,
   title,

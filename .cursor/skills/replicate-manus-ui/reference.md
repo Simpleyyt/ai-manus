@@ -1,3 +1,5 @@
+> **Note:** This file is an optional token archive for regressions. Do **not** treat finished Library/cards/FilePreviewer dumps as active work. Prefer live mine + code when the user reopens a surface.
+
 # Manus UI replicate — reference
 
 Detailed tokens and file map. Read when implementing Computer or auditing gaps.

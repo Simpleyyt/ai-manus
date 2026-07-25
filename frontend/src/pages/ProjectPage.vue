@@ -116,7 +116,7 @@
                 <button
                   v-if="!project.instruction?.trim()"
                   type="button"
-                  class="inline-flex items-center gap-1 rounded-[8px] border border-[var(--border-btn-main)] bg-[var(--button-secondary)] px-2.5 py-1 text-[13px] text-[var(--text-secondary)] hover:bg-[var(--fill-tsp-white-dark)]"
+                  class="inline-flex items-center gap-1 rounded-[8px] border border-[var(--border-btn-main)] bg-[var(--Button-secondary-main)] px-2.5 py-1 text-[13px] text-[var(--text-secondary)] hover:bg-[var(--fill-tsp-white-dark)]"
                   @click.stop="openInstructions">
                   <Plus :size="16" color="var(--icon-secondary)" />
                   {{ t('Add') }}
@@ -200,23 +200,20 @@
             :placeholder="instructionPlaceholder"
           />
         </div>
-        <div class="flex items-center justify-between gap-2 border-t border-[var(--border-main)] p-[16px]">
-          <div />
-          <div class="flex items-center gap-[8px]">
+        <div class="flex shrink-0 items-center justify-end gap-[8px] border-t border-[var(--border-main)] p-[16px]">
             <button
               type="button"
-              class="rounded-[10px] border border-[var(--border-btn-main)] bg-[var(--button-secondary)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--fill-tsp-white-dark)]"
+              class="rounded-[10px] border border-[var(--border-btn-main)] bg-[var(--Button-secondary-main)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--fill-tsp-white-dark)]"
               @click="closeInstructions">
               {{ t('Cancel') }}
             </button>
             <button
               type="button"
-              class="rounded-[10px] border border-[var(--border-btn-primary)] bg-[var(--button-primary)] px-3 py-2 text-sm text-[var(--text-white)] hover:bg-[var(--button-primary-hover)]"
+              class="rounded-[10px] bg-[var(--Button-primary-black)] px-3 py-2 text-sm text-[var(--text-onblack)] hover:opacity-90 disabled:opacity-50"
               :disabled="savingInstruction"
               @click="saveInstructions">
               {{ t('Save') }}
             </button>
-          </div>
         </div>
       </div>
     </div>

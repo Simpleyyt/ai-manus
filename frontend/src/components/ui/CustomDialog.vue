@@ -34,14 +34,14 @@
             </div>
             <div class="flex justify-end gap-2 p-5">
                 <button
-                    class="rounded-[10px] px-3 py-2 text-sm border border-[var(--border-btn-main)] bg-[var(--button-secondary)] text-[var(--text-secondary)] hover:bg-[var(--fill-tsp-white-dark)] cursor-pointer transition-colors"
+                    class="rounded-[10px] px-3 py-2 text-sm border border-[var(--border-btn-main)] bg-[var(--Button-secondary-main)] text-[var(--text-secondary)] hover:bg-[var(--fill-tsp-white-dark)] cursor-pointer transition-colors"
                     @click="handleCancel">{{ dialogConfig.cancelText }}</button>
                 <button
                     :class="[
                         'rounded-[10px] px-3 py-2 text-sm flex flex-row gap-1 items-center cursor-pointer transition-colors',
                         dialogConfig.confirmType === 'danger' 
                             ? 'border border-[var(--Button-secondary-error-border)] bg-[var(--Button-secondary-error-fill)] text-[var(--function-error)] enabled:hover:bg-[var(--function-error)] enabled:hover:text-[var(--text-white)]'
-                            : 'border border-[var(--border-btn-primary)] bg-[var(--button-primary)] text-[var(--text-white)] hover:bg-[var(--button-primary-hover)]'
+                            : 'bg-[var(--Button-primary-black)] text-[var(--text-onblack)] hover:opacity-90'
                     ]"
                     @click="handleConfirm">{{ dialogConfig.confirmText }}</button>
             </div>

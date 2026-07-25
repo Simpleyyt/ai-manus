@@ -583,6 +583,7 @@ const shareToSocial = async (network: 'x' | 'linkedin' | 'facebook' | 'reddit') 
 }
 
 const handleMoreClick = (event: MouseEvent) => {
+  event.stopPropagation();
   const target = (moreBtnRef.value || event.currentTarget) as HTMLElement;
   if (!sessionId.value) return;
   const items = [

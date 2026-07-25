@@ -75,7 +75,7 @@ import { useI18n } from 'vue-i18n';
 import { ref, nextTick, watch, onMounted, computed } from 'vue';
 import { X, RefreshCcw } from 'lucide-vue-next';
 import LoadingSpinnerIcon from './icons/LoadingSpinnerIcon.vue';
-import { useFilePanel } from '../composables/useFilePanel';
+import { useFilePreviewer } from '../composables/useFilePreviewer';
 
 const { t } = useI18n();
 
@@ -93,7 +93,7 @@ const emit = defineEmits<{
     (e: 'update:attachments', value: ExtendedFileInfo[]): void;
 }>();
 
-const { showFilePanel } = useFilePanel();
+const { showFilePreviewer } = useFilePreviewer();
 
 const files = computed(() => props.attachments);
 const fileInput = ref<HTMLInputElement>();
@@ -247,7 +247,7 @@ const isAllUploaded = computed(() => {
 
 const handleFileClick = (file: ExtendedFileInfo) => {
     if (file.status === 'success') {
-        showFilePanel(file);
+        showFilePreviewer(file);
     }
 };
 

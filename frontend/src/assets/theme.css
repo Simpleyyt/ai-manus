@@ -20,6 +20,8 @@
     --background-nav: #f0f0f0;
     --background-card: #fff;
     --background-mask: #000000a6;
+    --background-mask-black: #000000a6;
+    --background-preview-mask: #1a1a1a;
     --border-main: #0000000f;
     --border-white: #ffffff0a;
     --border-btn-main: #0000001f;
@@ -94,6 +96,8 @@
     --background-nav: #212122;
     --background-card: #444345;
     --background-mask: #000000a6;
+    --background-mask-black: #000000a6;
+    --background-preview-mask: #1a1a1a;
     --border-main: #ffffff14;
     --border-white: #ffffff0a;
     --border-btn-main: #ffffff1a;

@@ -43,6 +43,20 @@ export function useAgentEvents(state: AgentEventState, options: AgentEventOption
   };
 
   const handleMessageEvent = (messageData: MessageEventData) => {
+    // Skip blank assistant bubbles (e.g. empty create_plan.message from LLM)
+    const text = (messageData.content ?? '').trim();
+    if (messageData.role === 'assistant' && !text) {
+      if (messageData.attachments && messageData.attachments.length > 0) {
+        messages.value.push({
+          type: 'attachments',
+          content: {
+            ...messageData
+          } as AttachmentsContent,
+        });
+      }
+      return;
+    }
+
     messages.value.push({
       type: messageData.role,
       content: {

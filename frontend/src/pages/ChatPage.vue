@@ -154,7 +154,7 @@ import ShareIcon from '@/components/icons/ShareIcon.vue';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
 import type { FileInfo } from '../api/file';
 import { useSessionFileList } from '../composables/useSessionFileList'
-import { useFilePanel } from '../composables/useFilePanel'
+import { useFilePreviewer } from '../composables/useFilePreviewer'
 import { copyToClipboard } from '../utils/dom'
 import { SessionStatus } from '../types/response';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -164,7 +164,7 @@ import { useContextMenu, createMenuItem } from '../composables/useContextMenu';
 const router = useRouter()
 const { t } = useI18n()
 const { showSessionFileList } = useSessionFileList()
-const { hideFilePanel } = useFilePanel()
+const { hideFilePreviewer } = useFilePreviewer()
 
 // Create initial state factory
 const createInitialState = () => ({
@@ -379,7 +379,7 @@ const restoreSession = async () => {
 
 onBeforeRouteUpdate((to, _, next) => {
   computerPanel.value?.hideComputerPanel();
-  hideFilePanel();
+  hideFilePreviewer();
   resetState();
   if (to.params.sessionId) {
     messages.value = [];
@@ -391,7 +391,7 @@ onBeforeRouteUpdate((to, _, next) => {
 
 // Initialize active conversation
 onMounted(() => {
-  hideFilePanel();
+  hideFilePreviewer();
   const routeParams = router.currentRoute.value.params;
   if (routeParams.sessionId) {
     // If sessionId is included in URL, use it directly
@@ -400,8 +400,8 @@ onMounted(() => {
     const message = history.state?.message;
     const files: FileInfo[] = history.state?.files;
     history.replaceState({}, document.title);
-    if (message) {
-      void chat(message, files);
+    if (message || (files && files.length > 0)) {
+      void chat(message || '', files || []);
     } else {
       restoreSession();
     }

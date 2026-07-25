@@ -130,10 +130,11 @@ Do not confuse with chat **Plain Text** blocks (`rounded-lg border … bg-[var(-
 | Sidebar | `frontend/src/components/SessionSidebar.vue`, `SessionItem.vue` |
 | Search modal | `frontend/src/components/SearchDialog.vue` |
 | Library page | `frontend/src/pages/LibraryPage.vue`, `components/LibraryFileCard.vue` |
+| Project page | `frontend/src/pages/ProjectPage.vue` |
 | File type icons | `frontend/src/components/icons/CodeFileIcon.vue`, `FileIcon.vue` |
 | Chat page wire-up | `frontend/src/pages/ChatPage.vue` |
 | Share page | `frontend/src/pages/SharePage.vue` |
-| Router | `frontend/src/router/index.ts` (`/library`) |
+| Router | `frontend/src/router/index.ts` (`/library`, `/project/:projectId`) |
 | Theme tokens | `frontend/src/assets/theme.css` (`--Button-border-secondary`, `--shadow-S`, …) |
 | Terminal/File CSS | `frontend/src/assets/global.css` (xterm + `.computer-monaco-panel` + `shadow-menu`) |
 | Locales | `frontend/src/locales/en.ts`, `zh.ts` |
@@ -219,7 +220,7 @@ Source chunk (example): `/tmp/manus-js/2930l2ba6yrcn.js` — exports/helpers: `e
            └─ body: eW (session) OR eT (file)     ← mode switch
 ```
 
-**Local wiring:** route `/library` → `LibraryPage.vue` + `LibraryFileCard.vue`; `MainLayout` **must not** render `FilePanel` on `/library`. Sidebar Library → `router.push('/library')` + active row highlight.
+**Local wiring:** route `/library` → `LibraryPage.vue` + `LibraryFileCard.vue`; card click opens **`FilePreviewer`**. Sidebar Library → `router.push('/library')` + active row highlight.
 
 ### Browse mode (official `ei`)
 
@@ -305,7 +306,9 @@ md:w-[calc(100%+24px)] md:px-[12px] md:-ms-[12px] rounded-lg
 | Search `flex-1` on desktop | Guessed toolbar | `md:max-w-[200px] md:ms-auto` |
 | Always session-group | Missed `ei` file/session switch | Flat `eT` when filter/search/favorites |
 | SimpleBar siblings sideways | Content node is `flex-row` | One `flex-col` child, or drop SimpleBar |
-| FilePanel still open | Shared MainLayout with chat | `v-if="!isLibraryRoute"` |
+| FilePreviewer always unmounted on `/library` | Avoided width steal | Mount previewer; `hide` on enter; **card click** opens it |
+| Named `FilePanel` | Local legacy | Official **`FilePreviewer`** |
+| File favorites in `localStorage` | “先本地以后再改” | **Forbidden** — `POST/DELETE /library/files/{id}/favorite` + Mongo `file_favorites` |
 | 「布局很乱」= empty columns | 1 file / session in 3-col grid | Expected; use flat mode or richer data |
 | Wrong title node | Mined session `text-[14px]` | Page title is `text-lg … leading-[28px]` |
 
@@ -321,3 +324,28 @@ CDP dump checklist:
 Official bar often: `h-[56px] … py-[12px] ps-[14px] pe-[20px] md:px-[24px] gap-1 border-b … bg-[var(--background-gray-main)]`.
 
 Left product label ~ `text-[16px]/md:text-[18px] font-[500]` — product decision may be plain **Manus** without mode chevron.
+
+## Project (canonical)
+
+**直接抄** from `/tmp/manus-js/1whdjijd45ufa.js`: `bF`, `AX`, `gN(scene=project)`, `AJ`, `bL`, `bz`, `A9`/`uM`.
+Official URL: `https://manus.im/app/project/:projectId`.
+
+```
+Dragger: flex flex-col items-center gap-3 w-full h-full relative bg-gray-main
+  SimpleBar
+    A9 sticky h-[56px] — Share + More (local: More only; skip Leave)
+    grid pt-8 px-[24px] max-w-[768px]
+      + md:max-w-[1168px] md:grid-cols-[minmax(390px,768px)_minmax(240px,320px)] md:gap-x-[44px]
+      AX title | gN ChatBox | AJ Instructions (ChevronRight + Add) | bL Tasks (bz rows)
+```
+
+| Paste these | Not these |
+|---|---|
+| `gN` → reuse `ChatBox` | Fake「新建任务」pill / skinny textarea |
+| `AJ` ChevronRight + Add | Pencil-as-primary chrome |
+| `bz` `py-[12px]` + time + hairline | Sidebar `h-[36px]` `SessionItem` |
+| Official two-col grid | Library `h-[56px]` title + single column body |
+
+Do not invent: Connectors/Skills/Scheduled, Share/Leave.
+
+Local: `ProjectPage.vue`, `SessionItem variant="project"`, router `/project/:projectId`, MainLayout hides FilePreviewer.

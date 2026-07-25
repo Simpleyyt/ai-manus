@@ -65,44 +65,7 @@
           </template>
         </div>
 
-        <!-- Agent (visual parity; not yet wired) -->
-        <div
-          @click="handleComingSoon(t('Agent'))"
-          :title="isSessionSidebarShow ? undefined : t('Agent')"
-          class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] hover:bg-[var(--fill-tsp-white-light)] pointer-events-auto ps-[8px] pe-[2px]">
-          <div class="shrink-0 size-[20px] flex items-center justify-center">
-            <ScanEye :size="18" class="text-[var(--text-primary)]" />
-          </div>
-          <div v-if="isSessionSidebarShow" class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
-            <span class="truncate">{{ t('Agent') }}</span>
-          </div>
-        </div>
-
-        <!-- Plugins -->
-        <div
-          @click="handleComingSoon(t('Plugins'))"
-          :title="isSessionSidebarShow ? undefined : t('Plugins')"
-          class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] hover:bg-[var(--fill-tsp-white-light)] pointer-events-auto ps-[8px] pe-[2px]">
-          <div class="shrink-0 size-[20px] flex items-center justify-center">
-            <LayoutGrid :size="18" class="text-[var(--text-primary)]" />
-          </div>
-          <div v-if="isSessionSidebarShow" class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
-            <span class="truncate">{{ t('Plugins') }}</span>
-          </div>
-        </div>
-
-        <!-- Scheduled tasks -->
-        <div
-          @click="handleComingSoon(t('Scheduled tasks'))"
-          :title="isSessionSidebarShow ? undefined : t('Scheduled tasks')"
-          class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] hover:bg-[var(--fill-tsp-white-light)] pointer-events-auto ps-[8px] pe-[2px]">
-          <div class="shrink-0 size-[20px] flex items-center justify-center">
-            <Clock :size="18" class="text-[var(--text-primary)]" />
-          </div>
-          <div v-if="isSessionSidebarShow" class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
-            <span class="truncate">{{ t('Scheduled tasks') }}</span>
-          </div>
-        </div>
+        <!-- Agent / Plugins / Scheduled — product not wired; hidden -->
 
         <!-- Library — full page /library -->
         <div
@@ -144,7 +107,7 @@
             class="relative flex flex-col flex-1 min-h-0 overflow-y-auto overflow-x-hidden pb-5 px-[8px]"
             @scroll="handleListScroll">
 
-            <!-- Projects -->
+            <!-- Projects — official yw + yb (1whdjijd45ufa.js) -->
               <div
                 class="group flex items-center justify-between ps-[10px] pe-[2px] py-[2px] h-[36px] gap-[12px] clickable sticky top-0 z-[3] bg-[var(--background-nav)] cursor-pointer"
                 @click="projectsCollapsed = !projectsCollapsed">
@@ -164,48 +127,78 @@
                   class="relative flex items-center justify-center size-[32px] rounded-[8px] hover:bg-[var(--fill-tsp-white-main)] clickable text-[var(--icon-tertiary)]"
                   :title="t('New project')"
                   @click.stop="handleNewProjectClick">
-                  <Plus :size="16" />
+                  <Plus :size="18" />
                 </button>
               </div>
 
-              <template v-if="!projectsCollapsed">
+              <div v-if="!projectsCollapsed" class="flex flex-col w-full gap-px">
                 <div
                   v-if="projects.length === 0"
-                  class="flex items-center rounded-[10px] clickable cursor-pointer transition-colors w-full gap-[8px] h-[36px] pointer-events-auto ps-[8px] pe-[2px] hover:bg-[var(--fill-tsp-white-light)]"
+                  class="w-full flex items-center rounded-[10px] h-[36px] ps-[10px] pe-[8px] gap-[8px] hover:bg-[var(--fill-tsp-white-light)] clickable cursor-pointer"
                   @click="handleNewProjectClick">
-                  <div class="shrink-0 size-[20px] flex items-center justify-center">
-                    <FolderPlus :size="18" class="text-[var(--icon-tertiary)]" />
-                  </div>
-                  <span class="text-[14px] text-[var(--text-tertiary)] truncate">{{ t('New project') }}</span>
+                  <FolderPlus :size="18" class="shrink-0 text-[var(--icon-primary)]" />
+                  <span class="text-[var(--text-primary)] text-sm truncate">{{ t('New project') }}</span>
                 </div>
 
                 <template v-for="project in projects" :key="project.project_id">
+                  <!-- Official nav-bar-project-item-header -->
                   <div
-                    class="nav-bar-project-item-header group w-full flex items-center overflow-hidden h-[36px] ps-[8px] pe-[2px] gap-[12px] clickable hover:rounded-[10px] cursor-pointer"
-                    @click="toggleProjectExpand(project.project_id)">
-                    <div class="shrink-0 size-[20px] flex items-center justify-center">
-                      <Folder :size="18" class="text-[var(--icon-tertiary)]" />
+                    class="nav-bar-project-item-header w-full flex items-center overflow-hidden h-[36px] ps-[8px] pe-[2px] gap-[12px] clickable group cursor-pointer"
+                    :class="isActiveProject(project.project_id)
+                      ? 'rounded-[10px] shadow-[inset_0_0_0_100px_var(--fill-tsp-white-main)]'
+                      : 'hover:rounded-[10px] hover:shadow-[inset_0_0_0_100px_var(--fill-tsp-white-light)]'"
+                    @click="openProject(project.project_id)">
+                    <div class="flex flex-1 items-center gap-[8px] min-w-0">
+                      <!-- Icon ↔ ChevronRight on hover (official group/icon) -->
+                      <div class="flex items-center justify-center relative size-[20px] flex-shrink-0">
+                        <div
+                          class="absolute inset-0 flex items-center justify-center group-hover:invisible"
+                          :class="expandedProjectIds.has(project.project_id) ? 'invisible' : 'visible'">
+                          <Folder :size="18" class="text-[var(--icon-tertiary)]" />
+                        </div>
+                        <div
+                          class="absolute inset-0 flex items-center justify-center rounded-[8px] hover:bg-[var(--fill-tsp-white-light)] clickable invisible group-hover:visible"
+                          :class="expandedProjectIds.has(project.project_id) ? '!visible' : ''"
+                          :title="expandedProjectIds.has(project.project_id) ? t('Collapse') : t('Expand')"
+                          @click.stop="toggleProjectExpand(project.project_id)">
+                          <ChevronRight
+                            :size="18"
+                            class="text-[var(--icon-tertiary)] transition-transform duration-200"
+                            :class="expandedProjectIds.has(project.project_id) ? 'rotate-90' : 'rotate-0'"
+                          />
+                        </div>
+                      </div>
+                      <span
+                        class="text-[var(--text-primary)] text-sm truncate"
+                        :title="project.name">
+                        {{ project.name || t('Untitled') }}
+                      </span>
                     </div>
-                    <span class="flex-1 min-w-0 truncate text-[14px] text-[var(--text-primary)]">{{ project.name }}</span>
-                    <Pin
-                      v-if="project.is_pinned"
-                      :size="12"
-                      class="shrink-0 text-[var(--icon-tertiary)]"
-                      fill="var(--icon-tertiary)" />
-                    <button
-                      type="button"
-                      class="hidden group-hover:flex size-7 items-center justify-center rounded-md hover:bg-[var(--fill-tsp-white-main)] text-[var(--icon-tertiary)]"
-                      :title="project.is_pinned ? t('Unpin') : t('Pin')"
-                      @click.stop="handlePinProject(project)">
-                      <Pin :size="14" />
-                    </button>
+                    <div class="flex items-center flex-shrink-0">
+                      <Pin
+                        v-if="project.is_pinned"
+                        :size="12"
+                        class="flex size-[32px] flex-shrink-0 items-center justify-center p-[10px] text-[var(--icon-tertiary)] group-hover:hidden"
+                        fill="var(--icon-tertiary)"
+                      />
+                      <button
+                        type="button"
+                        class="hidden group-hover:flex size-[32px] rounded-[8px] items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-white-light)] text-[var(--icon-tertiary)]"
+                        :title="project.is_pinned ? t('Unpin') : t('Pin')"
+                        @click.stop="handlePinProject(project)">
+                        <Pin :size="14" />
+                      </button>
+                    </div>
                   </div>
-                  <div v-if="expandedProjectIds.has(project.project_id)" class="ps-[12px] flex flex-col gap-px">
+                  <div
+                    v-if="expandedProjectIds.has(project.project_id)"
+                    class="flex flex-col gap-[4px] overflow-hidden w-full">
                     <SessionItem
                       v-for="session in sessionsForProject(project.project_id)"
                       :key="session.session_id"
                       :session="session"
                       :projects="projects"
+                      row-class="!ps-[24px]"
                       @deleted="handleSessionDeleted"
                       @renamed="handleSessionRenamed"
                       @shared="handleSessionShared"
@@ -213,12 +206,12 @@
                       @moved="handleSessionMoved" />
                     <div
                       v-if="sessionsForProject(project.project_id).length === 0"
-                      class="px-[9px] py-2 text-[12px] text-[var(--text-tertiary)]">
-                      {{ t('No tasks in project') }}
+                      class="flex items-center ps-[36px] pe-[8px] h-[36px]">
+                      <span class="text-[var(--text-disable)] text-sm">{{ t('No tasks yet') }}</span>
                     </div>
                   </div>
                 </template>
-              </template>
+              </div>
 
             <!-- Tasks + filter -->
             <div ref="filterMenuRef" class="relative">
@@ -319,22 +312,7 @@
               </span>
             </div>
           </div>
-          <div v-if="isSessionSidebarShow" class="flex shrink-0 items-center gap-[4px]">
-            <button
-              type="button"
-              class="flex items-center justify-center size-[32px] rounded-[8px] hover:bg-[var(--fill-tsp-white-light)] text-[var(--icon-secondary)]"
-              :title="t('Coming soon')"
-              @click="handleComingSoon(t('Desktop'))">
-              <Monitor :size="18" />
-            </button>
-            <button
-              type="button"
-              class="flex items-center justify-center size-[32px] rounded-[8px] hover:bg-[var(--fill-tsp-white-light)] text-[var(--icon-secondary)]"
-              :title="t('Coming soon')"
-              @click="handleComingSoon(t('Notifications'))">
-              <Bell :size="18" />
-            </button>
-          </div>
+          <!-- Desktop / Notifications — not wired; hidden -->
         </div>
       </div>
     </div>
@@ -349,9 +327,8 @@
 
 <script setup lang="ts">
 import {
-  Bot, PanelLeft, SquarePen, MessageSquareDashed, ChevronUp, Search, LibraryBig,
-  Plus, FolderPlus, Check, Pin, Folder, ScanEye, LayoutGrid, Clock, ListFilter,
-  Monitor, Bell,
+  Bot, PanelLeft, SquarePen, MessageSquareDashed, ChevronUp, ChevronRight, Search, LibraryBig,
+  Plus, FolderPlus, Check, Pin, Folder, ListFilter,
 } from 'lucide-vue-next';
 import SessionItem from './SessionItem.vue';
 import UserMenu from './UserMenu.vue';
@@ -368,6 +345,7 @@ import { getCachedClientConfig } from '../api/config';
 import { ListSessionItem, ProjectItem } from '../types/response';
 import { useI18n } from 'vue-i18n';
 import { showSuccessToast, showErrorToast } from '../utils/toast';
+import { eventBus } from '../utils/eventBus';
 
 type TaskFilter = 'all' | 'favorites' | 'shared' | 'noProject'
 
@@ -445,10 +423,6 @@ const sessionsForProject = (projectId: string) => {
   return sessions.value.filter(s => s.project_id === projectId)
 }
 
-const handleComingSoon = (name: string) => {
-  showSuccessToast(`${name} — ${t('Coming soon')}`)
-}
-
 const handleClickOutside = (event: MouseEvent) => {
   if (showUserMenu.value && profileRef.value && !profileRef.value.contains(event.target as Node)) {
     showUserMenu.value = false
@@ -520,11 +494,21 @@ const handleNewProjectClick = () => {
         projects.value = [project, ...projects.value]
         expandedProjectIds.value = new Set([...expandedProjectIds.value, project.project_id])
         showSuccessToast(t('Project created'))
+        eventBus.emit('projects:changed')
+        await router.push(`/project/${project.project_id}`)
       } catch {
         showErrorToast(t('Failed to create project'))
       }
     }
   })
+}
+
+const isActiveProject = (projectId: string) => {
+  return route.path === `/project/${projectId}`
+}
+
+const openProject = (projectId: string) => {
+  router.push(`/project/${projectId}`)
 }
 
 const toggleProjectExpand = (projectId: string) => {
@@ -613,6 +597,8 @@ onMounted(async () => {
 
   fetchSessions()
   loadProjects()
+  eventBus.on('projects:changed', loadProjects)
+  eventBus.on('sessions:changed', updateSessions)
 
   window.addEventListener('keydown', handleKeydown)
   window.addEventListener('mousedown', handleClickOutside)
@@ -624,6 +610,8 @@ onUnmounted(() => {
     cancelGetSessionsSSE.value = null
   }
 
+  eventBus.off('projects:changed', loadProjects)
+  eventBus.off('sessions:changed', updateSessions)
   window.removeEventListener('keydown', handleKeydown)
   window.removeEventListener('mousedown', handleClickOutside)
 })

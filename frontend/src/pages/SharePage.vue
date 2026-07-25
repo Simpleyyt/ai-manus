@@ -106,14 +106,14 @@ import ManusLogoTextIcon from '../components/icons/ManusLogoTextIcon.vue';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
 import type { FileInfo } from '../api/file';
 import { useSessionFileList } from '../composables/useSessionFileList'
-import { useFilePanel } from '../composables/useFilePanel'
+import { useFilePreviewer } from '../composables/useFilePreviewer'
 import LoadingIndicator from '@/components/ui/LoadingIndicator.vue';
 import { copyToClipboard } from '../utils/dom'
 
 const router = useRouter()
 const { t } = useI18n()
 const { showSessionFileList } = useSessionFileList()
-const { hideFilePanel } = useFilePanel()
+const { hideFilePreviewer } = useFilePreviewer()
 
 // Create initial state factory
 const createInitialState = () => ({
@@ -210,7 +210,7 @@ const replay = async () => {
     showErrorToast(t('Session not found'));
     return;
   }
-  hideFilePanel();
+  hideFilePreviewer();
   computerPanel.value?.hideComputerPanel();
   resetState();
   sessionId.value = String(router.currentRoute.value.params.sessionId) as string;
@@ -268,7 +268,7 @@ const startReplay = () => {
 
 // Initialize active conversation
 onMounted(() => {
-  hideFilePanel();
+  hideFilePreviewer();
   const routeParams = router.currentRoute.value.params;
   if (routeParams.sessionId) {
     // If sessionId is included in URL, use it directly

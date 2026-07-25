@@ -33,6 +33,7 @@ from app.application.services.claw_service import ClawService
 from app.domain.services.claw_domain_service import ClawDomainService
 from app.application.services.project_service import ProjectService
 from app.infrastructure.repositories.mongo_project_repository import MongoProjectRepository
+from app.infrastructure.repositories.mongo_file_favorite_repository import MongoFileFavoriteRepository
 
 
 # Configure logging
@@ -85,6 +86,7 @@ def get_agent_service() -> AgentService:
         mcp_repository=mcp_repository,
         llm=llm,
         search_engine=search_engine,
+        project_repository=MongoProjectRepository(),
     ))
     
     # Create AgentService instance
@@ -97,6 +99,7 @@ def get_agent_service() -> AgentService:
         search_engine=search_engine,
         mcp_repository=mcp_repository,
         llm=llm,
+        file_favorite_repository=MongoFileFavoriteRepository(),
     )
 
 

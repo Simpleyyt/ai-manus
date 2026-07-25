@@ -130,7 +130,10 @@
                 :key="`${file.session_id}-${file.file_id || idx}`"
                 :file="file"
                 view-mode="grid"
-                @open="openSession(file.session_id)"
+                @open="previewFile(file)"
+                @locate="openSession(file.session_id)"
+                @favorite="(v) => toggleFavorite(file, v)"
+                @send="sendToManus(file)"
               />
             </div>
             <div v-else class="flex flex-col">
@@ -139,7 +142,10 @@
                 :key="`${file.session_id}-${file.file_id || idx}`"
                 :file="file"
                 view-mode="list"
-                @open="openSession(file.session_id)"
+                @open="previewFile(file)"
+                @locate="openSession(file.session_id)"
+                @favorite="(v) => toggleFavorite(file, v)"
+                @send="sendToManus(file)"
               />
             </div>
           </div>
@@ -183,7 +189,10 @@
                   :key="`${file.session_id}-${file.file_id || idx}`"
                   :file="file"
                   view-mode="grid"
-                  @open="openSession(file.session_id)"
+                  @open="previewFile(file)"
+                  @locate="openSession(file.session_id)"
+                  @favorite="(v) => toggleFavorite(file, v)"
+                  @send="sendToManus(file)"
                 />
               </div>
               <template v-else>
@@ -192,7 +201,10 @@
                   :key="`${file.session_id}-${file.file_id || idx}`"
                   :file="file"
                   view-mode="list"
-                  @open="openSession(file.session_id)"
+                  @open="previewFile(file)"
+                  @locate="openSession(file.session_id)"
+                  @favorite="(v) => toggleFavorite(file, v)"
+                  @send="sendToManus(file)"
                 />
               </template>
 
@@ -222,10 +234,14 @@ import {
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { getLibraryFiles } from '../api/project'
+import { getLibraryFiles, favoriteLibraryFile, unfavoriteLibraryFile } from '../api/project'
+import { createSession } from '../api/agent'
+import type { FileInfo } from '../api/file'
 import LibraryFileCard from '../components/LibraryFileCard.vue'
+import { useFilePreviewer } from '../composables/useFilePreviewer'
 import type { LibraryFileItem } from '../types/response'
 import { formatCustomTime } from '../utils/time'
+import { showErrorToast, showSuccessToast } from '../utils/toast'
 
 type ViewMode = 'grid' | 'list'
 type DocType = 'all' | 'documents' | 'media' | 'others'
@@ -240,6 +256,7 @@ interface LibraryGroup {
 
 const { t, locale } = useI18n()
 const router = useRouter()
+const { showFilePreviewer, hideFilePreviewer } = useFilePreviewer()
 
 const files = ref<LibraryFileItem[]>([])
 const loading = ref(false)
@@ -365,7 +382,63 @@ const openSession = (sessionId: string) => {
   router.push(`/chat/${sessionId}`)
 }
 
+/** Official ek: card click opens file previewer (not navigate to session). */
+const previewFile = (file: LibraryFileItem) => {
+  if (!file.file_id) {
+    showErrorToast(t('This format cannot be previewed'))
+    return
+  }
+  const info: FileInfo = {
+    file_id: file.file_id,
+    filename: file.filename || file.file_path || t('Untitled'),
+    content_type: file.content_type || undefined,
+    size: file.size ?? undefined,
+    upload_date: file.upload_date || '',
+  }
+  showFilePreviewer(info)
+}
+
+const toggleFavorite = async (file: LibraryFileItem, isFavorite: boolean) => {
+  if (!file.file_id) return
+  try {
+    const result = isFavorite
+      ? await favoriteLibraryFile(file.file_id)
+      : await unfavoriteLibraryFile(file.file_id)
+    files.value = files.value.map((f) =>
+      f.file_id === file.file_id ? { ...f, is_favorite: result.is_favorite } : f,
+    )
+    showSuccessToast(result.is_favorite ? t('Added to favorite') : t('Removed from favorite'))
+  } catch (e) {
+    console.error(e)
+    showErrorToast(t('Failed to update favorite'))
+  }
+}
+
+const sendToManus = async (file: LibraryFileItem) => {
+  if (!file.file_id) return
+  try {
+    const session = await createSession()
+    await router.push({
+      path: `/chat/${session.session_id}`,
+      state: {
+        message: '',
+        files: [{
+          file_id: file.file_id,
+          filename: file.filename || file.file_path || t('Untitled'),
+          content_type: file.content_type || undefined,
+          size: file.size ?? undefined,
+          upload_date: file.upload_date || '',
+        }],
+      },
+    })
+  } catch (e) {
+    console.error(e)
+    showErrorToast(t('Failed to send file to Manus'))
+  }
+}
+
 onMounted(() => {
+  hideFilePreviewer()
   load()
   document.addEventListener('click', onDocClick)
 })

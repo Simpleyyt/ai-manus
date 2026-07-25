@@ -28,17 +28,19 @@
         />
       </div>
       <div class="flex items-center flex-shrink-0">
+        <!-- Official ef FileActionsDropdown -->
         <button
           type="button"
           class="flex size-7 items-center justify-center rounded-md text-[var(--icon-tertiary)] hover:bg-[var(--fill-tsp-gray-main)]"
+          :class="menuOpen ? 'bg-[var(--fill-tsp-gray-main)]' : ''"
           :title="t('More options')"
-          @click.stop>
+          @click.stop="openMenu">
           <Ellipsis :size="16" />
         </button>
       </div>
     </div>
 
-    <!-- Official: aspect-[16/9] — preview canvas matches official gray fade base -->
+    <!-- Official: aspect-[16/9] — preview canvas + hover action (Preview/Visit/Locate) -->
     <div class="aspect-[16/9] overflow-hidden relative bg-[var(--background-menu-white)]">
       <img
         v-if="previewKind === 'image' && previewUrl"
@@ -68,6 +70,19 @@
           <component :is="fileType.icon" />
         </div>
       </div>
+
+      <!-- Official K.IconButton: absolute bottom-2 start-2, hidden until group-hover -->
+      <button
+        type="button"
+        class="absolute bottom-2 start-2 z-20 size-7 rounded-[8px] items-center justify-center transition-opacity group-hover:pointer-events-auto group-hover:flex hidden bg-[var(--background-mask-black)] hover:opacity-80 hover:bg-[var(--background-mask-black)]"
+        :title="hoverActionTitle"
+        @click.stop="onHoverAction">
+        <component
+          :is="hoverActionIcon"
+          class="size-4 text-[var(--icon-white)]"
+          :size="16"
+        />
+      </button>
     </div>
   </div>
 
@@ -98,33 +113,59 @@
           />
         </div>
       </div>
-      <button
-        type="button"
-        class="flex size-7 shrink-0 items-center justify-center rounded-md opacity-0 group-hover:opacity-100 text-[var(--icon-secondary)] hover:bg-[var(--fill-tsp-white-main)]"
-        :title="t('More options')"
-        @click.stop>
-        <Ellipsis :size="16" />
-      </button>
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <!-- Official eD hover action (group-hover); local always on — no select mode -->
+        <button
+          type="button"
+          class="clickable size-7 flex items-center justify-center rounded-md pointer-events-none opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 hover:bg-[var(--fill-tsp-white-main)]"
+          :title="hoverActionTitle"
+          @click.stop="onHoverAction">
+          <component
+            :is="hoverActionIcon"
+            class="size-4 text-[var(--icon-secondary)]"
+            :size="16"
+          />
+        </button>
+        <button
+          type="button"
+          class="flex size-7 shrink-0 items-center justify-center rounded-md text-[var(--icon-secondary)] hover:bg-[var(--fill-tsp-white-main)]"
+          :class="menuOpen ? 'opacity-100 bg-[var(--fill-tsp-white-main)]' : 'opacity-0 group-hover:opacity-100'"
+          :title="t('More options')"
+          @click.stop="openMenu">
+          <Ellipsis :size="16" />
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Ellipsis, Star } from 'lucide-vue-next';
-import { computed, onMounted, ref } from 'vue';
+import { Ellipsis, Eye, ExternalLink, MessageSquarePlus, SquareArrowOutUpRight, Star } from 'lucide-vue-next';
+import { computed, onMounted, ref, type Component } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { downloadFile, getFileDownloadUrl, type FileInfo } from '../api/file';
+import { createMenuItem, useContextMenu } from '../composables/useContextMenu';
 import type { LibraryFileItem } from '../types/response';
 import { getFileType } from '../utils/fileType';
 import { highlightLibraryPreview } from '../utils/libraryHighlight';
+
+type HoverAction = 'preview' | 'visit' | 'locate';
 
 const props = defineProps<{
   file: LibraryFileItem;
   viewMode: 'grid' | 'list';
 }>();
 
-const emit = defineEmits<{ (e: 'open'): void }>();
+const emit = defineEmits<{
+  (e: 'open'): void
+  (e: 'locate'): void
+  (e: 'favorite', isFavorite: boolean): void
+  (e: 'send'): void
+}>();
+
 const { t } = useI18n();
+const { showContextMenu } = useContextMenu();
+const menuOpen = ref(false);
 
 const previewUrl = ref<string | null>(null);
 const previewHtml = ref<string | null>(null);
@@ -175,6 +216,61 @@ const isTextLike = computed(() => {
     'sql', 'toml', 'ini', 'md', 'txt', 'sh', 'bash',
   ].includes(ext.value);
 });
+
+const canSendToManus = computed(() => !!props.file.file_id);
+
+/**
+ * Official libraryUtils.getLibraryAttachmentHoverAction:
+ * non-WEBDEV → preview; WEBDEV + url → visit; else locate.
+ * Local library items are session files (no WEBDEV) → preview.
+ */
+const hoverAction = computed<HoverAction>(() => 'preview');
+
+const hoverActionTitle = computed(() => {
+  if (hoverAction.value === 'visit') return t('Visit');
+  if (hoverAction.value === 'locate') return t('Locate in new tab');
+  return t('Preview');
+});
+
+const hoverActionIcon = computed<Component>(() =>
+  hoverAction.value === 'preview' ? Eye : SquareArrowOutUpRight,
+);
+
+const onHoverAction = () => {
+  if (hoverAction.value === 'visit') {
+    // Reserved for WEBDEV/website attachments with external URL
+    return;
+  }
+  if (hoverAction.value === 'locate') {
+    const sid = props.file.session_id;
+    if (sid) window.open(`/chat/${sid}`, '_blank', 'noopener,noreferrer');
+    return;
+  }
+  emit('open');
+};
+
+const openMenu = (event: MouseEvent) => {
+  const target = event.currentTarget as HTMLElement;
+  menuOpen.value = true;
+  const favorited = !!props.file.is_favorite;
+
+  const items = [
+    createMenuItem('locate', t('Locate in task'), { icon: ExternalLink }),
+    createMenuItem('favorite', favorited ? t('Unfavorite') : t('Add to favorites'), { icon: Star }),
+  ];
+  if (canSendToManus.value) {
+    items.push(createMenuItem('send', t('Send to Manus'), { icon: MessageSquarePlus }));
+  }
+
+  const menuId = props.file.file_id || `${props.file.session_id}:${displayName.value}`;
+  showContextMenu(menuId, target, items, async (itemKey: string) => {
+    if (itemKey === 'locate') emit('locate');
+    else if (itemKey === 'favorite') emit('favorite', !favorited);
+    else if (itemKey === 'send') emit('send');
+  }, () => {
+    menuOpen.value = false;
+  });
+};
 
 onMounted(async () => {
   const fileId = props.file.file_id;

@@ -107,6 +107,12 @@ class FavoriteSessionResponse(BaseModel):
     is_favorite: bool
 
 
+class FavoriteLibraryFileResponse(BaseModel):
+    """Favorite library file response schema"""
+    file_id: str
+    is_favorite: bool
+
+
 class MoveSessionProjectRequest(BaseModel):
     """Move session to project (null to remove from project)"""
     project_id: Optional[str] = None

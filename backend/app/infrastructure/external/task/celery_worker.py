@@ -48,6 +48,7 @@ def _build_runner_factory():
     from app.infrastructure.external.llm import get_llm
     from app.infrastructure.repositories.mongo_agent_repository import MongoAgentRepository
     from app.infrastructure.repositories.mongo_session_repository import MongoSessionRepository
+    from app.infrastructure.repositories.mongo_project_repository import MongoProjectRepository
     from app.infrastructure.repositories.file_mcp_repository import FileMCPRepository
 
     return AgentTaskRunnerFactory(
@@ -58,6 +59,7 @@ def _build_runner_factory():
         mcp_repository=FileMCPRepository(),
         llm=get_llm(),
         search_engine=get_search_engine(),
+        project_repository=MongoProjectRepository(),
     )
 
 
@@ -75,13 +77,21 @@ async def _ensure_initialized() -> None:
         UserDocument,
         ClawDocument,
         ProjectDocument,
+        FileFavoriteDocument,
     )
 
     settings = get_settings()
     await get_mongodb().initialize()
     await init_beanie(
         database=get_mongodb().client[settings.mongodb_database],
-        document_models=[AgentDocument, SessionDocument, UserDocument, ClawDocument, ProjectDocument],
+        document_models=[
+            AgentDocument,
+            SessionDocument,
+            UserDocument,
+            ClawDocument,
+            ProjectDocument,
+            FileFavoriteDocument,
+        ],
     )
     await get_redis().initialize()
     CeleryTask.set_runner_factory(_build_runner_factory())

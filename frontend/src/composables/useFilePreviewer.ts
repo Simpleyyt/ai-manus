@@ -1,21 +1,21 @@
 import { ref } from 'vue'
 import type { FileInfo } from '../api/file'
 import { eventBus } from '../utils/eventBus'
-import { EVENT_SHOW_FILE_PANEL } from '../constants/event'
+import { EVENT_SHOW_FILE_PREVIEWER } from '../constants/event'
 
 const isShow = ref(false)
 const visible = ref(true)
 const fileInfo = ref<FileInfo>()
 
-export function useFilePanel() {
-  const showFilePanel = (file: FileInfo) => {
-    eventBus.emit(EVENT_SHOW_FILE_PANEL)
+export function useFilePreviewer() {
+  const showFilePreviewer = (file: FileInfo) => {
+    eventBus.emit(EVENT_SHOW_FILE_PREVIEWER)
     visible.value = true
     fileInfo.value = file
     isShow.value = true
   }
 
-  const hideFilePanel = () => {
+  const hideFilePreviewer = () => {
     isShow.value = false
   }
 
@@ -23,7 +23,7 @@ export function useFilePanel() {
     isShow,
     fileInfo,
     visible,
-    showFilePanel,
-    hideFilePanel
+    showFilePreviewer,
+    hideFilePreviewer,
   }
-} 
+}

@@ -67,3 +67,10 @@ body,html {
 .computer-monaco-panel .monaco-diff-editor .editor.modified {
   background-color: var(--background-gray-main) !important;
 }
+
+/* Official FilePreviewer CodePreviewer — editor.background #fafafa */
+.file-previewer-monaco .monaco-editor,
+.file-previewer-monaco .monaco-editor-background,
+.file-previewer-monaco .monaco-editor .margin {
+  background-color: #fafafa !important;
+}

@@ -154,7 +154,7 @@ import ChatMessage from '../components/ChatMessage.vue';
 import LoadingIndicator from '../components/ui/LoadingIndicator.vue';
 import ClawIcon from '../components/icons/ClawIcon.vue';
 import openclawColorImage from '../assets/openclaw-color.png';
-import { useFilePanel } from '../composables/useFilePanel';
+import { useFilePreviewer } from '../composables/useFilePreviewer';
 import { useDialog } from '../composables/useDialog';
 import {
   getClaw, createClaw, deleteClaw,
@@ -166,7 +166,7 @@ import type { FileInfo } from '../api/file';
 import { showErrorToast } from '../utils/toast';
 
 const { t } = useI18n();
-const { hideFilePanel } = useFilePanel();
+const { hideFilePreviewer } = useFilePreviewer();
 const { showConfirmDialog } = useDialog();
 
 const simpleBarRef = ref<InstanceType<typeof SimpleBar>>();
@@ -620,7 +620,7 @@ onUnmounted(() => {
   clawWS?.disconnect();
   stopStatusPolling();
   stopExpiryCountdown();
-  hideFilePanel();
+  hideFilePreviewer();
 });
 </script>
 

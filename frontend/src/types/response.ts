@@ -43,6 +43,8 @@ export interface ProjectItem {
     instruction: string | null;
     is_pinned: boolean;
     sort_order: number;
+    created_at?: string | null;
+    updated_at?: string | null;
 }
 
 export interface ListProjectsResponse {

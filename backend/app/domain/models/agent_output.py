@@ -24,15 +24,18 @@ class PlanOutput(BaseModel):
     """Arguments of the ``create_plan`` output tool."""
 
     message: str = Field(
+        min_length=1,
         description=(
-            "Reply to the user acknowledging the task and how you will approach"
-            " it, written in the user's language"
-        )
+            "Non-empty reply to the user acknowledging the task and how you will"
+            " approach it (or a direct answer if no tool work is needed),"
+            " written in the user's language"
+        ),
     )
     language: str = Field(
-        description="Working language inferred from the user's message, e.g. 'en', 'zh'"
+        min_length=1,
+        description="Working language inferred from the user's message, e.g. 'en', 'zh'",
     )
-    title: str = Field(description="Short title for this task")
+    title: str = Field(min_length=1, description="Short non-empty title for this task")
     goal: str = Field(
         description="Overall goal of the plan; empty string if the task is infeasible"
     )
@@ -75,10 +78,11 @@ class FinalResult(BaseModel):
     """Arguments of the ``deliver_result`` output tool."""
 
     message: str = Field(
+        min_length=1,
         description=(
-            "Final answer delivered to the user, detailed and in the user's"
-            " language; reference produced files where relevant"
-        )
+            "Non-empty final answer delivered to the user, detailed and in the"
+            " user's language; reference produced files where relevant"
+        ),
     )
     attachments: List[str] = Field(
         default_factory=list,

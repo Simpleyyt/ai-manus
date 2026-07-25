@@ -33,7 +33,7 @@ import type { PlanEventData } from '../types/event'
 import ComputerPanelContent from './ComputerPanelContent.vue'
 import { useResizeObserver } from '../composables/useResizeObserver'
 import { eventBus } from '../utils/eventBus'
-import { EVENT_SHOW_FILE_PANEL, EVENT_SHOW_COMPUTER_PANEL } from '../constants/event'
+import { EVENT_SHOW_FILE_PREVIEWER, EVENT_SHOW_COMPUTER_PANEL } from '../constants/event'
 
 const computerPanelRef = ref<HTMLElement>()
 const { size: parentSize } = useResizeObserver(computerPanelRef, {
@@ -87,13 +87,13 @@ const onUseComputer = () => {
 }
 
 onMounted(() => {
-  eventBus.on(EVENT_SHOW_FILE_PANEL, () => {
+  eventBus.on(EVENT_SHOW_FILE_PREVIEWER, () => {
     visible.value = false
   })
 })
 
 onUnmounted(() => {
-  eventBus.off(EVENT_SHOW_FILE_PANEL)
+  eventBus.off(EVENT_SHOW_FILE_PREVIEWER)
 })
 
 defineExpose({

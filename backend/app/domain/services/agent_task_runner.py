@@ -31,11 +31,13 @@ from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.external.task import TaskRunner, TaskRunnerFactory, Task
 from app.domain.repositories.session_repository import SessionRepository
 from app.domain.repositories.mcp_repository import MCPRepository
+from app.domain.repositories.project_repository import ProjectRepository
 from app.domain.models.session import SessionStatus, TaskMode
 from app.domain.models.file import FileInfo
 from app.domain.services.tools.mcp import MCPToolkit
 from app.domain.models.tool_result import ToolResult
 from app.domain.models.search import SearchResults
+from app.domain.services.prompts.system import format_project_instructions
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +56,7 @@ class AgentTaskRunner(TaskRunner):
         mcp_repository: MCPRepository,
         llm: LLM,
         search_engine: Optional[SearchEngine] = None,
+        project_repository: Optional[ProjectRepository] = None,
     ):
         self._session_id = session_id
         self._agent_id = agent_id
@@ -65,6 +68,7 @@ class AgentTaskRunner(TaskRunner):
         self._session_repository = session_repository
         self._file_storage = file_storage
         self._mcp_repository = mcp_repository
+        self._project_repository = project_repository
         self._llm = llm
         self._mcp_tool = MCPToolkit()
         self._flow = PlanActFlow(
@@ -77,9 +81,19 @@ class AgentTaskRunner(TaskRunner):
             self._mcp_tool,
             self._llm,
             self._search_engine,
+            project_repository=self._project_repository,
         )
         # Snapshot file contents before mutating file tools (for Diff/Original views).
         self._file_old_by_call: Dict[str, str] = {}
+
+    async def _resolve_project_instruction(self, project_id: Optional[str]) -> Optional[str]:
+        if not project_id or not self._project_repository:
+            return None
+        project = await self._project_repository.find_by_id(project_id)
+        if not project:
+            return None
+        text = (project.instruction or "").strip()
+        return text or None
 
     async def _put_and_add_event(self, task: Task, event: AgentEvent) -> None:
         event_id = await task.output_stream.put(event.model_dump_json())
@@ -302,14 +316,22 @@ class AgentTaskRunner(TaskRunner):
             return
 
         session = await self._session_repository.find_by_id(self._session_id)
+        system_content = (
+            "You are Manus, a helpful AI assistant in Chat mode. "
+            "Answer the user's questions clearly and concisely. "
+            "You do not have access to tools, a computer, or the internet."
+        )
+        project_instruction = await self._resolve_project_instruction(
+            session.project_id if session else None
+        )
+        project_section = format_project_instructions(project_instruction)
+        if project_section:
+            system_content = f"{system_content}\n\n{project_section}"
+
         history: List[LLMMessage] = [
             LLMMessage(
                 role=Role.SYSTEM,
-                content=(
-                    "You are Manus, a helpful AI assistant in Chat mode. "
-                    "Answer the user's questions clearly and concisely. "
-                    "You do not have access to tools, a computer, or the internet."
-                ),
+                content=system_content,
             )
         ]
         for ev in (session.events if session else []) or []:
@@ -388,6 +410,7 @@ class AgentTaskRunnerFactory(TaskRunnerFactory):
         mcp_repository: MCPRepository,
         llm: LLM,
         search_engine: Optional[SearchEngine] = None,
+        project_repository: Optional[ProjectRepository] = None,
     ):
         self._agent_repository = agent_repository
         self._session_repository = session_repository
@@ -396,6 +419,7 @@ class AgentTaskRunnerFactory(TaskRunnerFactory):
         self._mcp_repository = mcp_repository
         self._llm = llm
         self._search_engine = search_engine
+        self._project_repository = project_repository
 
     @staticmethod
     def build_params(session_id: str, agent_id: str, user_id: str, sandbox_id: str) -> Dict[str, Any]:
@@ -426,4 +450,5 @@ class AgentTaskRunnerFactory(TaskRunnerFactory):
             mcp_repository=self._mcp_repository,
             llm=self._llm,
             search_engine=self._search_engine,
+            project_repository=self._project_repository,
         )

@@ -162,6 +162,23 @@ class ProjectDocument(BaseDocument[Project], id_field="project_id", domain_model
         ]
 
 
+class FileFavoriteDocument(Document):
+    """Per-user library file favorite (attachment-level, not session-level)."""
+    user_id: str
+    file_id: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    class Settings:
+        name = "file_favorites"
+        indexes = [
+            IndexModel(
+                [("user_id", ASCENDING), ("file_id", ASCENDING)],
+                unique=True,
+                name="user_id_file_id",
+            ),
+        ]
+
+
 class ClawDocument(BaseDocument[Claw], id_field="claw_id", domain_model_class=Claw):
     """MongoDB document for Claw instance"""
     claw_id: str

@@ -6,7 +6,9 @@ The system prompt is assembled at agent-construction time from:
 * one usage section per toolkit actually bound to the agent (taken from
   ``BaseToolkit.instructions``), so prompt guidance always matches the tools
   the model can really call,
-* an optional role-specific section supplied by the concrete agent.
+* an optional role-specific section supplied by the concrete agent,
+* an optional project-instructions section when the session belongs to a
+  project that defines ``instruction``.
 
 This replaces the previous monolithic hardcoded prompt, which shipped rules
 for tools that were not always available and could drift out of sync with the
@@ -54,9 +56,24 @@ what you produce.
 """.strip()
 
 
+def format_project_instructions(instruction: Optional[str] = None) -> str:
+    """Wrap a project instruction string for injection into a system prompt."""
+    text = (instruction or "").strip()
+    if not text:
+        return ""
+    return (
+        "<project_instructions>\n"
+        "Follow these project-specific instructions for every task in this "
+        "project:\n\n"
+        f"{text}\n"
+        "</project_instructions>"
+    )
+
+
 def build_system_prompt(
     toolkits: Optional[List[BaseToolkit]] = None,
     role_prompt: str = "",
+    project_instruction: Optional[str] = None,
 ) -> str:
     """Assemble the system prompt for an agent.
 
@@ -64,6 +81,8 @@ def build_system_prompt(
         toolkits: Toolkits bound to the agent; each contributes its own usage
             section only when it defines ``instructions``.
         role_prompt: Role-specific guidance appended by the concrete agent.
+        project_instruction: Optional per-project guidance from
+            ``Project.instruction``.
     """
     sections = [CORE_PROMPT]
     for toolkit in toolkits or []:
@@ -74,4 +93,7 @@ def build_system_prompt(
             )
     if role_prompt.strip():
         sections.append(role_prompt.strip())
+    project_section = format_project_instructions(project_instruction)
+    if project_section:
+        sections.append(project_section)
     return "\n\n".join(sections)

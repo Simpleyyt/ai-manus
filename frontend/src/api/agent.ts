@@ -61,6 +61,14 @@ export async function unfavoriteSession(sessionId: string): Promise<{ session_id
   return response.data.data;
 }
 
+export async function pinSession(sessionId: string, isPinned: boolean): Promise<{ session_id: string; is_pinned: boolean }> {
+  const response = await apiClient.post<ApiResponse<{ session_id: string; is_pinned: boolean }>>(
+    `/sessions/${sessionId}/pin`,
+    { is_pinned: isPinned }
+  );
+  return response.data.data;
+}
+
 export async function moveSessionProject(
   sessionId: string,
   projectId: string | null

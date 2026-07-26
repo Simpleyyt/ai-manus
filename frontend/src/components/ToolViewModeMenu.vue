@@ -1,12 +1,9 @@
 <template>
-  <!-- Official ToolViewModeMenu -->
-  <div
-    class="flex h-[32px] overflow-hidden rounded-[8px] text-[var(--icon-secondary)]"
-    :class="className">
+  <!-- Official ToolViewModeMenu (cn + className / buttonClassName) -->
+  <div :class="cn('flex h-[32px] overflow-hidden rounded-[8px] text-[var(--icon-secondary)]', className)">
     <button
       type="button"
-      class="clickable flex h-full w-[28px] items-center justify-center hover:bg-[var(--fill-tsp-white-main)]"
-      :class="buttonClassName"
+      :class="cn('clickable flex h-full w-[28px] items-center justify-center hover:bg-[var(--fill-tsp-white-main)]', buttonClassName)"
       :title="toggleTitle"
       @click="toggleFullscreen">
       <component :is="toggleIcon" :size="18" color="currentColor" />
@@ -16,8 +13,10 @@
       <PopoverTrigger as-child>
         <button
           type="button"
-          class="clickable flex h-full w-[18px] items-center justify-center hover:bg-[var(--fill-tsp-white-main)] data-[state=open]:bg-[var(--fill-tsp-white-main)]"
-          :class="buttonClassName"
+          :class="cn(
+            'clickable flex h-full w-[18px] items-center justify-center hover:bg-[var(--fill-tsp-white-main)] data-[state=open]:bg-[var(--fill-tsp-white-main)] data-[popover-trigger]:bg-[var(--fill-tsp-white-main)]',
+            buttonClassName,
+          )"
           :title="t('View')"
           :aria-expanded="menuOpen"
           aria-haspopup="dialog">
@@ -103,6 +102,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Check, ChevronDown, ChevronRight, SlidersHorizontal } from 'lucide-vue-next'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { cn } from '@/lib/utils'
 import CenterViewIcon from './icons/CenterViewIcon.vue'
 import FullViewIcon from './icons/FullViewIcon.vue'
 import SideViewIcon from './icons/SideViewIcon.vue'

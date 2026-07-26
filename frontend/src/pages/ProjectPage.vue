@@ -159,6 +159,7 @@
                   @renamed="handleSessionRenamed"
                   @shared="noop"
                   @favorited="handleSessionFavorited"
+                  @pinned="handleSessionPinned"
                   @moved="handleSessionMoved"
                 />
               </div>
@@ -263,7 +264,9 @@ const instructionDraft = ref('')
 const savingInstruction = ref(false)
 
 const projectSessions = computed(() =>
-  sessions.value.filter((s) => s.project_id === projectId.value),
+  sessions.value
+    .filter((s) => s.project_id === projectId.value)
+    .sort((a, b) => Number(!!b.is_pinned) - Number(!!a.is_pinned)),
 )
 
 const creatorName = computed(() => currentUser.value?.fullname || t('Unknown User'))
@@ -440,6 +443,12 @@ const handleSessionRenamed = (sessionId: string, title: string) => {
 const handleSessionFavorited = (sessionId: string, isFavorite: boolean) => {
   sessions.value = sessions.value.map((s) =>
     s.session_id === sessionId ? { ...s, is_favorite: isFavorite } : s,
+  )
+}
+
+const handleSessionPinned = (sessionId: string, isPinned: boolean) => {
+  sessions.value = sessions.value.map((s) =>
+    s.session_id === sessionId ? { ...s, is_pinned: isPinned } : s,
   )
 }
 

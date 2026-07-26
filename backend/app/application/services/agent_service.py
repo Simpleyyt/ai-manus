@@ -144,6 +144,13 @@ class AgentService:
             raise RuntimeError("Session not found")
         await self._session_repository.update_favorite_status(session_id, is_favorite)
 
+    async def update_session_pin(self, session_id: str, user_id: str, is_pinned: bool) -> None:
+        """Update pin status of a session"""
+        session = await self._session_repository.find_by_id_and_user_id(session_id, user_id)
+        if not session:
+            raise RuntimeError("Session not found")
+        await self._session_repository.update_pin_status(session_id, is_pinned)
+
     async def update_session_project(
         self,
         session_id: str,

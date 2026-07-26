@@ -75,6 +75,10 @@ class SessionRepository(Protocol):
         """Update the favorite status of a session"""
         ...
 
+    async def update_pin_status(self, session_id: str, is_pinned: bool) -> None:
+        """Update the pin status of a session"""
+        ...
+
     async def update_project_id(self, session_id: str, project_id: Optional[str]) -> None:
         """Assign or clear project association for a session"""
         ...

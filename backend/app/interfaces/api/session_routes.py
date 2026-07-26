@@ -18,7 +18,8 @@ from app.interfaces.schemas.session import (
     ListSessionItem, ListSessionResponse, ShellViewResponse,
     ShareSessionResponse, SharedSessionResponse,
     UpdateSessionTitleRequest, UpdateSessionTitleResponse,
-    FavoriteSessionResponse, MoveSessionProjectRequest, MoveSessionProjectResponse,
+    FavoriteSessionResponse, PinSessionRequest, PinSessionResponse,
+    MoveSessionProjectRequest, MoveSessionProjectResponse,
     UpdateSessionTaskModeRequest, UpdateSessionTaskModeResponse,
     LibraryFileItem, LibraryResponse,
 )
@@ -60,6 +61,9 @@ async def get_session(
         status=session.status,
         events=await EventMapper.events_to_sse_events(session.events),
         is_shared=session.is_shared,
+        is_favorite=session.is_favorite,
+        is_pinned=session.is_pinned,
+        project_id=session.project_id,
         task_mode=session.task_mode,
     ))
 
@@ -102,6 +106,16 @@ async def unfavorite_session(
 ) -> APIResponse[FavoriteSessionResponse]:
     await agent_service.update_session_favorite(session_id, current_user.id, False)
     return APIResponse.success(FavoriteSessionResponse(session_id=session_id, is_favorite=False))
+
+@router.post("/{session_id}/pin", response_model=APIResponse[PinSessionResponse])
+async def pin_session(
+    session_id: str,
+    request: PinSessionRequest,
+    current_user: User = Depends(get_current_user),
+    agent_service: AgentService = Depends(get_agent_service)
+) -> APIResponse[PinSessionResponse]:
+    await agent_service.update_session_pin(session_id, current_user.id, request.is_pinned)
+    return APIResponse.success(PinSessionResponse(session_id=session_id, is_pinned=request.is_pinned))
 
 @router.patch("/{session_id}/project", response_model=APIResponse[MoveSessionProjectResponse])
 async def move_session_project(

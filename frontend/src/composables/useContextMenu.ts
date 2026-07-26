@@ -115,7 +115,7 @@ export const createDangerMenuItem = (
 })
 
 export const createSeparator = (): MenuItem => ({
-  key: 'separator',
+  key: `separator-${Math.random().toString(36).slice(2)}`,
   label: '',
   disabled: true,
 }) 

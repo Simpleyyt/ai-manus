@@ -39,6 +39,9 @@ class GetSessionResponse(BaseModel):
     status: SessionStatus
     events: List[AgentSSEEvent] = []
     is_shared: bool = False
+    is_favorite: bool = False
+    is_pinned: bool = False
+    project_id: Optional[str] = None
     task_mode: TaskMode = TaskMode.AGENT
 
 
@@ -52,6 +55,7 @@ class ListSessionItem(BaseModel):
     unread_message_count: int
     is_shared: bool = False
     is_favorite: bool = False
+    is_pinned: bool = False
     project_id: Optional[str] = None
     task_mode: TaskMode = TaskMode.AGENT
 
@@ -66,6 +70,7 @@ class ListSessionItem(BaseModel):
             latest_message_at=int(summary.latest_message_at.timestamp()) if summary.latest_message_at else None,
             is_shared=summary.is_shared,
             is_favorite=summary.is_favorite,
+            is_pinned=summary.is_pinned,
             project_id=summary.project_id,
             task_mode=summary.task_mode or TaskMode.AGENT,
         )
@@ -105,6 +110,17 @@ class FavoriteSessionResponse(BaseModel):
     """Favorite session response schema"""
     session_id: str
     is_favorite: bool
+
+
+class PinSessionRequest(BaseModel):
+    """Pin / unpin session"""
+    is_pinned: bool = True
+
+
+class PinSessionResponse(BaseModel):
+    """Pin session response schema"""
+    session_id: str
+    is_pinned: bool
 
 
 class FavoriteLibraryFileResponse(BaseModel):

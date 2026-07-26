@@ -109,6 +109,7 @@ export default {
   'Project deleted': 'Project deleted',
   'Edit project': 'Edit project',
   'Edit instructions': 'Edit instructions',
+  'View project': 'View project',
   'Delete project': 'Delete project',
   'Delete project?': 'Delete project?',
   'Tasks in this project will not be deleted, but they will be removed from the project.':

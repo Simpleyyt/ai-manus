@@ -1,8 +1,5 @@
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, Query
-from sse_starlette.sse import EventSourceResponse
-from typing import AsyncGenerator, List, Optional
-from sse_starlette.event import ServerSentEvent
-from datetime import datetime
+from typing import List, Optional
 import asyncio
 import websockets
 import logging
@@ -14,7 +11,7 @@ from app.application.errors.exceptions import NotFoundError, UnauthorizedError, 
 from app.interfaces.dependencies import get_agent_service, get_current_user, get_optional_current_user, get_token_service, verify_signature_websocket
 from app.interfaces.schemas.base import APIResponse
 from app.interfaces.schemas.session import (
-    ChatRequest, ShellViewRequest, CreateSessionResponse, GetSessionResponse,
+    ShellViewRequest, CreateSessionResponse, GetSessionResponse,
     ListSessionItem, ListSessionResponse, ShellViewResponse,
     ShareSessionResponse, SharedSessionResponse,
     UpdateSessionTitleRequest, UpdateSessionTitleResponse,
@@ -30,7 +27,6 @@ from app.domain.models.file import FileInfo
 from app.domain.models.user import User
 
 logger = logging.getLogger(__name__)
-SESSION_POLL_INTERVAL = 5
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -175,49 +171,6 @@ async def get_all_sessions(
     summaries = await agent_service.get_all_sessions(current_user.id)
     session_items = [ListSessionItem.from_domain(s) for s in summaries]
     return APIResponse.success(ListSessionResponse(sessions=session_items))
-
-@router.post("")
-async def stream_sessions(
-    current_user: User = Depends(get_current_user),
-    agent_service: AgentService = Depends(get_agent_service)
-) -> EventSourceResponse:
-    async def event_generator() -> AsyncGenerator[ServerSentEvent, None]:
-        while True:
-            summaries = await agent_service.get_all_sessions(current_user.id)
-            session_items = [ListSessionItem.from_domain(s) for s in summaries]
-            yield ServerSentEvent(
-                event="sessions",
-                data=ListSessionResponse(sessions=session_items).model_dump_json()
-            )
-            await asyncio.sleep(SESSION_POLL_INTERVAL)
-    return EventSourceResponse(event_generator())
-
-@router.post("/{session_id}/chat")
-async def chat(
-    session_id: str,
-    request: ChatRequest,
-    current_user: User = Depends(get_current_user),
-    agent_service: AgentService = Depends(get_agent_service)
-) -> EventSourceResponse:
-    async def event_generator() -> AsyncGenerator[ServerSentEvent, None]:
-        async for event in agent_service.chat(
-            session_id=session_id,
-            user_id=current_user.id,
-            message=request.message,
-            timestamp=datetime.fromtimestamp(request.timestamp) if request.timestamp else None,
-            event_id=request.event_id,
-            attachments=[attachment.to_domain() for attachment in request.attachments] if request.attachments else None
-        ):
-            logger.debug(f"Received event from chat: {event}")
-            sse_event = await EventMapper.event_to_sse_event(event)
-            logger.debug(f"Received event: {sse_event}")
-            if sse_event:
-                yield ServerSentEvent(
-                    event=sse_event.event,
-                    data=sse_event.data.model_dump_json() if sse_event.data else None
-                )
-
-    return EventSourceResponse(event_generator())
 
 @router.post("/{session_id}/shell")
 async def view_shell(

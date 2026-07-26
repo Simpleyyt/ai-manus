@@ -1,25 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from app.interfaces.schemas.event import AgentSSEEvent
-from app.domain.models.file import FileInfo
 from app.domain.models.session import SessionStatus, SessionSummary, TaskMode
-
-
-class ChatAttachment(BaseModel):
-    """File attachment reference in a chat request"""
-    file_id: str
-    filename: str
-
-    def to_domain(self) -> FileInfo:
-        return FileInfo(file_id=self.file_id, filename=self.filename)
-
-
-class ChatRequest(BaseModel):
-    """Chat request schema"""
-    timestamp: Optional[int] = None
-    message: Optional[str] = None
-    attachments: Optional[List[ChatAttachment]] = None
-    event_id: Optional[str] = None
 
 
 class ShellViewRequest(BaseModel):

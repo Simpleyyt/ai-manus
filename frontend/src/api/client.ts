@@ -1,7 +1,6 @@
 // Backend API client configuration
 import axios, { AxiosError } from 'axios';
-import { fetchEventSource, EventSourceMessage } from '@microsoft/fetch-event-source';
-import { clearStoredTokens, getStoredToken, getStoredRefreshToken, storeToken } from './auth';
+import { clearStoredTokens, getStoredToken, getStoredRefreshToken, storeToken, storeRefreshToken } from './auth';
 
 // API configuration
 export const API_CONFIG = {
@@ -36,18 +35,22 @@ export interface ApiError {
 export const apiClient = axios.create({
   baseURL: BASE_URL,
   timeout: API_CONFIG.timeout,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
   },
 });
 
 // Request interceptor, add authentication token
 apiClient.interceptors.request.use(
   (config) => {
-    // Add authentication token if available
     const token = getStoredToken();
     if (token && !config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    if (!config.headers['X-Requested-With']) {
+      config.headers['X-Requested-With'] = 'XMLHttpRequest';
     }
     return config;
   },
@@ -98,36 +101,25 @@ const refreshAuthToken = async (): Promise<string | null> => {
 
   isRefreshing = true;
   const refreshToken = getStoredRefreshToken();
-  
-  if (!refreshToken) {
-    // No refresh token available, clear auth and redirect to login
-    clearStoredTokens();
-    delete apiClient.defaults.headers.Authorization;
-    window.dispatchEvent(new CustomEvent('auth:logout'));
-    redirectToLogin();
-    isRefreshing = false;
-    throw new Error('No refresh token available');
-  }
 
   try {
-    // Attempt to refresh token
+    // Cookie and/or body refresh_token (session id)
     const response = await apiClient.post('/auth/refresh', {
-      refresh_token: refreshToken
+      refresh_token: refreshToken || undefined,
     }, {
-      // Add special marker to prevent interceptor from retrying this request
       __isRefreshRequest: true
     } as any);
     
     if (response.data && response.data.data) {
       const newAccessToken = response.data.data.access_token;
       storeToken(newAccessToken);
+      const newRefresh = response.data.data.refresh_token;
+      if (newRefresh) {
+        storeRefreshToken(newRefresh);
+      }
       
-      // Update default headers
       apiClient.defaults.headers.Authorization = `Bearer ${newAccessToken}`;
-      
-      // Process queued requests
       processQueue(null, newAccessToken);
-      
       return newAccessToken;
     } else {
       throw new Error('Invalid refresh response');
@@ -229,163 +221,5 @@ apiClient.interceptors.response.use(
     console.error('API Error:', apiError);
     return Promise.reject(apiError);
   }
-); 
-
-export interface SSECallbacks<T = any> {
-  onOpen?: () => void;
-  onMessage?: (event: { event: string; data: T }) => void;
-  onClose?: () => void;
-  onError?: (error: Error) => void;
-}
-
-export interface SSEOptions {
-  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
-  body?: any;
-  headers?: Record<string, string>;
-}
-
-/**
- * Handle SSE authentication errors and attempt token refresh
- */
-const handleSSEAuthError = async <T = any>(
-  _error: Error,
-  _endpoint: string,
-  _options: SSEOptions,
-  callbacks: SSECallbacks<T>
-): Promise<boolean> => {
-  try {
-    const newAccessToken = await refreshAuthToken();
-    if (newAccessToken) {
-      // Emit event for token refresh success
-      window.dispatchEvent(new CustomEvent('auth:token-refreshed'));
-      console.log('Token refreshed for SSE connection, will retry connection');
-      return true; // Indicate successful refresh
-    }
-    return false; // No new token obtained
-  } catch (refreshError) {
-    // Token refresh failed, error already handled in refreshAuthToken
-    console.error('SSE token refresh failed:', refreshError);
-    if (callbacks.onError) {
-      callbacks.onError(refreshError as Error);
-    }
-    return false; // Indicate failed refresh
-  }
-};
-
-/**
- * Generic SSE connection function
- * @param endpoint - API endpoint (relative to BASE_URL)
- * @param options - Request options
- * @param callbacks - Event callbacks
- * @returns Function to cancel the SSE connection
- */
-export const createSSEConnection = async <T = any>(
-  endpoint: string,
-  options: SSEOptions = {},
-  callbacks: SSECallbacks<T> = {}
-): Promise<() => void> => {
-  const { onOpen, onMessage, onClose, onError } = callbacks;
-  const { 
-    method = 'GET', 
-    body, 
-    headers = {}
-  } = options;
-  
-  // Create AbortController for cancellation
-  const abortController = new AbortController();
-  
-  const apiUrl = `${BASE_URL}${endpoint}`;
-  
-  // Add authentication headers
-  const requestHeaders: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...headers,
-  };
-  
-  // Add authentication token if available
-  const token = getStoredToken();
-  if (token && !requestHeaders.Authorization) {
-    requestHeaders.Authorization = `Bearer ${token}`;
-  }
-  
-  // 创建SSE连接
-  const createConnection = async (): Promise<void> => {
-    return new Promise((_resolve, reject) => {
-      if (abortController.signal.aborted) {
-        reject(new Error('Connection aborted'));
-        return;
-      }
-
-      const ssePromise = fetchEventSource(apiUrl, {
-        method,
-        headers: requestHeaders,
-        openWhenHidden: true,
-        body: body ? JSON.stringify(body) : undefined,
-        signal: abortController.signal,
-        async onopen(response) {
-          // Check for authentication errors in the initial response
-          if (response.status === 401) {
-            const authError = new Error('Unauthorized');
-            const refreshSuccess = await handleSSEAuthError(authError, endpoint, options, callbacks);
-            
-            if (refreshSuccess) {
-              // Update authorization header with new token
-              const newToken = getStoredToken();
-              if (newToken) {
-                requestHeaders.Authorization = `Bearer ${newToken}`;
-                // Retry connection with new token
-                setTimeout(() => createConnection().catch(console.error), 1000);
-              }
-            }
-            return;
-          }
-          
-          // Check for other error status codes
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-          
-          if (onOpen) {
-            onOpen();
-          }
-        },
-        onmessage(event: EventSourceMessage) {
-          if (event.event && event.event.trim() !== '') {
-            if (onMessage) {
-              onMessage({
-                event: event.event,
-                data: JSON.parse(event.data) as T
-              });
-            }
-          }
-        },
-        onclose() {
-          if (onClose) {
-            onClose();
-          }
-        },
-        onerror(err: any) {
-          const error = err instanceof Error ? err : new Error(String(err));
-          console.error('EventSource error:', error);
-          
-          if (onError) {
-            onError(error);
-          }
-          reject(error);
-        },
-      });
-
-      ssePromise.catch(reject);
-    });
-  };
-
-  createConnection().catch((error) => {
-    if (!abortController.signal.aborted) {
-      console.error('SSE connection failed:', error);
-    }
-  });
-
-  return () => {
-    abortController.abort();
-  };
-}; 
+);
+ 

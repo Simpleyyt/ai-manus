@@ -335,9 +335,14 @@ const handleEvent = (event: AgentSSEEvent) => {
 
 // Reset all refs to their initial values
 const resetState = () => {
-  // Cancel any existing chat connection
+  const prevSessionId = sessionId.value;
+  // Drop local stream handlers; leave WS subscription for previous session
   if (cancelCurrentChat.value) {
     cancelCurrentChat.value();
+    cancelCurrentChat.value = null;
+  }
+  if (prevSessionId) {
+    void agentApi.leaveChatSession(prevSessionId);
   }
 
   // Reset reactive state to initial values
@@ -502,9 +507,13 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  const prevSessionId = sessionId.value;
   if (cancelCurrentChat.value) {
     cancelCurrentChat.value();
     cancelCurrentChat.value = null;
+  }
+  if (prevSessionId) {
+    void agentApi.leaveChatSession(prevSessionId);
   }
 })
 

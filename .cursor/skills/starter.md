@@ -199,7 +199,7 @@ Dev data persists in a named volume `manus-mongodb-data`. To wipe: `./dev.sh dow
 
 ### Session endpoints (`/api/v1/sessions/`)
 
-Create, list, delete sessions; send chat messages; subscribe to SSE events.
+Create, list, delete sessions; chat and list updates over WebSocket (`/ws/chat`, `/ws/sessions`). Auth for WS: Cookie or `Authorization: Bearer` (no `?token=`).
 
 ### File endpoints (`/api/v1/file/`)
 

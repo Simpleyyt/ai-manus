@@ -10,7 +10,7 @@
 2. Sandbox 是一个 Ubuntu Docker 环境，里面会启动 chrome 浏览器及 File/Shell 等工具的 API 服务。
 3. Web 往会话 ID 中发送用户消息，Server 收到用户消息后，将消息发送给 PlanAct Agent 处理。
 4. PlanAct Agent 进行规划与执行：规划器/执行器通过原生工具调用提交结构化结果（如 `create_plan` / `complete_step`），并按需调用沙盒工具（Shell / Browser / File / Search / MCP）。
-5. Agent 处理过程中产生的所有事件通过 SSE 发回 Web。
+5. Agent 处理过程中产生的所有事件经 Redis 队列，通过 WebSocket（`/api/v1/ws/chat`，`join_session` / `leave_session`）推回 Web；会话列表增量通过 `/api/v1/ws/sessions` 推送。
 
 **当用户浏览工具时：**
 

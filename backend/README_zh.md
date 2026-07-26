@@ -19,7 +19,7 @@ backend/
 │   │   └── services/    # 应用服务（agent、auth、file、token、email、claw）
 │   ├── interfaces/      # 接口层：定义系统对外接口
 │   │   ├── api/         # API 路由（会话、文件、认证、配置、Claw、OpenAI 代理）
-│   │   └── schemas/     # 请求/响应与 SSE 事件模式
+│   │   └── schemas/     # 请求/响应与实时事件模式
 │   ├── infrastructure/  # 基础设施层：提供技术实现
 │   ├── core/            # 核心配置（config.py）
 │   └── main.py          # 应用入口
@@ -31,7 +31,7 @@ backend/
 ## 核心功能
 
 1. **会话管理**：创建和管理对话会话实例
-2. **实时对话**：通过Server-Sent Events (SSE)实现实时对话
+2. **实时对话**：通过 WebSocket（`/ws/sessions`、`/ws/chat`）推送会话列表与聊天事件
 3. **工具调用**：支持多种工具调用，包括：
    - 浏览器自动化操作（使用Playwright）
    - Shell命令执行与查看
@@ -152,11 +152,9 @@ docker run -p 8000:8000 --env-file .env -v /var/run/docker.sock:/var/run/docker.
 |---|---|---|
 | PUT | `/sessions` | 创建新的对话会话 |
 | GET | `/sessions` | 获取所有会话列表 |
-| POST | `/sessions` | 以 SSE 流式获取会话列表更新 |
 | GET | `/sessions/{session_id}` | 获取会话详情（包括事件历史） |
 | DELETE | `/sessions/{session_id}` | 删除会话 |
 | POST | `/sessions/{session_id}/stop` | 停止活跃的会话 |
-| POST | `/sessions/{session_id}/chat` | 发送消息并接收 SSE 事件流 |
 | POST | `/sessions/{session_id}/clear_unread_message_count` | 清除未读消息计数 |
 | POST | `/sessions/{session_id}/shell` | 查看沙盒中的 Shell 会话输出 |
 | POST | `/sessions/{session_id}/file` | 查看沙盒中的文件内容 |
@@ -168,7 +166,16 @@ docker run -p 8000:8000 --env-file .env -v /var/run/docker.sock:/var/run/docker.
 | GET | `/sessions/{session_id}/share/files` | 获取已分享会话的文件列表 |
 | GET | `/sessions/shared/{session_id}` | 获取已分享会话（无需认证） |
 
-`/chat` 输出的 SSE 事件类型：`message`、`title`、`plan`、`step`、`tool`、`wait`、`error`、`done`。
+### 实时 WebSocket（`/api/v1/ws`）
+
+鉴权：浏览器 Cookie（`session_id`）或 App `Authorization: Bearer`（不使用 `?token=`）。
+
+| 路径 | 描述 |
+|---|---|
+| WebSocket | `/ws/sessions` | 会话列表通道（`snapshot` / `upsert` / `remove` / `ping`） |
+| WebSocket | `/ws/chat` | 聊天通道 — 每标签页一条连接；用 `join_session` / `leave_session` 切换；`chat` 发消息；`stop_session` 停止 |
+
+聊天服务端→客户端事件信封：`{ type: "event", session_id, event, data }`，其中 `event` 为 `message`、`title`、`plan`、`step`、`tool`、`wait`、`error`、`done` 之一。
 
 ### 文件接口（`/api/v1/files`）
 

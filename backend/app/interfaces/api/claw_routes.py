@@ -21,8 +21,6 @@ from app.interfaces.schemas.claw import (
 )
 from app.interfaces.schemas.file import FileInfoResponse
 from app.domain.models.user import User
-from app.domain.models.user import UserRole
-from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -183,25 +181,17 @@ async def get_history(
 
 HEARTBEAT_INTERVAL = 15
 
-async def _resolve_ws_user(token: str | None) -> User:
-    """Resolve User for a WebSocket connection.
-    In dev mode (auth_provider=none) returns anonymous; otherwise validates token."""
-    settings = get_settings()
-    if settings.auth_provider == "none":
-        return User(
-            id="anonymous", fullname="anonymous",
-            email="anonymous@localhost", role=UserRole.USER, is_active=True,
-        )
-    if not token:
-        raise ValueError("Authentication required")
-    from app.interfaces.dependencies import get_auth_service
-    auth_service = get_auth_service()
-    return await auth_service.verify_token(token)
+async def _resolve_ws_user(websocket: WebSocket) -> User:
+    """Resolve User for a WebSocket connection via shared credential resolve (B1/D1)."""
+    from app.interfaces.dependencies import resolve_ws_user
+    return await resolve_ws_user(websocket)
 
 
 @router.websocket("/ws")
-async def claw_ws(websocket: WebSocket, token: str | None = None):
+async def claw_ws(websocket: WebSocket):
     """Persistent WebSocket connection for Claw chat.
+
+    Auth: browser Cookie session_id, or App Authorization: Bearer (no ?token=).
 
     Client → Server (JSON):
         {"type": "chat", "message": "...", "session_id": "default"}
@@ -215,7 +205,7 @@ async def claw_ws(websocket: WebSocket, token: str | None = None):
         {"type": "heartbeat"}
     """
     try:
-        user = await _resolve_ws_user(token)
+        user = await _resolve_ws_user(websocket)
     except Exception:
         await websocket.close(code=4001, reason="Unauthorized")
         return

@@ -31,7 +31,7 @@ backend/
 ## 核心功能
 
 1. **会话管理**：创建和管理对话会话实例
-2. **实时对话**：通过 WebSocket（`/ws/sessions`、`/ws/chat`）推送会话列表与聊天事件
+2. **实时对话**：通过 WebSocket（`/ws/sessions`、`/ws/chat`、`/ws/claw`）推送会话列表、聊天与 Claw 事件
 3. **工具调用**：支持多种工具调用，包括：
    - 浏览器自动化操作（使用Playwright）
    - Shell命令执行与查看
@@ -174,6 +174,7 @@ docker run -p 8000:8000 --env-file .env -v /var/run/docker.sock:/var/run/docker.
 |---|---|
 | WebSocket | `/ws/sessions` | 会话列表通道（`snapshot` / `upsert` / `remove` / `ping`） |
 | WebSocket | `/ws/chat` | 聊天通道 — 每标签页一条连接；用 `join_session` / `leave_session` 切换；`chat` 发消息；`stop_session` 停止 |
+| WebSocket | `/ws/claw` | Claw 聊天通道（`chat` / `text` / `file` / `done` / `heartbeat`） |
 
 聊天服务端→客户端事件信封：`{ type: "event", session_id, event, data }`，其中 `event` 为 `message`、`title`、`plan`、`step`、`tool`、`wait`、`error`、`done` 之一。
 
@@ -219,7 +220,6 @@ docker run -p 8000:8000 --env-file .env -v /var/run/docker.sock:/var/run/docker.
 | GET | `/claw/files/{filename}` | 代理下载 Claw 工作区中的文件 |
 | GET | `/claw/resolve/{file_id}` | 解析 `manus-file://` 元信息（Claw API 密钥认证） |
 | GET | `/claw/resolve/{file_id}/download` | 下载 `manus-file://` 内容（Claw API 密钥认证） |
-| WebSocket | `/claw/ws` | Claw 聊天的持久 WebSocket 连接 |
 
 ### 其它接口
 

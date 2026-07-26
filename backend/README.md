@@ -31,7 +31,7 @@ backend/
 ## Core Features
 
 1. **Session Management**: Create and manage conversation session instances
-2. **Real-time Conversation**: Stream session list and chat events over WebSocket (`/ws/sessions`, `/ws/chat`)
+2. **Real-time Conversation**: Stream session list, chat, and Claw over WebSocket (`/ws/sessions`, `/ws/chat`, `/ws/claw`)
 3. **Tool Invocation**: Support for various tool calls, including:
    - Browser automation operations (using Playwright)
    - Shell command execution and viewing
@@ -174,6 +174,7 @@ Auth: browser Cookie (`session_id`) or App `Authorization: Bearer` (no `?token=`
 |---|---|
 | WebSocket | `/ws/sessions` | Session list channel (`snapshot` / `upsert` / `remove` / `ping`) |
 | WebSocket | `/ws/chat` | Chat channel — one connection per tab; switch with `join_session` / `leave_session`; send with `chat`; stop with `stop_session` |
+| WebSocket | `/ws/claw` | Claw chat channel (`chat` / `text` / `file` / `done` / `heartbeat`) |
 
 Chat server→client event envelope: `{ type: "event", session_id, event, data }` where `event` is one of `message`, `title`, `plan`, `step`, `tool`, `wait`, `error`, `done`.
 
@@ -219,7 +220,6 @@ Chat server→client event envelope: `{ type: "event", session_id, event, data }
 | GET | `/claw/files/{filename}` | Proxy a file download from the Claw workspace |
 | GET | `/claw/resolve/{file_id}` | Resolve `manus-file://` metadata (Claw API key auth) |
 | GET | `/claw/resolve/{file_id}/download` | Download `manus-file://` content (Claw API key auth) |
-| WebSocket | `/claw/ws` | Persistent WebSocket connection for Claw chat |
 
 ### Other Endpoints
 

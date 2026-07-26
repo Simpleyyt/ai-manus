@@ -2,17 +2,13 @@
 Claw management API routes.
 Endpoints for creating, managing, and chatting with OpenClaw instances.
 """
-import json
-import asyncio
 import logging
-import httpx
-from fastapi import APIRouter, Depends, Header, UploadFile, File, HTTPException, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Depends, Header, UploadFile, File, HTTPException, status
 from fastapi.responses import Response
 
 from app.application.services.claw_service import ClawService
 from app.application.services.file_service import FileService
 from app.application.errors.exceptions import NotFoundError
-from app.domain.models.claw import ClawAttachment
 from app.interfaces.dependencies import get_current_user, get_claw_service, get_file_service
 from app.interfaces.schemas.base import APIResponse
 from app.interfaces.schemas.claw import (
@@ -173,158 +169,3 @@ async def get_history(
                     pass
         schemas.append(schema)
     return APIResponse.success(ClawHistoryResponse(messages=schemas))
-
-
-# ---------------------------------------------------------------
-# WebSocket: bidirectional channel for chat messages & events
-# ---------------------------------------------------------------
-
-HEARTBEAT_INTERVAL = 15
-
-async def _resolve_ws_user(websocket: WebSocket) -> User:
-    """Resolve User for a WebSocket connection via shared credential resolve (B1/D1)."""
-    from app.interfaces.dependencies import resolve_ws_user
-    return await resolve_ws_user(websocket)
-
-
-@router.websocket("/ws")
-async def claw_ws(websocket: WebSocket):
-    """Persistent WebSocket connection for Claw chat.
-
-    Auth: browser Cookie session_id, or App Authorization: Bearer (no ?token=).
-
-    Client → Server (JSON):
-        {"type": "chat", "message": "...", "session_id": "default"}
-
-    Server → Client (JSON):
-        {"type": "text", "content": "..."}
-        {"type": "file", "file_id": "...", ...}
-        {"type": "done", "stop_reason": "end_turn"}
-        {"type": "error", "error": "..."}
-        {"type": "catchup", "content": "..."}   (on reconnect while response in-progress)
-        {"type": "heartbeat"}
-    """
-    try:
-        user = await _resolve_ws_user(websocket)
-    except Exception:
-        await websocket.close(code=4001, reason="Unauthorized")
-        return
-
-    await websocket.accept()
-
-    claw_service: ClawService = get_claw_service()
-    queue = claw_service.event_bus.subscribe(user.id)
-
-    async def _write_events():
-        """Forward events from the bus to the WS client + periodic heartbeat."""
-        try:
-            # Catch-up for in-progress response
-            pending = claw_service.get_pending_content(user.id)
-            if pending:
-                await websocket.send_json({"type": "catchup", "content": pending})
-
-            while True:
-                try:
-                    event = await asyncio.wait_for(queue.get(), timeout=HEARTBEAT_INTERVAL)
-                    await websocket.send_json(event)
-                except asyncio.TimeoutError:
-                    await websocket.send_json({"type": "heartbeat"})
-        except (WebSocketDisconnect, asyncio.CancelledError, Exception):
-            pass
-
-    file_service: FileService = get_file_service()
-
-    async def _process_files(file_ids: list[str], uid: str) -> tuple[str, list[ClawAttachment]]:
-        """Download files from GridFS, push to Claw workspace, return
-        (MANUS_FILE reference tags for the message, attachment metadata for history).
-
-        Mirrors kimi-claw's file resolution: download → save to workspace → reference tag.
-        """
-        claw = await claw_service.claw_repository.get_by_user_id(uid)
-        claw_base_url = claw.http_base_url if claw else None
-
-        refs: list[str] = []
-        attachments: list[ClawAttachment] = []
-        for fid in file_ids:
-            try:
-                stream, info = await file_service.download_file(fid, uid)
-                ct = info.content_type or ""
-                filename = info.filename or fid
-                raw = stream.read() if hasattr(stream, "read") else b""
-
-                attachments.append(ClawAttachment(
-                    file_id=fid, filename=filename,
-                    content_type=ct, size=info.size or 0,
-                ))
-
-                if not claw_base_url:
-                    refs.append(f'<MANUS_FILE name="{filename}" id="{fid}" status="no_claw" />')
-                    continue
-
-                # Push file to Claw workspace
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    resp = await client.post(
-                        f"{claw_base_url}/workspace",
-                        params={"file_id": fid, "filename": filename},
-                        content=raw,
-                        headers={"Content-Type": "application/octet-stream"},
-                    )
-                    resp.raise_for_status()
-                    result = resp.json()
-                    local_path = result.get("path", "")
-
-                refs.append(
-                    f'<MANUS_FILE path="{local_path}" name="{filename}" '
-                    f'id="{fid}" type="{ct}" size="{info.size}" />'
-                )
-                logger.info(f"[claw-ws] pushed {filename} to workspace: {local_path}")
-
-            except Exception as e:
-                logger.warning(f"[claw-ws] failed to process file {fid}: {e}")
-                refs.append(
-                    f'<MANUS_FILE name="{fid}" id="{fid}" status="download_failed" '
-                    f'reason="{str(e)[:100]}" />'
-                )
-
-        return "\n".join(refs), attachments
-
-    async def _read_messages():
-        """Read messages from the WS client and dispatch them."""
-        try:
-            while True:
-                data = await websocket.receive_json()
-                msg_type = data.get("type")
-                if msg_type == "chat":
-                    message = data.get("message", "").strip()
-                    session_id = data.get("session_id", "default")
-                    file_ids = data.get("file_ids", [])
-                    user_attachments: list[ClawAttachment] = []
-
-                    if file_ids:
-                        file_refs, user_attachments = await _process_files(file_ids, user.id)
-                        if file_refs:
-                            message = f"{message}\n\n{file_refs}" if message else file_refs
-
-                    if message:
-                        try:
-                            await claw_service.send_message(user.id, message, session_id)
-                            if user_attachments:
-                                await claw_service.claw_repository.append_message(
-                                    user.id, "attachments", "user", attachments=user_attachments,
-                                )
-                        except Exception as e:
-                            await websocket.send_json({"type": "error", "error": str(e)})
-        except (WebSocketDisconnect, asyncio.CancelledError, Exception):
-            pass
-
-    write_task = asyncio.create_task(_write_events())
-    read_task = asyncio.create_task(_read_messages())
-
-    try:
-        done, pending = await asyncio.wait(
-            [write_task, read_task], return_when=asyncio.FIRST_COMPLETED,
-        )
-        for t in pending:
-            t.cancel()
-    finally:
-        claw_service.event_bus.unsubscribe(user.id, queue)

@@ -99,9 +99,9 @@ export class ClawWebSocket {
   private connect() {
     if (this.closed) return;
 
-    // Browser: same-origin Cookie is sent automatically (B1). No ?token=.
+    // Same Cookie / Bearer resolve as /ws/sessions and /ws/chat. No ?token=.
     const wsBase = BASE_URL.replace(/^http/, 'ws');
-    const url = `${wsBase}/claw/ws`;
+    const url = `${wsBase}/ws/claw`;
 
     this.ws = new WebSocket(url);
 

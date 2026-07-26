@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Any, Optional
 
 import httpx
+import websockets
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.domain.models.claw import ClawAttachment
@@ -474,3 +475,74 @@ async def claw_ws(websocket: WebSocket):
             t.cancel()
     finally:
         claw_service.event_bus.unsubscribe(user.id, queue)
+
+
+@router.websocket("/vnc/{session_id}")
+async def vnc_ws(websocket: WebSocket, session_id: str):
+    """Sandbox VNC proxy (binary) — Cookie / Bearer auth, no signed URL.
+
+    Client should negotiate subprotocol ``binary`` (NoVNC default).
+    """
+    try:
+        user = await resolve_ws_user(websocket)
+    except Exception:
+        await websocket.close(code=4001, reason="Unauthorized")
+        return
+
+    agent_service = get_agent_service()
+    session = await agent_service.get_session(session_id, user.id)
+    if not session:
+        await websocket.close(code=4004, reason="Session not found")
+        return
+
+    await websocket.accept(subprotocol="binary")
+    logger.info("Accepted VNC WS for session %s user %s", session_id, user.id)
+
+    try:
+        sandbox_ws_url = await agent_service.get_vnc_url(session_id)
+        logger.info("Connecting to sandbox VNC at %s", sandbox_ws_url)
+
+        async with websockets.connect(sandbox_ws_url) as sandbox_ws:
+            async def forward_to_sandbox() -> None:
+                try:
+                    while True:
+                        data = await websocket.receive_bytes()
+                        await sandbox_ws.send(data)
+                except WebSocketDisconnect:
+                    logger.info("Web -> VNC connection closed")
+                except Exception as e:
+                    logger.error("Error forwarding data to sandbox: %s", e)
+
+            async def forward_from_sandbox() -> None:
+                try:
+                    while True:
+                        data = await sandbox_ws.recv()
+                        await websocket.send_bytes(data)
+                except websockets.exceptions.ConnectionClosed:
+                    logger.info("VNC -> Web connection closed")
+                except Exception as e:
+                    logger.error("Error forwarding data from sandbox: %s", e)
+
+            forward_task1 = asyncio.create_task(forward_to_sandbox())
+            forward_task2 = asyncio.create_task(forward_from_sandbox())
+            _done, pending = await asyncio.wait(
+                [forward_task1, forward_task2],
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            for task in pending:
+                task.cancel()
+    except ConnectionError as e:
+        logger.error("Unable to connect to sandbox environment: %s", e)
+        try:
+            await websocket.close(
+                code=1011,
+                reason=f"Unable to connect to sandbox environment: {str(e)}",
+            )
+        except Exception:
+            pass
+    except Exception as e:
+        logger.error("VNC WebSocket error: %s", e)
+        try:
+            await websocket.close(code=1011, reason=f"WebSocket error: {str(e)}")
+        except Exception:
+            pass

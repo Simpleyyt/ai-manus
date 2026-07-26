@@ -16,7 +16,7 @@
 
 - Browser:
     1. The headless browser in Sandbox starts VNC service through xvfb and x11vnc, and converts VNC to WebSocket through websockify.
-    2. Web's NoVNC component forwards to Sandbox through Server's WebSocket Forward, enabling browser viewing.
+    2. Web's NoVNC component connects via Server `/api/v1/ws/vnc/{session_id}` (Cookie / Bearer) and forwards to the Sandbox, enabling browser viewing.
 - Other tools: Other tools work on similar principles.
 
 ## Claw (Manus × Claw)

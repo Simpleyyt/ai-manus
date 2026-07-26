@@ -31,7 +31,7 @@ backend/
 ## Core Features
 
 1. **Session Management**: Create and manage conversation session instances
-2. **Real-time Conversation**: Stream session list, chat, and Claw over WebSocket (`/ws/sessions`, `/ws/chat`, `/ws/claw`)
+2. **Real-time Conversation**: Stream session list, chat, Claw, and VNC over WebSocket (`/ws/sessions`, `/ws/chat`, `/ws/claw`, `/ws/vnc/{session_id}`)
 3. **Tool Invocation**: Support for various tool calls, including:
    - Browser automation operations (using Playwright)
    - Shell command execution and viewing
@@ -159,8 +159,6 @@ All JSON APIs return a unified envelope:
 | POST | `/sessions/{session_id}/shell` | View shell session output in the sandbox |
 | POST | `/sessions/{session_id}/file` | View file content in the sandbox |
 | GET | `/sessions/{session_id}/files` | List files attached to the session |
-| WebSocket | `/sessions/{session_id}/vnc` | VNC connection to the sandbox (binary subprotocol) |
-| POST | `/sessions/{session_id}/vnc/signed-url` | Generate a signed URL for VNC WebSocket access |
 | POST | `/sessions/{session_id}/share` | Share a session publicly |
 | DELETE | `/sessions/{session_id}/share` | Unshare a session |
 | GET | `/sessions/{session_id}/share/files` | List files of a shared session |
@@ -175,6 +173,7 @@ Auth: browser Cookie (`session_id`) or App `Authorization: Bearer` (no `?token=`
 | WebSocket | `/ws/sessions` | Session list channel (`snapshot` / `upsert` / `remove` / `ping`) |
 | WebSocket | `/ws/chat` | Chat channel — one connection per tab; switch with `join_session` / `leave_session`; send with `chat`; stop with `stop_session` |
 | WebSocket | `/ws/claw` | Claw chat channel (`chat` / `text` / `file` / `done` / `heartbeat`) |
+| WebSocket | `/ws/vnc/{session_id}` | Sandbox VNC proxy (binary subprotocol; Cookie/Bearer) |
 
 Chat server→client event envelope: `{ type: "event", session_id, event, data }` where `event` is one of `message`, `title`, `plan`, `step`, `tool`, `wait`, `error`, `done`.
 

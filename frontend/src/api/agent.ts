@@ -1,7 +1,7 @@
 // Backend API service
-import { apiClient, API_CONFIG, ApiResponse, BASE_URL } from './client';
+import { apiClient, ApiResponse, BASE_URL } from './client';
 import { AgentSSEEvent } from '../types/event';
-import { CreateSessionResponse, GetSessionResponse, ShellViewResponse, FileViewResponse, ListSessionResponse, ListSessionItem, SignedUrlResponse, ShareSessionResponse, SharedSessionResponse } from '../types/response';
+import { CreateSessionResponse, GetSessionResponse, ShellViewResponse, FileViewResponse, ListSessionResponse, ListSessionItem, ShareSessionResponse, SharedSessionResponse } from '../types/response';
 import type { FileInfo } from './file';
 
 export type ChatStreamCallbacks = {
@@ -149,37 +149,12 @@ export async function stopSession(sessionId: string): Promise<void> {
 }
 
 /**
- * Create VNC signed URL
- * @param sessionId Session ID to create signed URL for
- * @param expireMinutes URL expiration time in minutes (default: 15)
- * @returns Signed URL response for VNC WebSocket access
+ * VNC WebSocket URL — Cookie / Bearer auth (same as /ws/*). No signed URL.
  */
-export async function createVncSignedUrl(sessionId: string, expireMinutes: number = 15): Promise<SignedUrlResponse> {
-  const response = await apiClient.post<ApiResponse<SignedUrlResponse>>(`/sessions/${sessionId}/vnc/signed-url`, {
-    expire_minutes: expireMinutes
-  });
-  return response.data.data;
-}
-
-/**
- * Get VNC WebSocket URL with signed URL
- * @param sessionId Session ID
- * @param expireMinutes URL expiration time in minutes (default: 60)
- * @returns Promise resolving to signed VNC WebSocket URL string
- * 
- * @example
- * // Signed URL (no Authorization header needed, more secure)
- * const url = await getVNCUrl('session123');
- * const url = await getVNCUrl('session123', 120);
- */
-export const getVNCUrl = async (
-  sessionId: string, 
-  expireMinutes: number = 15
-): Promise<string> => {
-    const signedUrlResponse = await createVncSignedUrl(sessionId, expireMinutes);
-    const wsBaseUrl = API_CONFIG.host.replace(/^http/, 'ws');
-    return `${wsBaseUrl}${signedUrlResponse.signed_url}`;
-}
+export const getVNCUrl = (sessionId: string): string => {
+  const wsBase = BASE_URL.replace(/^http/, 'ws');
+  return `${wsBase}/ws/vnc/${sessionId}`;
+};
 
 /**
  * File attachment reference sent with a chat request.

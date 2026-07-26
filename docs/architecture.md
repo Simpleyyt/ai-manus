@@ -16,7 +16,7 @@
 
 - 浏览器：
     1. Sandbox 的无头浏览器通过 xvfb 与 x11vnc 启动了 vnc 服务，并且通过 websockify 将 vnc 转化成 websocket。
-    2. Web 的 NoVNC 组件通过 Server 的 Websocket Forward 转发到 Sandbox，实现浏览器查看。
+    2. Web 的 NoVNC 组件通过 Server 的 `/api/v1/ws/vnc/{session_id}`（Cookie / Bearer）转发到 Sandbox，实现浏览器查看。
 - 其它工具：其它工具原理也是差不多。
 
 ## Claw（Manus × Claw）

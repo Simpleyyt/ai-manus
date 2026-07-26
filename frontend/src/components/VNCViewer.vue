@@ -37,7 +37,7 @@ const initVNCConnection = async () => {
   }
 
   try {
-    const wsUrl = await getVNCUrl(props.sessionId);
+    const wsUrl = getVNCUrl(props.sessionId);
 
     // Create NoVNC connection
     rfb = new RFB(vncContainer.value, wsUrl, {

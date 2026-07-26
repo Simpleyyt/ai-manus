@@ -31,7 +31,7 @@ backend/
 ## 核心功能
 
 1. **会话管理**：创建和管理对话会话实例
-2. **实时对话**：通过 WebSocket（`/ws/sessions`、`/ws/chat`、`/ws/claw`）推送会话列表、聊天与 Claw 事件
+2. **实时对话**：通过 WebSocket（`/ws/sessions`、`/ws/chat`、`/ws/claw`、`/ws/vnc/{session_id}`）推送会话列表、聊天、Claw 与 VNC
 3. **工具调用**：支持多种工具调用，包括：
    - 浏览器自动化操作（使用Playwright）
    - Shell命令执行与查看
@@ -159,8 +159,6 @@ docker run -p 8000:8000 --env-file .env -v /var/run/docker.sock:/var/run/docker.
 | POST | `/sessions/{session_id}/shell` | 查看沙盒中的 Shell 会话输出 |
 | POST | `/sessions/{session_id}/file` | 查看沙盒中的文件内容 |
 | GET | `/sessions/{session_id}/files` | 获取会话关联的文件列表 |
-| WebSocket | `/sessions/{session_id}/vnc` | 与沙盒建立 VNC 连接（binary 子协议） |
-| POST | `/sessions/{session_id}/vnc/signed-url` | 生成 VNC WebSocket 访问签名 URL |
 | POST | `/sessions/{session_id}/share` | 公开分享会话 |
 | DELETE | `/sessions/{session_id}/share` | 取消分享会话 |
 | GET | `/sessions/{session_id}/share/files` | 获取已分享会话的文件列表 |
@@ -175,6 +173,7 @@ docker run -p 8000:8000 --env-file .env -v /var/run/docker.sock:/var/run/docker.
 | WebSocket | `/ws/sessions` | 会话列表通道（`snapshot` / `upsert` / `remove` / `ping`） |
 | WebSocket | `/ws/chat` | 聊天通道 — 每标签页一条连接；用 `join_session` / `leave_session` 切换；`chat` 发消息；`stop_session` 停止 |
 | WebSocket | `/ws/claw` | Claw 聊天通道（`chat` / `text` / `file` / `done` / `heartbeat`） |
+| WebSocket | `/ws/vnc/{session_id}` | 沙盒 VNC 代理（binary 子协议；Cookie/Bearer） |
 
 聊天服务端→客户端事件信封：`{ type: "event", session_id, event, data }`，其中 `event` 为 `message`、`title`、`plan`、`step`、`tool`、`wait`、`error`、`done` 之一。
 

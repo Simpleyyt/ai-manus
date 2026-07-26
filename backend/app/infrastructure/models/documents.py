@@ -120,6 +120,7 @@ class SessionDocument(BaseDocument[Session], id_field="session_id", domain_model
     files: List[FileInfo] = []
     is_shared: Optional[bool] = False
     is_favorite: Optional[bool] = False
+    is_pinned: Optional[bool] = False
     project_id: Optional[str] = None
     task_mode: Optional[TaskMode] = TaskMode.AGENT
     class Settings:
@@ -135,6 +136,10 @@ class SessionDocument(BaseDocument[Session], id_field="session_id", domain_model
             IndexModel(
                 [("user_id", ASCENDING), ("is_favorite", ASCENDING)],
                 name="user_id_is_favorite",
+            ),
+            IndexModel(
+                [("user_id", ASCENDING), ("is_pinned", DESCENDING), ("latest_message_at", DESCENDING)],
+                name="user_id_is_pinned_latest",
             ),
         ]
 

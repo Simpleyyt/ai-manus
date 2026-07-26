@@ -19,6 +19,7 @@ SESSION_LIST_PROJECTION = {
     "status": 1,
     "is_shared": 1,
     "is_favorite": 1,
+    "is_pinned": 1,
     "project_id": 1,
     "task_mode": 1,
 }
@@ -75,6 +76,7 @@ class MongoSessionRepository(SessionRepository):
                 status=doc.get("status", SessionStatus.PENDING),
                 is_shared=doc.get("is_shared", False),
                 is_favorite=doc.get("is_favorite", False),
+                is_pinned=doc.get("is_pinned", False),
                 project_id=doc.get("project_id"),
                 task_mode=doc.get("task_mode") or TaskMode.AGENT,
             ))
@@ -221,6 +223,16 @@ class MongoSessionRepository(SessionRepository):
             SessionDocument.session_id == session_id
         ).update(
             {"$set": {"is_favorite": is_favorite, "updated_at": datetime.now(UTC)}}
+        )
+        if not result:
+            raise ValueError(f"Session {session_id} not found")
+
+    async def update_pin_status(self, session_id: str, is_pinned: bool) -> None:
+        """Update the pin status of a session"""
+        result = await SessionDocument.find_one(
+            SessionDocument.session_id == session_id
+        ).update(
+            {"$set": {"is_pinned": is_pinned, "updated_at": datetime.now(UTC)}}
         )
         if not result:
             raise ValueError(f"Session {session_id} not found")

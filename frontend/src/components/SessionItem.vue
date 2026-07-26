@@ -133,12 +133,12 @@
 </template>
 
 <script setup lang="ts">
-import { Ellipsis, FileText, Trash, Share2, Pencil, Star, ExternalLink, FolderPlus } from 'lucide-vue-next';
+import { Ellipsis, FileText, Trash, Share2, Pencil, Star, ExternalLink, FolderPlus, Pin } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { ListSessionItem, SessionStatus, ProjectItem } from '../types/response';
-import { useContextMenu, createDangerMenuItem, createMenuItem } from '../composables/useContextMenu';
+import { useContextMenu, createDangerMenuItem, createMenuItem, createSeparator } from '../composables/useContextMenu';
 import { useDialog } from '../composables/useDialog';
 import {
   deleteSession,
@@ -146,6 +146,7 @@ import {
   updateSessionTitle,
   favoriteSession,
   unfavoriteSession,
+  pinSession,
   moveSessionProject,
 } from '../api/agent';
 import { showSuccessToast, showErrorToast } from '../utils/toast';
@@ -178,6 +179,7 @@ const emit = defineEmits<{
   (e: 'renamed', sessionId: string, title: string): void
   (e: 'shared', sessionId: string): void
   (e: 'favorited', sessionId: string, isFavorite: boolean): void
+  (e: 'pinned', sessionId: string, isPinned: boolean): void
   (e: 'moved', sessionId: string, projectId: string | null): void
 }>();
 
@@ -217,11 +219,11 @@ const handleSessionMenuClick = (event: MouseEvent) => {
   const target = event.currentTarget as HTMLElement;
   isContextMenuOpen.value = true;
   const favoritedNow = !!props.session.is_favorite;
+  const pinnedNow = !!props.session.is_pinned;
 
   const items = [
     createMenuItem('share', t('Share'), { icon: Share2 }),
     createMenuItem('rename', t('Rename'), { icon: Pencil }),
-    createMenuItem('favorite', favoritedNow ? t('Unfavorite') : t('Add to favorites'), { icon: Star }),
     createMenuItem('open', t('Open in new tab'), { icon: ExternalLink }),
   ];
 
@@ -236,6 +238,9 @@ const handleSessionMenuClick = (event: MouseEvent) => {
     items.push(createMenuItem('remove_project', t('Remove from project'), { icon: FolderPlus }));
   }
 
+  items.push(createSeparator());
+  items.push(createMenuItem('pin', pinnedNow ? t('Unpin') : t('Pin'), { icon: Pin }));
+  items.push(createMenuItem('favorite', favoritedNow ? t('Unfavorite') : t('Add to favorites'), { icon: Star }));
   items.push(createDangerMenuItem('delete', t('Delete'), { icon: Trash }));
 
   showContextMenu(props.session.session_id, target, items, async (itemKey: string) => {
@@ -270,6 +275,14 @@ const handleSessionMenuClick = (event: MouseEvent) => {
           }
         }
       });
+    } else if (itemKey === 'pin') {
+      try {
+        const result = await pinSession(props.session.session_id, !pinnedNow);
+        emit('pinned', props.session.session_id, result.is_pinned);
+        showSuccessToast(result.is_pinned ? t('Task pinned') : t('Task unpinned'));
+      } catch {
+        showErrorToast(t('Failed to update pin'));
+      }
     } else if (itemKey === 'favorite') {
       try {
         const result = favoritedNow

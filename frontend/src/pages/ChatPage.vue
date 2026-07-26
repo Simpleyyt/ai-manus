@@ -100,12 +100,17 @@
             <FileSearch class="size-[18px] text-[var(--icon-secondary)]" :size="18" />
           </button>
 
-          <button type="button" ref="moreBtnRef"
+          <!-- Official session More (div.size-8 + Ellipsis) -->
+          <div
+            ref="moreBtnRef"
+            role="button"
+            tabindex="0"
             class="flex items-center justify-center cursor-pointer rounded-md hover:bg-[var(--fill-tsp-white-light)] size-8"
             :title="t('More options')"
-            @click="handleMoreClick">
+            @click="handleMoreClick"
+            @keydown.enter.prevent="handleMoreClick($event)">
             <Ellipsis class="size-[18px] text-[var(--icon-secondary)]" :size="18" />
-          </button>
+          </div>
         </div>
       </div>
 
@@ -128,7 +133,7 @@
         </div>
       </div>
     </div>
-    <ComputerPanel ref="computerPanel" :size="computerPanelSize" :sessionId="sessionId" :realTime="realTime"
+    <ComputerPanel ref="computerPanel" :sessionId="sessionId" :realTime="realTime"
       :isShare="false" :toolHistory="toolHistory" :plan="plan"
       @jumpToRealTime="jumpToRealTime"
       @selectTool="handleSelectTool"
@@ -149,22 +154,29 @@ import { Message, MessageContent, ToolContent, AttachmentsContent, StepContent, 
 import { PlanEventData, AgentSSEEvent } from '../types/event';
 import { useAgentEvents } from '../composables/useAgentEvents';
 import ComputerPanel from '../components/ComputerPanel.vue'
-import { ArrowDown, FileSearch, Lock, Globe, Link, Check, Ellipsis, ExternalLink, Copy, CircleHelp } from 'lucide-vue-next';
+import { ArrowDown, FileSearch, Lock, Globe, Link, Check, Ellipsis, Pencil, Star, Trash, FolderPlus, Pin } from 'lucide-vue-next';
 import ShareIcon from '@/components/icons/ShareIcon.vue';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
 import type { FileInfo } from '../api/file';
 import { useSessionFileList } from '../composables/useSessionFileList'
 import { useFilePreviewer } from '../composables/useFilePreviewer'
 import { copyToClipboard } from '../utils/dom'
-import { SessionStatus } from '../types/response';
+import { SessionStatus, type ProjectItem } from '../types/response';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import LoadingIndicator from '@/components/ui/LoadingIndicator.vue';
-import { useContextMenu, createMenuItem } from '../composables/useContextMenu';
+import { useContextMenu, createMenuItem, createDangerMenuItem, createSeparator } from '../composables/useContextMenu';
+import { useDialog } from '../composables/useDialog';
+import { getProjects } from '../api/project';
 
 const router = useRouter()
 const { t } = useI18n()
 const { showSessionFileList } = useSessionFileList()
 const { hideFilePreviewer } = useFilePreviewer()
+const { showConfirmDialog, showInputDialog } = useDialog();
+const projects = ref<ProjectItem[]>([]);
+const isFavorite = ref(false);
+const isPinned = ref(false);
+const projectId = ref<string | null>(null);
 
 // Create initial state factory
 const createInitialState = () => ({
@@ -172,7 +184,6 @@ const createInitialState = () => ({
   isLoading: false,
   sessionId: undefined as string | undefined,
   messages: [] as Message[],
-  computerPanelSize: 0,
   realTime: true,
   follow: true,
   title: t('New Chat'),
@@ -197,7 +208,6 @@ const {
   isLoading,
   sessionId,
   messages,
-  computerPanelSize,
   realTime,
   follow,
   title,
@@ -259,6 +269,11 @@ const resetState = () => {
 
   // Reset reactive state to initial values
   Object.assign(state, createInitialState());
+  sessionStatus.value = undefined;
+  isFavorite.value = false;
+  isPinned.value = false;
+  projectId.value = null;
+  projects.value = [];
 };
 
 // Watch message changes and automatically scroll to bottom
@@ -364,6 +379,9 @@ const restoreSession = async () => {
   // Initialize share mode based on session state
   shareMode.value = session.is_shared ? 'public' : 'private';
   sessionStatus.value = session.status as SessionStatus;
+  isFavorite.value = !!session.is_favorite;
+  isPinned.value = !!session.is_pinned;
+  projectId.value = session.project_id ?? null;
   realTime.value = false;
   for (const event of session.events) {
     handleEvent(event);
@@ -582,22 +600,120 @@ const shareToSocial = async (network: 'x' | 'linkedin' | 'facebook' | 'reddit') 
   window.open(targets[network], '_blank', 'noopener,noreferrer');
 }
 
-const handleMoreClick = (event: MouseEvent) => {
+const handleMoreClick = async (event: MouseEvent | KeyboardEvent) => {
   event.stopPropagation();
   const target = (moreBtnRef.value || event.currentTarget) as HTMLElement;
   if (!sessionId.value) return;
+
+  // Official session-detail … menu: Rename / Move to project / — / Pin / Favorite / Delete
+  // (skip scheduled / archive — no local product support)
+  try {
+    const res = await getProjects();
+    projects.value = res.projects ?? [];
+  } catch {
+    projects.value = [];
+  }
+
+  const favoritedNow = isFavorite.value;
+  const pinnedNow = isPinned.value;
   const items = [
-    createMenuItem('open', t('Open in new tab'), { icon: ExternalLink }),
-    createMenuItem('copy', t('Copy link'), { icon: Copy }),
-    createMenuItem('files', t('View all files in this task'), { icon: FileSearch }),
+    createMenuItem('rename', t('Rename'), { icon: Pencil }),
   ];
+
+  if (projects.value.length > 0) {
+    for (const project of projects.value) {
+      if (project.project_id !== projectId.value) {
+        items.push(createMenuItem(
+          `move:${project.project_id}`,
+          `${t('Move to project')}: ${project.name}`,
+          { icon: FolderPlus },
+        ));
+      }
+    }
+  }
+  if (projectId.value) {
+    items.push(createMenuItem('remove_project', t('Remove from project'), { icon: FolderPlus }));
+  }
+
+  items.push(createSeparator());
+  items.push(createMenuItem('pin', pinnedNow ? t('Unpin') : t('Pin'), { icon: Pin }));
+  items.push(createMenuItem('favorite', favoritedNow ? t('Unfavorite') : t('Add to favorites'), { icon: Star }));
+  items.push(createDangerMenuItem('delete', t('Delete'), { icon: Trash }));
+
   showContextMenu(sessionId.value, target, items, async (key: string) => {
-    if (key === 'open') {
-      window.open(`/chat/${sessionId.value}`, '_blank');
-    } else if (key === 'copy') {
-      await handleCopyLink();
-    } else if (key === 'files') {
-      handleFileListShow();
+    if (key === 'rename') {
+      showInputDialog({
+        title: t('Rename'),
+        initialValue: title.value || '',
+        placeholder: t('Enter task name'),
+        confirmText: t('Save'),
+        onConfirm: async (value: string) => {
+          if (!value || !sessionId.value) return;
+          try {
+            const result = await agentApi.updateSessionTitle(sessionId.value, value);
+            title.value = result.title;
+            showSuccessToast(t('Renamed successfully'));
+          } catch {
+            showErrorToast(t('Failed to rename session'));
+          }
+        },
+      });
+    } else if (key === 'pin') {
+      if (!sessionId.value) return;
+      try {
+        const result = await agentApi.pinSession(sessionId.value, !pinnedNow);
+        isPinned.value = result.is_pinned;
+        showSuccessToast(result.is_pinned ? t('Task pinned') : t('Task unpinned'));
+      } catch {
+        showErrorToast(t('Failed to update pin'));
+      }
+    } else if (key === 'favorite') {
+      if (!sessionId.value) return;
+      try {
+        const result = favoritedNow
+          ? await agentApi.unfavoriteSession(sessionId.value)
+          : await agentApi.favoriteSession(sessionId.value);
+        isFavorite.value = result.is_favorite;
+        showSuccessToast(result.is_favorite ? t('Added to favorite') : t('Removed from favorite'));
+      } catch {
+        showErrorToast(t('Failed to update favorite'));
+      }
+    } else if (key.startsWith('move:')) {
+      if (!sessionId.value) return;
+      const nextProjectId = key.slice(5);
+      try {
+        await agentApi.moveSessionProject(sessionId.value, nextProjectId);
+        projectId.value = nextProjectId;
+        showSuccessToast(t('Moved to project'));
+      } catch {
+        showErrorToast(t('Failed to move session'));
+      }
+    } else if (key === 'remove_project') {
+      if (!sessionId.value) return;
+      try {
+        await agentApi.moveSessionProject(sessionId.value, null);
+        projectId.value = null;
+        showSuccessToast(t('Removed from project'));
+      } catch {
+        showErrorToast(t('Failed to move session'));
+      }
+    } else if (key === 'delete') {
+      showConfirmDialog({
+        title: t('Delete this task?'),
+        content: t('The chat history of this session cannot be recovered after deletion.'),
+        confirmText: t('Delete'),
+        cancelText: t('Cancel'),
+        confirmType: 'danger',
+        onConfirm: () => {
+          if (!sessionId.value) return;
+          agentApi.deleteSession(sessionId.value).then(() => {
+            showSuccessToast(t('Deleted successfully'));
+            router.push('/');
+          }).catch(() => {
+            showErrorToast(t('Failed to delete session'));
+          });
+        },
+      });
     }
   });
 }

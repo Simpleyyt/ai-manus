@@ -4,8 +4,10 @@ description: >-
   Replicate manus.im / manus.ai UI into ai-manus by mining official JS bundles
   and live DOM (Chrome CDP), then pasting className trees onto Vue — 直接抄,
   never approximate. Use when aligning SessionSidebar, Library, Project,
-  Search, Computer, Chat header, Share, or any Manus UI parity; when the user
-  says 对齐官方、复刻、直接抄、抄源码、manus.im, or asks what is still not aligned.
+  Search, Computer, Chat header, Share, FilePreviewer, or any Manus UI parity;
+  when the user says 对齐官方、复刻、直接抄、抄源码、manus.im, or asks what
+  is still not aligned. Do **not** use this skill to re-document surfaces the
+  user already marked done.
 ---
 
 # Replicate Manus UI
@@ -51,21 +53,33 @@ Manus UI replicate:
 
 Prefer a **logged-in** session (guest marketing pages lack Computer / sidebar).
 
-**Chrome CDP** (typical local debug profile):
-
 ```bash
-# Example: Chrome with --remote-debugging-port=9222
-# Dump nodes matching computer / sidebar / header / library
-# Save under tmp/screenshots/manus-live/ (gitignored)
+# Chrome with sticky login profile
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+  --remote-debugging-port=9222 \
+  --user-data-dir=/tmp/chrome-manus-debug \
+  --profile-directory=Default \
+  --no-first-run --no-default-browser-check \
+  "https://manus.im/app/…"
+
+# Drive tab: playwright-core connectOverCDP('http://127.0.0.1:9222')
+# (local install often /tmp/pw)
 ```
 
-Also save screenshots under `tmp/screenshots/` for visual diff. Never commit binaries.
+Save under `tmp/screenshots/` (gitignored). 「截图发过来」→ personal skill **telegram-screenshots**, not OpenClaw.
+
+**Capture gotchas (process, not a finished-page museum):**
+
+- Prefer **element** screenshot for popovers; full-page makes menus unreadably small.
+- If a portaled menu is “blank” in shots, check z-index vs overlays (e.g. center dialog `z-[1000]`) before blaming CSS tokens.
+- Dump live `className` for disabled/hover — don’t invent from a washed-out crop.
+- Click **exact** leaf text + `boundingBox`, not a huge grid parent.
 
 **Dump quality (mandatory):**
 
-- Do **not** implement from truncated HTML/class strings. Card/toolbar dumps cut mid-`<svg>` or mid-`text-[var(--` are incomplete — re-dump until header, filename row, preview body, and trailing chrome (e.g. `⋯`) are fully present.
-- Verify you selected the **right node** (page title `库` ≠ session group title `text-[14px]`).
-- Prefer screenshot + full outerHTML of one card + toolbar parent over a shallow class list.
+- Do **not** implement from truncated HTML/class strings. Re-dump until chrome is complete (no mid-`<svg>` / mid-`text-[var(--`).
+- Verify the **right node** (page title ≠ session group title).
+- Pair every visual claim with a mined `className` / `e.s(["ComponentName"` snippet.
 
 ### 2. Mine official JS
 
@@ -180,57 +194,26 @@ Local mapping:
 - **File**: tabs Diff / Original / **Modified** (`已修改`); **default = Modified**; Monaco on gray-main, line numbers off. Not the chat “Plain Text” card.
 - Full tokens: [reference.md](reference.md#tool-content-panels-inside-computer-panel).
 
-## Library page (canonical)
+## Done surfaces (do not re-document)
 
-Official **`/app/library` is a full page**, not a modal (Search is the modal). Local: `/library` → `LibraryPage.vue` + `LibraryFileCard.vue`. Mine from chunk `2930l2ba6yrcn.js`: **`e7` toolbar · `e9` view tabs · `eW`/`eG` groups · `eT` flat · `eR` grid card · `eD` list row · `ey`/`ev` filename/preview**.
+**Library / cards / FilePreviewer chrome** already landed in code (`LibraryPage.vue`, `LibraryFileCard.vue`, `FilePreviewer*`, `ToolViewModeMenu.vue`). Skill is for **未对齐** surfaces and the 直接抄 workflow — not a museum of finished pages. If the user asks to redo one, mine JS/DOM again; do not paste stale skill tokens.
 
-| Piece | Official |
-|---|---|
-| Shell | `flex size-full min-h-0 flex-col` under sidebar; title **库** `text-lg font-[500] leading-[28px]` in `h-[56px]`; card click opens **`FilePreviewer`** (official name; not FilePanel) |
-| Scroll | Official wraps **one** `flex min-h-full flex-col` under SimpleBar. Local prefers `overflow-y-auto` — **never** put toolbar + groups as **siblings** under a `flex-row` SimpleBar content (they lay out sideways → 「布局很乱」) |
-| Toolbar `e7` | sticky; own `max-w-[1000px] mx-auto` inside `px-5 md:px-6` — **全部** dropdown \| **我的收藏** \| search `md:ms-auto md:max-w-[200px]` \| Grid/List **`e9` 32×32 icon tabs** (not filled pills) |
-| Browse mode | **`session`** (All, no query): grouped `eW`/`eG`. **`file`** (type ≠ All **or** favorites **or** search text): flat `eT` — **no** session headers, one `md:grid-cols-3` |
-| Groups `eG` | title `md:text-[16px] … font-medium leading-[22px]` + time (`justify-between` in grid); first **3** cards + “{count} more files” |
-| Grid `eR` | `rounded-[12px] border-[0.5px] border-dark` + hover `shadow-S`; header `gap-2 px-2 py-[10px]`; **24px** type SVG; filename **`ey` basename+ext inline** single `text-sm` truncate row; preview **`aspect-[16/9]`** + code `scale-[0.8]` on `#F7F7F7` |
-| List `eD` | **horizontal rows** (`hover:bg-fill-tsp-white-light`, `border-b`, icon + `text-[14px]`), **not** 1-col grid cards |
-| Card `⋯` `ef` | **Locate in task** / **Add to favorites** (per-file via `POST/DELETE /library/files/{id}/favorite`) / **Send to Manus** — favorites are **file** ids (Mongo `file_favorites`), not session `is_favorite` |
-| Hover action | Grid: `absolute bottom-2 start-2 z-20 size-7 rounded-[8px]` + `bg-[var(--background-mask-black)]` + Eye/`SquareArrowOutUpRight`; List: opacity-0 → group-hover. Action from `getLibraryAttachmentHoverAction` (local session files → **Preview**) |
-
-Active chrome: type filter → `bg-[var(--fill-blue)] text-[var(--text-blue)]` (only when **not** All); favorites → `bg-[var(--function-warning-tsp)]`. Favorites filter = **file** favorites. Full tokens: [reference.md](reference.md#library-canonical).
-
-### Library — do not invent / classic mistakes
-
-| Mistake | What went wrong |
-|---|---|
-| `LibraryDialog` modal | Official is a **route page**; Search is the `680×440` modal |
-| Truncated CDP → guess chrome | Mid-SVG dumps invent padding / wrong tabs / fake list |
-| Filename two block lines | Official `ey` is **inline** basename + `.ext` |
-| List = 1-col cards | Official list is **`eD` rows** |
-| Fixed `h-[166px]` preview | Official `aspect-[16/9]` + `scale-[0.8]` |
-| Search `flex-1` grow | Official `md:max-w-[200px] md:ms-auto` |
-| Always session-group | Search / favorites / type filter → **flat `eT`** |
-| SimpleBar multi-child | Content `flex-row` → toolbar left, groups shoved right |
-| Leave `FilePreviewer` open by accident | Entering `/library` should start clean (`hideFilePreviewer`); **card click** intentionally opens preview |
-| Card click = only jump chat | Official opens **`FilePreviewer`**; Locate is explicit menu/hover |
-| Name it `FilePanel` | Official export is **`FilePreviewer`** (+ Header / Brief / Body) |
-| Blame sparse 3-col for “乱” | 1 file / session → left column only is **correct**; denser when flat mode or multi-file sessions |
-| Empty `⋯` / session favorite as Library favorite | Official `ef`: Locate / per-file favorite (`file_favorites` API) / Send to Manus |
-| File favorites in `localStorage` | **Forbidden** — use `POST/DELETE /library/files/{id}/favorite` + Mongo `file_favorites` |
+Optional deep dump (only when reopening a regression): [reference.md](reference.md).
 
 ## Other surfaces (pointers)
 
 | Surface | Start here |
 |---|---|
-| Session list / sidebar | `SessionSidebar` (+ related list components) |
-| Library | `LibraryPage.vue` + `LibraryFileCard.vue` (route `/library`) |
-| Project detail | `ProjectPage.vue` (route `/project/:projectId`) |
-| Search tasks | `SearchDialog.vue` (centered `680×440` modal — not Library) |
-| File preview | `FilePreviewer.vue` + `useFilePreviewer` — paste official **FilePreviewer** / **Header** / **Brief**; image = mask shell + `ImageCloseButton` + bottom blur toolbar (Download/Zoom); skip Share / canvas / History |
-| Chat top bar | `ChatPage.vue` header (`h-[56px]`, Share popover) |
+| Session list / sidebar | `SessionSidebar` |
+| Library (done) | `LibraryPage.vue` + `LibraryFileCard.vue` |
+| File preview (done unless user reopens) | `FilePreviewer.vue` + `useFilePreviewer` |
+| Project detail | `ProjectPage.vue` |
+| Search tasks | `SearchDialog.vue` |
+| Chat top bar | `ChatPage.vue` header |
 | Input | `ChatBox.vue` |
-| Take control banner | `TakeControlBanner.vue` + browser takeover events |
+| Take control banner | `TakeControlBanner.vue` |
 
-When starting a new surface, repeat the workflow — do not reuse Computer assumptions blindly.
+When starting a **new** surface, repeat the workflow — do not reuse Computer / Library assumptions blindly.
 
 ## Project page (canonical)
 
@@ -266,23 +249,11 @@ Local: `/project/:projectId` → `ProjectPage.vue`. **Hide FilePreviewer**.
 ## Pitfalls
 
 - **没直接抄 / 凭感觉对齐** — user will reject; paste mined `className` trees before wiring.
-- **错页套壳** — Library / sidebar / Home patterns transplanted onto Project or Computer.
-- **U in Header ≠ app menu** — it is “Use Manus's computer” (VNC dialog), often with a confirm popover.
-- **PlanPanel location** — moving it only in CSS while leaving it in ChatPage breaks parity.
-- **White rounded card shell** — official sidebar Computer is gray + `border-l`, not `sm:rounded-[16px]` white card.
-- **Terminal white / mono / wrong size** — live uses gray-main + **ui-monospace 14 / 1.15**; system UI 16 causes mid-word wrap.
-- **File default Diff / 修改后** — live default is Modified / `已修改`.
-- **Chat Plain Text ≠ Computer File** — left-column code card is a different surface.
-- **Library ≠ dialog** — full page `/library`; Search is the `680×440` modal.
-- **Library SimpleBar / scroll** — one flex-col child only; multi-sibling under flex-row content = sideways mess.
-- **Library browse mode** — `file` (flat) vs `session` (grouped); do not always group.
-- **Library list ≠ 1-col cards** — copy `eD` rows from source.
-- **Project ≠ sidebar expand only** — official has `/app/project/:id` full page; local `/project/:id`.
-- **Truncated dump → invented chrome** — incomplete card/toolbar HTML caused wrong padding, fake list layout, wrong view tabs; re-mine before coding.
-- **Wrong mined node** — session group `text-[14px]`/`md:text-[16px]` is not the page title `text-lg`.
-- **Screenshot-only copy** — misses hover states, empty states, and exact tokens; always mine JS/DOM for the component name.
-- **Over-building** — dialog/center layout, Cloud/Local computer titles, policy error panels: only when source + user priority say so.
-- **`localStorage` for product state** — favorites / pins / synced prefs must be server APIs. Never “先 localStorage 以后再改”.
+- **错页套壳** — do not transplant one finished page’s chrome onto another.
+- **Truncated dump → invented chrome** — re-mine before coding.
+- **Screenshot-only copy** — always mine JS/DOM for the component name.
+- **`localStorage` for product state** — favorites / pins / synced prefs must be server APIs.
+- **Done surfaces** — Library/cards/FilePreviewer already shipped; do not reopen or re-document unless the user asks.
 
 ## Verify checklists
 
@@ -293,22 +264,16 @@ Local: `/project/:projectId` → `ProjectPage.vue`. **Hide FilePreviewer**.
 - [ ] No chrome from a different page; product skips = omit only
 - [ ] Side-by-side re-check Vue vs JS snippet
 
-Library verify:
-- [ ] Route /library; card click / hover Preview → FilePreviewer; Locate (⋯) → session
-- [ ] File / session favorites via **API** (no localStorage)
-- [ ] Hover btn: grid `bottom-2 start-2` mask-black; list row group-hover
-- [ ] All → session groups; search/favorites/type → flat 3-col (no group titles)
-- [ ] Grid cards aspect-16/9 + inline filename; List = full-width rows (not pushed right)
-- [ ] Toolbar max-w-1000; search ≤200px ms-auto; view tabs 32px
-- [ ] Re-check e7/eW/eT/eR/eD in 2930l2ba6yrcn.js (or current chunk)
 
 Project verify:
 - [ ] Grid md:max-w-[1168px] two-col; FilePreviewer hidden
 - [ ] Composer = ChatBox; Instructions = ChevronRight (+ Add if empty)
 - [ ] Tasks = SessionItem variant=project (bz), empty pt-48 copy
 - [ ] Re-check AX/gN/AJ/bL/bz/A9 in 1whdjijd45ufa.js (or current chunk)
+
 ```
 
 ## Additional resources
 
-- Component token dump and file map: [reference.md](reference.md)
+- Optional token dump when reopening a regression: [reference.md](reference.md)
+- Personal Telegram delivery (not in repo): `~/.cursor/skills/telegram-screenshots/SKILL.md`

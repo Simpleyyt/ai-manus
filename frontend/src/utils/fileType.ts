@@ -7,6 +7,8 @@ import UnknownFilePreview from '../components/filePreviews/UnknownFilePreview.vu
 import MarkdownFilePreview from '../components/filePreviews/MarkdownFilePreview.vue';
 import CodeFilePreview from '../components/filePreviews/CodeFilePreview.vue';
 import ImageFilePreview from '../components/filePreviews/ImageFilePreview.vue';
+import PdfFilePreview from '../components/filePreviews/PdfFilePreview.vue';
+import HtmlFilePreview from '../components/filePreviews/HtmlFilePreview.vue';
 
 export interface FileType {
   icon: Component;
@@ -66,6 +68,20 @@ export const getFileType = (filename: string): FileType => {
     return {
       icon: ImageFileIcon,
       preview: ImageFilePreview,
+    };
+  }
+
+  if (file_extension === 'pdf') {
+    return {
+      icon: FileIcon,
+      preview: PdfFilePreview,
+    };
+  }
+
+  if (file_extension === 'html' || file_extension === 'htm') {
+    return {
+      icon: CodeFileIcon,
+      preview: HtmlFilePreview,
     };
   }
   

@@ -33,6 +33,7 @@ class SessionSummary(BaseModel):
     status: SessionStatus = SessionStatus.PENDING
     is_shared: bool = False
     is_favorite: bool = False
+    is_pinned: bool = False
     project_id: Optional[str] = None
     task_mode: TaskMode = TaskMode.AGENT
 
@@ -55,6 +56,7 @@ class Session(BaseModel):
     status: SessionStatus = SessionStatus.PENDING
     is_shared: bool = False  # Whether this session is shared publicly
     is_favorite: bool = False
+    is_pinned: bool = False
     project_id: Optional[str] = None
     task_mode: TaskMode = TaskMode.AGENT
 

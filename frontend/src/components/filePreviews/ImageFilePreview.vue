@@ -37,6 +37,11 @@
       @click.stop>
       <div
         class="backdrop-blur-2xl bg-[rgba(0,0,0,0.65)] rounded-[12px] flex items-center gap-3 ps-1 pe-3 py-1">
+        <!-- Official: ToolViewModeMenu on dark image toolbar -->
+        <ToolViewModeMenu
+          class-name="text-[var(--icon-white)]"
+          button-class-name="rounded hover:bg-[rgba(255,255,255,0.1)] data-[popover-trigger]:bg-[rgba(255,255,255,0.1)] data-[state=open]:bg-[rgba(255,255,255,0.1)]"
+        />
         <button
           type="button"
           class="clickable size-7 flex items-center justify-center cursor-pointer hover:bg-[rgba(255,255,255,0.1)] rounded transition-colors"
@@ -87,6 +92,7 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Download, X, ZoomIn, ZoomOut } from 'lucide-vue-next'
 import { getFileDownloadUrl, type FileInfo } from '../../api/file'
+import ToolViewModeMenu from '../ToolViewModeMenu.vue'
 
 const props = defineProps<{
   file: FileInfo

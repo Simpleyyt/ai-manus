@@ -1,8 +1,8 @@
 <template>
-  <!-- 布局照抄 manus Take control 横幅 -->
+  <!-- Inside session message column (already max-w-[810px]); span full column width -->
   <div
     v-if="visible"
-    class="mx-auto w-full max-w-full sm:max-w-[768px] mb-3 flex items-center gap-3 rounded-[14px] bg-[var(--background-menu-white)] px-4 py-3 shadow-[0px_8px_24px_0px_rgba(0,0,0,0.06)] border border-[var(--border-light)]">
+    class="w-full mb-3 flex items-center gap-3 rounded-[14px] bg-[var(--background-menu-white)] px-4 py-3 shadow-[0px_8px_24px_0px_rgba(0,0,0,0.06)] border border-[var(--border-light)]">
     <div class="size-9 rounded-[10px] bg-[var(--fill-tsp-white-dark)] flex items-center justify-center shrink-0">
       <Monitor :size="18" class="text-[var(--icon-primary)]" />
     </div>

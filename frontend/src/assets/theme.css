@@ -159,3 +159,37 @@
     --color-4: 195 100% 63%;
     --color-5: 90 100% 63%
 }
+
+/* Official Manus chat message utilities (scraped CSS) */
+.u-break-words {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 250% 0;
+    }
+    to {
+        background-position: -250% 0;
+    }
+}
+
+.shimmer-text-secondary {
+    background-image: linear-gradient(
+        110deg,
+        var(--text-secondary),
+        35%,
+        var(--text-shining),
+        50%,
+        var(--text-secondary),
+        75%,
+        var(--text-secondary)
+    );
+    color: #0000;
+    background-size: 250% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    animation: 4s linear infinite shimmer;
+}

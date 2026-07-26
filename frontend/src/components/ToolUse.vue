@@ -2,26 +2,26 @@
   <p v-if="tool.name === 'message' && tool.args?.text" class="text-[var(--text-secondary)] text-[14px] overflow-hidden text-ellipsis whitespace-pre-line">
     {{ tool.args.text }}
   </p>
-  <div v-else-if="toolInfo" class="flex items-center group gap-2">
-    <div class="flex-1 min-w-0">
-      <div @click="handleClick"
-        class="rounded-[15px] items-center gap-2 px-[10px] py-[3px] border border-[var(--border-light)] bg-[var(--fill-tsp-gray-main)] inline-flex max-w-full clickable hover:bg-[var(--fill-tsp-gray-dark)] dark:hover:bg-white/[0.02]">
-        <div class="w-[16px] inline-flex items-center text-[var(--text-primary)]">
-          <component :is="toolInfo.icon" :size="21" />
-        </div>
-        <div class="flex-1 h-full min-w-0 flex">
-          <div
-            class="inline-flex items-center h-full rounded-full text-[14px] text-[var(--text-secondary)] max-w-[100%]">
-            <div class="max-w-[100%] text-ellipsis overflow-hidden whitespace-nowrap text-[13px]"
-              :title="`${toolInfo.function}${toolInfo.functionArg}`">
-              <div class="flex items-center">
-                {{ toolInfo.function
-                }}<span
-                  class="flex-1 min-w-0 rounded-[6px] px-1 ml-1 relative top-[0px] text-[12px] font-mono max-w-full text-ellipsis overflow-hidden whitespace-nowrap text-[var(--text-tertiary)]"><code>{{ toolInfo.functionArg }}</code></span>
-              </div>
-            </div>
-          </div>
-        </div>
+  <!-- Official StandardToolUsed: flat icon+label row (not gray pill) -->
+  <div
+    v-else-if="toolInfo"
+    class="flex w-full items-center gap-2 group"
+    :class="isCalling ? '' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'">
+    <div
+      class="flex min-w-0 flex-1 items-center gap-[4px] overflow-hidden leading-[20px] clickable"
+      @click="handleClick">
+      <div class="w-[20px] inline-flex items-center flex-shrink-0 text-[var(--text-primary)]">
+        <component :is="toolInfo.icon" :size="20" />
+      </div>
+      <div
+        class="min-w-0 flex-1 truncate whitespace-nowrap"
+        :class="isCalling ? 'shimmer-text-secondary' : ''"
+        :title="`${toolInfo.function}${toolInfo.functionArg}`">
+        <span class="text-sm">{{ toolInfo.function }}</span>
+        <span
+          v-if="toolInfo.functionArg"
+          class="ms-[6px] font-mono text-[12px]"
+          :class="isCalling ? '' : 'text-[var(--text-tertiary)]'">{{ toolInfo.functionArg }}</span>
       </div>
     </div>
     <div class="float-right transition text-[12px] text-[var(--text-tertiary)] invisible group-hover:visible">
@@ -31,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { ToolContent } from "../types/message";
 import { useToolInfo } from "../composables/useTool";
 import { useRelativeTime } from "../composables/useTime";
@@ -46,6 +46,8 @@ const emit = defineEmits<{
 
 const { relativeTime } = useRelativeTime();
 const { toolInfo } = useToolInfo(ref(props.tool));
+
+const isCalling = computed(() => props.tool.status === "calling");
 
 const handleClick = () => {
   emit("click");

@@ -114,12 +114,21 @@
         </div>
       </div>
 
-      <div class="mx-auto w-full max-w-full sm:max-w-[768px] sm:min-w-[390px] flex flex-col flex-1 px-5 min-h-0">
+      <!-- Official message column (CDP session detail): px-[24px] sm:max-w-[810px] sm:min-w-[360px] -->
+      <div class="mx-auto w-full max-w-full px-[24px] sm:max-w-[810px] sm:min-w-[360px] flex flex-col flex-1">
         <div class="flex flex-col w-full gap-[12px] pb-[80px] pt-[12px] flex-1 overflow-y-auto">
-          <TakeControlBanner :visible="showTakeControlBanner" @takeControl="handleTakeControl" />
           <ChatMessage v-for="(message, index) in messages" :key="index" :message="message"
             :hideHeader="isConsecutiveAssistant(messages, index)"
+            :showLiteBadge="taskMode === 'chat'"
+            :showCopyActions="shouldShowAssistantCopyActions(index)"
+            :isLastBeforeUser="isAssistantLastBeforeUser(index)"
             @toolClick="handleToolClick" />
+          <ChatWaitingContinue
+            :visible="showWaitingContinue"
+            :copy-text="lastAssistantPlainText" />
+          <ChatTaskCompleted
+            :visible="showTaskCompleted"
+            :copy-text="lastAssistantPlainText" />
           <LoadingIndicator v-if="isLoading" :text="$t('Thinking')" />
         </div>
 
@@ -148,7 +157,8 @@ import { useRouter, onBeforeRouteUpdate } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import ChatBox from '../components/ChatBox.vue';
 import ChatMessage from '../components/ChatMessage.vue';
-import TakeControlBanner from '../components/TakeControlBanner.vue';
+import ChatTaskCompleted from '../components/ChatTaskCompleted.vue';
+import ChatWaitingContinue from '../components/ChatWaitingContinue.vue';
 import * as agentApi from '../api/agent';
 import { Message, MessageContent, ToolContent, AttachmentsContent, StepContent, isConsecutiveAssistant } from '../types/message';
 import { PlanEventData, AgentSSEEvent } from '../types/event';
@@ -178,6 +188,7 @@ const projects = ref<ProjectItem[]>([]);
 const isFavorite = ref(false);
 const isPinned = ref(false);
 const projectId = ref<string | null>(null);
+const taskMode = ref<'agent' | 'chat'>('agent');
 
 // Create initial state factory
 const createInitialState = () => ({
@@ -245,12 +256,60 @@ const toolHistory = computed(() => {
   return tools;
 });
 
-const showTakeControlBanner = computed(() => sessionStatus.value === SessionStatus.WAITING);
-
 const chatPlaceholder = computed(() => t('Send message to Manus'));
 
+const lastAssistantIndex = computed(() => {
+  for (let i = messages.value.length - 1; i >= 0; i--) {
+    if (messages.value[i].type === 'assistant') return i;
+  }
+  return -1;
+});
+
+const lastAssistantPlainText = computed(() => {
+  const i = lastAssistantIndex.value;
+  if (i < 0) return '';
+  return ((messages.value[i].content as MessageContent).content || '').trim();
+});
+
+/** Official waiting row: "{product} will continue after your reply" (message_ask_user → WaitEvent) */
+const showWaitingContinue = computed(() =>
+  sessionStatus.value === SessionStatus.WAITING && !isLoading.value,
+);
+
+/** Official TaskCompleted when agent stopped / session completed */
+const showTaskCompleted = computed(() =>
+  sessionStatus.value === SessionStatus.COMPLETED && !!lastAssistantPlainText.value && !isLoading.value,
+);
+
+/**
+ * Official ChatReplyActions: show Copy under assistant replies that are not the
+ * live last message (TaskCompleted footer owns copy when task is done).
+ */
+const shouldShowAssistantCopyActions = (index: number) => {
+  const m = messages.value[index];
+  if (m?.type !== 'assistant') return false;
+  if (!((m.content as MessageContent).content || '').trim()) return false;
+  if (isLoading.value || sessionStatus.value === SessionStatus.RUNNING || sessionStatus.value === SessionStatus.PENDING) {
+    return index !== lastAssistantIndex.value;
+  }
+  if (showTaskCompleted.value || showWaitingContinue.value) {
+    return index !== lastAssistantIndex.value;
+  }
+  return true;
+};
+
+const isAssistantLastBeforeUser = (index: number) => {
+  if (messages.value[index]?.type !== 'assistant') return false;
+  for (let i = index + 1; i < messages.value.length; i++) {
+    const t = messages.value[i].type;
+    if (t === 'user') return true;
+    if (t === 'assistant') return false;
+  }
+  return false;
+};
+
 // Shared SSE event -> message list conversion
-const { handleEvent } = useAgentEvents(
+const { handleEvent: handleAgentEvent } = useAgentEvents(
   { messages, title, plan, isLoading, lastEventId, lastTool, lastNoMessageTool },
   {
     onToolActivity: (tool: ToolContent) => {
@@ -260,6 +319,19 @@ const { handleEvent } = useAgentEvents(
     },
   }
 );
+
+const handleEvent = (event: AgentSSEEvent) => {
+  handleAgentEvent(event);
+  if (event.event === 'done') {
+    sessionStatus.value = SessionStatus.COMPLETED;
+  } else if (event.event === 'wait') {
+    sessionStatus.value = SessionStatus.WAITING;
+  } else if (event.event === 'message' || event.event === 'tool' || event.event === 'step') {
+    if (sessionStatus.value !== SessionStatus.WAITING) {
+      sessionStatus.value = SessionStatus.RUNNING;
+    }
+  }
+};
 
 // Reset all refs to their initial values
 const resetState = () => {
@@ -274,6 +346,7 @@ const resetState = () => {
   isFavorite.value = false;
   isPinned.value = false;
   projectId.value = null;
+  taskMode.value = 'agent';
   projects.value = [];
 };
 
@@ -383,6 +456,7 @@ const restoreSession = async () => {
   isFavorite.value = !!session.is_favorite;
   isPinned.value = !!session.is_pinned;
   projectId.value = session.project_id ?? null;
+  taskMode.value = session.task_mode === 'chat' ? 'chat' : 'agent';
   realTime.value = false;
   for (const event of session.events) {
     handleEvent(event);

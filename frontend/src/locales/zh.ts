@@ -51,7 +51,7 @@ export default {
   'Desktop': '桌面端',
   'Notifications': '通知',
   'Coming soon': '即将推出',
-  'New project': '新建项目',
+  'New project': '新项目',
   'Favorites': '收藏',
   'Shared': '已分享',
   'Non-project tasks': '非项目任务',
@@ -109,6 +109,7 @@ export default {
   'Project deleted': '项目已删除',
   'Edit project': '编辑项目',
   'Edit instructions': '编辑指令',
+  'View project': '查看项目',
   'Delete project': '删除项目',
   'Delete project?': '删除项目？',
   'Tasks in this project will not be deleted, but they will be removed from the project.':

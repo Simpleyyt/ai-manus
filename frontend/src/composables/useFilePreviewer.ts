@@ -9,7 +9,6 @@ import { router } from '../router'
 export type FilePreviewViewMode = 'side' | 'center' | 'fullscreen'
 
 const isShow = ref(false)
-const visible = ref(true)
 const fileInfo = ref<FileInfo>()
 const viewMode = ref<FilePreviewViewMode>('center')
 const fullscreenReturnViewMode = ref<Exclude<FilePreviewViewMode, 'fullscreen'>>('center')
@@ -72,7 +71,6 @@ export function useFilePreviewer() {
 
   const showFilePreviewer = (file: FileInfo, mode?: FilePreviewViewMode) => {
     eventBus.emit(EVENT_SHOW_FILE_PREVIEWER)
-    visible.value = true
     fileInfo.value = file
     const canUseSide = canUseSideFilePreview.value
     if (mode) {
@@ -117,7 +115,6 @@ export function useFilePreviewer() {
   return {
     isShow,
     fileInfo,
-    visible,
     viewMode,
     fullscreenReturnViewMode,
     defaultViewMode,

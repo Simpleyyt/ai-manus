@@ -2,9 +2,9 @@
   <SimpleBar ref="simpleBarRef" @scroll="handleScroll">
     <!-- Chat column: full-bleed header (Manus) + centered message column -->
     <div ref="chatContainerRef" class="relative flex flex-col h-full flex-1 min-w-0">
-      <!-- Official session chrome (scraped from manus.im/app/...): h-56 bar + brand left + actions right -->
+      <!-- Official session chrome header bar (CDP: manus.im/app/…) -->
       <div ref="observerRef"
-        class="flex h-[56px] w-full shrink-0 items-center justify-between py-[12px] ps-[14px] pe-[20px] md:px-[24px] gap-1 border-b sticky top-0 z-10 flex-shrink-0 bg-[var(--background-gray-main)] border-[var(--border-main)]">
+        class="flex h-[56px] w-full shrink-0 items-center justify-between py-[12px] md:px-[24px] ps-[16px] pe-[20px] md:ps-[16px] md:pe-[20px] gap-1 border-b sticky top-0 z-10 flex-shrink-0 [-webkit-app-region:drag] bg-[var(--background-gray-main)] border-[var(--border-main)]">
         <div class="flex min-w-0 flex-1 items-center gap-1">
           <div class="flex items-center pointer-events-auto overflow-hidden">
             <div class="flex h-8 pt-[7px] md:pr-[6px] pr-[4px] pb-[7px] md:pl-[8px] pl-[6px] justify-center items-center gap-1 rounded-[8px]">
@@ -154,7 +154,7 @@ import { Message, MessageContent, ToolContent, AttachmentsContent, StepContent, 
 import { PlanEventData, AgentSSEEvent } from '../types/event';
 import { useAgentEvents } from '../composables/useAgentEvents';
 import ComputerPanel from '../components/ComputerPanel.vue'
-import { ArrowDown, FileSearch, Lock, Globe, Link, Check, Ellipsis, Pencil, Star, Trash, FolderPlus, Pin } from 'lucide-vue-next';
+import { ArrowDown, FileSearch, Lock, Globe, Link, Check, Ellipsis, Pencil, Star, Trash, FolderPlus, Folder, FolderSync, Pin } from 'lucide-vue-next';
 import ShareIcon from '@/components/icons/ShareIcon.vue';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
 import type { FileInfo } from '../api/file';
@@ -164,9 +164,10 @@ import { copyToClipboard } from '../utils/dom'
 import { SessionStatus, type ProjectItem } from '../types/response';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import LoadingIndicator from '@/components/ui/LoadingIndicator.vue';
-import { useContextMenu, createMenuItem, createDangerMenuItem, createSeparator } from '../composables/useContextMenu';
+import { useContextMenu, createMenuItem, createDangerMenuItem, createSeparator, createSubmenuItem } from '../composables/useContextMenu';
 import { useDialog } from '../composables/useDialog';
-import { getProjects } from '../api/project';
+import { getProjects, createProject } from '../api/project';
+import { eventBus } from '../utils/eventBus';
 
 const router = useRouter()
 const { t } = useI18n()
@@ -620,20 +621,22 @@ const handleMoreClick = async (event: MouseEvent | KeyboardEvent) => {
     createMenuItem('rename', t('Rename'), { icon: Pencil }),
   ];
 
-  if (projects.value.length > 0) {
-    for (const project of projects.value) {
-      if (project.project_id !== projectId.value) {
-        items.push(createMenuItem(
-          `move:${project.project_id}`,
-          `${t('Move to project')}: ${project.name}`,
-          { icon: FolderPlus },
-        ));
-      }
-    }
-  }
+  // Official:「移动到项目」+ chevron → submenu (新项目 / — / projects)
+  const moveChildren = [
+    createMenuItem('new_project', t('New project'), { icon: FolderPlus }),
+    createSeparator(),
+    ...projects.value.map((project) =>
+      createMenuItem(`move:${project.project_id}`, project.name, {
+        icon: Folder,
+        checked: project.project_id === projectId.value,
+      }),
+    ),
+  ];
   if (projectId.value) {
-    items.push(createMenuItem('remove_project', t('Remove from project'), { icon: FolderPlus }));
+    moveChildren.push(createSeparator());
+    moveChildren.push(createMenuItem('remove_project', t('Remove from project'), { icon: Folder }));
   }
+  items.push(createSubmenuItem('move_project', t('Move to project'), moveChildren, { icon: FolderSync }));
 
   items.push(createSeparator());
   items.push(createMenuItem('pin', pinnedNow ? t('Unpin') : t('Pin'), { icon: Pin }));
@@ -678,9 +681,30 @@ const handleMoreClick = async (event: MouseEvent | KeyboardEvent) => {
       } catch {
         showErrorToast(t('Failed to update favorite'));
       }
+    } else if (key === 'new_project') {
+      if (!sessionId.value) return;
+      showInputDialog({
+        title: t('New project'),
+        placeholder: t('Enter project name'),
+        confirmText: t('Create'),
+        onConfirm: async (value: string) => {
+          if (!value || !sessionId.value) return;
+          try {
+            const project = await createProject(value);
+            await agentApi.moveSessionProject(sessionId.value, project.project_id);
+            projectId.value = project.project_id;
+            projects.value = [project, ...projects.value];
+            eventBus.emit('projects:changed');
+            showSuccessToast(t('Moved to project'));
+          } catch {
+            showErrorToast(t('Failed to create project'));
+          }
+        },
+      });
     } else if (key.startsWith('move:')) {
       if (!sessionId.value) return;
       const nextProjectId = key.slice(5);
+      if (nextProjectId === projectId.value) return;
       try {
         await agentApi.moveSessionProject(sessionId.value, nextProjectId);
         projectId.value = nextProjectId;

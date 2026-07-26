@@ -133,12 +133,12 @@
 </template>
 
 <script setup lang="ts">
-import { Ellipsis, FileText, Trash, Share2, Pencil, Star, ExternalLink, FolderPlus, Pin } from 'lucide-vue-next';
+import { Ellipsis, FileText, Trash, Share2, Pencil, Star, ExternalLink, FolderPlus, Folder, FolderSync, Pin } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { ListSessionItem, SessionStatus, ProjectItem } from '../types/response';
-import { useContextMenu, createDangerMenuItem, createMenuItem, createSeparator } from '../composables/useContextMenu';
+import { useContextMenu, createDangerMenuItem, createMenuItem, createSeparator, createSubmenuItem } from '../composables/useContextMenu';
 import { useDialog } from '../composables/useDialog';
 import {
   deleteSession,
@@ -149,8 +149,10 @@ import {
   pinSession,
   moveSessionProject,
 } from '../api/agent';
+import { createProject } from '../api/project';
 import { showSuccessToast, showErrorToast } from '../utils/toast';
 import { formatCustomTime } from '../utils/time';
+import { eventBus } from '../utils/eventBus';
 
 interface Props {
   session: ListSessionItem;
@@ -227,16 +229,22 @@ const handleSessionMenuClick = (event: MouseEvent) => {
     createMenuItem('open', t('Open in new tab'), { icon: ExternalLink }),
   ];
 
-  if (props.projects.length > 0) {
-    for (const project of props.projects) {
-      if (project.project_id !== props.session.project_id) {
-        items.push(createMenuItem(`move:${project.project_id}`, `${t('Move to project')}: ${project.name}`, { icon: FolderPlus }));
-      }
-    }
-  }
+  // Official: single「移动到项目」row → submenu (新项目 / projects)
+  const moveChildren = [
+    createMenuItem('new_project', t('New project'), { icon: FolderPlus }),
+    createSeparator(),
+    ...props.projects.map((project) =>
+      createMenuItem(`move:${project.project_id}`, project.name, {
+        icon: Folder,
+        checked: project.project_id === props.session.project_id,
+      }),
+    ),
+  ];
   if (props.session.project_id) {
-    items.push(createMenuItem('remove_project', t('Remove from project'), { icon: FolderPlus }));
+    moveChildren.push(createSeparator());
+    moveChildren.push(createMenuItem('remove_project', t('Remove from project'), { icon: Folder }));
   }
+  items.push(createSubmenuItem('move_project', t('Move to project'), moveChildren, { icon: FolderSync }));
 
   items.push(createSeparator());
   items.push(createMenuItem('pin', pinnedNow ? t('Unpin') : t('Pin'), { icon: Pin }));
@@ -295,8 +303,27 @@ const handleSessionMenuClick = (event: MouseEvent) => {
       }
     } else if (itemKey === 'open') {
       window.open(`/chat/${props.session.session_id}`, '_blank');
+    } else if (itemKey === 'new_project') {
+      showInputDialog({
+        title: t('New project'),
+        placeholder: t('Enter project name'),
+        confirmText: t('Create'),
+        onConfirm: async (value: string) => {
+          if (!value) return;
+          try {
+            const project = await createProject(value);
+            await moveSessionProject(props.session.session_id, project.project_id);
+            emit('moved', props.session.session_id, project.project_id);
+            eventBus.emit('projects:changed');
+            showSuccessToast(t('Moved to project'));
+          } catch {
+            showErrorToast(t('Failed to create project'));
+          }
+        },
+      });
     } else if (itemKey.startsWith('move:')) {
       const projectId = itemKey.slice(5);
+      if (projectId === props.session.project_id) return;
       try {
         await moveSessionProject(props.session.session_id, projectId);
         emit('moved', props.session.session_id, projectId);

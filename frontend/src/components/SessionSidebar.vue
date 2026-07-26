@@ -166,13 +166,21 @@
                         {{ project.name || t('Untitled') }}
                       </span>
                     </div>
-                    <div class="flex items-center flex-shrink-0">
+                    <div class="flex items-center flex-shrink-0 opacity-0 group-hover:opacity-100">
+                      <!-- Official: … menu (pin/edit/view/delete) + SquarePen shortcut -->
                       <button
                         type="button"
-                        class="hidden group-hover:flex size-[32px] rounded-[8px] items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-white-light)] text-[var(--icon-tertiary)]"
-                        :title="t('Unpin')"
-                        @click.stop="handlePinProject(project)">
-                        <Pin :size="14" />
+                        class="size-[32px] flex rounded-[8px] items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-white-light)] text-[var(--icon-tertiary)]"
+                        :title="t('More options')"
+                        @click.stop="handleProjectMenuClick($event, project)">
+                        <Ellipsis :size="18" />
+                      </button>
+                      <button
+                        type="button"
+                        class="size-[32px] flex rounded-[8px] items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-white-light)] text-[var(--icon-tertiary)]"
+                        :title="t('Edit')"
+                        @click.stop="handleEditProject(project)">
+                        <SquarePen :size="16" />
                       </button>
                     </div>
                   </div>
@@ -270,13 +278,21 @@
                         {{ project.name || t('Untitled') }}
                       </span>
                     </div>
-                    <div class="flex items-center flex-shrink-0">
+                    <div class="flex items-center flex-shrink-0 opacity-0 group-hover:opacity-100">
+                      <!-- Official: … menu (pin/edit/view/delete) + SquarePen shortcut -->
                       <button
                         type="button"
-                        class="hidden group-hover:flex size-[32px] rounded-[8px] items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-white-light)] text-[var(--icon-tertiary)]"
-                        :title="t('Pin')"
-                        @click.stop="handlePinProject(project)">
-                        <Pin :size="14" />
+                        class="size-[32px] flex rounded-[8px] items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-white-light)] text-[var(--icon-tertiary)]"
+                        :title="t('More options')"
+                        @click.stop="handleProjectMenuClick($event, project)">
+                        <Ellipsis :size="18" />
+                      </button>
+                      <button
+                        type="button"
+                        class="size-[32px] flex rounded-[8px] items-center justify-center cursor-pointer hover:bg-[var(--fill-tsp-white-light)] text-[var(--icon-tertiary)]"
+                        :title="t('Edit')"
+                        @click.stop="handleEditProject(project)">
+                        <SquarePen :size="16" />
                       </button>
                     </div>
                   </div>
@@ -420,7 +436,7 @@
 <script setup lang="ts">
 import {
   Bot, PanelLeft, SquarePen, MessageSquareDashed, ChevronUp, ChevronRight, Search, LibraryBig,
-  Plus, FolderPlus, Check, Pin, Folder, ListFilter,
+  Plus, FolderPlus, Check, Pin, PinOff, Folder, ListFilter, Ellipsis, Eye, Trash, Pencil,
 } from 'lucide-vue-next';
 import SessionItem from './SessionItem.vue';
 import UserMenu from './UserMenu.vue';
@@ -429,10 +445,11 @@ import ManusLogoTextIcon from './icons/ManusLogoTextIcon.vue';
 import { useSessionSidebar } from '../composables/useSessionSidebar';
 import { useAuth } from '../composables/useAuth';
 import { useDialog } from '../composables/useDialog';
+import { useContextMenu, createMenuItem, createDangerMenuItem } from '../composables/useContextMenu';
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getSessionsSSE, getSessions } from '../api/agent';
-import { getProjects, createProject, pinProject } from '../api/project';
+import { getProjects, createProject, pinProject, updateProject, deleteProject } from '../api/project';
 import { getCachedClientConfig } from '../api/config';
 import { ListSessionItem, ProjectItem } from '../types/response';
 import { useI18n } from 'vue-i18n';
@@ -443,7 +460,8 @@ type TaskFilter = 'all' | 'favorites' | 'shared' | 'noProject'
 
 const { t } = useI18n()
 const { isSessionSidebarShow, toggleSessionSidebar } = useSessionSidebar()
-const { showInputDialog } = useDialog()
+const { showInputDialog, showConfirmDialog } = useDialog()
+const { showContextMenu } = useContextMenu()
 const route = useRoute()
 const router = useRouter()
 
@@ -631,6 +649,78 @@ const handlePinProject = async (project: ProjectItem) => {
   } catch {
     showErrorToast(t('Failed to update project'))
   }
+}
+
+const handleEditProject = (project: ProjectItem) => {
+  showInputDialog({
+    title: t('Edit project'),
+    initialValue: project.name,
+    placeholder: t('Enter project name'),
+    confirmText: t('Save'),
+    onConfirm: async (value: string) => {
+      if (!value) return
+      try {
+        const updated = await updateProject(project.project_id, { name: value })
+        projects.value = projects.value.map(p =>
+          p.project_id === updated.project_id ? updated : p,
+        )
+        eventBus.emit('projects:changed')
+        showSuccessToast(t('Project updated successfully'))
+      } catch {
+        showErrorToast(t('Failed to update project'))
+      }
+    },
+  })
+}
+
+const handleDeleteProject = (project: ProjectItem) => {
+  showConfirmDialog({
+    title: t('Delete project?'),
+    content: t('Tasks in this project will not be deleted, but they will be removed from the project.'),
+    confirmText: t('Delete'),
+    confirmType: 'danger',
+    onConfirm: async () => {
+      try {
+        await deleteProject(project.project_id)
+        projects.value = projects.value.filter(p => p.project_id !== project.project_id)
+        sessions.value = sessions.value.map(s =>
+          s.project_id === project.project_id ? { ...s, project_id: null } : s,
+        )
+        eventBus.emit('projects:changed')
+        eventBus.emit('sessions:changed')
+        showSuccessToast(t('Project deleted'))
+        if (route.path === `/project/${project.project_id}`) {
+          await router.push('/')
+        }
+      } catch {
+        showErrorToast(t('Failed to update project'))
+      }
+    },
+  })
+}
+
+/** Official project row … menu: Unpin|Pin / Edit / View project / Delete */
+const handleProjectMenuClick = (event: MouseEvent, project: ProjectItem) => {
+  event.stopPropagation()
+  const target = event.currentTarget as HTMLElement
+  const pinnedNow = !!project.is_pinned
+  const items = [
+    createMenuItem('pin', pinnedNow ? t('Unpin') : t('Pin'), { icon: pinnedNow ? PinOff : Pin }),
+    createMenuItem('edit', t('Edit'), { icon: Pencil }),
+    createMenuItem('view', t('View project'), { icon: Eye }),
+    createDangerMenuItem('delete', t('Delete'), { icon: Trash }),
+  ]
+  showContextMenu(project.project_id, target, items, async (key: string) => {
+    if (key === 'pin') {
+      await handlePinProject(project)
+    } else if (key === 'edit') {
+      handleEditProject(project)
+    } else if (key === 'view') {
+      openProject(project.project_id)
+    } else if (key === 'delete') {
+      handleDeleteProject(project)
+    }
+  })
 }
 
 const loadProjects = async () => {

@@ -29,10 +29,12 @@
     </div>
   </div>
 
-  <!-- Official portal: center mask + panel / fullscreen -->
+  <!-- Official portal: center mask + panel / fullscreen.
+       Keep center/fullscreen above Computer sidebar updates — do not dismiss
+       when EVENT_SHOW_COMPUTER_PANEL fires during a running task. -->
   <Teleport to="body">
     <div
-      v-if="visible && isShow && fileInfo && fileType && (viewMode === 'center' || viewMode === 'fullscreen')"
+      v-if="isShow && fileInfo && fileType && (viewMode === 'center' || viewMode === 'fullscreen')"
       class="fixed inset-0 pointer-events-none z-[1000]">
       <div
         v-if="viewMode === 'center'"
@@ -67,19 +69,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useFilePreviewer } from '../composables/useFilePreviewer'
 import { getFileDownloadUrl } from '../api/file'
 import { getFileType } from '../utils/fileType'
 import { useResizeObserver } from '../composables/useResizeObserver'
-import { eventBus } from '../utils/eventBus'
-import { EVENT_SHOW_COMPUTER_PANEL } from '../constants/event'
 import FilePreviewerChrome from './FilePreviewerChrome.vue'
 
 const {
   isShow,
   fileInfo,
-  visible,
   viewMode,
   showFilePreviewer,
   hideFilePreviewer,
@@ -121,16 +120,6 @@ const download = async () => {
   const url = await getFileDownloadUrl(fileInfo.value)
   window.open(url, '_blank')
 }
-
-onMounted(() => {
-  eventBus.on(EVENT_SHOW_COMPUTER_PANEL, () => {
-    visible.value = false
-  })
-})
-
-onUnmounted(() => {
-  eventBus.off(EVENT_SHOW_COMPUTER_PANEL)
-})
 
 defineExpose({
   showFilePreviewer,

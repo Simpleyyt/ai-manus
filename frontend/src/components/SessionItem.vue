@@ -108,24 +108,37 @@
     <div class="flex-1 min-w-0 flex gap-[4px] items-center text-[14px] text-[var(--text-primary)]">
       <span
         class="truncate"
-        :class="hasUnread ? 'font-semibold' : 'font-normal'"
         :title="session.title || t('New Chat')">
         {{ session.title || t('New Chat') }}
       </span>
-      <Star
-        v-if="session.is_favorite"
-        :size="12"
-        class="shrink-0 text-[var(--function-warning)]"
-        fill="var(--function-warning)" />
     </div>
 
-    <div class="shrink-0 flex items-center gap-1">
+    <!-- Official rightSlot: unread (16px) XOR favorite star, then more (32px swap on hover) -->
+    <div class="flex items-center">
       <div
-        @click.stop="handleSessionMenuClick"
-        class="group-hover:flex hidden size-8 rounded-[8px] cursor-pointer items-center justify-center hover:bg-[var(--fill-tsp-white-light)]"
-        :class="isContextMenuOpen ? '!flex bg-[var(--fill-tsp-white-light)]' : ''"
+        v-if="hasUnread || session.is_favorite"
+        class="size-[32px] flex items-center justify-center overflow-hidden group-hover:size-0"
+        :class="isContextMenuOpen ? '!size-0' : ''">
+        <div
+          v-if="hasUnread"
+          class="flex items-center justify-center h-[16px] min-w-[16px] px-[4px] rounded-full bg-[var(--function-error)] text-[var(--text-white)]">
+          <span class="text-[10px] font-[500] leading-normal">
+            {{ unreadBadge }}
+          </span>
+        </div>
+        <Star
+          v-else
+          :size="16"
+          class="text-[var(--function-warning)]"
+          fill="var(--function-warning)"
+        />
+      </div>
+      <div
+        class="rounded-[8px] cursor-pointer flex items-center justify-center size-0 overflow-hidden group-hover:size-[32px] hover:bg-[var(--fill-tsp-white-light)]"
+        :class="isContextMenuOpen ? '!size-[32px] bg-[var(--fill-tsp-white-light)]' : ''"
         :title="t('More options')"
-        aria-expanded="false" aria-haspopup="dialog">
+        @pointerdown.stop
+        @click.stop="handleSessionMenuClick">
         <Ellipsis :size="18" class="text-[var(--icon-tertiary)]" />
       </div>
     </div>
@@ -188,11 +201,15 @@ const emit = defineEmits<{
 const currentSessionId = computed(() => route.params.sessionId as string);
 const isCurrentSession = computed(() => currentSessionId.value === props.session.session_id);
 
+// Official: !isCurrent && getUnreadBadgeCount(session) > 0
+// getUnreadBadgeCount → 0 while activity (running/waiting/in_queue/created)
 const hasUnread = computed(() => {
+  if (isCurrentSession.value) return false;
   const active = props.session.status === SessionStatus.RUNNING
     || props.session.status === SessionStatus.PENDING
     || props.session.status === SessionStatus.WAITING;
-  return !active && (props.session.unread_message_count ?? 0) > 0;
+  if (active) return false;
+  return (props.session.unread_message_count ?? 0) > 0;
 });
 
 const unreadBadge = computed(() => {

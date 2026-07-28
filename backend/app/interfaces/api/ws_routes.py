@@ -256,7 +256,10 @@ async def chat_ws(websocket: WebSocket):
                 await safe_send({"type": "joined", "session_id": session_id})
 
                 # Resume live stream only while agent is actively running.
-                # pending/idle: ack join + stream_end so client clears loading.
+                # Idle/pending/completed/waiting: join ack only — do NOT send
+                # stream_end here. A follow-up `chat` would otherwise lose the
+                # client "thinking" state when the idle stream_end arrives after
+                # the chat frame was already sent.
                 status = getattr(session.status, "value", session.status)
                 if status == "running":
                     await cancel_stream()
@@ -265,8 +268,6 @@ async def chat_ws(websocket: WebSocket):
                         message=None,
                         last_event_id=last_event_id,
                     )
-                else:
-                    await safe_send({"type": "stream_end", "session_id": session_id})
 
             elif msg_type == "leave_session":
                 target = session_id or joined_session_id

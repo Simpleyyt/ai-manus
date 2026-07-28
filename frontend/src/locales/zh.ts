@@ -17,6 +17,7 @@ export default {
   'New Chat': '新对话',
   'New Task': '新建任务',
   'Thinking': '思考中',
+  '{name} is thinking': '{name} 正在思考',
   'Diff': '差异',
   'Original': '原始',
   'Modified': '已修改',

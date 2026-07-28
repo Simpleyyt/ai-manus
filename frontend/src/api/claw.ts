@@ -1,5 +1,4 @@
 import { apiClient, ApiResponse, BASE_URL } from './client';
-import { getStoredToken } from './auth';
 
 export type ClawStatus = 'creating' | 'running' | 'stopped' | 'error';
 
@@ -100,10 +99,9 @@ export class ClawWebSocket {
   private connect() {
     if (this.closed) return;
 
+    // Same Cookie / Bearer resolve as /ws/sessions and /ws/chat. No ?token=.
     const wsBase = BASE_URL.replace(/^http/, 'ws');
-    const token = getStoredToken();
-    const params = token ? `?token=${encodeURIComponent(token)}` : '';
-    const url = `${wsBase}/claw/ws${params}`;
+    const url = `${wsBase}/ws/claw`;
 
     this.ws = new WebSocket(url);
 

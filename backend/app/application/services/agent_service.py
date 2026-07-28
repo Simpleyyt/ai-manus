@@ -92,7 +92,8 @@ class AgentService:
         event_id: Optional[str] = None,
         attachments: Optional[List[FileInfo]] = None
     ) -> AsyncGenerator[AgentEvent, None]:
-        logger.info(f"Starting chat with session {session_id}: {message[:50]}...")
+        preview = (message or "")[:50]
+        logger.info(f"Starting chat with session {session_id}: {preview!r}...")
         # Directly use the domain service's chat method, which will check if the session exists
         async for event in self._agent_domain_service.chat(session_id, user_id, message, timestamp, event_id, attachments):
             logger.debug(f"Received event: {event}")
@@ -114,6 +115,14 @@ class AgentService:
         """Get all sessions for a specific user (lightweight summaries)"""
         logger.info(f"Getting all sessions for user {user_id}")
         return await self._session_repository.find_summaries_by_user_id(user_id)
+
+    async def get_session_summary(
+        self, session_id: str, user_id: str
+    ) -> Optional[SessionSummary]:
+        """Get a lightweight session summary for list upsert"""
+        return await self._session_repository.find_summary_by_id_and_user_id(
+            session_id, user_id
+        )
 
     async def delete_session(self, session_id: str, user_id: str) -> None:
         """Delete a session, ensuring it belongs to the user"""

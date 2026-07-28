@@ -448,7 +448,7 @@ import { useDialog } from '../composables/useDialog';
 import { useContextMenu, createMenuItem, createDangerMenuItem } from '../composables/useContextMenu';
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getSessionsSSE, getSessions } from '../api/agent';
+import { getSessions, connectSessionsListWS } from '../api/agent';
 import { getProjects, createProject, pinProject, updateProject, deleteProject } from '../api/project';
 import { getCachedClientConfig } from '../api/config';
 import { ListSessionItem, ProjectItem } from '../types/response';
@@ -467,7 +467,48 @@ const router = useRouter()
 
 const sessions = ref<ListSessionItem[]>([])
 const projects = ref<ProjectItem[]>([])
-const cancelGetSessionsSSE = ref<(() => void) | null>(null)
+const cancelSessionsListWS = ref<(() => void) | null>(null)
+
+const upsertSessionItem = (item: ListSessionItem) => {
+  const rest = sessions.value.filter(s => s.session_id !== item.session_id)
+  const next = [...rest, item]
+  next.sort((a, b) => (b.latest_message_at ?? 0) - (a.latest_message_at ?? 0))
+  sessions.value = next
+}
+
+const updateSessions = async () => {
+  try {
+    const response = await getSessions()
+    sessions.value = response.sessions
+  } catch (error) {
+    console.error('Failed to fetch sessions:', error)
+  }
+}
+
+const fetchSessions = async () => {
+  try {
+    if (cancelSessionsListWS.value) {
+      cancelSessionsListWS.value()
+      cancelSessionsListWS.value = null
+    }
+    cancelSessionsListWS.value = connectSessionsListWS({
+      onMessage: (msg) => {
+        if (msg.op === 'snapshot') {
+          sessions.value = msg.sessions
+        } else if (msg.op === 'upsert') {
+          upsertSessionItem(msg.session)
+        } else if (msg.op === 'remove') {
+          sessions.value = sessions.value.filter(s => s.session_id !== msg.session_id)
+        }
+      },
+      onError: () => {
+        console.error('Sessions list WS error')
+      },
+    })
+  } catch (error) {
+    console.error('Failed to connect sessions list WS:', error)
+  }
+}
 const isListScrolled = ref(false)
 const clawEnabled = ref(false)
 const scrollContainerRef = ref<HTMLElement | null>(null)
@@ -553,34 +594,6 @@ const handleClickOutside = (event: MouseEvent) => {
 const handleListScroll = () => {
   if (scrollContainerRef.value) {
     isListScrolled.value = scrollContainerRef.value.scrollTop > 0
-  }
-}
-
-const updateSessions = async () => {
-  try {
-    const response = await getSessions()
-    sessions.value = response.sessions
-  } catch (error) {
-    console.error('Failed to fetch sessions:', error)
-  }
-}
-
-const fetchSessions = async () => {
-  try {
-    if (cancelGetSessionsSSE.value) {
-      cancelGetSessionsSSE.value()
-      cancelGetSessionsSSE.value = null
-    }
-    cancelGetSessionsSSE.value = await getSessionsSSE({
-      onMessage: (event) => {
-        sessions.value = event.data.sessions
-      },
-      onError: (error) => {
-        console.error('Failed to fetch sessions:', error)
-      }
-    })
-  } catch (error) {
-    console.error('Failed to fetch sessions:', error)
   }
 }
 
@@ -804,9 +817,9 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  if (cancelGetSessionsSSE.value) {
-    cancelGetSessionsSSE.value()
-    cancelGetSessionsSSE.value = null
+  if (cancelSessionsListWS.value) {
+    cancelSessionsListWS.value()
+    cancelSessionsListWS.value = null
   }
 
   eventBus.off('projects:changed', loadProjects)

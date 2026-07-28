@@ -114,7 +114,7 @@
             />
 
             <!-- Loading indicator while waiting for response -->
-            <LoadingIndicator v-if="isWaitingResponse && !hasStreamingContent" :text="$t('Thinking')" />
+            <LoadingIndicator v-if="isWaitingResponse && !hasStreamingContent" :text="$t('{name} is thinking', { name: 'Manus' })" />
 
           </div>
 

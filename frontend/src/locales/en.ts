@@ -17,6 +17,7 @@ export default {
   'New Chat': 'New Chat',
   'New Task': 'New Task',
   'Thinking': 'Thinking',
+  '{name} is thinking': '{name} is thinking',
   'Diff': 'Diff',
   'Original': 'Original',
   'Modified': 'Modified',

@@ -19,7 +19,7 @@ backend/
 │   │   └── services/    # Application services (agent, auth, file, token, email, claw)
 │   ├── interfaces/      # Interface layer: defines external system interfaces
 │   │   ├── api/         # API routes (sessions, files, auth, config, claw, OpenAI proxy)
-│   │   └── schemas/     # Request/response and SSE event schemas
+│   │   └── schemas/     # Request/response and realtime event schemas
 │   ├── infrastructure/  # Infrastructure layer: provides technical implementation
 │   ├── core/            # Core configuration (config.py)
 │   └── main.py          # Application entry
@@ -31,7 +31,7 @@ backend/
 ## Core Features
 
 1. **Session Management**: Create and manage conversation session instances
-2. **Real-time Conversation**: Implement real-time conversation through Server-Sent Events (SSE)
+2. **Real-time Conversation**: Stream session list, chat, Claw, and VNC over WebSocket (`/ws/sessions`, `/ws/chat`, `/ws/claw`, `/ws/vnc/{session_id}`)
 3. **Tool Invocation**: Support for various tool calls, including:
    - Browser automation operations (using Playwright)
    - Shell command execution and viewing
@@ -152,23 +152,30 @@ All JSON APIs return a unified envelope:
 |---|---|---|
 | PUT | `/sessions` | Create a new conversation session |
 | GET | `/sessions` | List all sessions |
-| POST | `/sessions` | Stream session list updates (SSE) |
 | GET | `/sessions/{session_id}` | Get session details including event history |
 | DELETE | `/sessions/{session_id}` | Delete a session |
 | POST | `/sessions/{session_id}/stop` | Stop an active session |
-| POST | `/sessions/{session_id}/chat` | Send a message and receive an SSE event stream |
 | POST | `/sessions/{session_id}/clear_unread_message_count` | Clear the unread message count |
 | POST | `/sessions/{session_id}/shell` | View shell session output in the sandbox |
 | POST | `/sessions/{session_id}/file` | View file content in the sandbox |
 | GET | `/sessions/{session_id}/files` | List files attached to the session |
-| WebSocket | `/sessions/{session_id}/vnc` | VNC connection to the sandbox (binary subprotocol) |
-| POST | `/sessions/{session_id}/vnc/signed-url` | Generate a signed URL for VNC WebSocket access |
 | POST | `/sessions/{session_id}/share` | Share a session publicly |
 | DELETE | `/sessions/{session_id}/share` | Unshare a session |
 | GET | `/sessions/{session_id}/share/files` | List files of a shared session |
 | GET | `/sessions/shared/{session_id}` | Get a shared session (no authentication) |
 
-SSE event types emitted by `/chat`: `message`, `title`, `plan`, `step`, `tool`, `wait`, `error`, `done`.
+### Realtime WebSocket (`/api/v1/ws`)
+
+Auth: browser Cookie (`session_id`) or App `Authorization: Bearer` (no `?token=`).
+
+| Path | Description |
+|---|---|
+| WebSocket | `/ws/sessions` | Session list channel (`snapshot` / `upsert` / `remove` / `ping`) |
+| WebSocket | `/ws/chat` | Chat channel — one connection per tab; switch with `join_session` / `leave_session`; send with `chat`; stop with `stop_session` |
+| WebSocket | `/ws/claw` | Claw chat channel (`chat` / `text` / `file` / `done` / `heartbeat`) |
+| WebSocket | `/ws/vnc/{session_id}` | Sandbox VNC proxy (binary subprotocol; Cookie/Bearer) |
+
+Chat server→client event envelope: `{ type: "event", session_id, event, data }` where `event` is one of `message`, `title`, `plan`, `step`, `tool`, `wait`, `error`, `done`.
 
 ### File Endpoints (`/api/v1/files`)
 
@@ -212,7 +219,6 @@ SSE event types emitted by `/chat`: `message`, `title`, `plan`, `step`, `tool`, 
 | GET | `/claw/files/{filename}` | Proxy a file download from the Claw workspace |
 | GET | `/claw/resolve/{file_id}` | Resolve `manus-file://` metadata (Claw API key auth) |
 | GET | `/claw/resolve/{file_id}/download` | Download `manus-file://` content (Claw API key auth) |
-| WebSocket | `/claw/ws` | Persistent WebSocket connection for Claw chat |
 
 ### Other Endpoints
 

@@ -129,7 +129,10 @@
           <ChatTaskCompleted
             :visible="showTaskCompleted"
             :copy-text="lastAssistantPlainText" />
-          <LoadingIndicator v-if="isLoading" :text="$t('Thinking')" />
+          <!-- AgentIsTyping: only fill the empty gap before first visible turn output -->
+          <LoadingIndicator v-if="showThinking" :text="$t('{name} is thinking', { name: 'Manus' })" />
+          <!-- Official running spacer when work is already visible (tools/steps/messages) -->
+          <div v-else-if="isLoading" aria-hidden="true" class="h-5 invisible" />
         </div>
 
         <div class="flex flex-col bg-[var(--background-gray-main)] sticky bottom-0">
@@ -282,6 +285,40 @@ const showTaskCompleted = computed(() =>
 );
 
 /**
+ * Official AgentIsTyping: show only while waiting for the first visible output
+ * of the current turn. Once assistant text / tool / step appears, the content
+ * itself is the status — keep "thinking" would contradict "doing".
+ */
+const showThinking = computed(() => {
+  if (!isLoading.value) return false;
+  if (showWaitingContinue.value || showTaskCompleted.value) return false;
+
+  let lastUserIdx = -1;
+  for (let i = messages.value.length - 1; i >= 0; i--) {
+    const m = messages.value[i];
+    if (m.type === 'user') {
+      lastUserIdx = i;
+      break;
+    }
+    if (m.type === 'attachments' && (m.content as AttachmentsContent).role === 'user') {
+      lastUserIdx = i;
+      break;
+    }
+  }
+
+  for (let i = lastUserIdx + 1; i < messages.value.length; i++) {
+    const m = messages.value[i];
+    if (m.type === 'tool' || m.type === 'step') return false;
+    if (m.type === 'assistant') {
+      const text = ((m.content as MessageContent).content || '').trim();
+      if (text) return false;
+      // Empty assistant bubble → still typing (official)
+    }
+  }
+  return true;
+});
+
+/**
  * Official ChatReplyActions: show Copy under assistant replies that are not the
  * live last message (TaskCompleted footer owns copy when task is done).
  */
@@ -335,9 +372,14 @@ const handleEvent = (event: AgentSSEEvent) => {
 
 // Reset all refs to their initial values
 const resetState = () => {
-  // Cancel any existing chat connection
+  const prevSessionId = sessionId.value;
+  // Drop local stream handlers; leave WS subscription for previous session
   if (cancelCurrentChat.value) {
     cancelCurrentChat.value();
+    cancelCurrentChat.value = null;
+  }
+  if (prevSessionId) {
+    void agentApi.leaveChatSession(prevSessionId);
   }
 
   // Reset reactive state to initial values
@@ -462,7 +504,9 @@ const restoreSession = async () => {
     handleEvent(event);
   }
   realTime.value = true;
-  if (session.status === SessionStatus.RUNNING || session.status === SessionStatus.PENDING) {
+  // Only resume the live stream while the agent is running. Idle join no longer
+  // emits stream_end; pending/completed sessions must not leave isLoading stuck.
+  if (session.status === SessionStatus.RUNNING) {
     await chat();
   }
   agentApi.clearUnreadMessageCount(sessionId.value);
@@ -502,9 +546,13 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  const prevSessionId = sessionId.value;
   if (cancelCurrentChat.value) {
     cancelCurrentChat.value();
     cancelCurrentChat.value = null;
+  }
+  if (prevSessionId) {
+    void agentApi.leaveChatSession(prevSessionId);
   }
 })
 

@@ -95,7 +95,7 @@ print(f"MongoDB: {r.stdout.strip()} messages")
 import asyncio, json, websockets
 
 async def send_and_wait(message):
-    uri = 'ws://localhost:8000/api/v1/claw/ws?token=none'
+    uri = 'ws://localhost:8000/api/v1/ws/claw'
     async with websockets.connect(uri) as ws:
         await ws.send(json.dumps({
             'type': 'chat', 'message': message, 'session_id': 'default'

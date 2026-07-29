@@ -279,14 +279,7 @@ class ChatWebSocket {
 
     this.pendingJoin = { sessionId, lastEventId };
     if (this.joinedSessionId && this.joinedSessionId !== sessionId) {
-      // Fire-and-forget leave (no version required server-side)
-      this.send({
-        type: 'leave_session',
-        session_id: this.joinedSessionId,
-        id: shortUID(),
-        timestamp: Math.floor(Date.now() / 1000),
-        conn_id: this.connId,
-      });
+      this.send(this.envelope('leave_session', { session_id: this.joinedSessionId }));
       this.joinedSessionId = null;
     }
 
@@ -307,13 +300,7 @@ class ChatWebSocket {
       this.pendingJoin = null;
     }
     if (this.ws?.readyState === WebSocket.OPEN) {
-      this.send({
-        type: 'leave_session',
-        session_id: target,
-        id: shortUID(),
-        timestamp: Math.floor(Date.now() / 1000),
-        conn_id: this.connId,
-      });
+      this.send(this.envelope('leave_session', { session_id: target }));
     }
     if (this.joinedSessionId === target) {
       this.joinedSessionId = null;

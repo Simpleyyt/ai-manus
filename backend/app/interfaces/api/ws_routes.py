@@ -311,7 +311,8 @@ async def chat_ws(websocket: WebSocket):
             session_id = raw.get("session_id")
             request_id = raw.get("id")
 
-            # leave_session: allow without version (fire-and-forget on tab close)
+            # leave_session: still accept missing version (tab-close races), but
+            # clients should send version: 2 like other control frames.
             if msg_type != "leave_session" and raw.get("version") != CHAT_WS_PROTOCOL_VERSION:
                 await send_error(
                     f"Unsupported protocol version (require {CHAT_WS_PROTOCOL_VERSION})",

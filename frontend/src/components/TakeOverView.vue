@@ -21,6 +21,7 @@ import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import VNCViewer from './VNCViewer.vue';
+import { eventBus } from '../utils/eventBus';
 
 const route = useRoute();
 const { t } = useI18n();
@@ -29,13 +30,9 @@ const { t } = useI18n();
 const takeOverActive = ref(false);
 const currentSessionId = ref('');
 
-
-
-// Listen to takeover events
-const handleTakeOverEvent = (event: Event) => {
-    const customEvent = event as CustomEvent;
-    takeOverActive.value = customEvent.detail.active;
-    currentSessionId.value = customEvent.detail.sessionId;
+const handleTakeOverEvent = (payload: { sessionId: string; active: boolean }) => {
+    takeOverActive.value = payload.active;
+    currentSessionId.value = payload.sessionId;
 };
 
 // Calculate whether to show takeover view
@@ -51,16 +48,12 @@ const shouldShow = computed(() => {
     return !!sessionId && vnc === '1';
 });
 
-// Add event listener when component is mounted
 onMounted(() => {
-    window.addEventListener('takeover', handleTakeOverEvent as EventListener);
+    eventBus.on('ui:takeover', handleTakeOverEvent);
 });
 
-
-
-// Remove event listener when component is unmounted
 onBeforeUnmount(() => {
-    window.removeEventListener('takeover', handleTakeOverEvent as EventListener);
+    eventBus.off('ui:takeover', handleTakeOverEvent);
 });
 
 // Get session ID

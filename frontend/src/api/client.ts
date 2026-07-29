@@ -1,6 +1,7 @@
 // Backend API client configuration
 import axios, { AxiosError } from 'axios';
 import { clearStoredTokens, getStoredToken, getStoredRefreshToken, storeToken, storeRefreshToken } from './auth';
+import { eventBus } from '../utils/eventBus';
 
 // API configuration
 export const API_CONFIG = {
@@ -132,7 +133,7 @@ const refreshAuthToken = async (): Promise<string | null> => {
     processQueue(refreshError, null);
     
     // Emit logout event
-    window.dispatchEvent(new CustomEvent('auth:logout'));
+    eventBus.emit('auth:logout');
     
     // Redirect to login page
     redirectToLogin();

@@ -7,14 +7,25 @@ export const UI_SHOW_COMPUTER_PANEL = 'ui:show-computer-panel' as const
 
 /**
  * Typed app-wide mitt bus. No `[key: string]` escape — new events must be declared here.
- *
- * Window CustomEvents (`takeover`, `toast`, `auth:logout`) stay on `window` for now.
  */
 export type AppEvents = {
   'projects:changed': undefined
   'sessions:changed': undefined
   'ui:show-file-previewer': undefined
   'ui:show-computer-panel': undefined
+  /** VNC browser takeover overlay */
+  'ui:takeover': {
+    sessionId: string
+    active: boolean
+  }
+  /** Global toast notifications */
+  'ui:toast': {
+    message: string
+    type: 'error' | 'info' | 'success'
+    duration: number
+  }
+  /** Token refresh failed — clear session silently */
+  'auth:logout': undefined
   /** Official terminalUpdate — live shell console */
   'tool:terminal_update': {
     sessionId: string

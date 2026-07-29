@@ -771,9 +771,10 @@ const handleTakeControl = () => {
     realTime.value = true;
     computerPanel.value?.showComputerPanel(browserTool, true);
   }
-  window.dispatchEvent(new CustomEvent('takeover', {
-    detail: { sessionId: sessionId.value, active: true }
-  }));
+  eventBus.emit('ui:takeover', {
+    sessionId: sessionId.value,
+    active: true,
+  });
 }
 
 const handleSelectTool = (tool: ToolContent) => {

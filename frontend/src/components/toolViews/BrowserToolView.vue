@@ -37,6 +37,7 @@ import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import VNCViewer from '@/components/VNCViewer.vue';
 import TakeOverIcon from '@/components/icons/TakeOverIcon.vue';
+import { eventBus } from '@/utils/eventBus';
 
 const props = defineProps<{
   sessionId: string;
@@ -56,11 +57,9 @@ watch(() => props.toolContent?.content?.screenshot, () => {
 }, { immediate: true });
 
 const takeOver = () => {
-  window.dispatchEvent(new CustomEvent('takeover', {
-    detail: {
-      sessionId: props.sessionId,
-      active: true
-    }
-  }));
+  eventBus.emit('ui:takeover', {
+    sessionId: props.sessionId,
+    active: true,
+  });
 };
 </script>

@@ -235,6 +235,24 @@ class BaseAgent(ABC):
                     if shell_id and hasattr(tool.toolkit, "sandbox"):
                         invoke_task = asyncio.create_task(self.invoke_tool(tool, tool_call))
                         last_fingerprint: Optional[str] = None
+
+                        def _console_fingerprint(console: Any) -> str:
+                            """Cheap change detector — avoid repr() on large consoles."""
+                            if console is None:
+                                return "0:"
+                            if isinstance(console, str):
+                                return f"s:{len(console)}:{console[-80:]}"
+                            if isinstance(console, list):
+                                if not console:
+                                    return "0:"
+                                last = console[-1]
+                                if isinstance(last, dict):
+                                    tail = f"{last.get('command', '')}|{str(last.get('output', ''))[-60:]}"
+                                else:
+                                    tail = str(last)[-80:]
+                                return f"l:{len(console)}:{tail}"
+                            return f"o:{type(console).__name__}:{str(console)[-80:]}"
+
                         while not invoke_task.done():
                             done, _ = await asyncio.wait({invoke_task}, timeout=1.0)
                             if done:
@@ -248,11 +266,7 @@ class BaseAgent(ABC):
                                     if view and getattr(view, "data", None)
                                     else []
                                 )
-                                fingerprint = (
-                                    console
-                                    if isinstance(console, str)
-                                    else repr(console)
-                                )
+                                fingerprint = _console_fingerprint(console)
                                 if fingerprint != last_fingerprint:
                                     last_fingerprint = fingerprint
                                     yield TerminalUpdateEvent(

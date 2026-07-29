@@ -38,6 +38,8 @@ let fitAddon: FitAddon | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let themeObserver: MutationObserver | null = null;
 let lastText = '';
+let terminalDebounceTimer: number | null = null;
+let pendingTerminalOutput: unknown = null;
 
 const shellSessionId = computed(() => {
   if (props.toolContent && props.toolContent.args.id) {
@@ -225,11 +227,19 @@ const onTerminalUpdate = (payload: {
 }) => {
   if (payload.sessionId !== props.sessionId) return
   if (!shellSessionId.value || payload.shellId !== shellSessionId.value) return
-  void nextTick().then(() => {
-    if (!term) initTerminal()
-    writeTerminal(consoleToText(payload.output))
-    fit()
-  })
+  pendingTerminalOutput = payload.output
+  if (terminalDebounceTimer != null) return
+  // Coalesce rapid terminal_update frames (~1/s from server, bursts on catch-up)
+  terminalDebounceTimer = window.setTimeout(() => {
+    terminalDebounceTimer = null
+    const output = pendingTerminalOutput
+    pendingTerminalOutput = null
+    void nextTick().then(() => {
+      if (!term) initTerminal()
+      writeTerminal(consoleToText(output))
+      fit()
+    })
+  }, 100)
 }
 
 onMounted(() => {
@@ -247,6 +257,10 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  if (terminalDebounceTimer != null) {
+    clearTimeout(terminalDebounceTimer)
+    terminalDebounceTimer = null
+  }
   eventBus.off('tool:terminal_update', onTerminalUpdate)
   themeObserver?.disconnect();
   themeObserver = null;

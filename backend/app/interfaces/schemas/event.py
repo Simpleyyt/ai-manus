@@ -12,6 +12,7 @@ from app.domain.models.event import (
     TitleEvent,
     ToolEvent,
     StepEvent,
+    FileUpdateEvent,
 )
 
 class BaseEventData(BaseModel):
@@ -112,6 +113,45 @@ class DoneSSEEvent(BaseSSEEvent):
 class WaitSSEEvent(BaseSSEEvent):
     event: Literal["wait"] = "wait"
 
+
+class TerminalUpdateEventData(BaseEventData):
+    shell_id: str
+    output: Any = None
+    description: Optional[str] = None
+
+
+class TerminalUpdateSSEEvent(BaseSSEEvent):
+    event: Literal["terminal_update"] = "terminal_update"
+    data: TerminalUpdateEventData
+
+
+class FileUpdateEventData(BaseEventData):
+    path: str
+    content: str = ""
+    old_content: Optional[str] = None
+    file: Optional[FileInfoResponse] = None
+
+
+class FileUpdateSSEEvent(BaseSSEEvent):
+    event: Literal["file_update"] = "file_update"
+    data: FileUpdateEventData
+
+    @classmethod
+    async def from_event_async(cls, event: FileUpdateEvent) -> Self:
+        file_resp = (
+            await FileInfoResponse.from_domain(event.file) if event.file else None
+        )
+        return cls(
+            data=FileUpdateEventData(
+                **BaseEventData.base_event_data(event),
+                path=event.path,
+                content=event.content,
+                old_content=event.old_content,
+                file=file_resp,
+            )
+        )
+
+
 class ErrorEventData(BaseEventData):
     error: str
 
@@ -180,6 +220,8 @@ AgentSSEEvent = Union[
     DoneSSEEvent,
     ErrorSSEEvent,
     WaitSSEEvent,
+    TerminalUpdateSSEEvent,
+    FileUpdateSSEEvent,
     CommonSSEEvent,
 ]
 
@@ -194,6 +236,8 @@ _EVENT_TYPE_TO_SSE_CLASS: Dict[str, Type[BaseSSEEvent]] = {
     "done": DoneSSEEvent,
     "error": ErrorSSEEvent,
     "wait": WaitSSEEvent,
+    "terminal_update": TerminalUpdateSSEEvent,
+    "file_update": FileUpdateSSEEvent,
 }
 
 class EventMapper:

@@ -1,8 +1,7 @@
 import { computed, ref, watch, type Ref } from 'vue'
 import { useMediaQuery } from '@vueuse/core'
 import type { FileInfo } from '../api/file'
-import { eventBus } from '../utils/eventBus'
-import { EVENT_SHOW_FILE_PREVIEWER } from '../constants/event'
+import { eventBus, UI_SHOW_FILE_PREVIEWER, UI_SHOW_COMPUTER_PANEL } from '../utils/eventBus'
 import { router } from '../router'
 
 /** Official filePreviewerSlice viewMode — default is center */
@@ -67,10 +66,16 @@ export function useFilePreviewer() {
       },
       { immediate: true },
     )
+    // Official: keep center/fullscreen above Computer; only dismiss side (space conflict)
+    eventBus.on(UI_SHOW_COMPUTER_PANEL, () => {
+      if (isShow.value && viewMode.value === 'side') {
+        isShow.value = false
+      }
+    })
   }
 
   const showFilePreviewer = (file: FileInfo, mode?: FilePreviewViewMode) => {
-    eventBus.emit(EVENT_SHOW_FILE_PREVIEWER)
+    eventBus.emit(UI_SHOW_FILE_PREVIEWER)
     fileInfo.value = file
     const canUseSide = canUseSideFilePreview.value
     if (mode) {

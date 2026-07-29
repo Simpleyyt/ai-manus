@@ -1,31 +1,49 @@
 /**
  * Chat WebSocket — one connection per tab; switch sessions via join/leave.
- * Aligns with official Manus join_session / leave_session pattern.
+ * Protocol v2: envelope (id/timestamp/version), awaitable control frames,
+ * status_update, error codes — aligned with official Manus control plane.
  */
 import { BASE_URL } from './client';
-import type { AgentSSEEvent } from '../types/event';
+import type { AgentSSEEvent, AgentStatus, StatusUpdateEventData } from '../types/event';
 import type { ChatAttachment } from './agent';
 
+export const CHAT_WS_PROTOCOL_VERSION = 2;
+export const CHAT_WS_REQUEST_TIMEOUT_MS = 10_000;
+
 export type ChatWSServerMessage =
-  | { type: 'joined'; session_id: string }
-  | { type: 'left'; session_id: string }
-  | { type: 'stopped'; session_id: string }
+  | { type: 'joined'; session_id: string; request_id?: string }
+  | { type: 'left'; session_id: string; request_id?: string }
+  | { type: 'stopped'; session_id: string; request_id?: string }
+  | { type: 'ack'; request_id: string; op: string; session_id: string; ok: boolean }
   | { type: 'stream_end'; session_id: string }
   | { type: 'ping' }
-  | { type: 'error'; error: string; session_id?: string }
-  | { type: 'event'; session_id: string; event: string; data: AgentSSEEvent['data'] };
+  | { type: 'error'; error: string; code?: number; session_id?: string; request_id?: string }
+  | { type: 'event'; session_id: string; event: string; data: AgentSSEEvent['data'] | StatusUpdateEventData };
 
 type EventHandler = (msg: {
-  event: AgentSSEEvent['event'];
-  data: AgentSSEEvent['data'];
+  event: AgentSSEEvent['event'] | 'status_update';
+  data: AgentSSEEvent['data'] | StatusUpdateEventData;
 }) => void;
 
 type SessionHandlers = {
   onEvent?: EventHandler;
   onOpen?: () => void;
   onStreamEnd?: () => void;
-  onError?: (error: string) => void;
+  onStatusUpdate?: (agentStatus: AgentStatus) => void;
+  onError?: (error: string, code?: number) => void;
 };
+
+type PendingRequest = {
+  resolve: (msg: ChatWSServerMessage) => void;
+  reject: (error: Error) => void;
+  timer: ReturnType<typeof setTimeout>;
+  /** Accept these server message types as a successful response */
+  expect: Set<string>;
+};
+
+function shortUID(): string {
+  return `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
 
 class ChatWebSocket {
   private ws: WebSocket | null = null;
@@ -36,7 +54,9 @@ class ChatWebSocket {
   private pendingJoin: { sessionId: string; lastEventId?: string } | null = null;
   private handlers = new Map<string, SessionHandlers>();
   private readyWaiters: Array<() => void> = [];
-  private joinWaiters = new Map<string, Array<(ok: boolean, error?: string) => void>>();
+  private pendingRequests = new Map<string, PendingRequest>();
+  /** Connection generation — regenerated on each (re)connect */
+  private connId = shortUID();
 
   connect() {
     if (this.closed) return;
@@ -49,13 +69,13 @@ class ChatWebSocket {
 
     this.ws.onopen = () => {
       this.reconnectDelay = 1000;
+      this.connId = shortUID();
       this.readyWaiters.splice(0).forEach(resolve => resolve());
       // Re-join after reconnect
       const target = this.pendingJoin || (this.joinedSessionId
         ? { sessionId: this.joinedSessionId }
         : null);
       if (target) {
-        // Clear local join state; wait for server ack via joinSession path below
         this.joinedSessionId = null;
         void this.joinSession(target.sessionId, target.lastEventId);
       }
@@ -74,11 +94,7 @@ class ChatWebSocket {
     this.ws.onclose = () => {
       this.ws = null;
       this.joinedSessionId = null;
-      // Fail pending join waiters so callers don't hang
-      for (const [sid, waiters] of this.joinWaiters) {
-        waiters.forEach(w => w(false, 'WebSocket closed'));
-        this.joinWaiters.delete(sid);
-      }
+      this.failAllPending('WebSocket closed');
       if (this.closed) return;
       this.scheduleReconnect();
     };
@@ -96,6 +112,14 @@ class ChatWebSocket {
     }, this.reconnectDelay);
   }
 
+  private failAllPending(reason: string) {
+    for (const [id, pending] of this.pendingRequests) {
+      clearTimeout(pending.timer);
+      pending.reject(new Error(reason));
+      this.pendingRequests.delete(id);
+    }
+  }
+
   private async waitReady(): Promise<void> {
     this.connect();
     if (this.ws?.readyState === WebSocket.OPEN) return;
@@ -104,25 +128,97 @@ class ChatWebSocket {
     });
   }
 
+  private envelope(type: string, fields: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      id: shortUID(),
+      timestamp: Math.floor(Date.now() / 1000),
+      version: CHAT_WS_PROTOCOL_VERSION,
+      conn_id: this.connId,
+      type,
+      ...fields,
+    };
+  }
+
   private send(payload: Record<string, unknown>) {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(payload));
     }
   }
 
-  private resolveJoinWaiters(sessionId: string, ok: boolean, error?: string) {
-    const waiters = this.joinWaiters.get(sessionId);
-    if (!waiters?.length) return;
-    this.joinWaiters.delete(sessionId);
-    waiters.forEach(w => w(ok, error));
+  /**
+   * Send a control frame and wait for a matching ack / joined / stopped / error.
+   */
+  private async request(
+    type: string,
+    fields: Record<string, unknown>,
+    expect: string[],
+    timeoutMs = CHAT_WS_REQUEST_TIMEOUT_MS,
+  ): Promise<ChatWSServerMessage> {
+    await this.waitReady();
+    const payload = this.envelope(type, fields);
+    const requestId = String(payload.id);
+
+    return new Promise<ChatWSServerMessage>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pendingRequests.delete(requestId);
+        reject(new Error(`Chat WS ${type} timed out after ${timeoutMs}ms`));
+      }, timeoutMs);
+
+      this.pendingRequests.set(requestId, {
+        resolve,
+        reject,
+        timer,
+        expect: new Set(expect),
+      });
+
+      this.send(payload);
+    });
+  }
+
+  private resolvePending(msg: ChatWSServerMessage) {
+    const requestId =
+      'request_id' in msg && typeof msg.request_id === 'string'
+        ? msg.request_id
+        : undefined;
+    if (!requestId) return false;
+
+    const pending = this.pendingRequests.get(requestId);
+    if (!pending) return false;
+
+    if (msg.type === 'error') {
+      clearTimeout(pending.timer);
+      this.pendingRequests.delete(requestId);
+      const code = msg.code != null ? ` [${msg.code}]` : '';
+      pending.reject(new Error(`${msg.error}${code}`));
+      return true;
+    }
+
+    if (pending.expect.has(msg.type)) {
+      clearTimeout(pending.timer);
+      this.pendingRequests.delete(requestId);
+      pending.resolve(msg);
+      return true;
+    }
+    return false;
   }
 
   private handleMessage(msg: ChatWSServerMessage) {
     if (msg.type === 'ping') return;
 
+    // Resolve awaitable control-frame waiters first
+    if (this.resolvePending(msg)) {
+      // Still apply side effects for joined / left / stopped / ack below when useful
+      if (msg.type === 'ack') return;
+      if (msg.type === 'error') {
+        const sid = msg.session_id || this.joinedSessionId;
+        if (sid) this.handlers.get(sid)?.onError?.(msg.error, msg.code);
+        else console.error('Chat WS error:', msg.error, msg.code);
+        return;
+      }
+    }
+
     if (msg.type === 'joined') {
       this.joinedSessionId = msg.session_id;
-      this.resolveJoinWaiters(msg.session_id, true);
       this.handlers.get(msg.session_id)?.onOpen?.();
       return;
     }
@@ -134,6 +230,14 @@ class ChatWebSocket {
       return;
     }
 
+    if (msg.type === 'stopped') {
+      return;
+    }
+
+    if (msg.type === 'ack') {
+      return;
+    }
+
     if (msg.type === 'stream_end') {
       this.handlers.get(msg.session_id)?.onStreamEnd?.();
       return;
@@ -141,17 +245,18 @@ class ChatWebSocket {
 
     if (msg.type === 'error') {
       const sid = msg.session_id || this.joinedSessionId;
-      if (sid && this.joinWaiters.has(sid)) {
-        this.resolveJoinWaiters(sid, false, msg.error);
-      }
-      if (sid) this.handlers.get(sid)?.onError?.(msg.error);
-      else console.error('Chat WS error:', msg.error);
+      if (sid) this.handlers.get(sid)?.onError?.(msg.error, msg.code);
+      else console.error('Chat WS error:', msg.error, msg.code);
       return;
     }
 
     if (msg.type === 'event') {
+      if (msg.event === 'status_update') {
+        const data = msg.data as StatusUpdateEventData;
+        this.handlers.get(msg.session_id)?.onStatusUpdate?.(data.agent_status);
+      }
       this.handlers.get(msg.session_id)?.onEvent?.({
-        event: msg.event as AgentSSEEvent['event'],
+        event: msg.event as AgentSSEEvent['event'] | 'status_update',
         data: msg.data,
       });
     }
@@ -174,26 +279,18 @@ class ChatWebSocket {
 
     this.pendingJoin = { sessionId, lastEventId };
     if (this.joinedSessionId && this.joinedSessionId !== sessionId) {
-      this.send({ type: 'leave_session', session_id: this.joinedSessionId });
+      this.send(this.envelope('leave_session', { session_id: this.joinedSessionId }));
       this.joinedSessionId = null;
     }
 
-    const joined = new Promise<void>((resolve, reject) => {
-      const waiters = this.joinWaiters.get(sessionId) || [];
-      waiters.push((ok, error) => {
-        if (ok) resolve();
-        else reject(new Error(error || 'Failed to join session'));
-      });
-      this.joinWaiters.set(sessionId, waiters);
-    });
-
-    this.send({
-      type: 'join_session',
-      session_id: sessionId,
-      last_event_id: lastEventId,
-    });
-
-    await joined;
+    await this.request(
+      'join_session',
+      {
+        session_id: sessionId,
+        last_event_id: lastEventId,
+      },
+      ['joined'],
+    );
   }
 
   async leaveSession(sessionId?: string) {
@@ -203,7 +300,7 @@ class ChatWebSocket {
       this.pendingJoin = null;
     }
     if (this.ws?.readyState === WebSocket.OPEN) {
-      this.send({ type: 'leave_session', session_id: target });
+      this.send(this.envelope('leave_session', { session_id: target }));
     }
     if (this.joinedSessionId === target) {
       this.joinedSessionId = null;
@@ -220,24 +317,31 @@ class ChatWebSocket {
     if (this.joinedSessionId !== params.sessionId) {
       await this.joinSession(params.sessionId, params.lastEventId);
     }
-    this.send({
-      type: 'chat',
-      session_id: params.sessionId,
-      message: params.message || '',
-      last_event_id: params.lastEventId,
-      timestamp: Math.floor(Date.now() / 1000),
-      attachments: params.attachments || [],
-    });
+    // Await ack so caller knows the server accepted the chat frame
+    await this.request(
+      'chat',
+      {
+        session_id: params.sessionId,
+        message: params.message || '',
+        last_event_id: params.lastEventId,
+        attachments: params.attachments || [],
+      },
+      ['ack'],
+    );
   }
 
   async stopSession(sessionId: string) {
-    await this.waitReady();
-    this.send({ type: 'stop_session', session_id: sessionId });
+    await this.request(
+      'stop_session',
+      { session_id: sessionId },
+      ['stopped'],
+    );
   }
 
   destroy() {
     this.closed = true;
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.failAllPending('WebSocket destroyed');
     this.handlers.clear();
     this.ws?.close();
     this.ws = null;

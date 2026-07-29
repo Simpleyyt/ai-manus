@@ -16,6 +16,7 @@ import '@xterm/xterm/css/xterm.css';
 import { viewShellSession } from '@/api/agent';
 import { ToolContent } from '@/types/message';
 import { useLiveToolContent } from '@/composables/useLiveToolContent';
+import { eventBus } from '@/utils/eventBus';
 
 const props = defineProps<{
   sessionId: string;
@@ -37,6 +38,8 @@ let fitAddon: FitAddon | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let themeObserver: MutationObserver | null = null;
 let lastText = '';
+let terminalDebounceTimer: number | null = null;
+let pendingTerminalOutput: unknown = null;
 
 const shellSessionId = computed(() => {
   if (props.toolContent && props.toolContent.args.id) {
@@ -209,15 +212,40 @@ useLiveToolContent({
   live: toRef(props, 'live'),
   targetKey: shellSessionId,
   load: loadShellContent,
+  // Official: terminalUpdate over WS — no 5s REST poll
+  pushOnly: true,
 });
 
 watch(() => props.toolContent.content?.console, () => {
   if (!props.live) loadShellContent();
 });
 
+const onTerminalUpdate = (payload: {
+  sessionId: string
+  shellId: string
+  output: unknown
+}) => {
+  if (payload.sessionId !== props.sessionId) return
+  if (!shellSessionId.value || payload.shellId !== shellSessionId.value) return
+  pendingTerminalOutput = payload.output
+  if (terminalDebounceTimer != null) return
+  // Coalesce rapid terminal_update frames (~1/s from server, bursts on catch-up)
+  terminalDebounceTimer = window.setTimeout(() => {
+    terminalDebounceTimer = null
+    const output = pendingTerminalOutput
+    pendingTerminalOutput = null
+    void nextTick().then(() => {
+      if (!term) initTerminal()
+      writeTerminal(consoleToText(output))
+      fit()
+    })
+  }, 100)
+}
+
 onMounted(() => {
   initTerminal();
   loadShellContent();
+  eventBus.on('tool:terminal_update', onTerminalUpdate)
   themeObserver = new MutationObserver(() => {
     const dark = detectDark();
     if (dark !== isDark.value && term) {
@@ -229,6 +257,11 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  if (terminalDebounceTimer != null) {
+    clearTimeout(terminalDebounceTimer)
+    terminalDebounceTimer = null
+  }
+  eventBus.off('tool:terminal_update', onTerminalUpdate)
   themeObserver?.disconnect();
   themeObserver = null;
   resizeObserver?.disconnect();

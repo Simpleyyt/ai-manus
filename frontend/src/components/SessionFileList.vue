@@ -61,7 +61,7 @@
 
 <script setup lang="ts">
 import { X, Download, File } from 'lucide-vue-next';
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute } from 'vue-router';
 import type { FileInfo } from '../api/file';
 import { getFileDownloadUrl } from '../api/file';
@@ -70,6 +70,7 @@ import { formatRelativeTime, parseISODateTime } from '../utils/time';
 import { getFileType } from '../utils/fileType';
 import { useSessionFileList } from '../composables/useSessionFileList';
 import { useFilePreviewer } from '../composables/useFilePreviewer';
+import { eventBus } from '../utils/eventBus';
 
 const route = useRoute();
 const files = ref<FileInfo[]>([]);
@@ -92,9 +93,30 @@ const downloadFile = async (fileInfo: FileInfo) => {
     window.open(url, '_blank');
 }
 
-const showFile = (file: FileInfo) => {
-    showFilePreviewer(file);
+const showFile = (fileInfo: FileInfo) => {
+    showFilePreviewer(fileInfo);
     hideSessionFileList();
+}
+
+const onFileUpdate = (payload: {
+    sessionId: string
+    path: string
+    file?: FileInfo | null
+}) => {
+    const sessionId = route.params.sessionId as string
+    if (!sessionId || payload.sessionId !== sessionId) return
+    if (!visible.value) return
+    if (payload.file) {
+        const idx = files.value.findIndex(f => f.file_id === payload.file!.file_id
+            || f.filename === payload.file!.filename)
+        if (idx >= 0) {
+            files.value.splice(idx, 1, payload.file)
+        } else {
+            files.value = [payload.file, ...files.value]
+        }
+    } else {
+        void fetchFiles(sessionId)
+    }
 }
 
 watch(visible, (newVisible) => {
@@ -104,5 +126,13 @@ watch(visible, (newVisible) => {
             fetchFiles(sessionId);
         }
     }
+})
+
+onMounted(() => {
+    eventBus.on('tool:file_update', onFileUpdate)
+})
+
+onBeforeUnmount(() => {
+    eventBus.off('tool:file_update', onFileUpdate)
 })
 </script>

@@ -114,6 +114,28 @@ class WaitEvent(BaseEvent):
     """Wait event"""
     type: Literal["wait"] = "wait"
 
+
+class TerminalUpdateEvent(BaseEvent):
+    """Live shell/terminal output (official Manus ``terminalUpdate``).
+
+    Streamed while a shell tool runs and once more with final console.
+    Not required for history — ToolEvent already carries final content.
+    """
+    type: Literal["terminal_update"] = "terminal_update"
+    shell_id: str
+    output: Any = None
+    description: Optional[str] = None
+
+
+class FileUpdateEvent(BaseEvent):
+    """Live file editor content (official text_editor / file panel updates)."""
+    type: Literal["file_update"] = "file_update"
+    path: str
+    content: str = ""
+    old_content: Optional[str] = None
+    file: Optional[FileInfo] = None
+
+
 AgentEvent = Union[
     ErrorEvent,
     PlanEvent, 
@@ -123,4 +145,6 @@ AgentEvent = Union[
     DoneEvent,
     TitleEvent,
     WaitEvent,
+    TerminalUpdateEvent,
+    FileUpdateEvent,
 ]

@@ -171,11 +171,15 @@ Auth: browser Cookie (`session_id`) or App `Authorization: Bearer` (no `?token=`
 | Path | Description |
 |---|---|
 | WebSocket | `/ws/sessions` | Session list channel (`snapshot` / `upsert` / `remove` / `ping`) |
-| WebSocket | `/ws/chat` | Chat channel — one connection per tab; switch with `join_session` / `leave_session`; send with `chat`; stop with `stop_session` |
+| WebSocket | `/ws/chat` | Chat channel (protocol `version: 2`) — one connection per tab; `join_session` / `leave_session` / `chat` / `stop_session` with envelope `id`+`timestamp`; awaitable ack via `request_id` |
 | WebSocket | `/ws/claw` | Claw chat channel (`chat` / `text` / `file` / `done` / `heartbeat`) |
 | WebSocket | `/ws/vnc/{session_id}` | Sandbox VNC proxy (binary subprotocol; Cookie/Bearer) |
 
-Chat server→client event envelope: `{ type: "event", session_id, event, data }` where `event` is one of `message`, `title`, `plan`, `step`, `tool`, `wait`, `error`, `done`.
+Chat client→server envelope: `{ id, timestamp, version: 2, type, session_id, ... }`.
+
+Chat server→client: `{ type: "joined"|"left"|"stopped"|"ack"|"stream_end"|"ping"|"error"|"event", ... }`. Control replies echo `request_id`. Errors include `code` (`4000` bad version, `4002` bad request, `4004` not found, `4009` not joined, `5000` internal).
+
+Event envelope: `{ type: "event", session_id, event, data }` where `event` is one of `message`, `title`, `plan`, `step`, `tool`, `wait`, `error`, `done`, `status_update`, `terminal_update`, `file_update`. `status_update.data.agent_status` is `pending|running|waiting|completed|error` (authoritative loading/state signal). `terminal_update` / `file_update` push live Computer-panel shell console and file content (official `terminalUpdate` / text_editor).
 
 ### File Endpoints (`/api/v1/files`)
 

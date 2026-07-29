@@ -63,8 +63,7 @@ import type { ToolContent } from '../types/message'
 import type { PlanEventData } from '../types/event'
 import ComputerPanelContent from './ComputerPanelContent.vue'
 import { useResizeObserver } from '../composables/useResizeObserver'
-import { eventBus } from '../utils/eventBus'
-import { EVENT_SHOW_FILE_PREVIEWER, EVENT_SHOW_COMPUTER_PANEL } from '../constants/event'
+import { eventBus, UI_SHOW_FILE_PREVIEWER, UI_SHOW_COMPUTER_PANEL } from '../utils/eventBus'
 
 export type ComputerPresentation = 'sidebar' | 'dialog'
 
@@ -100,7 +99,8 @@ defineProps<{
 }>()
 
 const showComputerPanel = (content: ToolContent, isLive: boolean = false) => {
-  eventBus.emit(EVENT_SHOW_COMPUTER_PANEL)
+  // Notify file previewer: dismiss side mode only (center/fullscreen stay)
+  eventBus.emit(UI_SHOW_COMPUTER_PANEL)
   visible.value = true
   toolContent.value = content
   isShow.value = true
@@ -130,14 +130,17 @@ const onUseComputer = () => {
   emit('useComputer')
 }
 
+/** Opening file previewer hides the computer panel (mutual exclusion). */
+const onShowFilePreviewer = () => {
+  visible.value = false
+}
+
 onMounted(() => {
-  eventBus.on(EVENT_SHOW_FILE_PREVIEWER, () => {
-    visible.value = false
-  })
+  eventBus.on(UI_SHOW_FILE_PREVIEWER, onShowFilePreviewer)
 })
 
 onUnmounted(() => {
-  eventBus.off(EVENT_SHOW_FILE_PREVIEWER)
+  eventBus.off(UI_SHOW_FILE_PREVIEWER, onShowFilePreviewer)
 })
 
 defineExpose({

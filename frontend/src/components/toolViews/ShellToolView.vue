@@ -16,6 +16,7 @@ import '@xterm/xterm/css/xterm.css';
 import { viewShellSession } from '@/api/agent';
 import { ToolContent } from '@/types/message';
 import { useLiveToolContent } from '@/composables/useLiveToolContent';
+import { eventBus } from '@/utils/eventBus';
 
 const props = defineProps<{
   sessionId: string;
@@ -209,15 +210,32 @@ useLiveToolContent({
   live: toRef(props, 'live'),
   targetKey: shellSessionId,
   load: loadShellContent,
+  // Official: terminalUpdate over WS — no 5s REST poll
+  pushOnly: true,
 });
 
 watch(() => props.toolContent.content?.console, () => {
   if (!props.live) loadShellContent();
 });
 
+const onTerminalUpdate = (payload: {
+  sessionId: string
+  shellId: string
+  output: unknown
+}) => {
+  if (payload.sessionId !== props.sessionId) return
+  if (!shellSessionId.value || payload.shellId !== shellSessionId.value) return
+  void nextTick().then(() => {
+    if (!term) initTerminal()
+    writeTerminal(consoleToText(payload.output))
+    fit()
+  })
+}
+
 onMounted(() => {
   initTerminal();
   loadShellContent();
+  eventBus.on('tool:terminal_update', onTerminalUpdate)
   themeObserver = new MutationObserver(() => {
     const dark = detectDark();
     if (dark !== isDark.value && term) {
@@ -229,6 +247,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  eventBus.off('tool:terminal_update', onTerminalUpdate)
   themeObserver?.disconnect();
   themeObserver = null;
   resizeObserver?.disconnect();

@@ -35,6 +35,38 @@ SESSION_LIST_KEEPALIVE_SECONDS = 20.0
 CHAT_WS_PING_SECONDS = 20.0
 CLAW_HEARTBEAT_INTERVAL = 15
 
+# Chat WS protocol (aligned with official Manus control-plane contract).
+CHAT_WS_PROTOCOL_VERSION = 2
+ERR_BAD_VERSION = 4000
+ERR_BAD_REQUEST = 4002
+ERR_NOT_FOUND = 4004
+ERR_NOT_JOINED = 4009
+ERR_INTERNAL = 5000
+
+
+def _session_status_value(status: Any) -> str:
+    return getattr(status, "value", status) if status is not None else "pending"
+
+
+def _agent_status_from_session(status: Any) -> str:
+    """Map SessionStatus → wire agent_status (pending|running|waiting|completed|error)."""
+    value = _session_status_value(status)
+    if value in ("pending", "running", "waiting", "completed"):
+        return value
+    return "completed"
+
+
+def _events_after(events: list[Any], last_event_id: Optional[str]) -> list[Any]:
+    """Return domain events strictly after last_event_id (Mongo catch-up)."""
+    if not events:
+        return []
+    if not last_event_id:
+        return list(events)
+    idx = next((i for i, e in enumerate(events) if getattr(e, "id", None) == last_event_id), None)
+    if idx is None:
+        return list(events)
+    return list(events[idx + 1 :])
+
 
 @router.websocket("/sessions")
 async def sessions_list_ws(websocket: WebSocket):
@@ -121,19 +153,23 @@ async def chat_ws(websocket: WebSocket):
     """Chat channel — one connection per tab; switch sessions via join/leave.
 
     Auth: Cookie (browser) or Authorization Bearer (App). No ?token=.
+    Protocol version: client frames must include ``version: 2``.
 
-    Client → Server:
-      {"type":"join_session","session_id":"...","last_event_id":"...?"}
-      {"type":"leave_session","session_id":"..."}
-      {"type":"chat","session_id":"...","message":"...","attachments":[],"timestamp":123}
-      {"type":"stop_session","session_id":"..."}
+    Client → Server (envelope):
+      {
+        "id": "...", "timestamp": 1710000000, "version": 2,
+        "type": "join_session|leave_session|chat|stop_session",
+        "session_id": "...",
+        "last_event_id": "...?", "message": "...?", "attachments": [],
+        "conn_id": "...?"
+      }
 
     Server → Client:
-      {"type":"joined","session_id":"..."}
-      {"type":"left","session_id":"..."}
-      {"type":"event","session_id":"...","event":"message|tool|...","data":{...}}
+      {"type":"joined|left|stopped","session_id":"...","request_id":"...?"}
+      {"type":"ack","request_id":"...","op":"chat","session_id":"...","ok":true}
+      {"type":"event","session_id":"...","event":"message|status_update|...","data":{...}}
       {"type":"stream_end","session_id":"..."}
-      {"type":"error","error":"...","session_id":"...?"}
+      {"type":"error","error":"...","code":4000,"session_id":"...?","request_id":"...?"}
       {"type":"ping"}
     """
     try:
@@ -152,6 +188,42 @@ async def chat_ws(websocket: WebSocket):
     async def safe_send(payload: dict[str, Any]) -> None:
         async with send_lock:
             await websocket.send_json(payload)
+
+    async def send_error(
+        error: str,
+        *,
+        code: int = ERR_INTERNAL,
+        session_id: Optional[str] = None,
+        request_id: Optional[str] = None,
+    ) -> None:
+        payload: dict[str, Any] = {"type": "error", "error": error, "code": code}
+        if session_id:
+            payload["session_id"] = session_id
+        if request_id:
+            payload["request_id"] = request_id
+        await safe_send(payload)
+
+    async def send_status_update(session_id: str, agent_status: str) -> None:
+        await safe_send({
+            "type": "event",
+            "session_id": session_id,
+            "event": "status_update",
+            "data": {
+                "event_id": f"status-{session_id}-{agent_status}-{int(datetime.now().timestamp())}",
+                "timestamp": int(datetime.now().timestamp()),
+                "agent_status": agent_status,
+            },
+        })
+
+    async def send_agent_event(session_id: str, event: Any) -> None:
+        sse = await EventMapper.event_to_sse_event(event)
+        data = sse.data.model_dump(mode="json") if sse.data else {}
+        await safe_send({
+            "type": "event",
+            "session_id": session_id,
+            "event": sse.event,
+            "data": data,
+        })
 
     async def cancel_stream() -> None:
         nonlocal stream_task
@@ -172,6 +244,7 @@ async def chat_ws(websocket: WebSocket):
         attachments: Optional[list[FileInfo]] = None,
         timestamp: Optional[datetime] = None,
     ) -> None:
+        saw_error = False
         try:
             async for event in agent_service.chat(
                 session_id=session_id,
@@ -183,26 +256,27 @@ async def chat_ws(websocket: WebSocket):
             ):
                 if joined_session_id != session_id:
                     break
-                sse = await EventMapper.event_to_sse_event(event)
-                data = sse.data.model_dump(mode="json") if sse.data else {}
-                await safe_send({
-                    "type": "event",
-                    "session_id": session_id,
-                    "event": sse.event,
-                    "data": data,
-                })
+                if getattr(event, "type", None) == "error":
+                    saw_error = True
+                await send_agent_event(session_id, event)
             if joined_session_id == session_id:
                 await safe_send({"type": "stream_end", "session_id": session_id})
+                if saw_error:
+                    await send_status_update(session_id, "error")
+                else:
+                    session = await agent_service.get_session(session_id, user.id)
+                    status = _agent_status_from_session(
+                        session.status if session else "completed"
+                    )
+                    await send_status_update(session_id, status)
         except asyncio.CancelledError:
             raise
         except Exception as e:
             logger.exception("Chat stream failed for session %s", session_id)
             try:
-                await safe_send({
-                    "type": "error",
-                    "session_id": session_id,
-                    "error": str(e),
-                })
+                await send_error(str(e), code=ERR_INTERNAL, session_id=session_id)
+                if joined_session_id == session_id:
+                    await send_status_update(session_id, "error")
             except Exception:
                 pass
 
@@ -229,20 +303,40 @@ async def chat_ws(websocket: WebSocket):
                 await safe_send({"type": "ping"})
                 continue
 
+            if not isinstance(raw, dict):
+                await send_error("Invalid message", code=ERR_BAD_REQUEST)
+                continue
+
             msg_type = raw.get("type")
             session_id = raw.get("session_id")
+            request_id = raw.get("id")
+
+            # leave_session: allow without version (fire-and-forget on tab close)
+            if msg_type != "leave_session" and raw.get("version") != CHAT_WS_PROTOCOL_VERSION:
+                await send_error(
+                    f"Unsupported protocol version (require {CHAT_WS_PROTOCOL_VERSION})",
+                    code=ERR_BAD_VERSION,
+                    session_id=session_id,
+                    request_id=request_id,
+                )
+                continue
 
             if msg_type == "join_session":
                 if not session_id:
-                    await safe_send({"type": "error", "error": "session_id required"})
+                    await send_error(
+                        "session_id required",
+                        code=ERR_BAD_REQUEST,
+                        request_id=request_id,
+                    )
                     continue
                 session = await agent_service.get_session(session_id, user.id)
                 if not session:
-                    await safe_send({
-                        "type": "error",
-                        "session_id": session_id,
-                        "error": "Session not found",
-                    })
+                    await send_error(
+                        "Session not found",
+                        code=ERR_NOT_FOUND,
+                        session_id=session_id,
+                        request_id=request_id,
+                    )
                     continue
 
                 if joined_session_id and joined_session_id != session_id:
@@ -253,21 +347,35 @@ async def chat_ws(websocket: WebSocket):
 
                 joined_session_id = session_id
                 last_event_id = raw.get("last_event_id")
-                await safe_send({"type": "joined", "session_id": session_id})
+                joined_payload: dict[str, Any] = {
+                    "type": "joined",
+                    "session_id": session_id,
+                }
+                if request_id:
+                    joined_payload["request_id"] = request_id
+                await safe_send(joined_payload)
 
-                # Resume live stream only while agent is actively running.
-                # Idle/pending/completed/waiting: join ack only — do NOT send
-                # stream_end here. A follow-up `chat` would otherwise lose the
-                # client "thinking" state when the idle stream_end arrives after
-                # the chat frame was already sent.
-                status = getattr(session.status, "value", session.status)
+                status = _session_status_value(session.status)
+                agent_status = _agent_status_from_session(session.status)
+
+                # Idle/pending/completed/waiting: Mongo catch-up after cursor,
+                # then authoritative status_update. Do NOT send stream_end —
+                # a follow-up chat would otherwise clear client "thinking".
                 if status == "running":
+                    await send_status_update(session_id, "running")
                     await cancel_stream()
                     start_stream(
                         session_id=session_id,
                         message=None,
                         last_event_id=last_event_id,
                     )
+                else:
+                    if last_event_id:
+                        for event in _events_after(session.events or [], last_event_id):
+                            if joined_session_id != session_id:
+                                break
+                            await send_agent_event(session_id, event)
+                    await send_status_update(session_id, agent_status)
 
             elif msg_type == "leave_session":
                 target = session_id or joined_session_id
@@ -276,18 +384,29 @@ async def chat_ws(websocket: WebSocket):
                 if joined_session_id == target:
                     await cancel_stream()
                     joined_session_id = None
-                    await safe_send({"type": "left", "session_id": target})
+                    left_payload: dict[str, Any] = {
+                        "type": "left",
+                        "session_id": target,
+                    }
+                    if request_id:
+                        left_payload["request_id"] = request_id
+                    await safe_send(left_payload)
 
             elif msg_type == "chat":
                 if not session_id:
-                    await safe_send({"type": "error", "error": "session_id required"})
+                    await send_error(
+                        "session_id required",
+                        code=ERR_BAD_REQUEST,
+                        request_id=request_id,
+                    )
                     continue
                 if joined_session_id != session_id:
-                    await safe_send({
-                        "type": "error",
-                        "session_id": session_id,
-                        "error": "Not joined to this session",
-                    })
+                    await send_error(
+                        "Not joined to this session",
+                        code=ERR_NOT_JOINED,
+                        session_id=session_id,
+                        request_id=request_id,
+                    )
                     continue
 
                 message = raw.get("message") or ""
@@ -302,8 +421,17 @@ async def chat_ws(websocket: WebSocket):
                             )
                         )
                 ts = raw.get("timestamp")
-                timestamp = datetime.fromtimestamp(ts) if ts else None
+                timestamp = datetime.fromtimestamp(ts) if isinstance(ts, (int, float)) else None
 
+                if request_id:
+                    await safe_send({
+                        "type": "ack",
+                        "request_id": request_id,
+                        "op": "chat",
+                        "session_id": session_id,
+                        "ok": True,
+                    })
+                await send_status_update(session_id, "running")
                 await cancel_stream()
                 start_stream(
                     session_id=session_id,
@@ -315,22 +443,35 @@ async def chat_ws(websocket: WebSocket):
 
             elif msg_type == "stop_session":
                 if not session_id:
-                    await safe_send({"type": "error", "error": "session_id required"})
+                    await send_error(
+                        "session_id required",
+                        code=ERR_BAD_REQUEST,
+                        request_id=request_id,
+                    )
                     continue
                 try:
                     await agent_service.stop_session(session_id, user.id)
-                    await safe_send({"type": "stopped", "session_id": session_id})
-                except Exception as e:
-                    await safe_send({
-                        "type": "error",
+                    stopped_payload: dict[str, Any] = {
+                        "type": "stopped",
                         "session_id": session_id,
-                        "error": str(e),
-                    })
+                    }
+                    if request_id:
+                        stopped_payload["request_id"] = request_id
+                    await safe_send(stopped_payload)
+                    await send_status_update(session_id, "completed")
+                except Exception as e:
+                    await send_error(
+                        str(e),
+                        code=ERR_INTERNAL,
+                        session_id=session_id,
+                        request_id=request_id,
+                    )
             else:
-                await safe_send({
-                    "type": "error",
-                    "error": f"Unknown type: {msg_type}",
-                })
+                await send_error(
+                    f"Unknown type: {msg_type}",
+                    code=ERR_BAD_REQUEST,
+                    request_id=request_id,
+                )
 
     except WebSocketDisconnect:
         logger.debug("Chat WS disconnected for user %s", user.id)

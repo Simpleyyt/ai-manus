@@ -46,13 +46,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, toRef, watch } from 'vue';
+import { ref, computed, toRef, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ToolContent } from '@/types/message';
 import { viewFile } from '@/api/agent';
 import MonacoEditor from '@/components/ui/MonacoEditor.vue';
 import MonacoDiffEditor from '@/components/ui/MonacoDiffEditor.vue';
 import { useLiveToolContent } from '@/composables/useLiveToolContent';
+import { eventBus } from '@/utils/eventBus';
 
 type FileTab = 'diff' | 'oldContent' | 'newContent';
 
@@ -146,5 +147,29 @@ useLiveToolContent({
   live: toRef(props, 'live'),
   targetKey: filePath,
   load: loadFileContent,
+  // Official: file_update over WS — no 5s REST poll
+  pushOnly: true,
 });
+
+const onFileUpdate = (payload: {
+  sessionId: string
+  path: string
+  content: string
+  oldContent?: string | null
+}) => {
+  if (payload.sessionId !== props.sessionId) return
+  if (!filePath.value || payload.path !== filePath.value) return
+  fileContent.value = payload.content
+  if (payload.oldContent !== undefined) {
+    oldContent.value = payload.oldContent ?? ''
+  }
+}
+
+onMounted(() => {
+  eventBus.on('tool:file_update', onFileUpdate)
+})
+
+onBeforeUnmount(() => {
+  eventBus.off('tool:file_update', onFileUpdate)
+})
 </script>

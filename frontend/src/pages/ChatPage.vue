@@ -164,7 +164,7 @@ import ChatTaskCompleted from '../components/ChatTaskCompleted.vue';
 import ChatWaitingContinue from '../components/ChatWaitingContinue.vue';
 import * as agentApi from '../api/agent';
 import { Message, MessageContent, ToolContent, AttachmentsContent, StepContent, isConsecutiveAssistant } from '../types/message';
-import { PlanEventData, AgentSSEEvent } from '../types/event';
+import { PlanEventData, AgentSSEEvent, type AgentStatus, type TerminalUpdateEventData, type FileUpdateEventData } from '../types/event';
 import { useAgentEvents } from '../composables/useAgentEvents';
 import ComputerPanel from '../components/ComputerPanel.vue'
 import { ArrowDown, FileSearch, Lock, Globe, Link, Check, Ellipsis, Pencil, Star, Trash, FolderPlus, Folder, FolderSync, Pin } from 'lucide-vue-next';
@@ -359,6 +359,9 @@ const { handleEvent: handleAgentEvent } = useAgentEvents(
 
 const handleEvent = (event: AgentSSEEvent) => {
   handleAgentEvent(event);
+  if (event.event === 'status_update') {
+    return;
+  }
   if (event.event === 'done') {
     sessionStatus.value = SessionStatus.COMPLETED;
   } else if (event.event === 'wait') {
@@ -367,6 +370,30 @@ const handleEvent = (event: AgentSSEEvent) => {
     if (sessionStatus.value !== SessionStatus.WAITING) {
       sessionStatus.value = SessionStatus.RUNNING;
     }
+  }
+};
+
+/** Drive loading / sessionStatus from authoritative WS status_update. */
+const applyAgentStatus = (agentStatus: AgentStatus) => {
+  if (agentStatus === 'running') {
+    isLoading.value = true;
+    sessionStatus.value = SessionStatus.RUNNING;
+  } else if (agentStatus === 'waiting') {
+    isLoading.value = false;
+    sessionStatus.value = SessionStatus.WAITING;
+  } else if (agentStatus === 'pending') {
+    isLoading.value = false;
+    sessionStatus.value = SessionStatus.PENDING;
+  } else if (agentStatus === 'error') {
+    isLoading.value = false;
+    // Keep sessionStatus as-is unless unknown; treat like completed for footer UX
+    if (sessionStatus.value === SessionStatus.RUNNING || sessionStatus.value === SessionStatus.PENDING) {
+      sessionStatus.value = SessionStatus.COMPLETED;
+    }
+  } else {
+    // completed
+    isLoading.value = false;
+    sessionStatus.value = SessionStatus.COMPLETED;
   }
 };
 
@@ -401,6 +428,56 @@ watch(messages, async () => {
 }, { deep: true });
 
 
+
+const chatStreamCallbacks = (): agentApi.ChatStreamCallbacks => ({
+  onOpen: () => {
+    // Keep loading only when we already marked a turn in flight (chat send)
+  },
+  onMessage: ({ event, data }) => {
+    if (event === 'terminal_update') {
+      const d = data as TerminalUpdateEventData;
+      if (!sessionId.value) return;
+      eventBus.emit('tool:terminal_update', {
+        sessionId: sessionId.value,
+        shellId: d.shell_id,
+        output: d.output,
+      });
+      return;
+    }
+    if (event === 'file_update') {
+      const d = data as FileUpdateEventData;
+      if (!sessionId.value) return;
+      eventBus.emit('tool:file_update', {
+        sessionId: sessionId.value,
+        path: d.path,
+        content: d.content,
+        oldContent: d.old_content,
+        file: d.file ?? null,
+      });
+      return;
+    }
+    handleEvent({
+      event: event as AgentSSEEvent['event'],
+      data: data as AgentSSEEvent['data'],
+    });
+  },
+  onStatusUpdate: (agentStatus) => {
+    applyAgentStatus(agentStatus);
+  },
+  onClose: () => {
+    // Loading is driven by status_update (follows stream_end). Do not clear here.
+    if (cancelCurrentChat.value) {
+      cancelCurrentChat.value = null;
+    }
+  },
+  onError: (error) => {
+    console.error('Chat error:', error);
+    isLoading.value = false;
+    if (cancelCurrentChat.value) {
+      cancelCurrentChat.value = null;
+    }
+  },
+});
 
 const handleSubmit = () => {
   chat(inputMessage.value, attachments.value);
@@ -445,7 +522,6 @@ const chat = async (message: string = '', files: FileInfo[] = []) => {
   isLoading.value = true;
 
   try {
-    // Use the split event handler function and store the cancel function
     cancelCurrentChat.value = await agentApi.chatWithSession(
       sessionId.value,
       message,
@@ -453,30 +529,10 @@ const chat = async (message: string = '', files: FileInfo[] = []) => {
       files.map((file: FileInfo) => ({file_id : file.file_id, 
                                         filename : file.filename})),
       {
+        ...chatStreamCallbacks(),
         onOpen: () => {
           isLoading.value = true;
         },
-        onMessage: ({ event, data }) => {
-          handleEvent({
-            event: event as AgentSSEEvent['event'],
-            data: data as AgentSSEEvent['data']
-          });
-        },
-        onClose: () => {
-          isLoading.value = false;
-          // Clear the cancel function when connection is closed normally
-          if (cancelCurrentChat.value) {
-            cancelCurrentChat.value = null;
-          }
-        },
-        onError: (error) => {
-          console.error('Chat error:', error);
-          isLoading.value = false;
-          // Clear the cancel function when there's an error
-          if (cancelCurrentChat.value) {
-            cancelCurrentChat.value = null;
-          }
-        }
       }
     );
   } catch (error) {
@@ -504,10 +560,42 @@ const restoreSession = async () => {
     handleEvent(event);
   }
   realTime.value = true;
-  // Only resume the live stream while the agent is running. Idle join no longer
-  // emits stream_end; pending/completed sessions must not leave isLoading stuck.
-  if (session.status === SessionStatus.RUNNING) {
-    await chat();
+
+  // Always join the chat channel (status_update + idle Mongo catch-up).
+  // Only resume the live Redis stream while the agent is running — idle join
+  // no longer emits stream_end, so this will not stick isLoading.
+  if (cancelCurrentChat.value) {
+    cancelCurrentChat.value();
+    cancelCurrentChat.value = null;
+  }
+  try {
+    if (session.status === SessionStatus.RUNNING) {
+      isLoading.value = true;
+      cancelCurrentChat.value = await agentApi.chatWithSession(
+        sessionId.value,
+        '',
+        lastEventId.value,
+        undefined,
+        {
+          ...chatStreamCallbacks(),
+          onOpen: () => {
+            isLoading.value = true;
+          },
+        },
+      );
+    } else {
+      cancelCurrentChat.value = await agentApi.chatWithSession(
+        sessionId.value,
+        '',
+        lastEventId.value,
+        undefined,
+        chatStreamCallbacks(),
+      );
+    }
+  } catch (error) {
+    console.error('Failed to join chat session:', error);
+    isLoading.value = false;
+    cancelCurrentChat.value = null;
   }
   agentApi.clearUnreadMessageCount(sessionId.value);
 }

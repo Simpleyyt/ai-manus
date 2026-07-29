@@ -171,11 +171,15 @@ docker run -p 8000:8000 --env-file .env -v /var/run/docker.sock:/var/run/docker.
 | 路径 | 描述 |
 |---|---|
 | WebSocket | `/ws/sessions` | 会话列表通道（`snapshot` / `upsert` / `remove` / `ping`） |
-| WebSocket | `/ws/chat` | 聊天通道 — 每标签页一条连接；用 `join_session` / `leave_session` 切换；`chat` 发消息；`stop_session` 停止 |
+| WebSocket | `/ws/chat` | 聊天通道（协议 `version: 2`）— 每标签页一条连接；`join_session` / `leave_session` / `chat` / `stop_session`；信封含 `id`+`timestamp`；通过 `request_id` 可等待 ack |
 | WebSocket | `/ws/claw` | Claw 聊天通道（`chat` / `text` / `file` / `done` / `heartbeat`） |
 | WebSocket | `/ws/vnc/{session_id}` | 沙盒 VNC 代理（binary 子协议；Cookie/Bearer） |
 
-聊天服务端→客户端事件信封：`{ type: "event", session_id, event, data }`，其中 `event` 为 `message`、`title`、`plan`、`step`、`tool`、`wait`、`error`、`done` 之一。
+客户端→服务端信封：`{ id, timestamp, version: 2, type, session_id, ... }`。
+
+服务端→客户端：`{ type: "joined"|"left"|"stopped"|"ack"|"stream_end"|"ping"|"error"|"event", ... }`。控制面回包带 `request_id`。错误含 `code`（`4000` 版本错误、`4002` 坏请求、`4004` 未找到、`4009` 未加入、`5000` 内部错误）。
+
+事件信封：`{ type: "event", session_id, event, data }`，其中 `event` 为 `message`、`title`、`plan`、`step`、`tool`、`wait`、`error`、`done`、`status_update`、`terminal_update`、`file_update`。`status_update.data.agent_status` 为 `pending|running|waiting|completed|error`（权威加载/状态信号）。`terminal_update` / `file_update` 推送 Computer 面板终端输出与文件内容（对齐官方 `terminalUpdate` / text_editor）。
 
 ### 文件接口（`/api/v1/files`）
 

@@ -20,6 +20,8 @@ from app.domain.models.event import (
     ToolStatus,
     AgentEvent,
     McpToolContent,
+    TerminalUpdateEvent,
+    FileUpdateEvent,
 )
 from app.domain.services.flows.plan_act import PlanActFlow
 from app.domain.external.sandbox import Sandbox
@@ -98,6 +100,9 @@ class AgentTaskRunner(TaskRunner):
     async def _put_and_add_event(self, task: Task, event: AgentEvent) -> None:
         event_id = await task.output_stream.put(event.model_dump_json())
         event.id = event_id
+        # Live computer-panel updates — stream only (avoid bloating session.events)
+        if isinstance(event, (TerminalUpdateEvent, FileUpdateEvent)):
+            return
         await self._session_repository.add_event(self._session_id, event)
     
     async def _pop_event(self, task: Task) -> AgentEvent:
@@ -362,9 +367,41 @@ class AgentTaskRunner(TaskRunner):
             if isinstance(event, ToolEvent):
                 # TODO: move to tool function
                 await self._handle_tool_event(event)
+                yield event
+                # Official: terminalUpdate / text_editor file panel push after tool settles
+                if event.status == ToolStatus.CALLED:
+                    if event.tool_name == "shell" and event.function_args.get("id"):
+                        console = None
+                        if isinstance(event.tool_content, ShellToolContent):
+                            console = event.tool_content.console
+                        yield TerminalUpdateEvent(
+                            shell_id=event.function_args["id"],
+                            output=console if console is not None else [],
+                        )
+                    elif event.tool_name == "file" and event.function_args.get("file"):
+                        path = event.function_args["file"]
+                        content = ""
+                        old_content = None
+                        if isinstance(event.tool_content, FileToolContent):
+                            content = event.tool_content.content or ""
+                            old_content = event.tool_content.old_content
+                        file_info = await self._session_repository.get_file_by_path(
+                            self._session_id, path
+                        )
+                        yield FileUpdateEvent(
+                            path=path,
+                            content=content,
+                            old_content=old_content,
+                            file=file_info,
+                        )
             elif isinstance(event, MessageEvent):
                 await self._sync_message_attachments_to_storage(event)
-            yield event
+                yield event
+            elif isinstance(event, TerminalUpdateEvent):
+                # Already emitted from BaseAgent live poll
+                yield event
+            else:
+                yield event
 
         logger.info(f"Agent {self._agent_id} completed processing one message")
 

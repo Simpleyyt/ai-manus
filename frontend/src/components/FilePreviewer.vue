@@ -30,8 +30,8 @@
   </div>
 
   <!-- Official portal: center mask + panel / fullscreen.
-       Keep center/fullscreen above Computer sidebar updates — do not dismiss
-       when EVENT_SHOW_COMPUTER_PANEL fires during a running task. -->
+       Keep center/fullscreen above Computer sidebar updates — only side
+       preview is dismissed on ui:show-computer-panel (see useFilePreviewer). -->
   <Teleport to="body">
     <div
       v-if="isShow && fileInfo && fileType && (viewMode === 'center' || viewMode === 'fullscreen')"

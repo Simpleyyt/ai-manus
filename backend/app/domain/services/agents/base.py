@@ -11,6 +11,7 @@ from app.domain.models.event import (
     ToolStatus,
     ErrorEvent,
     MessageEvent,
+    TerminalUpdateEvent,
 )
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.external.llm import LLM
@@ -225,7 +226,48 @@ class BaseAgent(ABC):
                         function_args=function_args
                     )
 
-                    tool_result = await self.invoke_tool(tool, tool_call)
+                    # Official terminalUpdate: poll shell console while the tool runs
+                    shell_id = (
+                        function_args.get("id")
+                        if tool.toolkit.name == "shell" and isinstance(function_args, dict)
+                        else None
+                    )
+                    if shell_id and hasattr(tool.toolkit, "sandbox"):
+                        invoke_task = asyncio.create_task(self.invoke_tool(tool, tool_call))
+                        last_fingerprint: Optional[str] = None
+                        while not invoke_task.done():
+                            done, _ = await asyncio.wait({invoke_task}, timeout=1.0)
+                            if done:
+                                break
+                            try:
+                                view = await tool.toolkit.sandbox.view_shell(
+                                    shell_id, console=True
+                                )
+                                console = (
+                                    view.data.get("console", [])
+                                    if view and getattr(view, "data", None)
+                                    else []
+                                )
+                                fingerprint = (
+                                    console
+                                    if isinstance(console, str)
+                                    else repr(console)
+                                )
+                                if fingerprint != last_fingerprint:
+                                    last_fingerprint = fingerprint
+                                    yield TerminalUpdateEvent(
+                                        shell_id=shell_id,
+                                        output=console,
+                                    )
+                            except Exception:
+                                logger.debug(
+                                    "Shell live poll failed for %s",
+                                    shell_id,
+                                    exc_info=True,
+                                )
+                        tool_result = await invoke_task
+                    else:
+                        tool_result = await self.invoke_tool(tool, tool_call)
 
                     # Generate event after tool call
                     yield ToolEvent(

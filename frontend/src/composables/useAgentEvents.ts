@@ -137,6 +137,14 @@ export function useAgentEvents(state: AgentEventState, options: AgentEventOption
   };
 
   const handleEvent = (event: AgentSSEEvent) => {
+    // Control / live computer-panel events — not part of the chat message list
+    if (
+      event.event === 'status_update'
+      || event.event === 'terminal_update'
+      || event.event === 'file_update'
+    ) {
+      return;
+    }
     if (event.event === 'message') {
       handleMessageEvent(event.data as MessageEventData);
     } else if (event.event === 'tool') {
@@ -144,7 +152,7 @@ export function useAgentEvents(state: AgentEventState, options: AgentEventOption
     } else if (event.event === 'step') {
       handleStepEvent(event.data as StepEventData);
     } else if (event.event === 'done') {
-      // Loading state is cleared when the SSE connection closes
+      // Loading state is cleared when the stream ends / status_update arrives
     } else if (event.event === 'wait') {
       // TODO: handle wait event
     } else if (event.event === 'error') {

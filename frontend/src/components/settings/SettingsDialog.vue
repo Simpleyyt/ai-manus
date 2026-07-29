@@ -1,39 +1,34 @@
 <template>
   <Dialog v-model:open="isSettingsDialogOpen">
-    <DialogContent class="w-[380px] md:w-[95vw] md:max-w-[920px]">
-      <DialogTitle></DialogTitle>
-      <DialogDescription></DialogDescription>
-      
-      <SettingsTabs 
-        :tabs="tabs" 
-        :default-tab="defaultTab"
-        :current-sub-page="currentSubPage"
-        :sub-page-configs="subPageConfigs"
-        @tab-change="onTabChange"
-        @navigate-to-profile="navigateToProfile"
-        @back="goBack">
-        
-        <template #account>
-          <AccountSettings @navigate-to-profile="navigateToProfile" />
-        </template>
-        
-        <template #account-profile>
-          <ProfileSettings @back="goBack" />
-        </template>
-        
-        <template #settings>
+    <DialogContent
+      class="w-[380px] max-w-[98%] md:w-[80vw] md:min-w-[720px] md:max-w-[1440px] min-h-[400px] overflow-hidden rounded-[16px] border-0 shadow-menu"
+    >
+      <DialogTitle class="sr-only">{{ t('Settings') }}</DialogTitle>
+      <DialogDescription class="sr-only">{{ t('Settings') }}</DialogDescription>
+
+      <SettingsTabs :default-tab="defaultTab" @tab-change="onTabChange">
+        <template #general>
           <GeneralSettings />
         </template>
-        
+        <template #account>
+          <AccountSettings />
+        </template>
+        <template #shortcuts>
+          <ShortcutsSettings />
+        </template>
+        <template #personalization>
+          <PersonalizationSettings />
+        </template>
+        <template #help>
+          <HelpSettings />
+        </template>
       </SettingsTabs>
-      
     </DialogContent>
   </Dialog>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { UserRound, Settings2 } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import {
   Dialog,
   DialogContent,
@@ -42,53 +37,16 @@ import {
 } from '@/components/ui/dialog'
 import { useSettingsDialog } from '@/composables/useSettingsDialog'
 import SettingsTabs from './SettingsTabs.vue'
-import AccountSettings from './AccountSettings.vue'
 import GeneralSettings from './GeneralSettings.vue'
-import ProfileSettings from './ProfileSettings.vue'
-import type { TabItem, SubPageConfig } from './SettingsTabs.vue'
+import AccountSettings from './AccountSettings.vue'
+import ShortcutsSettings from './ShortcutsSettings.vue'
+import PersonalizationSettings from './PersonalizationSettings.vue'
+import HelpSettings from './HelpSettings.vue'
 
-// Use global settings dialog state
+const { t } = useI18n()
 const { isSettingsDialogOpen, defaultTab } = useSettingsDialog()
 
-// Navigation state for sub-pages
-const currentSubPage = ref<string | null>(null)
-
-// Tab configuration
-const tabs: TabItem[] = [
-  {
-    id: 'account',
-    label: 'Account',
-    icon: UserRound
-  },
-  {
-    id: 'settings',
-    label: 'Settings',
-    icon: Settings2
-  }
-]
-
-// Sub-page configuration
-const subPageConfigs: SubPageConfig[] = [
-  {
-    id: 'profile',
-    title: 'Profile',
-    parentTabId: 'account'
-  }
-]
-
-// Handle tab change
 const onTabChange = (_tabId: string) => {
-  // Reset sub-page when changing tabs
-  currentSubPage.value = null
-}
-
-// Navigate to profile sub-page
-const navigateToProfile = () => {
-  currentSubPage.value = 'profile'
-}
-
-// Go back to main view
-const goBack = () => {
-  currentSubPage.value = null
+  /* tab state owned by SettingsTabs */
 }
 </script>

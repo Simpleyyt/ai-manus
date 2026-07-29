@@ -54,6 +54,7 @@
     --fill-white: #fff;
     --fill-black: #28282973;
     --Button-primary-black: #1a1a19;
+    --Button-black: #1a1a19;
     --Button-primary-white: #fff;
     --Button-primary-brand: #0081f2;
     --Button-secondary-brand: #0081f21a;
@@ -131,6 +132,7 @@
     --fill-white: #3e3d3e;
     --fill-black: #28282973;
     --Button-primary-black: #fff;
+    --Button-black: #fff;
     --Button-primary-white: #ffffff14;
     --Button-primary-brand: #1a93fe;
     --Button-secondary-brand: #1a93fe1f;

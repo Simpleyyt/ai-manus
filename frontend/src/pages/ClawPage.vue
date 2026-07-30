@@ -132,6 +132,7 @@
               v-model:attachments="attachments"
               :rows="1"
               dense
+              :placeholder="t('Send message to Manus')"
               :isRunning="false"
               :hideStopButton="true"
               :allowSendFilesOnly="true"

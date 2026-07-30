@@ -108,10 +108,15 @@ describe('ChatBox TipTap', () => {
 
     const menu = wrapper.find('[data-testid="chatbox-plus-menu"]')
     expect(menu.exists()).toBe(true)
+    // Official + shell (not slash rounded-xl w-[240px])
+    expect(menu.classes().join(' ')).toContain('rounded-[12px]')
+    expect(menu.classes().join(' ')).toContain('p-1')
     expect(menu.text()).toContain('Add local files')
 
     const row = menu.findAll('button').find((b) => b.text().includes('Add local files'))
     expect(row).toBeTruthy()
+    expect(row!.classes().join(' ')).toContain('rounded-[8px]')
+    expect(row!.classes().join(' ')).toContain('p-2')
     await row!.trigger('click')
     await nextTick()
 

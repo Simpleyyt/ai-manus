@@ -178,7 +178,7 @@ export default {
   'Assign a task or type / to see more': '分配一个任务或输入 / 查看更多',
   'Send message to Manus': '向 Manus 发送消息',
   'Add files and more': '添加文件等',
-  'Add local files': '添加本地文件',
+  'Add local files': '从本地文件添加',
   'You can choose to take over the browser to complete the operation.': '你可以选择接管浏览器以完成操作。',
   'Center view': '居中视图',
   'Side view': '侧边视图',

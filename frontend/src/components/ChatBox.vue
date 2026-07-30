@@ -23,6 +23,7 @@
             :open="showPlusMenu"
             :items="plusMenuItems"
             :position-style="plusMenuPositionStyle"
+            variant="plus"
             test-id="chatbox-plus-menu"
             @select="handlePlusSelect"
           />

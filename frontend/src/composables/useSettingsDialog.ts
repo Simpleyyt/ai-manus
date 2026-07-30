@@ -1,12 +1,26 @@
 import { ref } from 'vue'
 
-// Global state for settings dialog
+export type SettingsTabId =
+  | 'general'
+  | 'account'
+  | 'shortcuts'
+  | 'personalization'
+  | 'help'
+
 const isSettingsDialogOpen = ref(false)
-const defaultTab = ref<string>('settings')
+const defaultTab = ref<SettingsTabId>('general')
 
 export function useSettingsDialog() {
-  const openSettingsDialog = (tabId?: string) => {
-    if (tabId) {
+  const openSettingsDialog = (tabId?: SettingsTabId | string) => {
+    if (tabId === 'settings') {
+      defaultTab.value = 'general'
+    } else if (
+      tabId === 'general'
+      || tabId === 'account'
+      || tabId === 'shortcuts'
+      || tabId === 'personalization'
+      || tabId === 'help'
+    ) {
       defaultTab.value = tabId
     }
     isSettingsDialogOpen.value = true
@@ -20,7 +34,7 @@ export function useSettingsDialog() {
     isSettingsDialogOpen.value = !isSettingsDialogOpen.value
   }
 
-  const setDefaultTab = (tabId: string) => {
+  const setDefaultTab = (tabId: SettingsTabId) => {
     defaultTab.value = tabId
   }
 
@@ -30,6 +44,6 @@ export function useSettingsDialog() {
     openSettingsDialog,
     closeSettingsDialog,
     toggleSettingsDialog,
-    setDefaultTab
+    setDefaultTab,
   }
 }

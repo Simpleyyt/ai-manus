@@ -10,6 +10,9 @@ import i18n from './composables/useI18n'
 import { router } from './router'
 import { getCachedClientConfig } from './api/config'
 import { configure } from "vue-gtag"
+import { initTheme } from './composables/useTheme'
+
+initTheme()
 
 // Preload client runtime config and initialize Google Analytics.
 void getCachedClientConfig().then((config) => {

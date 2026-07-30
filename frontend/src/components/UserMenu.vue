@@ -84,9 +84,9 @@ const handleAccountClick = () => {
     openSettingsDialog('account');
 };
 
-// Handle Settings click - open settings dialog with settings tab
+// Handle Settings click - open settings dialog on General tab
 const handleSettingsClick = () => {
-    openSettingsDialog('settings');
+    openSettingsDialog('general');
 };
 
 // Handle logout action

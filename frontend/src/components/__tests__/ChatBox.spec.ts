@@ -9,7 +9,7 @@ vi.mock('../ChatBoxFiles.vue', () => ({
     name: 'ChatBoxFiles',
     props: ['attachments'],
     emits: ['update:attachments'],
-    setup(_, { expose }) {
+    setup(_: unknown, { expose }: { expose: (exposed: Record<string, unknown>) => void }) {
       expose({ isAllUploaded: true, uploadFile: vi.fn() })
       return {}
     },

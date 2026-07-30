@@ -492,24 +492,15 @@ const chat = async (message: string = '', files: FileInfo[] = []) => {
     cancelCurrentChat.value = null;
   }
 
-  if (message.trim()) {
-    // Add user message to conversation list
+  if (message.trim() || files.length > 0) {
+    // Official ChatQuestion: attachments + text in one right-aligned group
     messages.value.push({
       type: 'user',
       content: {
         content: message,
-        timestamp: Math.floor(Date.now() / 1000)
+        timestamp: Math.floor(Date.now() / 1000),
+        attachments: files.length > 0 ? files : undefined,
       } as MessageContent,
-    });
-  }
-
-  if (files.length > 0) {
-    messages.value.push({
-      type: 'attachments',
-      content: {
-        role: 'user',
-        attachments: files
-      } as AttachmentsContent,
     });
   }
 

@@ -4,13 +4,15 @@ import { mount, flushPromises } from '@vue/test-utils'
 import ChatBox from '../ChatBox.vue'
 import { i18n } from '../../composables/useI18n'
 
+export const uploadFileMock = vi.fn()
+
 vi.mock('../ChatBoxFiles.vue', () => ({
   default: {
     name: 'ChatBoxFiles',
     props: ['attachments'],
     emits: ['update:attachments'],
     setup(_: unknown, { expose }: { expose: (exposed: Record<string, unknown>) => void }) {
-      expose({ isAllUploaded: true, uploadFile: vi.fn() })
+      expose({ isAllUploaded: true, uploadFile: uploadFileMock })
       return {}
     },
     template: '<div data-testid="chatbox-files" />'
@@ -84,5 +86,33 @@ describe('ChatBox TipTap', () => {
     const last = emitted![emitted!.length - 1][0] as string
     expect(last).toBe('line one\nline two')
     expect(last).not.toContain('\n\n')
+  })
+
+  it('plus menu lists Add local files and triggers uploadFile', async () => {
+    uploadFileMock.mockClear()
+    const wrapper = mount(ChatBox, {
+      props: { modelValue: '', rows: 1, isRunning: false, attachments: [] },
+      global: { plugins: [i18n] },
+      attachTo: document.body,
+    })
+    await flushPromises()
+    await nextTick()
+
+    const plusBtn = wrapper.find('button[aria-haspopup="dialog"]')
+    expect(plusBtn.exists()).toBe(true)
+    await plusBtn.trigger('click')
+    await nextTick()
+
+    const menu = wrapper.find('[data-testid="chatbox-slash-menu"]')
+    expect(menu.exists()).toBe(true)
+    expect(menu.text()).toContain('Add local files')
+
+    const row = menu.findAll('button').find((b) => b.text().includes('Add local files'))
+    expect(row).toBeTruthy()
+    await row!.trigger('click')
+    await nextTick()
+
+    expect(uploadFileMock).toHaveBeenCalled()
+    wrapper.unmount()
   })
 })

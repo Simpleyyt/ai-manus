@@ -19,15 +19,12 @@
             aria-expanded="false" aria-haspopup="dialog">
             <Plus :size="17" />
           </button>
-          <div v-if="showPlusMenu"
-            class="absolute bottom-[calc(100%+8px)] left-0 z-50 min-w-[200px] rounded-[12px] border border-[var(--border-light)] bg-[var(--background-menu-white)] shadow-[0px_8px_32px_0px_var(--shadow-S)] py-1">
-            <button type="button"
-              class="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--text-primary)] hover:bg-[var(--fill-tsp-white-main)]"
-              @click="handleAddLocalFiles">
-              <Paperclip :size="16" class="text-[var(--icon-tertiary)]" />
-              {{ t('Add local files') }}
-            </button>
-          </div>
+          <ChatBoxSlashMenu
+            :open="showPlusMenu"
+            :items="plusMenuItems"
+            :position-style="plusMenuPositionStyle"
+            @select="handlePlusSelect"
+          />
         </div>
         <div class="flex gap-1.5 ml-auto items-center">
           <button v-if="!isRunning || sendEnabled || hideStopButton"
@@ -44,6 +41,13 @@
         </div>
       </div>
     </div>
+    <ChatBoxSlashMenu
+      :open="slashMenuOpen"
+      :items="slashMenuItems"
+      :position-style="slashPositionStyle"
+      :active-index="slashActiveIndex"
+      @select="handleSlashSelect"
+    />
   </div>
 </template>
 
@@ -52,10 +56,18 @@ import { ref, watch, computed, onMounted, onUnmounted, onBeforeUnmount } from 'v
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
+import type { SuggestionProps } from '@tiptap/suggestion'
 import SendIcon from './icons/SendIcon.vue'
 import { useI18n } from 'vue-i18n'
 import ChatBoxFiles from './ChatBoxFiles.vue'
-import { Paperclip, Plus } from 'lucide-vue-next'
+import ChatBoxSlashMenu from './chatbox/ChatBoxSlashMenu.vue'
+import type { SlashMenuItem } from './chatbox/ChatBoxSlashMenu.vue'
+import {
+  buildSlashItems,
+  createSlashSuggestion,
+  type SlashItem,
+} from './chatbox/slashSuggestion'
+import { Plus } from 'lucide-vue-next'
 import type { FileInfo } from '../api/file'
 
 const { t } = useI18n()
@@ -63,6 +75,21 @@ const hasTextInput = ref(false)
 const chatBoxFileListRef = ref()
 const showPlusMenu = ref(false)
 const plusMenuRef = ref<HTMLElement | null>(null)
+
+const slashMenuOpen = ref(false)
+const slashMenuItems = ref<SlashItem[]>([])
+const slashActiveIndex = ref(0)
+const slashPositionStyle = ref<Record<string, string>>({})
+let slashCommand: ((item: SlashItem) => void) | null = null
+
+const plusMenuItems: SlashMenuItem[] = [
+  { id: 'add_local_files', titleKey: 'Add local files' },
+]
+const plusMenuPositionStyle = {
+  position: 'absolute',
+  bottom: 'calc(100% + 8px)',
+  left: '0',
+}
 
 const props = withDefaults(defineProps<{
   modelValue: string
@@ -108,6 +135,44 @@ const handleStop = () => {
   emit('stop')
 }
 
+const uploadFile = () => {
+  chatBoxFileListRef.value?.uploadFile()
+}
+
+const runAddLocalFiles = () => {
+  showPlusMenu.value = false
+  slashMenuOpen.value = false
+  uploadFile()
+}
+
+const handlePlusSelect = (_item: SlashMenuItem) => {
+  showPlusMenu.value = false
+  uploadFile()
+}
+
+const handleSlashSelect = (item: SlashMenuItem) => {
+  const full = slashMenuItems.value.find((i) => i.id === item.id)
+  if (full && slashCommand) {
+    slashCommand(full)
+  } else if (item.id === 'add_local_files') {
+    runAddLocalFiles()
+  }
+}
+
+const applySlashSuggestionProps = (suggestionProps: SuggestionProps<SlashItem>) => {
+  slashMenuItems.value = suggestionProps.items
+  slashCommand = suggestionProps.command
+  slashActiveIndex.value = 0
+  const rect = suggestionProps.clientRect?.()
+  if (rect) {
+    slashPositionStyle.value = {
+      position: 'fixed',
+      left: `${Math.round(rect.left)}px`,
+      top: `${Math.round(rect.bottom + 8)}px`,
+    }
+  }
+}
+
 /** Plain-text → TipTap JSON doc (avoids HTML parse of `<`/`&`). */
 const plainTextToDoc = (text: string) => ({
   type: 'doc' as const,
@@ -129,12 +194,62 @@ const editor = useEditor({
       // keep bold/italic/lists/hardBreak
     }),
     Placeholder.configure({ placeholder: () => placeholderText.value }),
+    createSlashSuggestion({
+      items: () => buildSlashItems(runAddLocalFiles),
+      onOpenChange: (open) => {
+        slashMenuOpen.value = open
+        if (!open) {
+          slashMenuItems.value = []
+          slashCommand = null
+        }
+      },
+      render: {
+        onStart: (suggestionProps) => {
+          applySlashSuggestionProps(suggestionProps)
+        },
+        onUpdate: (suggestionProps) => {
+          applySlashSuggestionProps(suggestionProps)
+        },
+        onExit: () => {
+          slashMenuItems.value = []
+          slashCommand = null
+        },
+        onKeyDown: ({ event }) => {
+          if (!slashMenuOpen.value || slashMenuItems.value.length === 0) return false
+          if (event.key === 'ArrowDown') {
+            event.preventDefault()
+            slashActiveIndex.value =
+              (slashActiveIndex.value + 1) % slashMenuItems.value.length
+            return true
+          }
+          if (event.key === 'ArrowUp') {
+            event.preventDefault()
+            slashActiveIndex.value =
+              (slashActiveIndex.value - 1 + slashMenuItems.value.length) %
+              slashMenuItems.value.length
+            return true
+          }
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            const item = slashMenuItems.value[slashActiveIndex.value]
+            if (item && slashCommand) slashCommand(item)
+            return true
+          }
+          if (event.key === 'Escape') {
+            slashMenuOpen.value = false
+            return true
+          }
+          return false
+        },
+      },
+    }),
   ],
   content: plainTextToDoc(props.modelValue || ''),
   editorProps: {
     attributes: { class: 'tiptap ProseMirror focus:outline-none' },
     handleKeyDown: (_view, event) => {
       if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+        if (slashMenuOpen.value) return false
         if (sendEnabled.value) {
           event.preventDefault()
           handleSubmit()
@@ -179,15 +294,6 @@ watch(placeholderText, () => {
 onBeforeUnmount(() => editor.value?.destroy())
 
 defineExpose({ editor })
-
-const uploadFile = () => {
-  chatBoxFileListRef.value?.uploadFile()
-}
-
-const handleAddLocalFiles = () => {
-  showPlusMenu.value = false
-  uploadFile()
-}
 
 const onDocClick = (e: MouseEvent) => {
   if (showPlusMenu.value && plusMenuRef.value && !plusMenuRef.value.contains(e.target as Node)) {

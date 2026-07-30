@@ -108,6 +108,17 @@ const handleStop = () => {
   emit('stop')
 }
 
+/** Plain-text → TipTap JSON doc (avoids HTML parse of `<`/`&`). */
+const plainTextToDoc = (text: string) => ({
+  type: 'doc' as const,
+  content: (text || '').split('\n').map((line) => ({
+    type: 'paragraph' as const,
+    ...(line
+      ? { content: [{ type: 'text' as const, text: line }] }
+      : {}),
+  })),
+})
+
 const editor = useEditor({
   extensions: [
     StarterKit.configure({
@@ -119,7 +130,7 @@ const editor = useEditor({
     }),
     Placeholder.configure({ placeholder: () => placeholderText.value }),
   ],
-  content: props.modelValue || '',
+  content: plainTextToDoc(props.modelValue || ''),
   editorProps: {
     attributes: { class: 'tiptap ProseMirror focus:outline-none' },
     handleKeyDown: (_view, event) => {
@@ -134,19 +145,28 @@ const editor = useEditor({
     },
   },
   onUpdate: ({ editor: ed }) => {
-    const text = ed.getText()
+    const text = ed.getText({ blockSeparator: '\n' })
     hasTextInput.value = !!text.trim()
     emit('update:modelValue', text)
   },
 })
 
-watch(() => props.modelValue, (val) => {
+const syncModelToEditor = (val: string) => {
   if (!editor.value) return
-  const current = editor.value.getText()
+  const current = editor.value.getText({ blockSeparator: '\n' })
   if (val !== current) {
-    editor.value.commands.setContent(val ? val : '', { emitUpdate: false })
+    editor.value.commands.setContent(plainTextToDoc(val), { emitUpdate: false })
   }
   hasTextInput.value = !!(val ?? '').trim()
+}
+
+watch(() => props.modelValue, (val) => {
+  syncModelToEditor(val ?? '')
+})
+
+// Retry inbound sync once the editor becomes ready (missed early modelValue).
+watch(editor, (ed) => {
+  if (ed) syncModelToEditor(props.modelValue ?? '')
 })
 
 watch(placeholderText, () => {

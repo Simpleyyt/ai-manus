@@ -140,7 +140,7 @@
             class="flex items-center justify-center w-[36px] h-[36px] rounded-full bg-[var(--background-white-main)] hover:bg-[var(--background-gray-main)] clickable border border-[var(--border-main)] shadow-[0px_5px_16px_0px_var(--shadow-S),0px_0px_1.25px_0px_var(--shadow-S)] absolute -top-20 left-1/2 -translate-x-1/2">
             <ArrowDown class="text-[var(--icon-primary)]" :size="20" />
           </button>
-          <ChatBox v-model="inputMessage" v-model:attachments="attachments" :rows="1" @submit="handleSubmit"
+          <ChatBox v-model="inputMessage" v-model:attachments="attachments" :rows="1" dense @submit="handleSubmit"
             :isRunning="isLoading" @stop="handleStop" :placeholder="chatPlaceholder" />
         </div>
       </div>

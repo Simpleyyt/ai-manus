@@ -131,6 +131,7 @@
               v-model="inputMessage"
               v-model:attachments="attachments"
               :rows="1"
+              dense
               :isRunning="false"
               :hideStopButton="true"
               :allowSendFilesOnly="true"

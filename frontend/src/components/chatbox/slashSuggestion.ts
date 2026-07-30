@@ -1,4 +1,4 @@
-import { Extension } from '@tiptap/core'
+import { Extension, type Editor, type Range } from '@tiptap/core'
 import Suggestion, {
   type SuggestionKeyDownProps,
   type SuggestionProps,
@@ -18,6 +18,26 @@ export function buildSlashItems(runAddLocalFiles: () => void): SlashItem[] {
       run: runAddLocalFiles,
     },
   ]
+}
+
+/**
+ * Prefer the TipTap suggestion `command` (deletes `/` query + runs item).
+ * When mouse blur clears `command` before click, fall back to stored `range`.
+ */
+export function applySlashSelection(opts: {
+  editor: Editor | null | undefined
+  range: Range | null
+  command: ((item: SlashItem) => void) | null
+  item: SlashItem
+}): void {
+  if (opts.command) {
+    opts.command(opts.item)
+    return
+  }
+  if (opts.editor && opts.range) {
+    opts.editor.chain().focus().deleteRange(opts.range).run()
+  }
+  opts.item.run()
 }
 
 export type SlashSuggestionRenderHandlers = {

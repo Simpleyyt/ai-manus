@@ -23,6 +23,7 @@
             :open="showPlusMenu"
             :items="plusMenuItems"
             :position-style="plusMenuPositionStyle"
+            test-id="chatbox-plus-menu"
             @select="handlePlusSelect"
           />
         </div>
@@ -46,6 +47,7 @@
       :items="slashMenuItems"
       :position-style="slashPositionStyle"
       :active-index="slashActiveIndex"
+      test-id="chatbox-slash-menu"
       @select="handleSlashSelect"
     />
   </div>
@@ -63,12 +65,14 @@ import ChatBoxFiles from './ChatBoxFiles.vue'
 import ChatBoxSlashMenu from './chatbox/ChatBoxSlashMenu.vue'
 import type { SlashMenuItem } from './chatbox/ChatBoxSlashMenu.vue'
 import {
+  applySlashSelection,
   buildSlashItems,
   createSlashSuggestion,
   type SlashItem,
 } from './chatbox/slashSuggestion'
 import { Plus } from 'lucide-vue-next'
 import type { FileInfo } from '../api/file'
+import type { Range } from '@tiptap/core'
 
 const { t } = useI18n()
 const hasTextInput = ref(false)
@@ -81,6 +85,7 @@ const slashMenuItems = ref<SlashItem[]>([])
 const slashActiveIndex = ref(0)
 const slashPositionStyle = ref<Record<string, string>>({})
 let slashCommand: ((item: SlashItem) => void) | null = null
+let slashRange: Range | null = null
 
 const plusMenuItems: SlashMenuItem[] = [
   { id: 'add_local_files', titleKey: 'Add local files' },
@@ -151,17 +156,29 @@ const handlePlusSelect = (_item: SlashMenuItem) => {
 }
 
 const handleSlashSelect = (item: SlashMenuItem) => {
-  const full = slashMenuItems.value.find((i) => i.id === item.id)
-  if (full && slashCommand) {
-    slashCommand(full)
-  } else if (item.id === 'add_local_files') {
-    runAddLocalFiles()
-  }
+  const full: SlashItem =
+    slashMenuItems.value.find((i) => i.id === item.id) ??
+    buildSlashItems(runAddLocalFiles).find((i) => i.id === item.id) ??
+    {
+      id: 'add_local_files',
+      titleKey: 'Add local files',
+      run: runAddLocalFiles,
+    }
+
+  applySlashSelection({
+    editor: editor.value,
+    range: slashRange,
+    command: slashCommand,
+    item: full,
+  })
+  slashRange = null
+  slashCommand = null
 }
 
 const applySlashSuggestionProps = (suggestionProps: SuggestionProps<SlashItem>) => {
   slashMenuItems.value = suggestionProps.items
   slashCommand = suggestionProps.command
+  slashRange = suggestionProps.range
   slashActiveIndex.value = 0
   const rect = suggestionProps.clientRect?.()
   if (rect) {
@@ -201,6 +218,7 @@ const editor = useEditor({
         if (!open) {
           slashMenuItems.value = []
           slashCommand = null
+          // Keep slashRange until select/onStart so mouse click after blur can still delete `/`
         }
       },
       render: {
@@ -213,6 +231,7 @@ const editor = useEditor({
         onExit: () => {
           slashMenuItems.value = []
           slashCommand = null
+          // Keep slashRange for pending mouse click after focus steal
         },
         onKeyDown: ({ event }) => {
           if (!slashMenuOpen.value || slashMenuItems.value.length === 0) return false
@@ -232,11 +251,21 @@ const editor = useEditor({
           if (event.key === 'Enter') {
             event.preventDefault()
             const item = slashMenuItems.value[slashActiveIndex.value]
-            if (item && slashCommand) slashCommand(item)
+            if (item) {
+              applySlashSelection({
+                editor: editor.value,
+                range: slashRange,
+                command: slashCommand,
+                item,
+              })
+              slashRange = null
+              slashCommand = null
+            }
             return true
           }
           if (event.key === 'Escape') {
             slashMenuOpen.value = false
+            slashRange = null
             return true
           }
           return false

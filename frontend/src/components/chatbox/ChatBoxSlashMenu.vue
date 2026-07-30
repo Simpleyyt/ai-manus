@@ -1,9 +1,9 @@
 <template>
   <div
-    v-show="open"
+    v-if="open"
     class="bg-[var(--background-menu-white)] shadow-menu rounded-xl w-[240px] flex flex-col p-0 backdrop-blur-[40px] overflow-hidden z-[9]"
     :style="positionStyle"
-    data-testid="chatbox-slash-menu"
+    :data-testid="testId"
   >
     <div class="hide-scroll-bar flex-1 min-h-0 max-h-[280px] overflow-y-auto py-1">
       <button
@@ -12,6 +12,7 @@
         type="button"
         class="clickable mx-1 flex min-h-9 w-[calc(100%-8px)] items-center gap-2 rounded-lg px-2 text-sm text-[var(--text-primary)] hover:bg-[var(--fill-tsp-white-main)]"
         :class="index === activeIndex ? 'bg-[var(--fill-tsp-white-main)]' : ''"
+        @mousedown.prevent
         @click="emit('select', item)"
       >
         <Paperclip :size="16" class="text-[var(--icon-tertiary)]" />
@@ -36,10 +37,12 @@ withDefaults(
     items: SlashMenuItem[]
     positionStyle?: Record<string, string> | string
     activeIndex?: number
+    testId?: string
   }>(),
   {
     positionStyle: undefined,
     activeIndex: -1,
+    testId: 'chatbox-slash-menu',
   },
 )
 

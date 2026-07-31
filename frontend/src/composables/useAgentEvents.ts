@@ -57,6 +57,18 @@ export function useAgentEvents(state: AgentEventState, options: AgentEventOption
       return;
     }
 
+    // User turn: keep attachments on the same ChatQuestion shell (images above bubble).
+    if (messageData.role === 'user') {
+      messages.value.push({
+        type: 'user',
+        content: {
+          ...messageData,
+          attachments: messageData.attachments?.length ? messageData.attachments : undefined,
+        } as MessageContent,
+      });
+      return;
+    }
+
     messages.value.push({
       type: messageData.role,
       content: {

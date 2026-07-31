@@ -77,6 +77,52 @@ describe('ChatBoxFiles', () => {
     expect(attachments.value).toEqual([])
   })
 
+  it('renders image attachments as 54px thumbnail chips with preview', async () => {
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-image')
+    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+
+    const png: FileInfo = {
+      file_id: 'img-1',
+      filename: 'shot.png',
+      content_type: 'image/png',
+      size: 1200,
+      upload_date: '2026-01-01T00:00:00Z',
+    }
+    vi.mocked(apiUploadFile).mockResolvedValue(png)
+
+    const { wrapper, attachments } = mountWithParent()
+    const file = new File([new Uint8Array([1, 2, 3])], 'shot.png', { type: 'image/png' })
+    const input = wrapper.find('input[type="file"]')
+    Object.defineProperty(input.element, 'files', { value: [file] })
+    await input.trigger('change')
+    await flushPromises()
+
+    const thumb = wrapper.find('[data-testid="chatbox-attach-image"]')
+    expect(thumb.exists()).toBe(true)
+    expect(thumb.classes().join(' ')).toContain('h-[54px]')
+    expect(thumb.classes().join(' ')).toContain('w-[54px]')
+    expect(thumb.classes().join(' ')).toContain('rounded-[12px]')
+    expect(wrapper.find('[data-testid="chatbox-attach-file"]').exists()).toBe(false)
+    expect(thumb.find('img').attributes('src')).toBe('blob:mock-image')
+    expect(attachments.value[0].previewUrl).toBe('blob:mock-image')
+    expect(createObjectURL).toHaveBeenCalled()
+
+    await thumb.find('button').trigger('click')
+    expect(attachments.value).toEqual([])
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-image')
+
+    createObjectURL.mockRestore()
+    revokeObjectURL.mockRestore()
+  })
+
+  it('keeps non-image attachments as wide file chips', async () => {
+    vi.mocked(apiUploadFile).mockResolvedValue(uploadedFile)
+    const { wrapper } = mountWithParent()
+    await selectFile(wrapper)
+    expect(wrapper.find('[data-testid="chatbox-attach-file"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="chatbox-attach-image"]').exists()).toBe(false)
+  })
+
   it('does not mutate the attachments prop array directly', async () => {
     vi.mocked(apiUploadFile).mockResolvedValue(uploadedFile)
     const initial: ExtendedFileInfo[] = []

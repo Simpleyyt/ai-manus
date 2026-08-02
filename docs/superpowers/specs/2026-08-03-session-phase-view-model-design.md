@@ -1,7 +1,7 @@
 # Session Phase View-Model (Frontend Decoupling)
 
 **Date:** 2026-08-03  
-**Status:** Approved for implementation  
+**Status:** implemented  
 **Scope:** Frontend only (Approach A). No WS protocol or backend changes in this work.
 
 ## Problem

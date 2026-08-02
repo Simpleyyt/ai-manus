@@ -4,7 +4,7 @@
  * status_update, error codes — aligned with official Manus control plane.
  */
 import { BASE_URL } from './client';
-import type { AgentSSEEvent, AgentStatus, StatusUpdateEventData } from '../types/event';
+import type { AgentEvent, AgentStatus, StatusUpdateEventData } from '../types/event';
 import type { ChatAttachment } from './agent';
 
 export const CHAT_WS_PROTOCOL_VERSION = 2;
@@ -18,11 +18,11 @@ export type ChatWSServerMessage =
   | { type: 'stream_end'; session_id: string }
   | { type: 'ping' }
   | { type: 'error'; error: string; code?: number; session_id?: string; request_id?: string }
-  | { type: 'event'; session_id: string; event: string; data: AgentSSEEvent['data'] | StatusUpdateEventData };
+  | { type: 'event'; session_id: string; event: string; data: AgentEvent['data'] | StatusUpdateEventData };
 
 type EventHandler = (msg: {
-  event: AgentSSEEvent['event'] | 'status_update';
-  data: AgentSSEEvent['data'] | StatusUpdateEventData;
+  event: AgentEvent['event'] | 'status_update';
+  data: AgentEvent['data'] | StatusUpdateEventData;
 }) => void;
 
 type SessionHandlers = {
@@ -256,7 +256,7 @@ class ChatWebSocket {
         this.handlers.get(msg.session_id)?.onStatusUpdate?.(data.agent_status);
       }
       this.handlers.get(msg.session_id)?.onEvent?.({
-        event: msg.event as AgentSSEEvent['event'] | 'status_update',
+        event: msg.event as AgentEvent['event'] | 'status_update',
         data: msg.data,
       });
     }

@@ -3,7 +3,8 @@ import type { FileInfo } from '../api/file';
 /** Wire agent_status from chat WS status_update (official Manus-aligned). */
 export type AgentStatus = 'pending' | 'running' | 'waiting' | 'completed' | 'error';
 
-export type AgentSSEEvent = {
+/** Chat / session agent event over WebSocket (and history REST payloads). */
+export type AgentEvent = {
   event: 'tool' | 'step' | 'message' | 'error' | 'done' | 'title' | 'wait' | 'plan' | 'attachments' | 'status_update' | 'terminal_update' | 'file_update';
   data: ToolEventData | StepEventData | MessageEventData | ErrorEventData | DoneEventData | TitleEventData | WaitEventData | PlanEventData | StatusUpdateEventData | TerminalUpdateEventData | FileUpdateEventData;
 }

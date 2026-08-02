@@ -216,12 +216,12 @@ async def chat_ws(websocket: WebSocket):
         })
 
     async def send_agent_event(session_id: str, event: Any) -> None:
-        sse = await EventMapper.event_to_sse_event(event)
-        data = sse.data.model_dump(mode="json") if sse.data else {}
+        stream_event = await EventMapper.event_to_stream_event(event)
+        data = stream_event.data.model_dump(mode="json") if stream_event.data else {}
         await safe_send({
             "type": "event",
             "session_id": session_id,
-            "event": sse.event,
+            "event": stream_event.event,
             "data": data,
         })
 

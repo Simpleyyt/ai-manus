@@ -13,7 +13,7 @@ import {
   ErrorEventData,
   TitleEventData,
   PlanEventData,
-  AgentSSEEvent,
+  AgentEvent,
 } from '../types/event';
 
 export interface AgentEventState {
@@ -32,7 +32,7 @@ export interface AgentEventOptions {
 }
 
 /**
- * Shared conversion of agent SSE events into the UI message list.
+ * Shared conversion of agent stream events into the UI message list.
  * Used by both ChatPage (live chat) and SharePage (replay).
  */
 export function useAgentEvents(state: AgentEventState, options: AgentEventOptions = {}) {
@@ -136,7 +136,7 @@ export function useAgentEvents(state: AgentEventState, options: AgentEventOption
     plan.value = planData;
   };
 
-  const handleEvent = (event: AgentSSEEvent) => {
+  const handleEvent = (event: AgentEvent) => {
     // Control / live computer-panel events — not part of the chat message list
     if (
       event.event === 'status_update'

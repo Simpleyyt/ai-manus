@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class ClawEventBus:
-    """Simple in-memory pub/sub per user for broadcasting SSE events."""
+    """Simple in-memory pub/sub per user for broadcasting Claw stream events."""
 
     def __init__(self):
         self._subscribers: dict[str, list[asyncio.Queue]] = defaultdict(list)
@@ -35,7 +35,7 @@ class ClawEventBus:
 
 
 class _ChatState:
-    """Tracks an in-progress response so new SSE clients can catch up."""
+    """Tracks an in-progress response so new WebSocket clients can catch up."""
     __slots__ = ("pending_text",)
 
     def __init__(self):
@@ -47,7 +47,7 @@ class ClawService:
 
     Thin orchestration layer: delegates core business logic to
     ``ClawDomainService`` and adds application-level concerns such as
-    the SSE event bus, background task scheduling, and chat state tracking.
+    the Claw event bus, background task scheduling, and chat state tracking.
     """
 
     def __init__(self, claw_domain_service: ClawDomainService):
@@ -143,7 +143,7 @@ class ClawService:
             self._chat_states.pop(user_id, None)
 
     def get_pending_content(self, user_id: str) -> Optional[str]:
-        """Return accumulated text for an in-progress response (for SSE catch-up)."""
+        """Return accumulated text for an in-progress response (for WS catch-up)."""
         state = self._chat_states.get(user_id)
         if state and state.pending_text:
             return state.pending_text

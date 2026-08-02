@@ -45,7 +45,7 @@ class CommonEventData(BaseEventData):
         }
         extra = "allow"
 
-class BaseSSEEvent(BaseModel):
+class BaseStreamEvent(BaseModel):
     event: str
     data: BaseEventData
 
@@ -62,7 +62,7 @@ class MessageEventData(BaseEventData):
     content: str
     attachments: Optional[List[FileInfoResponse]] = None
 
-class MessageSSEEvent(BaseSSEEvent):
+class MessageStreamEvent(BaseStreamEvent):
     event: Literal["message"] = "message"
     data: MessageEventData
 
@@ -85,7 +85,7 @@ class ToolEventData(BaseEventData):
     args: Dict[str, Any]
     content: Optional[ToolContent] = None
 
-class ToolSSEEvent(BaseSSEEvent):
+class ToolStreamEvent(BaseStreamEvent):
     event: Literal["tool"] = "tool"
     data: ToolEventData
 
@@ -107,10 +107,10 @@ class ToolSSEEvent(BaseSSEEvent):
             )
         )
 
-class DoneSSEEvent(BaseSSEEvent):
+class DoneStreamEvent(BaseStreamEvent):
     event: Literal["done"] = "done"
 
-class WaitSSEEvent(BaseSSEEvent):
+class WaitStreamEvent(BaseStreamEvent):
     event: Literal["wait"] = "wait"
 
 
@@ -120,7 +120,7 @@ class TerminalUpdateEventData(BaseEventData):
     description: Optional[str] = None
 
 
-class TerminalUpdateSSEEvent(BaseSSEEvent):
+class TerminalUpdateStreamEvent(BaseStreamEvent):
     event: Literal["terminal_update"] = "terminal_update"
     data: TerminalUpdateEventData
 
@@ -132,7 +132,7 @@ class FileUpdateEventData(BaseEventData):
     file: Optional[FileInfoResponse] = None
 
 
-class FileUpdateSSEEvent(BaseSSEEvent):
+class FileUpdateStreamEvent(BaseStreamEvent):
     event: Literal["file_update"] = "file_update"
     data: FileUpdateEventData
 
@@ -155,7 +155,7 @@ class FileUpdateSSEEvent(BaseSSEEvent):
 class ErrorEventData(BaseEventData):
     error: str
 
-class ErrorSSEEvent(BaseSSEEvent):
+class ErrorStreamEvent(BaseStreamEvent):
     event: Literal["error"] = "error"
     data: ErrorEventData
 
@@ -164,7 +164,7 @@ class StepEventData(BaseEventData):
     id: str
     description: str
 
-class StepSSEEvent(BaseSSEEvent):
+class StepStreamEvent(BaseStreamEvent):
     event: Literal["step"] = "step"
     data: StepEventData
 
@@ -182,14 +182,14 @@ class StepSSEEvent(BaseSSEEvent):
 class TitleEventData(BaseEventData):
     title: str
 
-class TitleSSEEvent(BaseSSEEvent):
+class TitleStreamEvent(BaseStreamEvent):
     event: Literal["title"] = "title"
     data: TitleEventData
 
 class PlanEventData(BaseEventData):
     steps: List[StepEventData]
 
-class PlanSSEEvent(BaseSSEEvent):
+class PlanStreamEvent(BaseStreamEvent):
     event: Literal["plan"] = "plan"
     data: PlanEventData
 
@@ -207,54 +207,54 @@ class PlanSSEEvent(BaseSSEEvent):
             )
         )
 
-class CommonSSEEvent(BaseSSEEvent):
+class CommonStreamEvent(BaseStreamEvent):
     event: str
     data: CommonEventData
 
-AgentSSEEvent = Union[
-    PlanSSEEvent,
-    MessageSSEEvent,
-    TitleSSEEvent,
-    ToolSSEEvent,
-    StepSSEEvent,
-    DoneSSEEvent,
-    ErrorSSEEvent,
-    WaitSSEEvent,
-    TerminalUpdateSSEEvent,
-    FileUpdateSSEEvent,
-    CommonSSEEvent,
+AgentStreamEvent = Union[
+    PlanStreamEvent,
+    MessageStreamEvent,
+    TitleStreamEvent,
+    ToolStreamEvent,
+    StepStreamEvent,
+    DoneStreamEvent,
+    ErrorStreamEvent,
+    WaitStreamEvent,
+    TerminalUpdateStreamEvent,
+    FileUpdateStreamEvent,
+    CommonStreamEvent,
 ]
 
-# Explicit registry: domain event type -> SSE event class.
+# Explicit registry: domain event type -> wire stream event class.
 # Register new event types here when adding them to AgentEvent.
-_EVENT_TYPE_TO_SSE_CLASS: Dict[str, Type[BaseSSEEvent]] = {
-    "plan": PlanSSEEvent,
-    "message": MessageSSEEvent,
-    "title": TitleSSEEvent,
-    "tool": ToolSSEEvent,
-    "step": StepSSEEvent,
-    "done": DoneSSEEvent,
-    "error": ErrorSSEEvent,
-    "wait": WaitSSEEvent,
-    "terminal_update": TerminalUpdateSSEEvent,
-    "file_update": FileUpdateSSEEvent,
+_EVENT_TYPE_TO_STREAM_CLASS: Dict[str, Type[BaseStreamEvent]] = {
+    "plan": PlanStreamEvent,
+    "message": MessageStreamEvent,
+    "title": TitleStreamEvent,
+    "tool": ToolStreamEvent,
+    "step": StepStreamEvent,
+    "done": DoneStreamEvent,
+    "error": ErrorStreamEvent,
+    "wait": WaitStreamEvent,
+    "terminal_update": TerminalUpdateStreamEvent,
+    "file_update": FileUpdateStreamEvent,
 }
 
 class EventMapper:
-    """Map AgentEvent (domain) to SSEEvent (wire format)"""
+    """Map AgentEvent (domain) to AgentStreamEvent (WS / REST wire format)"""
 
     @staticmethod
-    async def event_to_sse_event(event: AgentEvent) -> AgentSSEEvent:
-        sse_event_class = _EVENT_TYPE_TO_SSE_CLASS.get(event.type, CommonSSEEvent)
+    async def event_to_stream_event(event: AgentEvent) -> AgentStreamEvent:
+        stream_event_class = _EVENT_TYPE_TO_STREAM_CLASS.get(event.type, CommonStreamEvent)
         # Classes needing IO (e.g. signed URLs) define from_event_async
-        from_event_async = getattr(sse_event_class, "from_event_async", None)
+        from_event_async = getattr(stream_event_class, "from_event_async", None)
         if from_event_async is not None:
             return await from_event_async(event)
-        return sse_event_class.from_event(event)
+        return stream_event_class.from_event(event)
 
     @staticmethod
-    async def events_to_sse_events(events: List[AgentEvent]) -> List[AgentSSEEvent]:
-        """Create SSE event list from event list"""
+    async def events_to_stream_events(events: List[AgentEvent]) -> List[AgentStreamEvent]:
+        """Create wire event list from domain event list"""
         return [
-            await EventMapper.event_to_sse_event(event) for event in events if event
+            await EventMapper.event_to_stream_event(event) for event in events if event
         ]

@@ -52,7 +52,7 @@ async def get_session(
         session_id=session.id,
         title=session.title,
         status=session.status,
-        events=await EventMapper.events_to_sse_events(session.events),
+        events=await EventMapper.events_to_stream_events(session.events),
         is_shared=session.is_shared,
         is_favorite=session.is_favorite,
         is_pinned=session.is_pinned,
@@ -286,6 +286,6 @@ async def get_shared_session(
         session_id=session.id,
         title=session.title,
         status=session.status,
-        events=await EventMapper.events_to_sse_events(session.events),
+        events=await EventMapper.events_to_stream_events(session.events),
         is_shared=session.is_shared
     ))

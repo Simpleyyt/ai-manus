@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, List
-from app.interfaces.schemas.event import AgentSSEEvent
+from app.interfaces.schemas.event import AgentStreamEvent
 from app.domain.models.session import SessionStatus, SessionSummary, TaskMode
 
 
@@ -19,7 +19,7 @@ class GetSessionResponse(BaseModel):
     session_id: str
     title: Optional[str] = None
     status: SessionStatus
-    events: List[AgentSSEEvent] = []
+    events: List[AgentStreamEvent] = []
     is_shared: bool = False
     is_favorite: bool = False
     is_pinned: bool = False
@@ -159,5 +159,5 @@ class SharedSessionResponse(BaseModel):
     session_id: str
     title: Optional[str] = None
     status: SessionStatus
-    events: List[AgentSSEEvent] = []
+    events: List[AgentStreamEvent] = []
     is_shared: bool

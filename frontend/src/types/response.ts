@@ -1,4 +1,4 @@
-import { AgentSSEEvent } from "./event";
+import { AgentEvent } from "./event";
 
 export enum SessionStatus {
     PENDING = "pending",
@@ -15,7 +15,7 @@ export interface GetSessionResponse {
     session_id: string;
     title: string | null;
     status: SessionStatus;
-    events: AgentSSEEvent[];
+    events: AgentEvent[];
     is_shared: boolean;
     is_favorite: boolean;
     is_pinned: boolean;
@@ -103,7 +103,7 @@ export interface SharedSessionResponse {
     session_id: string;
     title: string | null;
     status: SessionStatus;
-    events: AgentSSEEvent[];
+    events: AgentEvent[];
     is_shared: boolean;
 }
   

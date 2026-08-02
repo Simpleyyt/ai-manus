@@ -175,6 +175,7 @@ export default {
   'Select an application to use': 'Select an application to use',
   'Failed to load file content': 'Failed to load file content',
   'Give Manus a task to work on...': 'Give Manus a task to work on...',
+  'Assign a task or type / to see more': 'Assign a task or type / to see more',
   'Send message to Manus': 'Send message to Manus',
   'Add files and more': 'Add files and more',
   'Add local files': 'Add local files',

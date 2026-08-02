@@ -131,6 +131,8 @@
               v-model="inputMessage"
               v-model:attachments="attachments"
               :rows="1"
+              dense
+              :placeholder="t('Send message to Manus')"
               :isRunning="false"
               :hideStopButton="true"
               :allowSendFilesOnly="true"
@@ -573,22 +575,18 @@ const handleSubmit = async () => {
   const successFiles = files.filter((f: FileInfo) => !('status' in f) || (f as FileInfo & { status?: string }).status === 'success');
   const msgToSend = msg || (successFiles.length > 0 ? t('Please check {count} attachment(s) I sent', { count: successFiles.length }) : '');
 
-  if (msgToSend) {
+  if (msgToSend || successFiles.length > 0) {
     messages.value.push({
       type: 'user',
-      content: { content: msgToSend, timestamp: Math.floor(Date.now() / 1000) } as MessageContent,
+      content: {
+        content: msgToSend,
+        timestamp: Math.floor(Date.now() / 1000),
+        attachments: successFiles.length > 0 ? successFiles : undefined,
+      } as MessageContent,
     });
   }
 
   if (successFiles.length > 0) {
-    messages.value.push({
-      type: 'attachments',
-      content: {
-        role: 'user',
-        attachments: successFiles,
-        timestamp: Math.floor(Date.now() / 1000),
-      } as AttachmentsContent,
-    });
     attachments.value.length = 0;
   }
 

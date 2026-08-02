@@ -140,7 +140,7 @@
             class="flex items-center justify-center w-[36px] h-[36px] rounded-full bg-[var(--background-white-main)] hover:bg-[var(--background-gray-main)] clickable border border-[var(--border-main)] shadow-[0px_5px_16px_0px_var(--shadow-S),0px_0px_1.25px_0px_var(--shadow-S)] absolute -top-20 left-1/2 -translate-x-1/2">
             <ArrowDown class="text-[var(--icon-primary)]" :size="20" />
           </button>
-          <ChatBox v-model="inputMessage" v-model:attachments="attachments" :rows="1" @submit="handleSubmit"
+          <ChatBox v-model="inputMessage" v-model:attachments="attachments" :rows="1" dense @submit="handleSubmit"
             :isRunning="isLoading" @stop="handleStop" :placeholder="chatPlaceholder" />
         </div>
       </div>
@@ -492,24 +492,15 @@ const chat = async (message: string = '', files: FileInfo[] = []) => {
     cancelCurrentChat.value = null;
   }
 
-  if (message.trim()) {
-    // Add user message to conversation list
+  if (message.trim() || files.length > 0) {
+    // Official ChatQuestion: attachments + text in one right-aligned group
     messages.value.push({
       type: 'user',
       content: {
         content: message,
-        timestamp: Math.floor(Date.now() / 1000)
+        timestamp: Math.floor(Date.now() / 1000),
+        attachments: files.length > 0 ? files : undefined,
       } as MessageContent,
-    });
-  }
-
-  if (files.length > 0) {
-    messages.value.push({
-      type: 'attachments',
-      content: {
-        role: 'user',
-        attachments: files
-      } as AttachmentsContent,
     });
   }
 

@@ -204,7 +204,7 @@ const showThinking = computed(() => {
   return true;
 });
 
-// Shared SSE event -> message list conversion
+// Shared agent event -> message list conversion
 const { handleEvent } = useAgentEvents(
   { messages, title, plan, isLoading, lastEventId, lastTool, lastNoMessageTool },
   {

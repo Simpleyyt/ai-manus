@@ -71,7 +71,7 @@ See [docs/roadmap.md](docs/en/roadmap.md) for the full checklist (including comp
 2. The Sandbox is an Ubuntu Docker environment that starts Chrome browser and API services for tools like File/Shell.
 3. Web sends user messages to the session ID, and when the Server receives user messages, it forwards them to the PlanAct Agent for processing.
 4. During processing, the PlanAct Agent plans and executes steps: the planner/executor submit structured results through native tool calls, and call sandbox tools (Shell / Browser / File / Search / MCP) as needed.
-5. All events generated during Agent processing are sent back to Web via SSE.
+5. All events generated during Agent processing are sent back to Web via WebSocket.
 
 **When users browse tools:**
 

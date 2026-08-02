@@ -6,7 +6,7 @@
 
 ## 特性
 
-- 聊天界面与任务会话，支持计划面板与 SSE 事件流
+- 聊天界面与任务会话，支持计划面板与 WebSocket 事件流
 - 工具面板与富渲染视图（搜索、文件、终端、浏览器、MCP）
 - VNC 查看器，支持实时查看与接管沙盒
 - 登录认证、会话分享、文件上传与下载
@@ -67,7 +67,7 @@ docker run -d -p 8080:80 ai-chatbot-vue
 
 ```
 src/
-├── api/             # API 层（axios 客户端、SSE、认证、文件、Claw、配置）
+├── api/             # API 层（axios 客户端、WebSocket、认证、文件、Claw、配置）
 ├── assets/          # 静态资源和CSS文件
 ├── components/      # 可复用组件
 │   ├── toolViews/       # 工具富渲染视图（浏览器、文件、终端、搜索、MCP）

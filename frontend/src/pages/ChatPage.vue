@@ -164,7 +164,7 @@ import ChatTaskCompleted from '../components/ChatTaskCompleted.vue';
 import ChatWaitingContinue from '../components/ChatWaitingContinue.vue';
 import * as agentApi from '../api/agent';
 import { Message, MessageContent, ToolContent, AttachmentsContent, StepContent, isConsecutiveAssistant } from '../types/message';
-import { PlanEventData, AgentSSEEvent, type AgentStatus, type TerminalUpdateEventData, type FileUpdateEventData } from '../types/event';
+import { PlanEventData, AgentEvent, type AgentStatus, type TerminalUpdateEventData, type FileUpdateEventData } from '../types/event';
 import { useAgentEvents } from '../composables/useAgentEvents';
 import ComputerPanel from '../components/ComputerPanel.vue'
 import { ArrowDown, FileSearch, Lock, Globe, Link, Check, Ellipsis, Pencil, Star, Trash, FolderPlus, Folder, FolderSync, Pin } from 'lucide-vue-next';
@@ -345,7 +345,7 @@ const isAssistantLastBeforeUser = (index: number) => {
   return false;
 };
 
-// Shared SSE event -> message list conversion
+// Shared agent event -> message list conversion
 const { handleEvent: handleAgentEvent } = useAgentEvents(
   { messages, title, plan, isLoading, lastEventId, lastTool, lastNoMessageTool },
   {
@@ -357,7 +357,7 @@ const { handleEvent: handleAgentEvent } = useAgentEvents(
   }
 );
 
-const handleEvent = (event: AgentSSEEvent) => {
+const handleEvent = (event: AgentEvent) => {
   handleAgentEvent(event);
   if (event.event === 'status_update') {
     return;
@@ -457,8 +457,8 @@ const chatStreamCallbacks = (): agentApi.ChatStreamCallbacks => ({
       return;
     }
     handleEvent({
-      event: event as AgentSSEEvent['event'],
-      data: data as AgentSSEEvent['data'],
+      event: event as AgentEvent['event'],
+      data: data as AgentEvent['data'],
     });
   },
   onStatusUpdate: (agentStatus) => {

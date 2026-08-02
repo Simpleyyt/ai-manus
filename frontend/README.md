@@ -6,7 +6,7 @@ This is the frontend for AI Manus × Claw, built with Vue 3 + TypeScript + Vite.
 
 ## Features
 
-- Chat interface with task sessions, plan panel, and SSE event streaming
+- Chat interface with task sessions, plan panel, and WebSocket event streaming
 - Tool panels with rich renderers (Search, Files, Terminal, Browser, MCP)
 - VNC viewer for real-time sandbox viewing and takeover
 - Login/authentication, session sharing, and file upload/download
@@ -67,7 +67,7 @@ docker run -d -p 8080:80 ai-chatbot-vue
 
 ```
 src/
-├── api/             # API layer (axios client, SSE, auth, files, claw, config)
+├── api/             # API layer (axios client, WebSocket, auth, files, claw, config)
 ├── assets/          # Static resources and CSS files
 ├── components/      # Reusable components
 │   ├── toolViews/       # Rich tool renderers (Browser, File, Shell, Search, MCP)

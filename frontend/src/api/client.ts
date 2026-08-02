@@ -90,7 +90,7 @@ const redirectToLogin = () => {
 };
 
 /**
- * Common token refresh logic used by both axios interceptor and SSE connections
+ * Common token refresh logic used by the axios interceptor
  */
 const refreshAuthToken = async (): Promise<string | null> => {
   if (isRefreshing) {

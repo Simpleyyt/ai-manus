@@ -1,13 +1,13 @@
 // Backend API service
 import { apiClient, ApiResponse, BASE_URL } from './client';
-import { AgentSSEEvent } from '../types/event';
+import { AgentEvent } from '../types/event';
 import type { AgentStatus } from '../types/event';
 import { CreateSessionResponse, GetSessionResponse, ShellViewResponse, FileViewResponse, ListSessionResponse, ListSessionItem, ShareSessionResponse, SharedSessionResponse } from '../types/response';
 import type { FileInfo } from './file';
 
 export type ChatStreamCallbacks = {
   onOpen?: () => void;
-  onMessage?: (event: { event: string; data: AgentSSEEvent['data'] }) => void;
+  onMessage?: (event: { event: string; data: AgentEvent['data'] }) => void;
   onStatusUpdate?: (agentStatus: AgentStatus) => void;
   onClose?: () => void;
   onError?: (error: Error) => void;
@@ -186,7 +186,7 @@ export const chatWithSession = async (
     onEvent: ({ event, data }) => {
       // status_update is delivered via onStatusUpdate; skip duplicate onMessage
       if (event === 'status_update') return;
-      callbacks?.onMessage?.({ event, data: data as AgentSSEEvent['data'] });
+      callbacks?.onMessage?.({ event, data: data as AgentEvent['data'] });
     },
     onStatusUpdate: (agentStatus) => {
       callbacks?.onStatusUpdate?.(agentStatus);

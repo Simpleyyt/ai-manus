@@ -27,7 +27,7 @@ class ClawDomainService:
     """Domain service for Claw lifecycle, history merge, and auth logic.
 
     This service encapsulates pure business rules that are independent of
-    application-level concerns (SSE event bus, background task scheduling, etc.).
+    application-level concerns (event bus, background task scheduling, etc.).
     """
 
     def __init__(
@@ -285,7 +285,7 @@ class ClawDomainService:
         """Stream chat from the claw client, persisting messages.
 
         Yields raw chunk dicts from the claw client. The caller is responsible
-        for broadcasting chunks to SSE / WebSocket consumers.
+        for broadcasting chunks to WebSocket consumers.
         """
         assistant_content: list[str] = []
         file_attachments: list[ClawAttachment] = []

@@ -330,7 +330,6 @@ const handleEvent = (event: AgentEvent) => {
   if (event.event === 'status_update') return;
   if (event.event === 'wait') noteDomainEvent('wait');
   else if (event.event === 'done') noteDomainEvent('done');
-  else if (event.event === 'error') noteDomainEvent('error');
 };
 
 // Reset all refs to their initial values

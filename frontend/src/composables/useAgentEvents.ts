@@ -20,7 +20,6 @@ export interface AgentEventState {
   messages: Ref<Message[]>;
   title: Ref<string>;
   plan: Ref<PlanEventData | undefined>;
-  isLoading?: Ref<boolean>;
   lastEventId: Ref<string | undefined>;
   lastTool: Ref<ToolContent | undefined>;
   lastNoMessageTool: Ref<ToolContent | undefined>;

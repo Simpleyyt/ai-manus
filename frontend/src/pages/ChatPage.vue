@@ -250,6 +250,7 @@ const {
 } = useSessionPhase({ messages });
 
 // Non-state refs that don't need reset
+const isHydrating = ref(false)
 const computerPanel = ref<InstanceType<typeof ComputerPanel>>()
 const simpleBarRef = ref<InstanceType<typeof SimpleBar>>();
 const observerRef = ref<HTMLDivElement>();
@@ -321,12 +322,15 @@ const { handleEvent: handleAgentEvent } = useAgentEvents(
         computerPanel.value?.showComputerPanel(tool, true);
       }
     },
-    onStreamError: () => noteDomainEvent('error'),
+    onStreamError: () => {
+      if (!isHydrating.value) noteDomainEvent('error');
+    },
   }
 );
 
 const handleEvent = (event: AgentEvent) => {
   handleAgentEvent(event);
+  if (isHydrating.value) return;
   if (event.event === 'status_update') return;
   if (event.event === 'wait') noteDomainEvent('wait');
   else if (event.event === 'done') noteDomainEvent('done');
@@ -485,20 +489,24 @@ const restoreSession = async () => {
   const session = await agentApi.getSession(sessionId.value);
   // Initialize share mode based on session state
   shareMode.value = session.is_shared ? 'public' : 'private';
-  hydrateFromSessionStatus(session.status);
   isFavorite.value = !!session.is_favorite;
   isPinned.value = !!session.is_pinned;
   projectId.value = session.project_id ?? null;
   taskMode.value = session.task_mode === 'chat' ? 'chat' : 'agent';
   realTime.value = false;
-  for (const event of session.events) {
-    handleAgentEvent(event);
+  isHydrating.value = true;
+  try {
+    hydrateFromSessionStatus(session.status);
+    for (const event of session.events) {
+      handleAgentEvent(event);
+    }
+  } finally {
+    isHydrating.value = false;
   }
   realTime.value = true;
 
   // Always join the chat channel (status_update + idle Mongo catch-up).
-  // Only resume the live Redis stream while the agent is running — idle join
-  // no longer emits stream_end, so this will not stick isLoading.
+  // Only resume the live Redis stream while the agent is running.
   if (cancelCurrentChat.value) {
     cancelCurrentChat.value();
     cancelCurrentChat.value = null;

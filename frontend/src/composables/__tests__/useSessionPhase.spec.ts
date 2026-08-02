@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { ref } from 'vue'
 import { useSessionPhase } from '../useSessionPhase'
 import { SessionStatus } from '../../types/response'
-import type { Message } from '../../types/message'
+import type { Message, MessageContent } from '../../types/message'
 
 describe('useSessionPhase', () => {
   it('hydrate waiting → not busy, showWaitingContinue', () => {
@@ -35,21 +35,21 @@ describe('useSessionPhase', () => {
 
   it('running shows thinking until visible assistant/tool/step after last user', () => {
     const messages = ref<Message[]>([
-      { type: 'user', content: { content: 'hi', timestamp: 1 } },
+      { type: 'user', content: { content: 'hi', timestamp: 1 } as MessageContent },
     ])
     const { applyStatusUpdate, showThinking } = useSessionPhase({ messages })
     applyStatusUpdate('running')
     expect(showThinking.value).toBe(true)
     messages.value.push({
       type: 'assistant',
-      content: { content: 'hello', timestamp: 2 },
+      content: { content: 'hello', timestamp: 2 } as MessageContent,
     })
     expect(showThinking.value).toBe(false)
   })
 
   it('completed + assistant text → showTaskCompleted', () => {
     const messages = ref<Message[]>([
-      { type: 'assistant', content: { content: 'done text', timestamp: 1 } },
+      { type: 'assistant', content: { content: 'done text', timestamp: 1 } as MessageContent },
     ])
     const { applyStatusUpdate, showTaskCompleted, isBusy } = useSessionPhase({ messages })
     applyStatusUpdate('completed')

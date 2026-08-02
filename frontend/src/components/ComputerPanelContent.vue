@@ -47,14 +47,14 @@
             aria-haspopup="dialog"
             :title="useComputerTitle"
             @click="showUseComputer = !showUseComputer">
-            <Monitor :size="18" />
+            <UseComputerIcon class="w-5 h-5" color="currentColor" />
           </button>
           <div
             v-if="showUseComputer"
             class="absolute right-0 top-[calc(100%+10px)] z-50 w-[min(480px,calc(100vw-32px))] rounded-[20px] border border-[var(--border-main)] bg-[var(--background-menu-white)] shadow-[0px_8px_32px_0px_var(--shadow-S)] p-4 flex flex-col gap-3">
             <div class="flex justify-between items-center">
               <div class="flex items-center gap-1.5 min-w-0">
-                <Monitor :size="20" class="text-[var(--icon-primary)] shrink-0" />
+                <UseComputerIcon :size="20" color="var(--icon-primary)" class="shrink-0" />
                 <h2 class="text-lg text-[var(--text-primary)] font-serif font-semibold truncate">
                   {{ t("Use application on {product}'s computer", { product: 'Manus' }) }}
                 </h2>
@@ -219,7 +219,7 @@ import { toRef, ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useMediaQuery } from '@vueuse/core';
 import { useI18n } from 'vue-i18n';
 import {
-  PlayIcon, X, Monitor,
+  PlayIcon, X,
   SkipBack, SkipForward,
 } from 'lucide-vue-next';
 import type { ToolContent } from '@/types/message';
@@ -229,6 +229,7 @@ import PlanPanel from './PlanPanel.vue';
 import ComputerInactiveEmpty from './ComputerInactiveEmpty.vue';
 import CenterViewIcon from './icons/CenterViewIcon.vue';
 import SideViewIcon from './icons/SideViewIcon.vue';
+import UseComputerIcon from './icons/UseComputerIcon.vue';
 
 const props = withDefaults(defineProps<{
   sessionId?: string;

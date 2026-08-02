@@ -365,7 +365,10 @@ const handleEvent = (event: AgentEvent) => {
   if (event.event === 'done') {
     sessionStatus.value = SessionStatus.COMPLETED;
   } else if (event.event === 'wait') {
+    // WaitEvent means the agent paused for user input — clear loading even if
+    // a later stream_end clears handlers before status_update(waiting) arrives.
     sessionStatus.value = SessionStatus.WAITING;
+    isLoading.value = false;
   } else if (event.event === 'message' || event.event === 'tool' || event.event === 'step') {
     if (sessionStatus.value !== SessionStatus.WAITING) {
       sessionStatus.value = SessionStatus.RUNNING;

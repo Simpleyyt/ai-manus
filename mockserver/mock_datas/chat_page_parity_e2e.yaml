@@ -1,0 +1,49 @@
+# Short script: plan → browser → ask user (WAITING + takeover banner)
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: create_plan
+              arguments: |
+                {
+                  "message": "I'll open a page and then ask you to take over.",
+                  "language": "zh",
+                  "goal": "demo take control banner",
+                  "title": "Chat page parity e2e",
+                  "steps": [
+                    { "id": "1", "description": "Open example.com then wait for user takeover" }
+                  ]
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: browser_navigate
+              arguments: |
+                {
+                    "url": "https://example.com"
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: message_ask_user
+              arguments: |
+                {
+                    "text": "Please take over the browser to finish the next step.",
+                    "suggest_user_takeover": "browser"
+                }

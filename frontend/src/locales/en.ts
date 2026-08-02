@@ -50,6 +50,8 @@ export default {
   'Library': 'Library',
   'Projects': 'Projects',
   'Agent': 'Agent',
+  'Chat': 'Chat',
+  'Failed to update mode': 'Failed to update mode',
   'Plugins': 'Plugins',
   'Scheduled tasks': 'Scheduled tasks',
   'Filter': 'Filter',

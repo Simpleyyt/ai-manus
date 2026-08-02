@@ -50,6 +50,8 @@ export default {
   'Library': '库',
   'Projects': '项目',
   'Agent': 'Agent',
+  'Chat': 'Chat',
+  'Failed to update mode': '更新模式失败',
   'Plugins': '插件',
   'Scheduled tasks': '定时任务',
   'Filter': '筛选',

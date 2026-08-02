@@ -108,6 +108,17 @@ export async function updateSessionTitle(sessionId: string, title: string): Prom
   return response.data.data;
 }
 
+export async function updateSessionTaskMode(
+  sessionId: string,
+  taskMode: 'agent' | 'chat',
+): Promise<{ session_id: string; task_mode: 'agent' | 'chat' }> {
+  const response = await apiClient.patch<ApiResponse<{ session_id: string; task_mode: 'agent' | 'chat' }>>(
+    `/sessions/${sessionId}/mode`,
+    { task_mode: taskMode },
+  );
+  return response.data.data;
+}
+
 export async function favoriteSession(sessionId: string): Promise<{ session_id: string; is_favorite: boolean }> {
   const response = await apiClient.post<ApiResponse<{ session_id: string; is_favorite: boolean }>>(
     `/sessions/${sessionId}/favorite`

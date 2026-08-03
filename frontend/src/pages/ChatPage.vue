@@ -6,13 +6,13 @@
       <div ref="observerRef"
         class="flex h-[56px] w-full shrink-0 items-center justify-between py-[12px] md:px-[24px] ps-[16px] pe-[20px] md:ps-[16px] md:pe-[20px] gap-1 border-b sticky top-0 z-10 flex-shrink-0 [-webkit-app-region:drag] bg-[var(--background-gray-main)] border-[var(--border-main)]">
         <div class="flex min-w-0 flex-1 items-center gap-1">
-          <div class="flex items-center pointer-events-auto overflow-hidden relative" ref="modeMenuRef">
+          <div class="flex items-center pointer-events-auto relative" ref="modeMenuRef">
             <button
               type="button"
               class="flex h-8 pt-[7px] md:pr-[6px] pr-[4px] pb-[7px] md:pl-[8px] pl-[6px] justify-center items-center gap-1 rounded-[8px] clickable hover:bg-[var(--fill-tsp-white-light)]"
               :aria-expanded="showModeMenu"
               aria-haspopup="menu"
-              @click="showModeMenu = !showModeMenu">
+              @click="toggleModeMenu">
               <span class="text-[var(--text-primary)] md:text-[18px] text-[16px] font-[500] md:leading-[22px] leading-[20px] truncate">Manus</span>
               <span
                 v-if="taskMode === 'chat'"
@@ -21,10 +21,14 @@
               </span>
               <ChevronDown class="size-3.5 text-[var(--icon-tertiary)] shrink-0" :size="14" />
             </button>
+          </div>
+          <Teleport to="body">
             <div
               v-if="showModeMenu"
+              ref="modeMenuPanelRef"
               role="menu"
-              class="absolute top-[calc(100%+6px)] left-0 z-50 min-w-[180px] rounded-[12px] border border-[var(--border-light)] bg-[var(--background-menu-white)] shadow-[0px_8px_32px_0px_var(--shadow-S)] p-1">
+              class="fixed z-[1100] min-w-[180px] rounded-[12px] border border-[var(--border-light)] bg-[var(--background-menu-white)] shadow-[0px_8px_32px_0px_var(--shadow-S)] p-1"
+              :style="{ top: `${modeMenuPos.top}px`, left: `${modeMenuPos.left}px` }">
               <button
                 type="button"
                 role="menuitem"
@@ -42,7 +46,7 @@
                 <Check v-if="taskMode === 'chat'" :size="16" class="text-[var(--icon-primary)]" />
               </button>
             </div>
-          </div>
+          </Teleport>
           <div class="flex-1 min-w-[16px]"></div>
         </div>
 
@@ -293,8 +297,18 @@ const observerRef = ref<HTMLDivElement>();
 const chatContainerRef = ref<HTMLDivElement>();
 const moreBtnRef = ref<HTMLElement | null>(null);
 const modeMenuRef = ref<HTMLElement | null>(null);
+const modeMenuPanelRef = ref<HTMLElement | null>(null);
+const modeMenuPos = ref({ top: 0, left: 0 });
 const showModeMenu = ref(false);
 const { showContextMenu } = useContextMenu();
+
+const toggleModeMenu = () => {
+  if (!showModeMenu.value && modeMenuRef.value) {
+    const r = modeMenuRef.value.getBoundingClientRect();
+    modeMenuPos.value = { top: r.bottom + 6, left: r.left };
+  }
+  showModeMenu.value = !showModeMenu.value;
+};
 
 const toolHistory = computed(() => {
   const tools: ToolContent[] = [];
@@ -336,10 +350,13 @@ const setTaskMode = async (mode: 'agent' | 'chat') => {
 
 const handleModeMenuOutside = (e: MouseEvent) => {
   if (!showModeMenu.value) return;
-  const el = modeMenuRef.value;
-  if (el && !el.contains(e.target as Node)) {
-    showModeMenu.value = false;
-  }
+  const t = e.target as Node;
+  if (modeMenuRef.value?.contains(t) || modeMenuPanelRef.value?.contains(t)) return;
+  showModeMenu.value = false;
+};
+
+const handleModeMenuScroll = () => {
+  if (showModeMenu.value) showModeMenu.value = false;
 };
 
 const lastAssistantIndex = computed(() => {
@@ -547,12 +564,7 @@ const restoreSession = async () => {
     return;
   }
   const session = await agentApi.getSession(sessionId.value);
-  // Initialize share mode based on session state
-  shareMode.value = session.is_shared ? 'public' : 'private';
-  isFavorite.value = !!session.is_favorite;
-  isPinned.value = !!session.is_pinned;
-  projectId.value = session.project_id ?? null;
-  taskMode.value = session.task_mode === 'chat' ? 'chat' : 'agent';
+  applySessionMeta(session);
   realTime.value = false;
   isHydrating.value = true;
   try {
@@ -617,20 +629,43 @@ onBeforeRouteUpdate((to, _, next) => {
   next();
 })
 
+const applySessionMeta = (session: Awaited<ReturnType<typeof agentApi.getSession>>) => {
+  shareMode.value = session.is_shared ? 'public' : 'private';
+  isFavorite.value = !!session.is_favorite;
+  isPinned.value = !!session.is_pinned;
+  projectId.value = session.project_id ?? null;
+  taskMode.value = session.task_mode === 'chat' ? 'chat' : 'agent';
+};
+
 // Initialize active conversation
 onMounted(() => {
   document.addEventListener('mousedown', handleModeMenuOutside);
+  window.addEventListener('scroll', handleModeMenuScroll, true);
   hideFilePreviewer();
   const routeParams = router.currentRoute.value.params;
   if (routeParams.sessionId) {
     // If sessionId is included in URL, use it directly
     sessionId.value = String(routeParams.sessionId) as string;
-    // Get initial message from history.state
-    const message = history.state?.message;
-    const files: FileInfo[] = history.state?.files;
+    // Get initial message / mode from history.state (HomePage → new chat)
+    const message = history.state?.message as string | undefined;
+    const files = history.state?.files as FileInfo[] | undefined;
+    const seededMode = history.state?.taskMode as 'agent' | 'chat' | undefined;
     history.replaceState({}, document.title);
+    if (seededMode === 'chat' || seededMode === 'agent') {
+      taskMode.value = seededMode;
+    }
     if (message || (files && files.length > 0)) {
-      void chat(message || '', files || []);
+      // Initial-message path used to skip restoreSession(), so taskMode never
+      // left the default 'agent'. Load session meta first, then send.
+      void (async () => {
+        try {
+          const session = await agentApi.getSession(sessionId.value!);
+          applySessionMeta(session);
+        } catch (e) {
+          console.error('Failed to load session meta before initial chat', e);
+        }
+        await chat(message || '', files || []);
+      })();
     } else {
       restoreSession();
     }
@@ -639,6 +674,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('mousedown', handleModeMenuOutside);
+  window.removeEventListener('scroll', handleModeMenuScroll, true);
   const prevSessionId = sessionId.value;
   if (cancelCurrentChat.value) {
     cancelCurrentChat.value();

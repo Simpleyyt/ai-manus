@@ -31,6 +31,13 @@ const imageFileExtensions = [
   'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico', 'tiff', 'tif', 'heic', 'heif',
 ];
 
+/** True when filename / MIME should use the composer image thumbnail chip. */
+export const isImageFile = (filename: string, contentType?: string | null): boolean => {
+  if (contentType?.startsWith('image/')) return true;
+  const ext = filename.split('.').pop()?.toLowerCase();
+  return !!ext && imageFileExtensions.includes(ext);
+};
+
 const documentFileExtensions = [
   'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp',
 ];

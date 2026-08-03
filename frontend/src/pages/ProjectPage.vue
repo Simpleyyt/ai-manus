@@ -89,7 +89,7 @@
                 v-model:attachments="attachments"
                 :rows="2"
                 :is-running="false"
-                :placeholder="t('Give Manus a task...')"
+                :placeholder="t('Assign a task or type / to see more')"
                 @submit="handleNewTask"
               />
             </div>

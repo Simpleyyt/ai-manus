@@ -8,7 +8,12 @@
   <div v-if="message.type === 'user'" class="flex flex-col group mt-6 w-full items-end">
     <div class="max-w-[90%]">
       <div class="flex relative flex-col gap-2 max-w-full items-end">
-        <div class="relative max-w-full w-fit">
+        <ChatAttachmentList
+          v-if="userAttachments.length"
+          :attachments="userAttachments"
+          align-end
+        />
+        <div v-if="hasUserText" class="relative max-w-full w-fit">
           <div
             data-chat-question-bubble
             class="relative overflow-hidden rounded-[12px] p-3 bg-[var(--fill-white)] dark:bg-[var(--fill-tsp-white-main)] ltr:rounded-br-none rtl:rounded-bl-none border border-[var(--border-main)] dark:border-0 limited-markdown-content text-[var(--text-primary)] u-break-words [&_p]:m-0 [&_p]:leading-[22px] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
@@ -17,7 +22,7 @@
         </div>
       </div>
       <div class="flex items-center justify-end gap-[2px] overflow-hidden invisible group-hover:visible py-[2px]">
-        <ChatMessageCopyButton :text="plainText" />
+        <ChatMessageCopyButton v-if="hasUserText" :text="plainText" />
         <div class="float-right transition text-[12px] leading-[16px] text-[var(--text-tertiary)] whitespace-nowrap">
           {{ relativeTime(messageContent.timestamp) }}
         </div>
@@ -138,6 +143,7 @@ import { useRelativeTime } from '../composables/useTime';
 import { Bot } from 'lucide-vue-next';
 import AttachmentsMessage from './AttachmentsMessage.vue';
 import ChatMessageCopyButton from './ChatMessageCopyButton.vue';
+import ChatAttachmentList from './ChatAttachmentList.vue';
 
 
 const props = defineProps<{
@@ -173,6 +179,9 @@ const stepContent = computed(() => props.message.content as StepContent);
 const messageContent = computed(() => props.message.content as MessageContent);
 const toolContent = computed(() => props.message.content as ToolContent);
 const attachmentsContent = computed(() => props.message.content as AttachmentsContent);
+
+const userAttachments = computed(() => messageContent.value.attachments ?? []);
+const hasUserText = computed(() => !!(messageContent.value.content || '').trim());
 
 const plainText = computed(() => {
   if (props.message.type === 'user' || props.message.type === 'assistant') {

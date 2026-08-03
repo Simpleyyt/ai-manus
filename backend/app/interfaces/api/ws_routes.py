@@ -260,15 +260,24 @@ async def chat_ws(websocket: WebSocket):
                     saw_error = True
                 await send_agent_event(session_id, event)
             if joined_session_id == session_id:
-                await safe_send({"type": "stream_end", "session_id": session_id})
-                if saw_error:
+                session = await agent_service.get_session(session_id, user.id)
+                final_status = _session_status_value(session.status) if session else "completed"
+                # Prefer authoritative session status (e.g. waiting after message_ask_user)
+                # over saw_error — early tool errors can coexist with a later WaitEvent.
+                # Send status_update BEFORE stream_end: clients often clear handlers on
+                # stream_end, which would drop a trailing status_update.
+                if final_status == "waiting":
+                    await send_status_update(session_id, "waiting")
+                elif saw_error:
                     await send_status_update(session_id, "error")
                 else:
-                    session = await agent_service.get_session(session_id, user.id)
-                    status = _agent_status_from_session(
-                        session.status if session else "completed"
+                    await send_status_update(
+                        session_id,
+                        _agent_status_from_session(
+                            session.status if session else "completed"
+                        ),
                     )
-                    await send_status_update(session_id, status)
+                await safe_send({"type": "stream_end", "session_id": session_id})
         except asyncio.CancelledError:
             raise
         except Exception as e:

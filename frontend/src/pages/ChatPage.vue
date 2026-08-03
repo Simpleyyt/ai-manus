@@ -6,9 +6,41 @@
       <div ref="observerRef"
         class="flex h-[56px] w-full shrink-0 items-center justify-between py-[12px] md:px-[24px] ps-[16px] pe-[20px] md:ps-[16px] md:pe-[20px] gap-1 border-b sticky top-0 z-10 flex-shrink-0 [-webkit-app-region:drag] bg-[var(--background-gray-main)] border-[var(--border-main)]">
         <div class="flex min-w-0 flex-1 items-center gap-1">
-          <div class="flex items-center pointer-events-auto overflow-hidden">
-            <div class="flex h-8 pt-[7px] md:pr-[6px] pr-[4px] pb-[7px] md:pl-[8px] pl-[6px] justify-center items-center gap-1 rounded-[8px]">
+          <div class="flex items-center pointer-events-auto overflow-hidden relative" ref="modeMenuRef">
+            <button
+              type="button"
+              class="flex h-8 pt-[7px] md:pr-[6px] pr-[4px] pb-[7px] md:pl-[8px] pl-[6px] justify-center items-center gap-1 rounded-[8px] clickable hover:bg-[var(--fill-tsp-white-light)]"
+              :aria-expanded="showModeMenu"
+              aria-haspopup="menu"
+              @click="showModeMenu = !showModeMenu">
               <span class="text-[var(--text-primary)] md:text-[18px] text-[16px] font-[500] md:leading-[22px] leading-[20px] truncate">Manus</span>
+              <span
+                v-if="taskMode === 'chat'"
+                class="text-[var(--text-tertiary)] text-xs flex h-5 py-0.5 px-1.5 items-center rounded-[6px] border border-[var(--border-dark)] flex-shrink-0">
+                Lite
+              </span>
+              <ChevronDown class="size-3.5 text-[var(--icon-tertiary)] shrink-0" :size="14" />
+            </button>
+            <div
+              v-if="showModeMenu"
+              role="menu"
+              class="absolute top-[calc(100%+6px)] left-0 z-50 min-w-[180px] rounded-[12px] border border-[var(--border-light)] bg-[var(--background-menu-white)] shadow-[0px_8px_32px_0px_var(--shadow-S)] p-1">
+              <button
+                type="button"
+                role="menuitem"
+                class="flex w-full items-center justify-between gap-2 px-3 py-2 rounded-[8px] text-sm text-[var(--text-primary)] hover:bg-[var(--fill-tsp-white-main)]"
+                @click="setTaskMode('agent')">
+                <span>{{ t('Agent') }}</span>
+                <Check v-if="taskMode === 'agent'" :size="16" class="text-[var(--icon-primary)]" />
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                class="flex w-full items-center justify-between gap-2 px-3 py-2 rounded-[8px] text-sm text-[var(--text-primary)] hover:bg-[var(--fill-tsp-white-main)]"
+                @click="setTaskMode('chat')">
+                <span>{{ t('Chat') }} · Lite</span>
+                <Check v-if="taskMode === 'chat'" :size="16" class="text-[var(--icon-primary)]" />
+              </button>
             </div>
           </div>
           <div class="flex-1 min-w-[16px]"></div>
@@ -140,7 +172,10 @@
             class="flex items-center justify-center w-[36px] h-[36px] rounded-full bg-[var(--background-white-main)] hover:bg-[var(--background-gray-main)] clickable border border-[var(--border-main)] shadow-[0px_5px_16px_0px_var(--shadow-S),0px_0px_1.25px_0px_var(--shadow-S)] absolute -top-20 left-1/2 -translate-x-1/2">
             <ArrowDown class="text-[var(--icon-primary)]" :size="20" />
           </button>
-          <ChatBox v-model="inputMessage" v-model:attachments="attachments" :rows="1" @submit="handleSubmit"
+          <TakeControlBanner
+            :visible="showTakeControlBanner"
+            @takeControl="handleTakeControl" />
+          <ChatBox v-model="inputMessage" v-model:attachments="attachments" :rows="1" dense @submit="handleSubmit"
             :isRunning="isLoading" @stop="handleStop" :placeholder="chatPlaceholder" />
         </div>
       </div>
@@ -162,12 +197,13 @@ import ChatBox from '../components/ChatBox.vue';
 import ChatMessage from '../components/ChatMessage.vue';
 import ChatTaskCompleted from '../components/ChatTaskCompleted.vue';
 import ChatWaitingContinue from '../components/ChatWaitingContinue.vue';
+import TakeControlBanner from '../components/TakeControlBanner.vue';
 import * as agentApi from '../api/agent';
 import { Message, MessageContent, ToolContent, AttachmentsContent, StepContent, isConsecutiveAssistant } from '../types/message';
 import { PlanEventData, AgentEvent, type AgentStatus, type TerminalUpdateEventData, type FileUpdateEventData } from '../types/event';
 import { useAgentEvents } from '../composables/useAgentEvents';
 import ComputerPanel from '../components/ComputerPanel.vue'
-import { ArrowDown, FileSearch, Lock, Globe, Link, Check, Ellipsis, Pencil, Star, Trash, FolderPlus, Folder, FolderSync, Pin } from 'lucide-vue-next';
+import { ArrowDown, FileSearch, Lock, Globe, Link, Check, Ellipsis, Pencil, Star, Trash, FolderPlus, Folder, FolderSync, Pin, ChevronDown } from 'lucide-vue-next';
 import ShareIcon from '@/components/icons/ShareIcon.vue';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
 import type { FileInfo } from '../api/file';
@@ -243,6 +279,8 @@ const simpleBarRef = ref<InstanceType<typeof SimpleBar>>();
 const observerRef = ref<HTMLDivElement>();
 const chatContainerRef = ref<HTMLDivElement>();
 const moreBtnRef = ref<HTMLElement | null>(null);
+const modeMenuRef = ref<HTMLElement | null>(null);
+const showModeMenu = ref(false);
 const sessionStatus = ref<SessionStatus | undefined>(undefined);
 const { showContextMenu } = useContextMenu();
 
@@ -259,7 +297,38 @@ const toolHistory = computed(() => {
   return tools;
 });
 
+const hasBrowserTool = computed(() =>
+  toolHistory.value.some((t) => t.name === 'browser'),
+);
+
+/** Official suggest-takeover banner: waiting + browser tool available */
+const showTakeControlBanner = computed(() =>
+  sessionStatus.value === SessionStatus.WAITING && !isLoading.value && hasBrowserTool.value,
+);
+
 const chatPlaceholder = computed(() => t('Send message to Manus'));
+
+const setTaskMode = async (mode: 'agent' | 'chat') => {
+  showModeMenu.value = false;
+  if (!sessionId.value || taskMode.value === mode) return;
+  const prev = taskMode.value;
+  taskMode.value = mode;
+  try {
+    await agentApi.updateSessionTaskMode(sessionId.value, mode);
+  } catch (e) {
+    taskMode.value = prev;
+    console.error('Failed to update task mode', e);
+    showErrorToast(t('Failed to update mode'));
+  }
+};
+
+const handleModeMenuOutside = (e: MouseEvent) => {
+  if (!showModeMenu.value) return;
+  const el = modeMenuRef.value;
+  if (el && !el.contains(e.target as Node)) {
+    showModeMenu.value = false;
+  }
+};
 
 const lastAssistantIndex = computed(() => {
   for (let i = messages.value.length - 1; i >= 0; i--) {
@@ -492,24 +561,15 @@ const chat = async (message: string = '', files: FileInfo[] = []) => {
     cancelCurrentChat.value = null;
   }
 
-  if (message.trim()) {
-    // Add user message to conversation list
+  if (message.trim() || files.length > 0) {
+    // Official ChatQuestion: attachments + text in one right-aligned group
     messages.value.push({
       type: 'user',
       content: {
         content: message,
-        timestamp: Math.floor(Date.now() / 1000)
+        timestamp: Math.floor(Date.now() / 1000),
+        attachments: files.length > 0 ? files : undefined,
       } as MessageContent,
-    });
-  }
-
-  if (files.length > 0) {
-    messages.value.push({
-      type: 'attachments',
-      content: {
-        role: 'user',
-        attachments: files
-      } as AttachmentsContent,
     });
   }
 
@@ -616,6 +676,7 @@ onBeforeRouteUpdate((to, _, next) => {
 
 // Initialize active conversation
 onMounted(() => {
+  document.addEventListener('mousedown', handleModeMenuOutside);
   hideFilePreviewer();
   const routeParams = router.currentRoute.value.params;
   if (routeParams.sessionId) {
@@ -634,6 +695,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  document.removeEventListener('mousedown', handleModeMenuOutside);
   const prevSessionId = sessionId.value;
   if (cancelCurrentChat.value) {
     cancelCurrentChat.value();

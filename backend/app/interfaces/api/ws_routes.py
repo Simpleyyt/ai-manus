@@ -259,6 +259,10 @@ async def chat_ws(websocket: WebSocket):
                 if getattr(event, "type", None) == "error":
                     saw_error = True
                 await send_agent_event(session_id, event)
+                # Mid-stream phase: WaitEvent means Mongo is already WAITING — tell
+                # clients immediately so phase UI does not depend on domain→phase fallbacks.
+                if getattr(event, "type", None) == "wait":
+                    await send_status_update(session_id, "waiting")
             if joined_session_id == session_id:
                 session = await agent_service.get_session(session_id, user.id)
                 final_status = _session_status_value(session.status) if session else "completed"

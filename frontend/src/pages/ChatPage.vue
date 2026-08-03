@@ -164,7 +164,7 @@
           <!-- AgentIsTyping: only fill the empty gap before first visible turn output -->
           <LoadingIndicator v-if="showThinking" :text="$t('{name} is thinking', { name: 'Manus' })" />
           <!-- Official running spacer when work is already visible (tools/steps/messages) -->
-          <div v-else-if="isLoading" aria-hidden="true" class="h-5 invisible" />
+          <div v-else-if="isBusy" aria-hidden="true" class="h-5 invisible" />
         </div>
 
         <div class="flex flex-col bg-[var(--background-gray-main)] sticky bottom-0">
@@ -176,7 +176,7 @@
             :visible="showTakeControlBanner"
             @takeControl="handleTakeControl" />
           <ChatBox v-model="inputMessage" v-model:attachments="attachments" :rows="1" dense @submit="handleSubmit"
-            :isRunning="isLoading" @stop="handleStop" :placeholder="chatPlaceholder" />
+            :isRunning="isBusy" @stop="handleStop" :placeholder="chatPlaceholder" />
         </div>
       </div>
     </div>
@@ -199,9 +199,10 @@ import ChatTaskCompleted from '../components/ChatTaskCompleted.vue';
 import ChatWaitingContinue from '../components/ChatWaitingContinue.vue';
 import TakeControlBanner from '../components/TakeControlBanner.vue';
 import * as agentApi from '../api/agent';
-import { Message, MessageContent, ToolContent, AttachmentsContent, StepContent, isConsecutiveAssistant } from '../types/message';
-import { PlanEventData, AgentEvent, type AgentStatus, type TerminalUpdateEventData, type FileUpdateEventData } from '../types/event';
+import { Message, MessageContent, ToolContent, StepContent, isConsecutiveAssistant } from '../types/message';
+import { PlanEventData, AgentEvent, type TerminalUpdateEventData, type FileUpdateEventData } from '../types/event';
 import { useAgentEvents } from '../composables/useAgentEvents';
+import { useSessionPhase } from '../composables/useSessionPhase';
 import ComputerPanel from '../components/ComputerPanel.vue'
 import { ArrowDown, FileSearch, Lock, Globe, Link, Check, Ellipsis, Pencil, Star, Trash, FolderPlus, Folder, FolderSync, Pin, ChevronDown } from 'lucide-vue-next';
 import ShareIcon from '@/components/icons/ShareIcon.vue';
@@ -232,7 +233,6 @@ const taskMode = ref<'agent' | 'chat'>('agent');
 // Create initial state factory
 const createInitialState = () => ({
   inputMessage: '',
-  isLoading: false,
   sessionId: undefined as string | undefined,
   messages: [] as Message[],
   realTime: true,
@@ -256,7 +256,6 @@ const state = reactive(createInitialState());
 // Destructure refs from reactive state
 const {
   inputMessage,
-  isLoading,
   sessionId,
   messages,
   realTime,
@@ -273,7 +272,21 @@ const {
   sharingLoading
 } = toRefs(state);
 
+const {
+  phase,
+  isBusy,
+  hydrateFromSessionStatus,
+  applyStatusUpdate,
+  noteOptimisticRun,
+  noteDomainEvent,
+  reset: resetPhase,
+  showWaitingContinue,
+  showTaskCompleted,
+  showThinking,
+} = useSessionPhase({ messages });
+
 // Non-state refs that don't need reset
+const isHydrating = ref(false)
 const computerPanel = ref<InstanceType<typeof ComputerPanel>>()
 const simpleBarRef = ref<InstanceType<typeof SimpleBar>>();
 const observerRef = ref<HTMLDivElement>();
@@ -281,7 +294,6 @@ const chatContainerRef = ref<HTMLDivElement>();
 const moreBtnRef = ref<HTMLElement | null>(null);
 const modeMenuRef = ref<HTMLElement | null>(null);
 const showModeMenu = ref(false);
-const sessionStatus = ref<SessionStatus | undefined>(undefined);
 const { showContextMenu } = useContextMenu();
 
 const toolHistory = computed(() => {
@@ -303,7 +315,7 @@ const hasBrowserTool = computed(() =>
 
 /** Official suggest-takeover banner: waiting + browser tool available */
 const showTakeControlBanner = computed(() =>
-  sessionStatus.value === SessionStatus.WAITING && !isLoading.value && hasBrowserTool.value,
+  phase.value === 'waiting' && !isBusy.value && hasBrowserTool.value,
 );
 
 const chatPlaceholder = computed(() => t('Send message to Manus'));
@@ -343,50 +355,6 @@ const lastAssistantPlainText = computed(() => {
   return ((messages.value[i].content as MessageContent).content || '').trim();
 });
 
-/** Official waiting row: "{product} will continue after your reply" (message_ask_user → WaitEvent) */
-const showWaitingContinue = computed(() =>
-  sessionStatus.value === SessionStatus.WAITING && !isLoading.value,
-);
-
-/** Official TaskCompleted when agent stopped / session completed */
-const showTaskCompleted = computed(() =>
-  sessionStatus.value === SessionStatus.COMPLETED && !!lastAssistantPlainText.value && !isLoading.value,
-);
-
-/**
- * Official AgentIsTyping: show only while waiting for the first visible output
- * of the current turn. Once assistant text / tool / step appears, the content
- * itself is the status — keep "thinking" would contradict "doing".
- */
-const showThinking = computed(() => {
-  if (!isLoading.value) return false;
-  if (showWaitingContinue.value || showTaskCompleted.value) return false;
-
-  let lastUserIdx = -1;
-  for (let i = messages.value.length - 1; i >= 0; i--) {
-    const m = messages.value[i];
-    if (m.type === 'user') {
-      lastUserIdx = i;
-      break;
-    }
-    if (m.type === 'attachments' && (m.content as AttachmentsContent).role === 'user') {
-      lastUserIdx = i;
-      break;
-    }
-  }
-
-  for (let i = lastUserIdx + 1; i < messages.value.length; i++) {
-    const m = messages.value[i];
-    if (m.type === 'tool' || m.type === 'step') return false;
-    if (m.type === 'assistant') {
-      const text = ((m.content as MessageContent).content || '').trim();
-      if (text) return false;
-      // Empty assistant bubble → still typing (official)
-    }
-  }
-  return true;
-});
-
 /**
  * Official ChatReplyActions: show Copy under assistant replies that are not the
  * live last message (TaskCompleted footer owns copy when task is done).
@@ -395,7 +363,7 @@ const shouldShowAssistantCopyActions = (index: number) => {
   const m = messages.value[index];
   if (m?.type !== 'assistant') return false;
   if (!((m.content as MessageContent).content || '').trim()) return false;
-  if (isLoading.value || sessionStatus.value === SessionStatus.RUNNING || sessionStatus.value === SessionStatus.PENDING) {
+  if (isBusy.value || phase.value === 'running' || phase.value === 'pending') {
     return index !== lastAssistantIndex.value;
   }
   if (showTaskCompleted.value || showWaitingContinue.value) {
@@ -416,57 +384,25 @@ const isAssistantLastBeforeUser = (index: number) => {
 
 // Shared agent event -> message list conversion
 const { handleEvent: handleAgentEvent } = useAgentEvents(
-  { messages, title, plan, isLoading, lastEventId, lastTool, lastNoMessageTool },
+  { messages, title, plan, lastEventId, lastTool, lastNoMessageTool },
   {
     onToolActivity: (tool: ToolContent) => {
       if (realTime.value) {
         computerPanel.value?.showComputerPanel(tool, true);
       }
     },
+    onStreamError: () => {
+      if (!isHydrating.value) noteDomainEvent('error');
+    },
   }
 );
 
 const handleEvent = (event: AgentEvent) => {
   handleAgentEvent(event);
-  if (event.event === 'status_update') {
-    return;
-  }
-  if (event.event === 'done') {
-    sessionStatus.value = SessionStatus.COMPLETED;
-  } else if (event.event === 'wait') {
-    // WaitEvent means the agent paused for user input — clear loading even if
-    // a later stream_end clears handlers before status_update(waiting) arrives.
-    sessionStatus.value = SessionStatus.WAITING;
-    isLoading.value = false;
-  } else if (event.event === 'message' || event.event === 'tool' || event.event === 'step') {
-    if (sessionStatus.value !== SessionStatus.WAITING) {
-      sessionStatus.value = SessionStatus.RUNNING;
-    }
-  }
-};
-
-/** Drive loading / sessionStatus from authoritative WS status_update. */
-const applyAgentStatus = (agentStatus: AgentStatus) => {
-  if (agentStatus === 'running') {
-    isLoading.value = true;
-    sessionStatus.value = SessionStatus.RUNNING;
-  } else if (agentStatus === 'waiting') {
-    isLoading.value = false;
-    sessionStatus.value = SessionStatus.WAITING;
-  } else if (agentStatus === 'pending') {
-    isLoading.value = false;
-    sessionStatus.value = SessionStatus.PENDING;
-  } else if (agentStatus === 'error') {
-    isLoading.value = false;
-    // Keep sessionStatus as-is unless unknown; treat like completed for footer UX
-    if (sessionStatus.value === SessionStatus.RUNNING || sessionStatus.value === SessionStatus.PENDING) {
-      sessionStatus.value = SessionStatus.COMPLETED;
-    }
-  } else {
-    // completed
-    isLoading.value = false;
-    sessionStatus.value = SessionStatus.COMPLETED;
-  }
+  if (isHydrating.value) return;
+  if (event.event === 'status_update') return;
+  if (event.event === 'wait') noteDomainEvent('wait');
+  else if (event.event === 'done') noteDomainEvent('done');
 };
 
 // Reset all refs to their initial values
@@ -483,7 +419,7 @@ const resetState = () => {
 
   // Reset reactive state to initial values
   Object.assign(state, createInitialState());
-  sessionStatus.value = undefined;
+  resetPhase();
   isFavorite.value = false;
   isPinned.value = false;
   projectId.value = null;
@@ -534,7 +470,7 @@ const chatStreamCallbacks = (): agentApi.ChatStreamCallbacks => ({
     });
   },
   onStatusUpdate: (agentStatus) => {
-    applyAgentStatus(agentStatus);
+    applyStatusUpdate(agentStatus);
   },
   onClose: () => {
     // Loading is driven by status_update (follows stream_end). Do not clear here.
@@ -544,7 +480,7 @@ const chatStreamCallbacks = (): agentApi.ChatStreamCallbacks => ({
   },
   onError: (error) => {
     console.error('Chat error:', error);
-    isLoading.value = false;
+    noteDomainEvent('error');
     if (cancelCurrentChat.value) {
       cancelCurrentChat.value = null;
     }
@@ -582,7 +518,7 @@ const chat = async (message: string = '', files: FileInfo[] = []) => {
   // Clear input field and attachments
   inputMessage.value = '';
   attachments.value = [];
-  isLoading.value = true;
+  noteOptimisticRun();
 
   try {
     cancelCurrentChat.value = await agentApi.chatWithSession(
@@ -594,13 +530,13 @@ const chat = async (message: string = '', files: FileInfo[] = []) => {
       {
         ...chatStreamCallbacks(),
         onOpen: () => {
-          isLoading.value = true;
+          noteOptimisticRun();
         },
       }
     );
   } catch (error) {
     console.error('Chat error:', error);
-    isLoading.value = false;
+    noteDomainEvent('error');
     cancelCurrentChat.value = null;
   }
 }
@@ -613,27 +549,31 @@ const restoreSession = async () => {
   const session = await agentApi.getSession(sessionId.value);
   // Initialize share mode based on session state
   shareMode.value = session.is_shared ? 'public' : 'private';
-  sessionStatus.value = session.status as SessionStatus;
   isFavorite.value = !!session.is_favorite;
   isPinned.value = !!session.is_pinned;
   projectId.value = session.project_id ?? null;
   taskMode.value = session.task_mode === 'chat' ? 'chat' : 'agent';
   realTime.value = false;
-  for (const event of session.events) {
-    handleEvent(event);
+  isHydrating.value = true;
+  try {
+    hydrateFromSessionStatus(session.status);
+    for (const event of session.events) {
+      handleAgentEvent(event);
+    }
+  } finally {
+    isHydrating.value = false;
   }
   realTime.value = true;
 
   // Always join the chat channel (status_update + idle Mongo catch-up).
-  // Only resume the live Redis stream while the agent is running — idle join
-  // no longer emits stream_end, so this will not stick isLoading.
+  // Only resume the live Redis stream while the agent is running.
   if (cancelCurrentChat.value) {
     cancelCurrentChat.value();
     cancelCurrentChat.value = null;
   }
   try {
     if (session.status === SessionStatus.RUNNING) {
-      isLoading.value = true;
+      noteOptimisticRun();
       cancelCurrentChat.value = await agentApi.chatWithSession(
         sessionId.value,
         '',
@@ -642,7 +582,7 @@ const restoreSession = async () => {
         {
           ...chatStreamCallbacks(),
           onOpen: () => {
-            isLoading.value = true;
+            noteOptimisticRun();
           },
         },
       );
@@ -657,7 +597,7 @@ const restoreSession = async () => {
     }
   } catch (error) {
     console.error('Failed to join chat session:', error);
-    isLoading.value = false;
+    noteDomainEvent('error');
     cancelCurrentChat.value = null;
   }
   agentApi.clearUnreadMessageCount(sessionId.value);

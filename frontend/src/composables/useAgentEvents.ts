@@ -20,7 +20,6 @@ export interface AgentEventState {
   messages: Ref<Message[]>;
   title: Ref<string>;
   plan: Ref<PlanEventData | undefined>;
-  isLoading: Ref<boolean>;
   lastEventId: Ref<string | undefined>;
   lastTool: Ref<ToolContent | undefined>;
   lastNoMessageTool: Ref<ToolContent | undefined>;
@@ -29,6 +28,8 @@ export interface AgentEventState {
 export interface AgentEventOptions {
   /** Called when a non-message tool is created or updated, so the page can surface it (e.g. in the tool panel). */
   onToolActivity?: (tool: ToolContent) => void;
+  /** Fired when stream shows an error assistant bubble or step failed — page maps to phase. */
+  onStreamError?: () => void;
 }
 
 /**
@@ -36,7 +37,7 @@ export interface AgentEventOptions {
  * Used by both ChatPage (live chat) and SharePage (replay).
  */
 export function useAgentEvents(state: AgentEventState, options: AgentEventOptions = {}) {
-  const { messages, title, plan, isLoading, lastEventId, lastTool, lastNoMessageTool } = state;
+  const { messages, title, plan, lastEventId, lastTool, lastNoMessageTool } = state;
 
   const getLastStep = (): StepContent | undefined => {
     return messages.value.filter(message => message.type === 'step').pop()?.content as StepContent;
@@ -125,12 +126,12 @@ export function useAgentEvents(state: AgentEventState, options: AgentEventOption
         lastStep.status = stepData.status;
       }
     } else if (stepData.status === 'failed') {
-      isLoading.value = false;
+      options.onStreamError?.();
     }
   };
 
   const handleErrorEvent = (errorData: ErrorEventData) => {
-    isLoading.value = false;
+    options.onStreamError?.();
     messages.value.push({
       type: 'assistant',
       content: {

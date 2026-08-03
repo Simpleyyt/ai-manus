@@ -206,7 +206,7 @@ const showThinking = computed(() => {
 
 // Shared agent event -> message list conversion
 const { handleEvent } = useAgentEvents(
-  { messages, title, plan, isLoading, lastEventId, lastTool, lastNoMessageTool },
+  { messages, title, plan, lastEventId, lastTool, lastNoMessageTool },
   {
     onToolActivity: (tool: ToolContent) => {
       if (realTime.value) {

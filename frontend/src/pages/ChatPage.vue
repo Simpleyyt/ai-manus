@@ -286,7 +286,6 @@ const {
 } = useSessionPhase({ messages });
 
 // Non-state refs that don't need reset
-const isHydrating = ref(false)
 const computerPanel = ref<InstanceType<typeof ComputerPanel>>()
 const simpleBarRef = ref<InstanceType<typeof SimpleBar>>();
 const observerRef = ref<HTMLDivElement>();
@@ -391,18 +390,12 @@ const { handleEvent: handleAgentEvent } = useAgentEvents(
         computerPanel.value?.showComputerPanel(tool, true);
       }
     },
-    onStreamError: () => {
-      if (!isHydrating.value) noteDomainEvent('error');
-    },
   }
 );
 
 const handleEvent = (event: AgentEvent) => {
   handleAgentEvent(event);
-  if (isHydrating.value) return;
-  if (event.event === 'status_update') return;
-  if (event.event === 'wait') noteDomainEvent('wait');
-  else if (event.event === 'done') noteDomainEvent('done');
+  // Live phase authority is status_update only (backend-status-channel design).
 };
 
 // Reset all refs to their initial values
@@ -554,14 +547,9 @@ const restoreSession = async () => {
   projectId.value = session.project_id ?? null;
   taskMode.value = session.task_mode === 'chat' ? 'chat' : 'agent';
   realTime.value = false;
-  isHydrating.value = true;
-  try {
-    hydrateFromSessionStatus(session.status);
-    for (const event of session.events) {
-      handleAgentEvent(event);
-    }
-  } finally {
-    isHydrating.value = false;
+  hydrateFromSessionStatus(session.status);
+  for (const event of session.events) {
+    handleAgentEvent(event);
   }
   realTime.value = true;
 

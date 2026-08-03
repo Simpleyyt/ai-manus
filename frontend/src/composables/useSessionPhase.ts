@@ -18,6 +18,13 @@ function toPhase(status: string): SessionPhase | undefined {
   return undefined
 }
 
+/**
+ * Session phase view-model: busy flag + footer/thinking derived from a single
+ * phase FSM. Live phase authority is WS `status_update` (+ REST hydrate +
+ * optimistic run). `noteDomainEvent` remains for client/transport failures only.
+ *
+ * @see docs/superpowers/specs/2026-08-03-backend-status-channel-design.md
+ */
 export function useSessionPhase(options?: { messages?: Ref<Message[]> }) {
   const phase = ref<SessionPhase | undefined>(undefined)
   const isBusy = ref(false)

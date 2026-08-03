@@ -12,6 +12,7 @@ class ShellViewRequest(BaseModel):
     """Shell session content view request model"""
     id: str = Field(..., description="Unique identifier of the target shell session")
     console: Optional[bool] = Field(False, description="Whether to return console records")
+    max_length: Optional[int] = Field(10000, description="Maximum length of the output to return, the most recent part is kept")
 
 
 class ShellWaitRequest(BaseModel):

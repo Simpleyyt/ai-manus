@@ -6,8 +6,6 @@ GitHub：<https://github.com/simpleyyt/ai-manus> | Demo：<https://app.ai-manus.
 
 博客文章：[我也复刻了一个 Manus，带高仿 WebUI 和沙盒](https://simpleyyt.com/2026/03/07/rebuild-manus-with-webui-and-sandbox/)
 
-加入我们的社群：[QQ群(1005477581)](https://qun.qq.com/universal-share/share?ac=1&authKey=p4X3Da5iMpR4liAenxwvhs7IValPKiCFtUevRlJouz9qSTSZsMnPJc3hzsJjgQYv&busi_data=eyJncm91cENvZGUiOiIxMDA1NDc3NTgxIiwidG9rZW4iOiJNZmUrTmQ0UzNDZDNqNDFVdjVPS1VCRkJGRWVlV0R3RFJSRVFoZDAwRjFDeUdUM0t6aUIyczlVdzRjV1BYN09IIiwidWluIjoiMzQyMjExODE1In0%3D&data=C3B-E6BlEbailV32co77iXL5vxPIhtD9y_itWLSq50hKqosO_55_isOZym2Faaq4hs9-517tUY8GSWaDwPom-A&svctype=4&tempid=h5_group_info)
-
 ---
 
 AI Manus 是一个通用的 AI Agent 系统，可以完全私有部署，支持在沙盒环境中运行各种工具和操作。现已深度集成 **Claw**（基于 [OpenClaw](https://github.com/anthropics/openclaw)），实现 Manus × Claw 联合体验：一键部署 AI 助手、用户隔离容器、自动过期倒计时与完整聊天历史。

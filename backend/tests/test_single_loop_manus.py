@@ -4,6 +4,7 @@ import pytest
 
 from app.domain.models.agent_output import FinalResult
 from app.domain.models.event import (
+    DoneEvent,
     MessageEvent,
     PlanEvent,
     PlanStatus,
@@ -14,8 +15,11 @@ from app.domain.models.event import (
 )
 from app.domain.models.memory import Memory
 from app.domain.models.message import LLMMessage, Message, Role, ToolCall
+from app.domain.models.plan import ExecutionStatus, Plan, Step
+from app.domain.models.session import SessionStatus
 from app.domain.services.agents.manus import ManusAgent
 from app.domain.services.agents.base import BaseAgent, StructuredOutputEvent
+from app.domain.services.flows.agent_loop import AgentLoopFlow
 from app.domain.services.tools.base import OutputTool
 from app.domain.services.tools.message import MessageToolkit
 from app.domain.services.tools.todo import TodoToolkit
@@ -47,6 +51,32 @@ class ScriptedLLM:
         raise AssertionError("parse_json must not be used by the agent loop")
 
 
+class FakeSession:
+    def __init__(
+        self,
+        status: SessionStatus = SessionStatus.PENDING,
+        plan: Plan | None = None,
+    ) -> None:
+        self.status = status
+        self.project_id = None
+        self.plan = plan
+
+    def get_last_plan(self):
+        return self.plan
+
+
+class FakeSessionRepository:
+    def __init__(self, session: FakeSession) -> None:
+        self.session = session
+        self.status_updates: list[SessionStatus] = []
+
+    async def find_by_id(self, session_id: str):
+        return self.session
+
+    async def update_status(self, session_id: str, status: SessionStatus) -> None:
+        self.status_updates.append(status)
+
+
 class TestAgent(BaseAgent):
     name = "test"
 
@@ -59,6 +89,187 @@ DELIVER_RESULT = OutputTool(
     description="Deliver the final result.",
     schema=FinalResult,
 )
+
+
+@pytest.mark.asyncio
+async def test_agent_loop_flow_fresh_message_runs_manus():
+    agent_repository = FakeAgentRepository()
+    session_repository = FakeSessionRepository(FakeSession())
+    llm = ScriptedLLM([
+        LLMMessage.assistant(
+            tool_calls=[
+                ToolCall(
+                    id="result-1",
+                    name="deliver_result",
+                    args={"message": "Finished in one loop", "attachments": []},
+                ),
+            ]
+        ),
+    ])
+    flow = AgentLoopFlow(
+        agent_id="agent-1",
+        agent_repository=agent_repository,
+        session_id="session-1",
+        session_repository=session_repository,
+        sandbox=object(),
+        browser=object(),
+        mcp_tool=MessageToolkit(),
+        llm=llm,
+    )
+
+    events = [event async for event in flow.run(Message(message="Do it"))]
+
+    assert any(
+        isinstance(event, MessageEvent)
+        and event.message == "Finished in one loop"
+        for event in events
+    )
+    assert isinstance(events[-1], DoneEvent)
+    assert session_repository.status_updates == [SessionStatus.RUNNING]
+    assert flow.is_done()
+
+
+@pytest.mark.asyncio
+async def test_agent_loop_flow_wait_does_not_emit_done():
+    flow = AgentLoopFlow(
+        agent_id="agent-1",
+        agent_repository=FakeAgentRepository(),
+        session_id="session-1",
+        session_repository=FakeSessionRepository(FakeSession()),
+        sandbox=object(),
+        browser=object(),
+        mcp_tool=MessageToolkit(),
+        llm=ScriptedLLM([
+            LLMMessage.assistant(
+                tool_calls=[
+                    ToolCall(
+                        id="ask-1",
+                        name="message_ask_user",
+                        args={"text": "Which option?"},
+                    ),
+                ]
+            ),
+        ]),
+    )
+
+    events = [event async for event in flow.run(Message(message="Do it"))]
+
+    assert any(isinstance(event, WaitEvent) for event in events)
+    assert not any(isinstance(event, DoneEvent) for event in events)
+    assert not flow.is_done()
+
+
+@pytest.mark.asyncio
+async def test_agent_loop_flow_waiting_session_rolls_back_resumes_and_rehydrates_todos():
+    agent_repository = FakeAgentRepository()
+    memory = Memory(messages=[
+        LLMMessage.system("old system prompt"),
+        LLMMessage.assistant(
+            tool_calls=[
+                ToolCall(
+                    id="ask-1",
+                    name="message_ask_user",
+                    args={"text": "Which option?"},
+                ),
+            ]
+        ),
+    ])
+    await agent_repository.save_memory("agent-1", ManusAgent.name, memory)
+    plan = Plan(
+        title="Choose an option",
+        steps=[
+            Step(
+                id="choose",
+                description="Choose the preferred option",
+                status=ExecutionStatus.RUNNING,
+            ),
+        ],
+    )
+    flow = AgentLoopFlow(
+        agent_id="agent-1",
+        agent_repository=agent_repository,
+        session_id="session-1",
+        session_repository=FakeSessionRepository(
+            FakeSession(status=SessionStatus.WAITING, plan=plan)
+        ),
+        sandbox=object(),
+        browser=object(),
+        mcp_tool=MessageToolkit(),
+        llm=ScriptedLLM([
+            LLMMessage.assistant(
+                tool_calls=[
+                    ToolCall(
+                        id="result-1",
+                        name="deliver_result",
+                        args={"message": "Used option B", "attachments": []},
+                    ),
+                ]
+            ),
+        ]),
+    )
+
+    events = [
+        event async for event in flow.run(Message(message="Use option B"))
+    ]
+
+    assert any(
+        isinstance(event, MessageEvent) and event.message == "Used option B"
+        for event in events
+    )
+    completed_plan = next(
+        event for event in events
+        if isinstance(event, PlanEvent) and event.status == PlanStatus.COMPLETED
+    )
+    assert completed_plan.plan.steps[0].id == "choose"
+    assert flow.agent._todo_items[0].content == "Choose the preferred option"
+    assert flow.agent._todo_items[0].status.value == "in_progress"
+    assert not any(
+        message.role == Role.USER
+        for message in memory.get_messages()
+    )
+    assert any(
+        message.role == Role.TOOL and message.content == "Use option B"
+        for message in memory.get_messages()
+    )
+    assert isinstance(events[-1], DoneEvent)
+
+
+@pytest.mark.asyncio
+async def test_agent_loop_flow_completes_the_last_plan_when_agent_has_no_todos():
+    last_plan = Plan(
+        title="Existing plan",
+        steps=[Step(id="existing", description="Existing step")],
+    )
+    flow = AgentLoopFlow(
+        agent_id="agent-1",
+        agent_repository=FakeAgentRepository(),
+        session_id="session-1",
+        session_repository=FakeSessionRepository(
+            FakeSession(status=SessionStatus.RUNNING, plan=last_plan)
+        ),
+        sandbox=object(),
+        browser=object(),
+        mcp_tool=MessageToolkit(),
+        llm=ScriptedLLM([
+            LLMMessage.assistant(
+                tool_calls=[
+                    ToolCall(
+                        id="result-1",
+                        name="deliver_result",
+                        args={"message": "Done", "attachments": []},
+                    ),
+                ]
+            ),
+        ]),
+    )
+
+    events = [event async for event in flow.run(Message(message="Continue"))]
+
+    completed_plan = next(
+        event for event in events
+        if isinstance(event, PlanEvent) and event.status == PlanStatus.COMPLETED
+    )
+    assert completed_plan.plan.steps[0].id == "existing"
 
 
 @pytest.mark.asyncio

@@ -1,5 +1,7 @@
 from typing import AsyncGenerator, AsyncIterable, List
 
+from pydantic import ValidationError
+
 from app.domain.external.llm import LLM
 from app.domain.models.agent_output import FinalResult
 from app.domain.models.event import (
@@ -13,7 +15,7 @@ from app.domain.models.event import (
 )
 from app.domain.models.file import FileInfo
 from app.domain.models.message import Message
-from app.domain.models.todo import TodoItem
+from app.domain.models.todo import TodoItem, TodoWriteArgs
 from app.domain.repositories.agent_repository import AgentRepository
 from app.domain.services.agents.base import BaseAgent, StructuredOutputEvent
 from app.domain.services.prompts.manus import MANUS_ROLE_PROMPT
@@ -73,10 +75,13 @@ class ManusAgent(BaseAgent):
                     event.function_name == "todo_write"
                     and event.status == ToolStatus.CALLED
                 ):
-                    items = [
-                        TodoItem.model_validate(item)
-                        for item in event.function_args.get("items", [])
-                    ]
+                    try:
+                        items = TodoWriteArgs.model_validate(
+                            event.function_args
+                        ).items
+                    except ValidationError:
+                        yield event
+                        continue
                     created_plan = not self._todo_items and bool(items)
                     title = suggest_title(self._user_message, items)
                     projected = project_todo_write(

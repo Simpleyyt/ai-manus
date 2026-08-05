@@ -3,7 +3,15 @@ from typing import List
 import pytest
 
 from app.domain.models.agent_output import FinalResult
-from app.domain.models.event import MessageEvent, PlanEvent, PlanStatus, TitleEvent, WaitEvent
+from app.domain.models.event import (
+    MessageEvent,
+    PlanEvent,
+    PlanStatus,
+    TitleEvent,
+    ToolEvent,
+    ToolStatus,
+    WaitEvent,
+)
 from app.domain.models.memory import Memory
 from app.domain.models.message import LLMMessage, Message, Role, ToolCall
 from app.domain.services.agents.manus import ManusAgent
@@ -154,6 +162,60 @@ async def test_manus_run_todo_then_deliver_emits_plan_and_message():
     assert any(
         isinstance(event, MessageEvent)
         and event.message == "Research complete"
+        for event in events
+    )
+
+
+@pytest.mark.asyncio
+async def test_manus_invalid_todo_args_yields_tool_event_and_continues():
+    repository = FakeAgentRepository()
+    llm = ScriptedLLM([
+        LLMMessage.assistant(
+            tool_calls=[
+                ToolCall(
+                    id="todo-invalid",
+                    name="todo_write",
+                    args={
+                        "items": [
+                            {
+                                "id": "research",
+                                "status": "in_progress",
+                            }
+                        ]
+                    },
+                ),
+            ]
+        ),
+        LLMMessage.assistant(
+            tool_calls=[
+                ToolCall(
+                    id="result-1",
+                    name="deliver_result",
+                    args={"message": "Recovered and completed", "attachments": []},
+                ),
+            ]
+        ),
+    ])
+    agent = ManusAgent(
+        agent_id="agent-1",
+        agent_repository=repository,
+        llm=llm,
+        tools=[TodoToolkit(), MessageToolkit()],
+    )
+    agent.max_retries = 0
+
+    events = [event async for event in agent.run(Message(message="Research this"))]
+
+    assert any(
+        isinstance(event, ToolEvent)
+        and event.function_name == "todo_write"
+        and event.status == ToolStatus.CALLED
+        for event in events
+    )
+    assert not any(isinstance(event, PlanEvent) for event in events)
+    assert any(
+        isinstance(event, MessageEvent)
+        and event.message == "Recovered and completed"
         for event in events
     )
 

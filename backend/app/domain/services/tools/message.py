@@ -10,8 +10,8 @@ class MessageToolkit(BaseToolkit):
     instructions: str = """
 - Use message_notify_user for brief one-sentence progress updates; it needs no reply
 - Use message_ask_user only when blocked without user input (clarification, confirmation, credentials, or browser takeover)
-- Maintain working todos with todo_write; do not dump raw todo lists as the final user answer
-- Deliver final results and files through deliver_result
+- When todo_write is available, use it to maintain working todos; do not dump raw todo lists as the final user answer
+- When deliver_result is available, use it to deliver final results and files
 """
     
     def __init__(self):

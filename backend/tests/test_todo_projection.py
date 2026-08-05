@@ -1,7 +1,10 @@
+import pytest
+
 from app.domain.models.todo import TodoItem, TodoStatus
 from app.domain.models.event import PlanEvent, PlanStatus, StepEvent, StepStatus
 from app.domain.models.plan import ExecutionStatus
 from app.domain.services.todo_projection import todos_to_plan, project_todo_write
+from app.domain.services.tools.todo import TodoToolkit
 
 def test_todos_to_plan_maps_statuses():
     plan = todos_to_plan([
@@ -31,3 +34,18 @@ def test_subsequent_todo_write_emits_updated_and_step_transitions():
     types = [(type(e), getattr(e, "status", None)) for e in events]
     assert any(isinstance(e, PlanEvent) and e.status == PlanStatus.UPDATED for e in events)
     assert any(isinstance(e, StepEvent) and e.status == StepStatus.COMPLETED for e in events)
+
+
+@pytest.mark.asyncio
+async def test_todo_write_returns_items():
+    tk = TodoToolkit()
+    tool = tk.get_tool("todo_write")
+    assert tool is not None
+    result = await tool.invoke({
+        "items": [
+            {"id": "1", "content": "Do thing", "status": "pending"},
+        ]
+    })
+    assert result.success is True
+    assert result.data is not None
+    assert len(result.data) == 1

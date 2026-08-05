@@ -182,133 +182,171 @@ class BaseAgent(ABC):
         self._output_tool = output_tool
         try:
             message = await self.ask(request)
-            for _ in range(self.max_iterations):
-                if not message.tool_calls:
-                    # Plain message: final answer for unstructured runs; for
-                    # structured runs, nudge the model to use the output tool.
-                    if not output_tool:
-                        break
-                    message = await self.ask(
-                        f"Submit your result by calling the `{output_tool.name}` tool."
-                    )
-                    continue
-
-                tool_responses = []
-                structured_output: Optional[Any] = None
-                for tool_call in message.tool_calls:
-                    function_name = tool_call.name
-                    if not tool_call.id:
-                        tool_call.id = str(uuid.uuid4())
-                    tool_call_id = tool_call.id
-                    function_args = tool_call.args
-
-                    if output_tool and function_name == output_tool.name:
-                        response, structured_output = self._handle_output_call(tool_call)
-                        tool_responses.append(response)
-                        continue
-
-                    tool = self.get_tool(function_name)
-                    if not tool:
-                        yield ErrorEvent(error=f"Unknown tool: {function_name}")
-                        tool_responses.append(LLMMessage.tool(
-                            tool_call_id=tool_call_id,
-                            name=function_name,
-                            content=f"Unknown tool: {function_name}",
-                        ))
-                        continue
-
-                    # Generate event before tool call
-                    yield ToolEvent(
-                        status=ToolStatus.CALLING,
-                        tool_call_id=tool_call_id,
-                        tool_name=tool.toolkit.name,
-                        function_name=function_name,
-                        function_args=function_args
-                    )
-
-                    # Official terminalUpdate: poll shell console while the tool runs
-                    shell_id = (
-                        function_args.get("id")
-                        if tool.toolkit.name == "shell" and isinstance(function_args, dict)
-                        else None
-                    )
-                    if shell_id and hasattr(tool.toolkit, "sandbox"):
-                        invoke_task = asyncio.create_task(self.invoke_tool(tool, tool_call))
-                        last_fingerprint: Optional[str] = None
-
-                        def _console_fingerprint(console: Any) -> str:
-                            """Cheap change detector — avoid repr() on large consoles."""
-                            if console is None:
-                                return "0:"
-                            if isinstance(console, str):
-                                return f"s:{len(console)}:{console[-80:]}"
-                            if isinstance(console, list):
-                                if not console:
-                                    return "0:"
-                                last = console[-1]
-                                if isinstance(last, dict):
-                                    tail = f"{last.get('command', '')}|{str(last.get('output', ''))[-60:]}"
-                                else:
-                                    tail = str(last)[-80:]
-                                return f"l:{len(console)}:{tail}"
-                            return f"o:{type(console).__name__}:{str(console)[-80:]}"
-
-                        while not invoke_task.done():
-                            done, _ = await asyncio.wait({invoke_task}, timeout=1.0)
-                            if done:
-                                break
-                            try:
-                                view = await tool.toolkit.sandbox.view_shell(
-                                    shell_id, console=True
-                                )
-                                console = (
-                                    view.data.get("console", [])
-                                    if view and getattr(view, "data", None)
-                                    else []
-                                )
-                                fingerprint = _console_fingerprint(console)
-                                if fingerprint != last_fingerprint:
-                                    last_fingerprint = fingerprint
-                                    yield TerminalUpdateEvent(
-                                        shell_id=shell_id,
-                                        output=console,
-                                    )
-                            except Exception:
-                                logger.debug(
-                                    "Shell live poll failed for %s",
-                                    shell_id,
-                                    exc_info=True,
-                                )
-                        tool_result = await invoke_task
-                    else:
-                        tool_result = await self.invoke_tool(tool, tool_call)
-
-                    # Generate event after tool call
-                    yield ToolEvent(
-                        status=ToolStatus.CALLED,
-                        tool_call_id=tool_call_id,
-                        tool_name=tool.toolkit.name,
-                        function_name=function_name,
-                        function_args=function_args,
-                        function_result=tool_result.artifact
-                    )
-
-                    tool_responses.append(tool_result)
-
-                if structured_output is not None:
-                    # Persist the tool responses so the tool-call pairing in
-                    # memory stays consistent, then finish.
-                    await self._add_to_memory(tool_responses)
-                    yield StructuredOutputEvent(output=structured_output)
-                    return
-
-                message = await self.ask_with_messages(tool_responses)
-            else:
-                yield ErrorEvent(error="Maximum iteration count reached, failed to complete the task")
-
-            yield MessageEvent(message=message.content)
+            async for event in self._tool_loop(message):
+                yield event
         finally:
             self._output_tool = None
+
+    async def continue_execute(
+        self,
+        output_tool: Optional[OutputTool] = None,
+    ) -> AsyncGenerator[BaseEvent, None]:
+        """Resume the tool loop from current memory without adding a user turn."""
+        self._output_tool = output_tool
+        try:
+            await self._ensure_memory()
+            if self.memory.estimate_tokens() > self.max_context_tokens:
+                self.memory.compact(max_tokens=self.max_context_tokens)
+                await self._repository.save_memory(
+                    self._agent_id, self.name, self.memory
+                )
+
+            message = await self._llm.ask(
+                messages=list(self.memory.get_messages()),
+                tools=self.get_tool_schemas(),
+                tool_choice=self.tool_choice,
+            )
+            logger.debug(f"Response from model: {message}")
+            await self._add_to_memory([message])
+
+            async for event in self._tool_loop(message):
+                yield event
+        finally:
+            self._output_tool = None
+
+    async def _tool_loop(
+        self,
+        message: LLMMessage,
+    ) -> AsyncGenerator[BaseEvent, None]:
+        """Process model tool calls until the run produces a final event."""
+        for _ in range(self.max_iterations):
+            if not message.tool_calls:
+                # Plain message: final answer for unstructured runs; for
+                # structured runs, nudge the model to use the output tool.
+                if not self._output_tool:
+                    break
+                message = await self.ask(
+                    f"Submit your result by calling the `{self._output_tool.name}` tool."
+                )
+                continue
+
+            tool_responses = []
+            structured_output: Optional[Any] = None
+            for tool_call in message.tool_calls:
+                function_name = tool_call.name
+                if not tool_call.id:
+                    tool_call.id = str(uuid.uuid4())
+                tool_call_id = tool_call.id
+                function_args = tool_call.args
+
+                if (
+                    self._output_tool
+                    and function_name == self._output_tool.name
+                ):
+                    response, structured_output = self._handle_output_call(tool_call)
+                    tool_responses.append(response)
+                    continue
+
+                tool = self.get_tool(function_name)
+                if not tool:
+                    yield ErrorEvent(error=f"Unknown tool: {function_name}")
+                    tool_responses.append(LLMMessage.tool(
+                        tool_call_id=tool_call_id,
+                        name=function_name,
+                        content=f"Unknown tool: {function_name}",
+                    ))
+                    continue
+
+                # Generate event before tool call
+                yield ToolEvent(
+                    status=ToolStatus.CALLING,
+                    tool_call_id=tool_call_id,
+                    tool_name=tool.toolkit.name,
+                    function_name=function_name,
+                    function_args=function_args
+                )
+
+                # Official terminalUpdate: poll shell console while the tool runs
+                shell_id = (
+                    function_args.get("id")
+                    if tool.toolkit.name == "shell" and isinstance(function_args, dict)
+                    else None
+                )
+                if shell_id and hasattr(tool.toolkit, "sandbox"):
+                    invoke_task = asyncio.create_task(self.invoke_tool(tool, tool_call))
+                    last_fingerprint: Optional[str] = None
+
+                    def _console_fingerprint(console: Any) -> str:
+                        """Cheap change detector — avoid repr() on large consoles."""
+                        if console is None:
+                            return "0:"
+                        if isinstance(console, str):
+                            return f"s:{len(console)}:{console[-80:]}"
+                        if isinstance(console, list):
+                            if not console:
+                                return "0:"
+                            last = console[-1]
+                            if isinstance(last, dict):
+                                tail = f"{last.get('command', '')}|{str(last.get('output', ''))[-60:]}"
+                            else:
+                                tail = str(last)[-80:]
+                            return f"l:{len(console)}:{tail}"
+                        return f"o:{type(console).__name__}:{str(console)[-80:]}"
+
+                    while not invoke_task.done():
+                        done, _ = await asyncio.wait({invoke_task}, timeout=1.0)
+                        if done:
+                            break
+                        try:
+                            view = await tool.toolkit.sandbox.view_shell(
+                                shell_id, console=True
+                            )
+                            console = (
+                                view.data.get("console", [])
+                                if view and getattr(view, "data", None)
+                                else []
+                            )
+                            fingerprint = _console_fingerprint(console)
+                            if fingerprint != last_fingerprint:
+                                last_fingerprint = fingerprint
+                                yield TerminalUpdateEvent(
+                                    shell_id=shell_id,
+                                    output=console,
+                                )
+                        except Exception:
+                            logger.debug(
+                                "Shell live poll failed for %s",
+                                shell_id,
+                                exc_info=True,
+                            )
+                    tool_result = await invoke_task
+                else:
+                    tool_result = await self.invoke_tool(tool, tool_call)
+
+                # Generate event after tool call
+                yield ToolEvent(
+                    status=ToolStatus.CALLED,
+                    tool_call_id=tool_call_id,
+                    tool_name=tool.toolkit.name,
+                    function_name=function_name,
+                    function_args=function_args,
+                    function_result=tool_result.artifact
+                )
+
+                tool_responses.append(tool_result)
+
+            if structured_output is not None:
+                # Persist the tool responses so the tool-call pairing in
+                # memory stays consistent, then finish.
+                await self._add_to_memory(tool_responses)
+                yield StructuredOutputEvent(output=structured_output)
+                return
+
+            message = await self.ask_with_messages(tool_responses)
+        else:
+            yield ErrorEvent(error="Maximum iteration count reached, failed to complete the task")
+
+        yield MessageEvent(message=message.content)
 
     async def _ensure_memory(self):
         if not self.memory:

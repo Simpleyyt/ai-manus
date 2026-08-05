@@ -23,7 +23,7 @@ from app.domain.models.event import (
     TerminalUpdateEvent,
     FileUpdateEvent,
 )
-from app.domain.services.flows.plan_act import PlanActFlow
+from app.domain.services.flows.agent_loop import AgentLoopFlow
 from app.domain.external.sandbox import Sandbox
 from app.domain.external.browser import Browser
 from app.domain.external.search import SearchEngine
@@ -73,7 +73,7 @@ class AgentTaskRunner(TaskRunner):
         self._project_repository = project_repository
         self._llm = llm
         self._mcp_tool = MCPToolkit()
-        self._flow = PlanActFlow(
+        self._flow = AgentLoopFlow(
             self._agent_id,
             self._repository,
             self._session_id,

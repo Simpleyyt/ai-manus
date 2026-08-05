@@ -78,17 +78,21 @@ class AgentLoopFlow(BaseFlow):
 
     @staticmethod
     def _todos_from_plan(plan: Plan) -> list[TodoItem]:
-        status_map = {
-            ExecutionStatus.PENDING: TodoStatus.PENDING,
-            ExecutionStatus.RUNNING: TodoStatus.IN_PROGRESS,
-            ExecutionStatus.COMPLETED: TodoStatus.COMPLETED,
-            ExecutionStatus.FAILED: TodoStatus.CANCELLED,
-        }
         return [
             TodoItem(
                 id=step.id,
                 content=step.description,
-                status=status_map[step.status],
+                status=(
+                    TodoStatus.CANCELLED
+                    if step.status == ExecutionStatus.COMPLETED
+                    and step.success is False
+                    else {
+                        ExecutionStatus.PENDING: TodoStatus.PENDING,
+                        ExecutionStatus.RUNNING: TodoStatus.IN_PROGRESS,
+                        ExecutionStatus.COMPLETED: TodoStatus.COMPLETED,
+                        ExecutionStatus.FAILED: TodoStatus.CANCELLED,
+                    }[step.status]
+                ),
             )
             for step in plan.steps
         ]
@@ -112,6 +116,8 @@ class AgentLoopFlow(BaseFlow):
         last_plan = session.get_last_plan()
         if initial_status == SessionStatus.WAITING and last_plan:
             self.agent._todo_items = self._todos_from_plan(last_plan)
+            self.agent._plan_title = last_plan.title
+            self.agent._plan_goal = last_plan.goal
 
         waited = False
         events = (
@@ -129,12 +135,22 @@ class AgentLoopFlow(BaseFlow):
             if not final_todos and last_plan:
                 final_todos = self._todos_from_plan(last_plan)
             if final_todos:
+                title = (
+                    self.agent._plan_title
+                    if self.agent._plan_title is not None
+                    else last_plan.title if last_plan else ""
+                )
+                goal = (
+                    self.agent._plan_goal
+                    if self.agent._plan_goal is not None
+                    else last_plan.goal if last_plan else ""
+                )
                 yield PlanEvent(
                     status=PlanStatus.COMPLETED,
                     plan=todos_to_plan(
                         final_todos,
-                        title=last_plan.title if last_plan else "",
-                        goal=last_plan.goal if last_plan else "",
+                        title=title,
+                        goal=goal,
                     ),
                 )
             self._done = True

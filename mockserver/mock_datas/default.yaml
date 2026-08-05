@@ -1,6 +1,6 @@
-# Canned responses follow the native tool-calling protocol:
-# planner submits plans via create_plan/update_plan output tools, and the
-# executor finishes steps via complete_step and delivers via deliver_result.
+# Canned Agent responses follow the single-loop Manus tool protocol:
+# todo_write projects plan progress, work tools perform the task, and
+# deliver_result returns the final user-facing result.
 - choices:
     - index: 0
       message:
@@ -9,17 +9,14 @@
         tool_calls:
           - type: function
             function:
-              name: create_plan
+              name: todo_write
               arguments: |
                 {
-                  "message": "This is a test",
-                  "language": "en",
-                  "goal": "test goal",
-                  "title": "test title",
-                  "steps": [
+                  "items": [
                     {
                       "id": "1",
-                      "description": "test step"
+                      "content": "Run the mock Agent task",
+                      "status": "in_progress"
                     }
                   ]
                 }
@@ -140,32 +137,17 @@
         tool_calls:
           - type: function
             function:
-              name: complete_step
+              name: todo_write
               arguments: |
                 {
-                  "success": true,
-                  "result": "test end",
-                  "attachments": [
-                    "/home/ubuntu/example.txt",
-                    "/home/ubuntu/example.md",
-                    "/home/ubuntu/example.py"
+                  "items": [
+                    {
+                      "id": "1",
+                      "content": "Run the mock Agent task",
+                      "status": "completed"
+                    }
                   ]
                 }
-
-- choices:
-    - index: 0
-      message:
-        role: assistant
-        content: null
-        tool_calls:
-          - type: function
-            function:
-              name: update_plan
-              arguments: |
-                {
-                  "steps": []
-                }
-      finish_reason: stop
 
 - choices:
     - index: 0

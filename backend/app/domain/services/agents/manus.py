@@ -8,6 +8,7 @@ from app.domain.models.event import (
     BaseEvent,
     ErrorEvent,
     MessageEvent,
+    PlanEvent,
     TitleEvent,
     ToolEvent,
     ToolStatus,
@@ -55,6 +56,8 @@ class ManusAgent(BaseAgent):
             tools=tools,
         )
         self._todo_items: List[TodoItem] = []
+        self._plan_title: str | None = None
+        self._plan_goal: str | None = None
         self._title_emitted = False
         self._user_message = ""
 
@@ -91,6 +94,9 @@ class ManusAgent(BaseAgent):
                     )
                     self._todo_items = items
                     for projected_event in projected:
+                        if isinstance(projected_event, PlanEvent):
+                            self._plan_title = projected_event.plan.title
+                            self._plan_goal = projected_event.plan.goal
                         yield projected_event
                     if created_plan and not self._title_emitted and title:
                         self._title_emitted = True
@@ -112,6 +118,15 @@ class ManusAgent(BaseAgent):
 
             if isinstance(event, StructuredOutputEvent):
                 result: FinalResult = event.output
+                if not self._title_emitted:
+                    title = self._plan_title or suggest_title(
+                        self._user_message,
+                        self._todo_items,
+                    )
+                    if title:
+                        self._plan_title = title
+                        self._title_emitted = True
+                        yield TitleEvent(title=title)
                 attachments = [
                     FileInfo(file_path=file_path)
                     for file_path in result.attachments

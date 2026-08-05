@@ -234,6 +234,23 @@ async def test_agent_loop_flow_waiting_session_rolls_back_resumes_and_rehydrates
     assert isinstance(events[-1], DoneEvent)
 
 
+def test_agent_loop_flow_rehydrates_unsuccessful_completed_step_as_cancelled():
+    plan = Plan(
+        steps=[
+            Step(
+                id="cancelled",
+                description="Skipped work",
+                status=ExecutionStatus.COMPLETED,
+                success=False,
+            ),
+        ],
+    )
+
+    todos = AgentLoopFlow._todos_from_plan(plan)
+
+    assert todos[0].status.value == "cancelled"
+
+
 @pytest.mark.asyncio
 async def test_agent_loop_flow_completes_the_last_plan_when_agent_has_no_todos():
     last_plan = Plan(
@@ -270,6 +287,56 @@ async def test_agent_loop_flow_completes_the_last_plan_when_agent_has_no_todos()
         if isinstance(event, PlanEvent) and event.status == PlanStatus.COMPLETED
     )
     assert completed_plan.plan.steps[0].id == "existing"
+
+
+@pytest.mark.asyncio
+async def test_agent_loop_flow_completed_plan_keeps_latest_todo_title_and_goal():
+    flow = AgentLoopFlow(
+        agent_id="agent-1",
+        agent_repository=FakeAgentRepository(),
+        session_id="session-1",
+        session_repository=FakeSessionRepository(FakeSession()),
+        sandbox=object(),
+        browser=object(),
+        mcp_tool=MessageToolkit(),
+        llm=ScriptedLLM([
+            LLMMessage.assistant(
+                tool_calls=[
+                    ToolCall(
+                        id="todo-1",
+                        name="todo_write",
+                        args={
+                            "items": [
+                                {
+                                    "id": "preserve",
+                                    "content": "Preserve plan metadata",
+                                    "status": "pending",
+                                },
+                            ],
+                        },
+                    ),
+                ],
+            ),
+            LLMMessage.assistant(
+                tool_calls=[
+                    ToolCall(
+                        id="result-1",
+                        name="deliver_result",
+                        args={"message": "Done", "attachments": []},
+                    ),
+                ],
+            ),
+        ]),
+    )
+
+    events = [event async for event in flow.run(Message(message="Do it"))]
+
+    completed_plan = next(
+        event for event in events
+        if isinstance(event, PlanEvent) and event.status == PlanStatus.COMPLETED
+    )
+    assert completed_plan.plan.title == "Preserve plan metadata"
+    assert completed_plan.plan.goal == "Preserve plan metadata"
 
 
 @pytest.mark.asyncio
@@ -463,18 +530,9 @@ async def test_manus_ask_user_yields_wait_and_stops():
 
 
 @pytest.mark.asyncio
-async def test_manus_does_not_emit_title_without_a_created_plan():
+async def test_manus_emits_fallback_title_when_delivering_without_todos():
     repository = FakeAgentRepository()
     llm = ScriptedLLM([
-        LLMMessage.assistant(
-            tool_calls=[
-                ToolCall(
-                    id="todo-1",
-                    name="todo_write",
-                    args={"items": []},
-                ),
-            ]
-        ),
         LLMMessage.assistant(
             tool_calls=[
                 ToolCall(
@@ -494,4 +552,7 @@ async def test_manus_does_not_emit_title_without_a_created_plan():
 
     events = [event async for event in agent.run(Message(message="Quick task"))]
 
-    assert not any(isinstance(event, TitleEvent) for event in events)
+    assert any(
+        isinstance(event, TitleEvent) and event.title == "Quick task"
+        for event in events
+    )

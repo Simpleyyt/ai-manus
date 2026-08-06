@@ -15,6 +15,7 @@ import {
   PlanEventData,
   AgentEvent,
 } from '../types/event';
+import { isComputerPanelTool } from '../constants/tool';
 
 export interface AgentEventState {
   messages: Ref<Message[]>;
@@ -105,7 +106,9 @@ export function useAgentEvents(state: AgentEventState, options: AgentEventOption
       }
       lastTool.value = toolContent;
     }
-    if (toolContent.name !== 'message') {
+    // Soft-plan / chat tools stay in the timeline but must not drive the
+    // Computer panel (no ToolView → inactive empty).
+    if (isComputerPanelTool(toolContent.name)) {
       lastNoMessageTool.value = toolContent;
       options.onToolActivity?.(toolContent);
     }

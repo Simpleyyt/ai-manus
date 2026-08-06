@@ -232,6 +232,8 @@ export default {
   // Message tools
   'Sending notification': '正在发送通知',
   'Asking question': '正在提问',
+  'Updating plan': '正在更新计划',
+  'Plan': '计划',
   // Tool names
   'Terminal': '终端',
   'File': '文件',

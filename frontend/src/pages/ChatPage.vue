@@ -207,6 +207,7 @@ import { Message, MessageContent, ToolContent, StepContent, isConsecutiveAssista
 import { PlanEventData, AgentEvent, type TerminalUpdateEventData, type FileUpdateEventData } from '../types/event';
 import { useAgentEvents } from '../composables/useAgentEvents';
 import { useSessionPhase } from '../composables/useSessionPhase';
+import { isComputerPanelTool } from '../constants/tool';
 import ComputerPanel from '../components/ComputerPanel.vue'
 import { ArrowDown, FileSearch, Lock, Globe, Link, Check, Ellipsis, Pencil, Star, Trash, FolderPlus, Folder, FolderSync, Pin, ChevronDown } from 'lucide-vue-next';
 import ShareIcon from '@/components/icons/ShareIcon.vue';
@@ -692,6 +693,9 @@ const isLiveTool = (tool: ToolContent) => {
 }
 
 const handleToolClick = (tool: ToolContent) => {
+  if (!isComputerPanelTool(tool.name)) {
+    return;
+  }
   realTime.value = false;
   if (sessionId.value) {
     computerPanel.value?.showComputerPanel(tool, isLiveTool(tool));

@@ -232,6 +232,8 @@ export default {
   // Message tools
   'Sending notification': 'Sending notification',
   'Asking question': 'Asking question',
+  'Updating plan': 'Updating plan',
+  'Plan': 'Plan',
   // Tool names
   'Terminal': 'Terminal',
   'File': 'File',

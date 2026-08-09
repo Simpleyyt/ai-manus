@@ -1,6 +1,6 @@
 # Canned Agent responses follow the single-loop Manus tool protocol:
-# todo_write projects plan progress, work tools perform the task, and
-# deliver_result returns the final user-facing result.
+# message_notify + todo.md (file_write) projects plan progress, work tools
+# perform the task, and deliver_result returns the final user-facing result.
 - choices:
     - index: 0
       message:
@@ -9,16 +9,25 @@
         tool_calls:
           - type: function
             function:
-              name: todo_write
+              name: message_notify_user
               arguments: |
                 {
-                  "items": [
-                    {
-                      "id": "1",
-                      "content": "Run the mock Agent task",
-                      "status": "in_progress"
-                    }
-                  ]
+                    "text": "Starting the mock Agent task."
+                }
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: file_write
+              arguments: |
+                {
+                  "file": "/home/ubuntu/todo.md",
+                  "content": "# Plan\n- [~] Run the mock Agent task\n",
+                  "append": false
                 }
 
 - choices:
@@ -137,16 +146,12 @@
         tool_calls:
           - type: function
             function:
-              name: todo_write
+              name: file_write
               arguments: |
                 {
-                  "items": [
-                    {
-                      "id": "1",
-                      "content": "Run the mock Agent task",
-                      "status": "completed"
-                    }
-                  ]
+                  "file": "/home/ubuntu/todo.md",
+                  "content": "# Plan\n- [x] Run the mock Agent task\n",
+                  "append": false
                 }
 
 - choices:

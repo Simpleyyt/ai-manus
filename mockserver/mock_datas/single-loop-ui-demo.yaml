@@ -1,0 +1,75 @@
+# Short single-loop demo for UI recording (todo.md plan + file deliver).
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: message_notify_user
+              arguments: |
+                {
+                  "text": "开始准备示例文件。"
+                }
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: file_write
+              arguments: |
+                {
+                  "file": "/home/ubuntu/todo.md",
+                  "content": "# Plan\n- [~] 准备示例文件\n- [ ] 交付结果\n",
+                  "append": false
+                }
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: file_write
+              arguments: |
+                {
+                  "file": "/home/ubuntu/demo.txt",
+                  "content": "Single-loop Manus demo\n",
+                  "append": false,
+                  "leading_newline": false,
+                  "trailing_newline": true
+                }
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: file_write
+              arguments: |
+                {
+                  "file": "/home/ubuntu/todo.md",
+                  "content": "# Plan\n- [x] 准备示例文件\n- [x] 交付结果\n",
+                  "append": false
+                }
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: deliver_result
+              arguments: |
+                {
+                  "message": "单环 Agent 演示完成：已用 todo.md 维护计划，并交付 demo.txt。",
+                  "attachments": ["/home/ubuntu/demo.txt"]
+                }

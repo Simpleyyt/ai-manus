@@ -4,6 +4,7 @@ import {
   readStoredThemeMode,
   setThemeMode,
   initTheme,
+  isDocumentDark,
 } from '../useTheme'
 
 describe('useTheme', () => {
@@ -53,5 +54,11 @@ describe('useTheme', () => {
     localStorage.setItem('manus-theme-mode', 'light')
     expect(initTheme()).toBe('light')
     expect(document.documentElement.classList.contains('dark')).toBe(false)
+  })
+
+  it('isDocumentDark reflects html dark class', () => {
+    expect(isDocumentDark()).toBe(false)
+    document.documentElement.classList.add('dark')
+    expect(isDocumentDark()).toBe(true)
   })
 })

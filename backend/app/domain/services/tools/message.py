@@ -8,9 +8,11 @@ class MessageToolkit(BaseToolkit):
 
     name: str = "message"
     instructions: str = """
+- Start tool-using tasks with message_notify_user (one short sentence ack)
 - Use message_notify_user for brief one-sentence progress updates; it needs no reply
 - Use message_ask_user only when blocked without user input (clarification, confirmation, credentials, or browser takeover)
-- When todo_write is available, use it to maintain working todos; do not dump raw todo lists as the final user answer
+- Prefer sensible defaults over asking when the request is already clear
+- Do not dump raw todo lists as the final user answer; use deliver_result for the answer
 - When deliver_result is available, use it to deliver final results and files
 """
     

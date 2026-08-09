@@ -209,7 +209,7 @@ import { useAgentEvents } from '../composables/useAgentEvents';
 import { useSessionPhase } from '../composables/useSessionPhase';
 import { isComputerPanelTool } from '../constants/tool';
 import ComputerPanel from '../components/ComputerPanel.vue'
-import { ArrowDown, FileSearch, Lock, Globe, Link, Check, Ellipsis, Pencil, Star, Trash, FolderPlus, Folder, FolderSync, Pin, ChevronDown } from 'lucide-vue-next';
+import { ArrowDown, FileSearch, Lock, Globe, Link, Check, Ellipsis, Pencil, Star, Trash, FolderPlus, Folder, FolderSync, Pin, ChevronDown, CircleHelp } from 'lucide-vue-next';
 import ShareIcon from '@/components/icons/ShareIcon.vue';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
 import type { FileInfo } from '../api/file';

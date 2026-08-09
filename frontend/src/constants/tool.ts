@@ -89,6 +89,7 @@ import SearchIcon from '../components/icons/SearchIcon.vue';
 import EditIcon from '../components/icons/EditIcon.vue';
 import BrowserIcon from '../components/icons/BrowserIcon.vue';
 import ShellIcon from '../components/icons/ShellIcon.vue';
+import { ListTodo } from 'lucide-vue-next';
 
 /**
  * Tool icon mapping
@@ -99,6 +100,7 @@ export const TOOL_ICON_MAP: {[key: string]: any} = {
   "browser": BrowserIcon,
   "search": SearchIcon,
   "message": "",
+  "todo": ListTodo,
   "mcp": SearchIcon  // 暂时使用搜索图标，可以后续创建专门的MCP图标
 };
 

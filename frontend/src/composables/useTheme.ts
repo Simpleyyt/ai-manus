@@ -62,3 +62,12 @@ export function initTheme(): ThemeMode {
   setThemeMode(mode)
   return mode
 }
+
+/** Current resolved dark state (after `dark` class is applied). */
+export function isDocumentDark(): boolean {
+  if (typeof document === 'undefined') return false
+  return (
+    document.documentElement.classList.contains('dark')
+    || document.body.classList.contains('dark')
+  )
+}

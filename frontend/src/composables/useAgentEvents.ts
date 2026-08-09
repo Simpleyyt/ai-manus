@@ -89,6 +89,19 @@ export function useAgentEvents(state: AgentEventState, options: AgentEventOption
   };
 
   const handleToolEvent = (toolData: ToolEventData) => {
+    // Soft-control tools are projected server-side (message bubbles / plan steps).
+    if (
+      toolData.name === 'todo'
+      || toolData.name === 'message'
+      || toolData.function === 'todo_write'
+      || toolData.function === 'message_notify_user'
+      || toolData.function === 'message_ask_user'
+      || toolData.function === 'plan_report'
+      || toolData.function === 'replan'
+    ) {
+      return;
+    }
+
     const lastStep = getLastStep();
     const toolContent: ToolContent = {
       ...toolData
@@ -106,8 +119,7 @@ export function useAgentEvents(state: AgentEventState, options: AgentEventOption
       }
       lastTool.value = toolContent;
     }
-    // Soft-plan / chat tools stay in the timeline but must not drive the
-    // Computer panel (no ToolView → inactive empty).
+    // Soft-plan / chat tools must not drive the Computer panel.
     if (isComputerPanelTool(toolContent.name)) {
       lastNoMessageTool.value = toolContent;
       options.onToolActivity?.(toolContent);

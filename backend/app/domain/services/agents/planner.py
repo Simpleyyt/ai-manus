@@ -110,6 +110,10 @@ class PlannerAgent(BaseAgent):
                     updated_steps.extend(new_steps)
                     # Update steps in plan
                     plan.steps = updated_steps
+                else:
+                    # All existing steps are already finished; preserve them and
+                    # append the newly discovered remaining work.
+                    plan.steps.extend(new_steps)
 
                 yield PlanEvent(status=PlanStatus.UPDATED, plan=plan)
             else:

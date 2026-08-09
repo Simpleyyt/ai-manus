@@ -23,6 +23,7 @@
           :original="oldContent || ''"
           :modified="fileContent"
           :filename="fileName"
+          :theme="monacoTheme"
         />
       </div>
       <section
@@ -33,7 +34,7 @@
           :value="activeView === 'oldContent' ? (oldContent || '') : fileContent"
           :filename="fileName"
           :read-only="true"
-          theme="vs"
+          :theme="monacoTheme"
           :line-numbers="'off'"
           :word-wrap="'on'"
           :minimap="false"
@@ -53,6 +54,7 @@ import { viewFile } from '@/api/agent';
 import MonacoEditor from '@/components/ui/MonacoEditor.vue';
 import MonacoDiffEditor from '@/components/ui/MonacoDiffEditor.vue';
 import { useLiveToolContent } from '@/composables/useLiveToolContent';
+import { useDocumentDark } from '@/composables/useDocumentDark';
 import { eventBus } from '@/utils/eventBus';
 
 type FileTab = 'diff' | 'oldContent' | 'newContent';
@@ -70,6 +72,9 @@ defineExpose({
 });
 
 const { t } = useI18n();
+const isDark = useDocumentDark();
+/** Panel bg is --background-gray-main; pair with vs-dark so tokens aren't light-on-dark mess */
+const monacoTheme = computed(() => (isDark.value ? 'vs-dark' : 'vs'));
 const fileContent = ref('');
 const oldContent = ref<string | null>(null);
 /** Official default selected tab is Modified / 已修改 */

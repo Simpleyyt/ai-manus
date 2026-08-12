@@ -34,7 +34,7 @@
             @toolClick="handleToolClick" />
 
           <!-- Loading indicator: only before first visible replay output -->
-          <LoadingIndicator v-if="showThinking" :text="$t('{name} is thinking', { name: 'Manus' })" />
+          <LoadingIndicator v-if="showThinking" :text="$t('Thinking')" />
           <div v-else-if="isLoading" aria-hidden="true" class="h-5 invisible" />
         </div>
 
@@ -102,6 +102,7 @@ import { Message, MessageContent, ToolContent, StepContent, AttachmentsContent, 
 import { PlanEventData } from '../types/event';
 import { useAgentEvents } from '../composables/useAgentEvents';
 import ComputerPanel from '../components/ComputerPanel.vue'
+import { isComputerPanelTool } from '../constants/tool';
 import { ArrowDown, FileSearch, Link, Bot } from 'lucide-vue-next';
 import ManusLogoTextIcon from '../components/icons/ManusLogoTextIcon.vue';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
@@ -209,8 +210,9 @@ const { handleEvent } = useAgentEvents(
   { messages, title, plan, lastEventId, lastTool, lastNoMessageTool },
   {
     onToolActivity: (tool: ToolContent) => {
+      // Official: Computer closed by default; only follow tools if already open.
       if (realTime.value) {
-        computerPanel.value?.showComputerPanel(tool, false);
+        computerPanel.value?.followLiveToolIfOpen(tool, false);
       }
     },
   }
@@ -317,6 +319,9 @@ onUnmounted(() => {
 });
 
 const handleToolClick = (tool: ToolContent) => {
+  if (!isComputerPanelTool(tool.name)) {
+    return;
+  }
   realTime.value = false;
   if (sessionId.value) {
     computerPanel.value?.showComputerPanel(tool, false);
@@ -324,6 +329,9 @@ const handleToolClick = (tool: ToolContent) => {
 }
 
 const handleSelectTool = (tool: ToolContent) => {
+  if (!isComputerPanelTool(tool.name)) {
+    return;
+  }
   realTime.value = false;
   computerPanel.value?.showComputerPanel(tool, false);
 }

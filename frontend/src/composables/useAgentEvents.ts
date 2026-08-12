@@ -15,6 +15,7 @@ import {
   PlanEventData,
   AgentEvent,
 } from '../types/event';
+import { isComputerPanelTool } from '../constants/tool';
 
 export interface AgentEventState {
   messages: Ref<Message[]>;
@@ -88,6 +89,19 @@ export function useAgentEvents(state: AgentEventState, options: AgentEventOption
   };
 
   const handleToolEvent = (toolData: ToolEventData) => {
+    // Soft-control tools are projected server-side (message bubbles / plan steps).
+    if (
+      toolData.name === 'todo'
+      || toolData.name === 'message'
+      || toolData.function === 'todo_write'
+      || toolData.function === 'message_notify_user'
+      || toolData.function === 'message_ask_user'
+      || toolData.function === 'plan_report'
+      || toolData.function === 'replan'
+    ) {
+      return;
+    }
+
     const lastStep = getLastStep();
     const toolContent: ToolContent = {
       ...toolData
@@ -105,27 +119,59 @@ export function useAgentEvents(state: AgentEventState, options: AgentEventOption
       }
       lastTool.value = toolContent;
     }
-    if (toolContent.name !== 'message') {
+    // Soft-plan / chat tools must not drive the Computer panel.
+    if (isComputerPanelTool(toolContent.name)) {
       lastNoMessageTool.value = toolContent;
       options.onToolActivity?.(toolContent);
     }
   };
 
+  const findStepById = (id: string): StepContent | undefined => {
+    for (let i = messages.value.length - 1; i >= 0; i--) {
+      const message = messages.value[i];
+      if (message.type !== 'step') continue;
+      const step = message.content as StepContent;
+      if (step.id === id) return step;
+    }
+    return undefined;
+  };
+
+  const ensureStepMessage = (stepData: StepEventData) => {
+    const existing = findStepById(stepData.id);
+    if (existing) {
+      existing.status = stepData.status;
+      existing.description = stepData.description || existing.description;
+      return existing;
+    }
+    if (stepData.status !== 'running' && stepData.status !== 'pending') {
+      return undefined;
+    }
+    const content = {
+      ...stepData,
+      status: stepData.status === 'pending' ? 'running' : stepData.status,
+      tools: [],
+    } as StepContent;
+    messages.value.push({ type: 'step', content });
+    return content;
+  };
+
   const handleStepEvent = (stepData: StepEventData) => {
-    const lastStep = getLastStep();
     if (stepData.status === 'running') {
-      messages.value.push({
-        type: 'step',
-        content: {
-          ...stepData,
-          tools: []
-        } as StepContent,
-      });
+      ensureStepMessage(stepData);
     } else if (stepData.status === 'completed') {
-      if (lastStep) {
-        lastStep.status = stepData.status;
+      const matched = findStepById(stepData.id) ?? getLastStep();
+      if (matched) {
+        matched.status = stepData.status;
+        if (stepData.description) matched.description = stepData.description;
+        if (stepData.result) matched.result = stepData.result;
       }
     } else if (stepData.status === 'failed') {
+      const matched = findStepById(stepData.id) ?? getLastStep();
+      if (matched) {
+        matched.status = stepData.status;
+        if (stepData.description) matched.description = stepData.description;
+        if (stepData.result) matched.result = stepData.result;
+      }
       options.onStreamError?.();
     }
   };
@@ -147,6 +193,18 @@ export function useAgentEvents(state: AgentEventState, options: AgentEventOption
 
   const handlePlanEvent = (planData: PlanEventData) => {
     plan.value = planData;
+    // Defense in depth: PlanEvent alone used to only feed Computer PlanPanel.
+    // Official chat shows a dedicated running step row — seed/sync from plan.
+    for (const step of planData.steps ?? []) {
+      if (step.status === 'running') {
+        ensureStepMessage(step);
+      } else if (step.status === 'completed' || step.status === 'failed') {
+        const matched = findStepById(step.id);
+        if (matched) {
+          matched.status = step.status;
+        }
+      }
+    }
   };
 
   const handleEvent = (event: AgentEvent) => {

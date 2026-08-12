@@ -1,51 +1,22 @@
 <template>
-  <!-- Official Manus AgentIsTyping: text + 3 bounce dots -->
-  <div class="flex items-center gap-1 text-[var(--text-tertiary)] text-sm">
-    <span v-if="text">{{ text }}</span>
-    <span class="flex gap-1 relative top-[4px]">
-      <span
-        v-for="delay in delays"
-        :key="delay"
-        class="w-[3px] h-[3px] rounded animate-bounce-dot bg-[var(--icon-tertiary)]"
-        :style="{ animationDelay: delay }"
-      ></span>
-    </span>
+  <!-- Official Manus thinking row (user-pasted DOM) -->
+  <div class="flex items-center h-[28px] gap-2" style="opacity: 1">
+    <LiveStatusCanvas :size="16" />
+    <div
+      class="animate-live-status-shimmer bg-[linear-gradient(110deg,var(--text-primary),35%,var(--text-shining),50%,var(--text-primary),75%,var(--text-primary))] bg-[length:200%_100%] bg-clip-text text-[14px] text-transparent [contain:paint] motion-reduce:animate-none motion-reduce:bg-none motion-reduce:text-[var(--text-primary)]">
+      {{ text }}
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import LiveStatusCanvas from '@/components/LiveStatusCanvas.vue'
+
 interface Props {
   text?: string
 }
 
 withDefaults(defineProps<Props>(), {
-  text: undefined
+  text: undefined,
 })
-
-const delays = ['0ms', '200ms', '400ms'] as const
 </script>
-
-<style scoped>
-.animate-bounce-dot {
-  display: inline-block;
-  animation: dot-animation 1.5s infinite;
-}
-
-@keyframes dot-animation {
-  0% {
-    transform: translateY(0);
-  }
-
-  20% {
-    transform: translateY(-4px);
-  }
-
-  40% {
-    transform: translateY(0);
-  }
-
-  100% {
-    transform: translateY(0);
-  }
-}
-</style>

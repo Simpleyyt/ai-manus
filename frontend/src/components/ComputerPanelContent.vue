@@ -13,7 +13,7 @@
         <div class="flex min-w-0 items-center gap-[8px] text-[var(--text-tertiary)] text-xs">
           <div class="" :title="usingLabel">
             <template v-if="toolInfo">
-              {{ $t('Manus is using') }}<span>{{ toolInfo.name }}</span>
+              {{ $t('Manus is using') }} <span>{{ toolInfo.name }}</span>
             </template>
             <template v-else>
               {{ $t('Waiting for instructions') }}

@@ -8,9 +8,13 @@ class MessageToolkit(BaseToolkit):
 
     name: str = "message"
     instructions: str = """
+- Start tool-using work with message_notify_user (one short sentence ack)
 - Use message_notify_user for brief one-sentence progress updates; it needs no reply
 - Use message_ask_user only when blocked without user input (clarification, confirmation, credentials, or browser takeover)
-- Deliver final results and files to the user, not todo lists, advice, or plans
+- Prefer sensible defaults over asking when the request is already clear
+- Do not dump raw todo lists as the user-facing answer
+- When complete_step is available, end the current plan step with it (honest success/failure)
+- When deliver_result is available, use it for the overall final answer and output files
 """
     
     def __init__(self):

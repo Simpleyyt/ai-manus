@@ -149,10 +149,14 @@ const computedLanguage = computed(() => {
 /** Official MONACO_COMMON_OPTIONS + lineNumbers on (FilePreviewerContent) */
 const buildCodePreviewerOptions = (): monaco.editor.IStandaloneEditorConstructionOptions => {
   const lang = computedLanguage.value;
+  const dark =
+    typeof document !== "undefined" &&
+    (document.documentElement.classList.contains("dark") ||
+      document.body.classList.contains("dark"));
   const options: monaco.editor.IStandaloneEditorConstructionOptions = {
     value: props.value,
     language: lang,
-    theme: "one-light-file-preview",
+    theme: dark ? "vs-dark" : "one-light-file-preview",
     readOnly: true,
     folding: true,
     lineDecorationsWidth: 0,
@@ -302,6 +306,14 @@ watch(computedLanguage, (newLanguage) => {
     }
   }
 });
+
+watch(
+  () => props.theme,
+  (theme) => {
+    if (props.variant === "codePreviewer") return;
+    monaco.editor.setTheme(theme);
+  },
+);
 
 onMounted(() => {
   initEditor();

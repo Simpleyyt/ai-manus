@@ -10,6 +10,8 @@ from typing import List
 
 from pydantic import BaseModel, Field
 
+from app.domain.models.plan import ExecutionStatus
+
 
 class PlanStepDraft(BaseModel):
     """A single step proposed by the planner."""
@@ -47,6 +49,38 @@ class PlanOutput(BaseModel):
     )
 
 
+class PlanStepStatusUpdate(BaseModel):
+    id: str = Field(description="Existing plan step id")
+    status: ExecutionStatus = Field(
+        description="pending | running | completed | failed"
+    )
+    reflection: str | None = Field(
+        default=None,
+        description="Optional short note for this step transition",
+    )
+
+
+class PlanReportOutput(BaseModel):
+    """Arguments of the ``plan_report`` tool (authoritative Plan UI progress)."""
+
+    steps: List[PlanStepStatusUpdate] = Field(
+        description="Full status snapshot for known step ids (include every step)"
+    )
+    reflection: str = Field(
+        default="",
+        description="Optional short overall reflection for this progress update",
+    )
+
+
+class ReplanOutput(BaseModel):
+    """Arguments of the ``replan`` tool."""
+
+    reason: str = Field(
+        min_length=1,
+        description="Why the remaining plan must change",
+    )
+
+
 class PlanUpdateOutput(BaseModel):
     """Arguments of the ``update_plan`` output tool."""
 
@@ -64,8 +98,9 @@ class StepReport(BaseModel):
     success: bool = Field(description="Whether the step was completed successfully")
     result: str = Field(
         description=(
-            "Concrete outcome of the step: what was done and what was produced,"
-            " in the working language"
+            "Concrete verified outcome of the step: what was done, what was"
+            " produced, and how it was checked (e.g. command output), in the"
+            " working language. Do not claim success without verification."
         )
     )
     attachments: List[str] = Field(

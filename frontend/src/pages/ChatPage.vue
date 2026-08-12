@@ -156,8 +156,9 @@
           <ChatMessage v-for="(message, index) in messages" :key="index" :message="message"
             :hideHeader="isConsecutiveAssistant(messages, index)"
             :showLiteBadge="taskMode === 'chat'"
-            :showCopyActions="shouldShowAssistantCopyActions(index)"
+            :showCopyActions="shouldShowAssistantCopyActionsAt(index)"
             :isLastBeforeUser="isAssistantLastBeforeUser(index)"
+            :step-connects-to-next="isStepConnectedToNext(messages, index)"
             @toolClick="handleToolClick" />
           <ChatWaitingContinue
             :visible="showWaitingContinue"
@@ -165,9 +166,9 @@
           <ChatTaskCompleted
             :visible="showTaskCompleted"
             :copy-text="lastAssistantPlainText" />
-          <!-- AgentIsTyping: only fill the empty gap before first visible turn output -->
-          <LoadingIndicator v-if="showThinking" :text="$t('{name} is thinking', { name: 'Manus' })" />
-          <!-- Official running spacer when work is already visible (tools/steps/messages) -->
+          <!-- AgentIsTyping / LiveStatus gap: busy with no live step/tool indicator -->
+          <LoadingIndicator v-if="showThinking" :text="$t('Thinking')" />
+          <!-- Official running spacer when a step/tool already shows progress -->
           <div v-else-if="isBusy" aria-hidden="true" class="h-5 invisible" />
         </div>
 
@@ -203,12 +204,13 @@ import ChatTaskCompleted from '../components/ChatTaskCompleted.vue';
 import ChatWaitingContinue from '../components/ChatWaitingContinue.vue';
 import TakeControlBanner from '../components/TakeControlBanner.vue';
 import * as agentApi from '../api/agent';
-import { Message, MessageContent, ToolContent, StepContent, isConsecutiveAssistant } from '../types/message';
+import { Message, MessageContent, ToolContent, StepContent, isConsecutiveAssistant, shouldShowAssistantCopyActions, isAssistantLastBeforeUser as isAssistantLastBeforeUserMsg, isStepConnectedToNext } from '../types/message';
 import { PlanEventData, AgentEvent, type TerminalUpdateEventData, type FileUpdateEventData } from '../types/event';
 import { useAgentEvents } from '../composables/useAgentEvents';
 import { useSessionPhase } from '../composables/useSessionPhase';
+import { isComputerPanelTool } from '../constants/tool';
 import ComputerPanel from '../components/ComputerPanel.vue'
-import { ArrowDown, FileSearch, Lock, Globe, Link, Check, Ellipsis, Pencil, Star, Trash, FolderPlus, Folder, FolderSync, Pin, ChevronDown } from 'lucide-vue-next';
+import { ArrowDown, FileSearch, Lock, Globe, Link, Check, Ellipsis, Pencil, Star, Trash, FolderPlus, Folder, FolderSync, Pin, ChevronDown, CircleHelp } from 'lucide-vue-next';
 import ShareIcon from '@/components/icons/ShareIcon.vue';
 import { showErrorToast, showSuccessToast } from '../utils/toast';
 import type { FileInfo } from '../api/file';
@@ -372,39 +374,27 @@ const lastAssistantPlainText = computed(() => {
 });
 
 /**
- * Official ChatReplyActions: show Copy under assistant replies that are not the
- * live last message (TaskCompleted footer owns copy when task is done).
+ * Official ChatReplyActions: last reply owned by TaskCompleted / WaitingContinue
+ * (or hidden while live). Earlier assistant replies keep inline Copy.
  */
-const shouldShowAssistantCopyActions = (index: number) => {
-  const m = messages.value[index];
-  if (m?.type !== 'assistant') return false;
-  if (!((m.content as MessageContent).content || '').trim()) return false;
-  if (isBusy.value || phase.value === 'running' || phase.value === 'pending') {
-    return index !== lastAssistantIndex.value;
-  }
-  if (showTaskCompleted.value || showWaitingContinue.value) {
-    return index !== lastAssistantIndex.value;
-  }
-  return true;
-};
+const shouldShowAssistantCopyActionsAt = (index: number) =>
+  shouldShowAssistantCopyActions(messages.value, index, lastAssistantIndex.value, {
+    footerOwnsLastCopy: showTaskCompleted.value || showWaitingContinue.value,
+    hideLastWhileBusy:
+      isBusy.value || phase.value === 'running' || phase.value === 'pending',
+  });
 
-const isAssistantLastBeforeUser = (index: number) => {
-  if (messages.value[index]?.type !== 'assistant') return false;
-  for (let i = index + 1; i < messages.value.length; i++) {
-    const t = messages.value[i].type;
-    if (t === 'user') return true;
-    if (t === 'assistant') return false;
-  }
-  return false;
-};
+const isAssistantLastBeforeUser = (index: number) =>
+  isAssistantLastBeforeUserMsg(messages.value, index);
 
 // Shared agent event -> message list conversion
 const { handleEvent: handleAgentEvent } = useAgentEvents(
   { messages, title, plan, lastEventId, lastTool, lastNoMessageTool },
   {
     onToolActivity: (tool: ToolContent) => {
+      // Official: Computer closed by default; only follow live tools if already open.
       if (realTime.value) {
-        computerPanel.value?.showComputerPanel(tool, true);
+        computerPanel.value?.followLiveToolIfOpen(tool, true);
       }
     },
   }
@@ -412,7 +402,11 @@ const { handleEvent: handleAgentEvent } = useAgentEvents(
 
 const handleEvent = (event: AgentEvent) => {
   handleAgentEvent(event);
-  // Live phase authority is status_update only (backend-status-channel design).
+  // Live phase authority is status_update; wait is a belt-and-suspenders cue
+  // so the footer can appear even if the trailing status_update races.
+  if (event.event === 'wait') {
+    noteDomainEvent('wait');
+  }
 };
 
 // Reset all refs to their initial values
@@ -692,6 +686,9 @@ const isLiveTool = (tool: ToolContent) => {
 }
 
 const handleToolClick = (tool: ToolContent) => {
+  if (!isComputerPanelTool(tool.name)) {
+    return;
+  }
   realTime.value = false;
   if (sessionId.value) {
     computerPanel.value?.showComputerPanel(tool, isLiveTool(tool));

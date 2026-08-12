@@ -56,6 +56,25 @@ def _agent_status_from_session(status: Any) -> str:
     return "completed"
 
 
+def _final_agent_status(
+    session_status: Any,
+    *,
+    saw_wait: bool = False,
+    saw_error: bool = False,
+) -> str:
+    """Resolve end-of-stream agent_status.
+
+    Prefer an in-stream WaitEvent over Mongo: the runner may still be
+    RUNNING when WaitEvent is drained, and a trailing status_update of
+    "running" would hide the waiting footer.
+    """
+    if saw_wait or _session_status_value(session_status) == "waiting":
+        return "waiting"
+    if saw_error:
+        return "error"
+    return _agent_status_from_session(session_status)
+
+
 def _events_after(events: list[Any], last_event_id: Optional[str]) -> list[Any]:
     """Return domain events strictly after last_event_id (Mongo catch-up)."""
     if not events:
@@ -245,6 +264,7 @@ async def chat_ws(websocket: WebSocket):
         timestamp: Optional[datetime] = None,
     ) -> None:
         saw_error = False
+        saw_wait = False
         try:
             async for event in agent_service.chat(
                 session_id=session_id,
@@ -259,28 +279,25 @@ async def chat_ws(websocket: WebSocket):
                 if getattr(event, "type", None) == "error":
                     saw_error = True
                 await send_agent_event(session_id, event)
-                # Mid-stream phase: WaitEvent means Mongo is already WAITING — tell
-                # clients immediately so phase UI does not depend on domain→phase fallbacks.
+                # Mid-stream phase: WaitEvent — tell clients immediately so phase UI
+                # does not depend on domain→phase fallbacks or Mongo lag.
                 if getattr(event, "type", None) == "wait":
+                    saw_wait = True
                     await send_status_update(session_id, "waiting")
             if joined_session_id == session_id:
                 session = await agent_service.get_session(session_id, user.id)
-                final_status = _session_status_value(session.status) if session else "completed"
-                # Prefer authoritative session status (e.g. waiting after message_ask_user)
-                # over saw_error — early tool errors can coexist with a later WaitEvent.
+                # Prefer in-stream WaitEvent over Mongo (may still be RUNNING) and
+                # over saw_error — early tool errors can coexist with a later wait.
                 # Send status_update BEFORE stream_end: clients often clear handlers on
                 # stream_end, which would drop a trailing status_update.
-                if final_status == "waiting":
-                    await send_status_update(session_id, "waiting")
-                elif saw_error:
-                    await send_status_update(session_id, "error")
-                else:
-                    await send_status_update(
-                        session_id,
-                        _agent_status_from_session(
-                            session.status if session else "completed"
-                        ),
-                    )
+                await send_status_update(
+                    session_id,
+                    _final_agent_status(
+                        session.status if session else "completed",
+                        saw_wait=saw_wait,
+                        saw_error=saw_error,
+                    ),
+                )
                 await safe_send({"type": "stream_end", "session_id": session_id})
         except asyncio.CancelledError:
             raise

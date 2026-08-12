@@ -1,6 +1,6 @@
-# Canned responses follow the native tool-calling protocol:
-# planner submits plans via create_plan/update_plan output tools, and the
-# executor finishes steps via complete_step and delivers via deliver_result.
+# Canned Agent responses follow the single-loop Manus tool protocol:
+# message_notify + todo.md (file_write) projects plan progress, work tools
+# perform the task, and deliver_result returns the final user-facing result.
 - choices:
     - index: 0
       message:
@@ -9,19 +9,25 @@
         tool_calls:
           - type: function
             function:
-              name: create_plan
+              name: message_notify_user
               arguments: |
                 {
-                  "message": "This is a test",
-                  "language": "en",
-                  "goal": "test goal",
-                  "title": "test title",
-                  "steps": [
-                    {
-                      "id": "1",
-                      "description": "test step"
-                    }
-                  ]
+                    "text": "Starting the mock Agent task."
+                }
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: file_write
+              arguments: |
+                {
+                  "file": "/home/ubuntu/todo.md",
+                  "content": "# Plan\n- [~] Run the mock Agent task\n",
+                  "append": false
                 }
 
 - choices:
@@ -140,32 +146,13 @@
         tool_calls:
           - type: function
             function:
-              name: complete_step
+              name: file_write
               arguments: |
                 {
-                  "success": true,
-                  "result": "test end",
-                  "attachments": [
-                    "/home/ubuntu/example.txt",
-                    "/home/ubuntu/example.md",
-                    "/home/ubuntu/example.py"
-                  ]
+                  "file": "/home/ubuntu/todo.md",
+                  "content": "# Plan\n- [x] Run the mock Agent task\n",
+                  "append": false
                 }
-
-- choices:
-    - index: 0
-      message:
-        role: assistant
-        content: null
-        tool_calls:
-          - type: function
-            function:
-              name: update_plan
-              arguments: |
-                {
-                  "steps": []
-                }
-      finish_reason: stop
 
 - choices:
     - index: 0

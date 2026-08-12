@@ -18,6 +18,7 @@ Two additional concepts support modern context engineering:
 """
 import inspect
 import re
+import copy
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Type, get_type_hints
 
 from pydantic import BaseModel, Field, ValidationError, create_model
@@ -71,6 +72,54 @@ def _clean_schema(schema: Dict[str, Any]) -> Dict[str, Any]:
                 if isinstance(prop, dict):
                     prop.pop("title", None)
     return schema
+
+
+# Official Manus timeline shows tool ``brief`` (NL intent), not file paths.
+BRIEF_PARAM_SCHEMA: Dict[str, Any] = {
+    "type": "string",
+    "description": (
+        "Short user-facing description of this action in the user's language "
+        "(what you are doing), e.g. '编写 Python 示例代码' or 'Run the example "
+        "and capture output'. Do not put file paths or raw shell commands here."
+    ),
+}
+
+
+def with_brief_parameter(parameters: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Copy an OpenAI parameters schema and require a ``brief`` property.
+
+    Mirrors official Manus ``toolUsed.brief``: the model must supply a
+    user-facing NL label; the timeline prefers it over file paths / commands.
+    """
+    params: Dict[str, Any] = copy.deepcopy(parameters) if parameters else {
+        "type": "object",
+        "properties": {},
+    }
+    if params.get("type") != "object":
+        params["type"] = "object"
+    props = params.setdefault("properties", {})
+    if not isinstance(props, dict):
+        props = {}
+        params["properties"] = props
+    if "brief" not in props:
+        props["brief"] = dict(BRIEF_PARAM_SCHEMA)
+    required = params.setdefault("required", [])
+    if isinstance(required, list) and "brief" not in required:
+        required.append("brief")
+    return params
+
+
+def take_brief(args: Optional[Dict[str, Any]]) -> tuple[Optional[str], Dict[str, Any]]:
+    """Split ``brief`` from tool-call args (brief is UI-only, not for tool impl)."""
+    clean = dict(args or {})
+    raw = clean.pop("brief", None)
+    if raw is None:
+        return None, clean
+    if isinstance(raw, str):
+        text = raw.strip()
+        return (text or None), clean
+    text = str(raw).strip()
+    return (text or None), clean
 
 
 def _build_parameters(func: Callable, param_docs: Dict[str, str]) -> Dict[str, Any]:
@@ -177,16 +226,24 @@ class Tool:
 
     async def invoke(self, args: Dict[str, Any]) -> Any:
         """Invoke the underlying coroutine with the given arguments."""
-        return await self._invoker(args or {})
+        _, clean = take_brief(args)
+        return await self._invoker(clean)
 
     def to_openai_schema(self) -> Dict[str, Any]:
         """Render this tool as an OpenAI function-calling schema."""
+        # Soft chat/plan tools are not StandardToolUsed rows — no brief.
+        toolkit_name = getattr(self.toolkit, "name", "") or ""
+        parameters = (
+            self.parameters
+            if toolkit_name in {"message", "todo"}
+            else with_brief_parameter(self.parameters)
+        )
         return {
             "type": "function",
             "function": {
                 "name": self.name,
                 "description": self.description,
-                "parameters": self.parameters,
+                "parameters": parameters,
             },
         }
 

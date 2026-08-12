@@ -10,6 +10,7 @@ class FileToolkit(BaseToolkit):
     instructions: str = """
 - Prefer file tools over shell redirection to avoid escaping issues
 - Actively save intermediate results; keep different kinds of reference material in separate files
+- Optionally keep /home/ubuntu/todo.md as personal working notes; it does not drive the Plan UI
 - Use append mode to concatenate content onto an existing file
 - Only read text, code, or markdown files; never read binary files
 """

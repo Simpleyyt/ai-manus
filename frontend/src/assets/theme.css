@@ -5,7 +5,8 @@
     --text-disable: #b9b9b7;
     --text-brand: #0081f2;
     --text-blue: #0081f2;
-    --text-shining: #c5c5c3;
+    /* Official Manus light --text-shining (shimmer highlight band) */
+    --text-shining: #e5e5e5;
     --text-onblack: #fff;
     --text-white: #fff;
     --text-white-tsp: #ffffff99;
@@ -83,7 +84,8 @@
     --text-disable: #5f5f5f;
     --text-brand: #1a93fe;
     --text-blue: #1a93fe;
-    --text-shining: #a8a8a8;
+    /* Official Manus dark --text-shining (dark band through light secondary text) */
+    --text-shining: #474747;
     --text-onblack: #000000e6;
     --text-white: #fff;
     --text-white-tsp: #ffffff99;
@@ -171,13 +173,18 @@
 
 @keyframes shimmer {
     0% {
-        background-position: 250% 0;
+        background-position: 200% 0;
     }
     to {
-        background-position: -250% 0;
+        background-position: -200% 0;
     }
 }
 
+/*
+ * Continuous tool-label shimmer (same motion model as Thinking /
+ * animate-live-status-shimmer). A narrow 4s band reads as one flash;
+ * keep the gradient moving for the whole calling / active window.
+ */
 .shimmer-text-secondary {
     background-image: linear-gradient(
         110deg,
@@ -189,9 +196,10 @@
         75%,
         var(--text-secondary)
     );
-    color: #0000;
-    background-size: 250% 100%;
+    color: transparent;
+    background-size: 200% 100%;
     -webkit-background-clip: text;
     background-clip: text;
-    animation: 4s linear infinite shimmer;
+    animation: shimmer 2.2s linear infinite;
+    contain: paint;
 }

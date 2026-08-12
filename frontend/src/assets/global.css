@@ -37,6 +37,11 @@ body,html {
   animation: manus-text-shimmer 2.2s linear infinite;
 }
 
+/* Official AgentIsTyping / live status label */
+.animate-live-status-shimmer {
+  animation: manus-text-shimmer 2.2s linear infinite;
+}
+
 .shadow-menu {
   box-shadow:
     0 0 0 1px var(--border-dark),
@@ -58,7 +63,7 @@ body,html {
   background-color: var(--background-gray-main) !important;
 }
 
-/* Manus Computer file editor — same gray canvas as official monaco vs */
+/* Manus Computer file editor — same gray canvas as panel (theme tokens via vs / vs-dark) */
 .computer-monaco-panel .monaco-editor,
 .computer-monaco-panel .monaco-editor-background,
 .computer-monaco-panel .monaco-editor .margin,
@@ -68,9 +73,14 @@ body,html {
   background-color: var(--background-gray-main) !important;
 }
 
-/* Official FilePreviewer CodePreviewer — editor.background #fafafa */
+/* Official FilePreviewer CodePreviewer — light #fafafa; dark follows panel */
 .file-previewer-monaco .monaco-editor,
 .file-previewer-monaco .monaco-editor-background,
 .file-previewer-monaco .monaco-editor .margin {
   background-color: #fafafa !important;
+}
+.dark .file-previewer-monaco .monaco-editor,
+.dark .file-previewer-monaco .monaco-editor-background,
+.dark .file-previewer-monaco .monaco-editor .margin {
+  background-color: var(--background-gray-main) !important;
 }

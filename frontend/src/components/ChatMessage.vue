@@ -64,43 +64,108 @@
       </div>
     </div>
   </div>
-  <ToolUse v-else-if="message.type === 'tool'" :tool="toolContent" @click="handleToolClick(toolContent)" />
-  <div v-else-if="message.type === 'step'" class="flex flex-col">
-    <div class="text-sm w-full clickable flex gap-2 justify-between group/header truncate text-[var(--text-primary)]"
-      data-event-id="HNtP7XOMUOhPemItd2EkK2">
-      <div class="flex flex-row gap-2 justify-center items-center truncate">
-        <div v-if="stepContent.status !== 'completed'"
-          class="w-4 h-4 flex-shrink-0 flex items-center justify-center border border-[var(--border-dark)] rounded-[15px]">
+  <ToolUse
+    v-else-if="message.type === 'tool'"
+    :tool="toolContent"
+    :active="toolContent.status === 'calling'"
+    @click="handleToolClick(toolContent)"
+  />
+  <!-- Official StepGroup: empty:pb-0 + pb-0 when next list item is also stepGroup -->
+  <div
+    v-else-if="message.type === 'step'"
+    class="flex flex-col empty:pb-0"
+    :class="stepConnectsToNext ? 'pb-0' : 'pb-2'">
+    <div class="flex flex-col">
+      <component
+        :is="stepCanToggle ? 'button' : 'div'"
+        :type="stepCanToggle ? 'button' : undefined"
+        class="relative flex h-[28px] w-full min-w-0 items-center overflow-hidden whitespace-nowrap text-[14px] font-normal text-[var(--text-secondary)]"
+        :class="stepCanToggle
+          ? 'group/header clickable hover:text-[var(--text-primary)] border-0 bg-transparent p-0 text-start'
+          : undefined"
+        @click="stepCanToggle ? (stepExpanded = !stepExpanded) : undefined"
+      >
+        <div class="flex min-w-0 flex-1 flex-nowrap items-center gap-[4px] overflow-hidden">
+          <div class="flex size-[20px] flex-shrink-0 items-center justify-center rounded-[100px]">
+            <div
+              v-if="stepCompleted"
+              class="bg-[var(--fill-tsp-white-dark)] rounded-full size-[17px] flex items-center justify-center"
+            >
+              <StepCheckIcon :size="9" class="text-[var(--icon-tertiary)]" />
+            </div>
+            <LiveStatusCanvas v-else :size="16" :active="stepContent.status === 'running'" />
+          </div>
+          <div class="flex min-w-0 flex-1 items-center justify-start gap-[4px] overflow-hidden py-[4px]">
+            <span class="min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap leading-[20px]">
+              {{ stepContent.description }}
+            </span>
+            <span
+              v-if="stepCanToggle"
+              class="hidden size-[16px] flex-shrink-0 items-center justify-center group-hover/header:flex"
+              :class="(!stepCompleted || stepExpanded) ? 'flex' : undefined"
+            >
+              <ChevronDown v-if="stepExpanded" :size="16" color="currentColor" />
+              <ChevronRight v-else :size="16" color="currentColor" />
+            </span>
+          </div>
         </div>
-        <div v-else
-          class="w-4 h-4 flex-shrink-0 flex items-center justify-center border-[var(--border-dark)] rounded-[15px] bg-[var(--text-disable)] dark:bg-[var(--fill-tsp-white-dark)] border-0">
-          <CheckIcon class="text-[var(--icon-white)] dark:text-[var(--icon-white-tsp)]" :size="10" />
+        <div
+          class="float-right transition text-[12px] leading-[16px] text-[var(--text-tertiary)] ms-auto flex-shrink-0"
+          :class="stepCanToggle ? 'invisible group-hover/header:visible' : undefined"
+        >
+          {{ relativeTime(message.content.timestamp) }}
         </div>
-        <div class="truncate font-medium markdown-content"
-          v-html="stepContent.description ? renderMarkdown(stepContent.description) : ''">
+      </component>
+      <!-- Official: collapsed → lastToolItems only (while live); expanded → preceding + last -->
+      <div v-if="stepHasTimelineBody" class="flex min-w-0 flex-col">
+        <div class="relative min-w-0">
+          <div class="pointer-events-none absolute inset-y-0 start-0 flex w-[20px] justify-center py-2">
+            <div class="h-full w-px flex-none bg-[var(--border-main)]"></div>
+          </div>
+          <div class="flex min-w-0 flex-col ps-[20px]">
+            <div class="min-w-0 overflow-hidden" style="height: auto; opacity: 1">
+              <div class="min-w-0">
+                <div class="flex min-w-0 flex-col">
+                  <div
+                    v-for="item in stepVisiblePreceding"
+                    :key="item.id"
+                    class="min-w-0 [&:has(>[data-timeline-content]:empty)]:hidden"
+                    style="opacity: 1; transform: none"
+                  >
+                    <div data-timeline-content="true" class="min-w-0 flex-1 py-1 ps-[4px]">
+                      <ToolUse
+                        v-if="item.kind === 'tool'"
+                        :tool="item.tool"
+                        :active="isLiveStepTool(item.id)"
+                        @click="handleToolClick(item.tool)"
+                      />
+                    </div>
+                  </div>
+                  <div
+                    v-for="item in stepVisibleLast"
+                    :key="item.id"
+                    class="min-w-0 [&:has(>[data-timeline-content]:empty)]:hidden"
+                    style="opacity: 1; transform: none"
+                  >
+                    <div data-timeline-content="true" class="min-w-0 flex-1 py-1 ps-[4px]">
+                      <ToolUse
+                        v-if="item.kind === 'tool'"
+                        :tool="item.tool"
+                        :active="isLiveStepTool(item.id)"
+                        @click="handleToolClick(item.tool)"
+                      />
+                      <div v-else class="flex flex-col gap-2 w-full">
+                        <p class="text-[var(--text-secondary)] text-[14px] u-break-words whitespace-pre-wrap m-0">
+                          {{ item.text }}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <span class="flex-shrink-0 flex" @click="isExpanded = !isExpanded;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-            class="lucide lucide-chevron-down transition-transform duration-300 w-4 h-4"
-            :class="{ 'rotate-180': isExpanded }">
-            <path d="m6 9 6 6 6-6"></path>
-          </svg>
-        </span>
-      </div>
-      <div class="float-right transition text-[12px] text-[var(--text-tertiary)] invisible group-hover/header:visible">
-        {{ relativeTime(message.content.timestamp) }}
-      </div>
-    </div>
-    <div class="flex">
-      <div class="w-[24px] relative">
-        <div class="border-l border-dashed border-[var(--border-dark)] absolute start-[8px] top-0 bottom-0"
-          style="height: calc(100% + 14px);"></div>
-      </div>
-      <div
-        class="flex flex-col gap-3 flex-1 min-w-0 overflow-hidden pt-2 transition-[max-height,opacity] duration-150 ease-in-out"
-        :class="{ 'max-h-[100000px] opacity-100': isExpanded, 'max-h-0 opacity-0': !isExpanded }">
-        <ToolUse v-for="(tool, index) in stepContent.tools" :key="index" :tool="tool" @click="handleToolClick(tool)" />
       </div>
     </div>
   </div>
@@ -132,18 +197,24 @@
 
 <script setup lang="ts">
 import ManusTextIcon from './icons/ManusTextIcon.vue';
-import { Message, MessageContent, AttachmentsContent } from '../types/message';
+import {
+  Message,
+  MessageContent,
+  AttachmentsContent,
+  resolveStepTimelineVisibility,
+} from '../types/message';
 import ToolUse from './ToolUse.vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { CheckIcon } from 'lucide-vue-next';
 import { computed, ref, type Component } from 'vue';
 import { ToolContent, StepContent } from '../types/message';
 import { useRelativeTime } from '../composables/useTime';
-import { Bot } from 'lucide-vue-next';
+import { Bot, ChevronDown, ChevronRight } from 'lucide-vue-next';
 import AttachmentsMessage from './AttachmentsMessage.vue';
 import ChatMessageCopyButton from './ChatMessageCopyButton.vue';
 import ChatAttachmentList from './ChatAttachmentList.vue';
+import LiveStatusCanvas from './LiveStatusCanvas.vue';
+import StepCheckIcon from './icons/StepCheckIcon.vue';
 
 
 const props = defineProps<{
@@ -159,12 +230,15 @@ const props = defineProps<{
   showCopyActions?: boolean;
   /** Official: pb-2 when last reply before a user message */
   isLastBeforeUser?: boolean;
+  /** Official StepGroup: pb-0 when the next list item is also a step */
+  stepConnectsToNext?: boolean;
 }>();
 
 const hideAssistantHeader = computed(() => props.hideHeader ?? false);
 const showLiteBadge = computed(() => props.showLiteBadge ?? false);
 const showCopyActions = computed(() => props.showCopyActions ?? false);
 const isLastBeforeUser = computed(() => props.isLastBeforeUser ?? false);
+const stepConnectsToNext = computed(() => props.stepConnectsToNext ?? false);
 
 const emit = defineEmits<{
   (e: 'toolClick', tool: ToolContent): void;
@@ -176,6 +250,42 @@ const handleToolClick = (tool: ToolContent) => {
 
 // For backward compatibility, provide the original computed properties
 const stepContent = computed(() => props.message.content as StepContent);
+const stepCompleted = computed(() =>
+  stepContent.value.status === 'completed' || stepContent.value.status === 'failed',
+);
+const stepVisibility = computed(() => resolveStepTimelineVisibility(stepContent.value));
+/** Official: canToggle when some timeline rows stay hidden while collapsed. */
+const stepCanToggle = computed(() => stepVisibility.value.canToggle);
+/**
+ * Official StepGroup: default collapsed (ChevronRight). While live, collapsed
+ * still shows lastToolItems; expand reveals precedingItems + last.
+ */
+const stepExpanded = ref(false);
+const stepVisiblePreceding = computed(() =>
+  stepExpanded.value ? stepVisibility.value.precedingItems : [],
+);
+const stepVisibleLast = computed(() => {
+  const { lastToolItems, collapsedVisibleItems } = stepVisibility.value;
+  if (lastToolItems.length === 0) return [];
+  if (stepExpanded.value) return lastToolItems;
+  return collapsedVisibleItems;
+});
+const stepHasTimelineBody = computed(
+  () => stepVisiblePreceding.value.length > 0 || stepVisibleLast.value.length > 0,
+);
+
+/** Current (last) tool of a running step — keep its label shimmering continuously. */
+const liveStepToolId = computed(() => {
+  if (stepCompleted.value) return null;
+  for (let i = stepVisibility.value.lastToolItems.length - 1; i >= 0; i -= 1) {
+    const item = stepVisibility.value.lastToolItems[i];
+    if (item.kind === 'tool') return item.id;
+  }
+  return null;
+});
+
+const isLiveStepTool = (id: string) => liveStepToolId.value === id;
+
 const messageContent = computed(() => props.message.content as MessageContent);
 const toolContent = computed(() => props.message.content as ToolContent);
 const attachmentsContent = computed(() => props.message.content as AttachmentsContent);
@@ -189,9 +299,6 @@ const plainText = computed(() => {
   }
   return '';
 });
-
-// Control content expand/collapse state
-const isExpanded = ref(true);
 
 const { relativeTime } = useRelativeTime();
 

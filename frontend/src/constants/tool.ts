@@ -35,7 +35,10 @@ export const TOOL_FUNCTION_MAP: {[key: string]: string} = {
   
   // Message tools
   "message_notify_user": "Sending notification",
-  "message_ask_user": "Asking question"
+  "message_ask_user": "Asking question",
+
+  // Soft plan (single-loop) — timeline only; not a Computer panel tool
+  "todo_write": "Updating plan",
 };
 
 /**
@@ -78,13 +81,15 @@ export const TOOL_NAME_MAP: {[key: string]: string} = {
   "browser": "Browser",
   "info": "Information",
   "message": "Message",
-  "mcp": "MCP Tool"
+  "mcp": "MCP Tool",
+  "todo": "Plan",
 };
 
 import SearchIcon from '../components/icons/SearchIcon.vue';
 import EditIcon from '../components/icons/EditIcon.vue';
 import BrowserIcon from '../components/icons/BrowserIcon.vue';
 import ShellIcon from '../components/icons/ShellIcon.vue';
+import { ListTodo } from 'lucide-vue-next';
 
 /**
  * Tool icon mapping
@@ -95,6 +100,7 @@ export const TOOL_ICON_MAP: {[key: string]: any} = {
   "browser": BrowserIcon,
   "search": SearchIcon,
   "message": "",
+  "todo": ListTodo,
   "mcp": SearchIcon  // 暂时使用搜索图标，可以后续创建专门的MCP图标
 };
 
@@ -114,3 +120,13 @@ export const TOOL_COMPONENT_MAP: {[key: string]: any} = {
   "browser": BrowserToolView,
   "mcp": McpToolView
 };
+
+/**
+ * Tools that can render in Manus's Computer panel.
+ * Soft-plan / chat tools (todo, message) update the timeline or Plan panel
+ * but must not steal the computer view — otherwise the panel shows inactive.
+ */
+export function isComputerPanelTool(toolName: string | undefined | null): boolean {
+  if (!toolName) return false;
+  return Object.prototype.hasOwnProperty.call(TOOL_COMPONENT_MAP, toolName);
+}

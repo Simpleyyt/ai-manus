@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { ref } from 'vue'
 import { useSessionPhase } from '../useSessionPhase'
 import { SessionStatus } from '../../types/response'
-import type { Message, MessageContent } from '../../types/message'
+import type { Message, MessageContent, StepContent, ToolContent } from '../../types/message'
 
 describe('useSessionPhase', () => {
   it('hydrate waiting → not busy, showWaitingContinue', () => {
@@ -25,6 +25,26 @@ describe('useSessionPhase', () => {
     expect(showWaitingContinue.value).toBe(true)
   })
 
+  it('stale status_update running after waiting does not hide waiting footer', () => {
+    const { applyStatusUpdate, phase, isBusy, showWaitingContinue } = useSessionPhase()
+    applyStatusUpdate('waiting')
+    applyStatusUpdate('running')
+    expect(phase.value).toBe('waiting')
+    expect(isBusy.value).toBe(false)
+    expect(showWaitingContinue.value).toBe(true)
+  })
+
+  it('noteOptimisticRun then status running resumes from waiting', () => {
+    const { applyStatusUpdate, noteOptimisticRun, phase, isBusy, showWaitingContinue } =
+      useSessionPhase()
+    applyStatusUpdate('waiting')
+    noteOptimisticRun()
+    applyStatusUpdate('running')
+    expect(phase.value).toBe('running')
+    expect(isBusy.value).toBe(true)
+    expect(showWaitingContinue.value).toBe(false)
+  })
+
   it('noteDomainEvent wait without status_update → waiting, not busy', () => {
     const { noteOptimisticRun, noteDomainEvent, phase, isBusy } = useSessionPhase()
     noteOptimisticRun()
@@ -33,18 +53,57 @@ describe('useSessionPhase', () => {
     expect(isBusy.value).toBe(false)
   })
 
-  it('running shows thinking until visible assistant/tool/step after last user', () => {
+  it('running shows thinking until a live step/tool indicator exists', () => {
     const messages = ref<Message[]>([
       { type: 'user', content: { content: 'hi', timestamp: 1 } as MessageContent },
     ])
     const { applyStatusUpdate, showThinking } = useSessionPhase({ messages })
     applyStatusUpdate('running')
     expect(showThinking.value).toBe(true)
+
+    // Notify text alone must not hide thinking — gaps before next tool still need it
     messages.value.push({
       type: 'assistant',
       content: { content: 'hello', timestamp: 2 } as MessageContent,
     })
+    expect(showThinking.value).toBe(true)
+
+    messages.value.push({
+      type: 'step',
+      content: {
+        id: 's1',
+        description: 'Do work',
+        status: 'running',
+        tools: [],
+        timestamp: 3,
+      } as StepContent,
+    })
     expect(showThinking.value).toBe(false)
+
+    ;(messages.value[2].content as StepContent).status = 'completed'
+    expect(showThinking.value).toBe(true)
+  })
+
+  it('calling tool hides thinking; called tool brings it back while busy', () => {
+    const messages = ref<Message[]>([
+      { type: 'user', content: { content: 'hi', timestamp: 1 } as MessageContent },
+    ])
+    const { applyStatusUpdate, showThinking } = useSessionPhase({ messages })
+    applyStatusUpdate('running')
+    messages.value.push({
+      type: 'tool',
+      content: {
+        tool_call_id: 't1',
+        name: 'shell',
+        function: 'shell_exec',
+        args: {},
+        status: 'calling',
+        timestamp: 2,
+      } as ToolContent,
+    })
+    expect(showThinking.value).toBe(false)
+    ;(messages.value[1].content as ToolContent).status = 'called'
+    expect(showThinking.value).toBe(true)
   })
 
   it('completed + assistant text → showTaskCompleted', () => {

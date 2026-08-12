@@ -40,12 +40,16 @@ export interface ToolEventData extends BaseEventData {
   function: string;
   args: {[key: string]: any};
   content?: any;
+  /** Official StandardToolUsed timeline label (NL action), not file path. */
+  brief?: string | null;
 }
 
 export interface StepEventData extends BaseEventData {
   status: "pending" | "running" | "completed" | "failed"
   id: string
   description: string
+  /** Present when the step finished with a concrete outcome. */
+  result?: string
 }
 
 export interface MessageEventData extends BaseEventData {

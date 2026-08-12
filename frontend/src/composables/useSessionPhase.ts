@@ -1,7 +1,13 @@
 import { ref, computed, type Ref } from 'vue'
 import type { AgentStatus } from '../types/event'
 import { SessionStatus } from '../types/response'
-import type { Message, MessageContent, AttachmentsContent } from '../types/message'
+import type {
+  Message,
+  MessageContent,
+  AttachmentsContent,
+  StepContent,
+  ToolContent,
+} from '../types/message'
 
 export type SessionPhase = 'pending' | 'running' | 'waiting' | 'completed' | 'error'
 
@@ -38,6 +44,11 @@ export function useSessionPhase(options?: { messages?: Ref<Message[]> }) {
 
   const applyStatusUpdate = (agentStatus: AgentStatus) => {
     if (agentStatus === 'running') {
+      // Ignore stale running after wait (Mongo may still be RUNNING when the
+      // stream drains WaitEvent; trailing status_update must not hide footer).
+      if (phase.value === 'waiting' && !isBusy.value) {
+        return
+      }
       isBusy.value = true
       phase.value = 'running'
     } else if (agentStatus === 'waiting') {
@@ -122,12 +133,18 @@ export function useSessionPhase(options?: { messages?: Ref<Message[]> }) {
       }
     }
 
+    // Hide only while a live step/tool already shows progress (step spinner /
+    // calling tool). Completed notify text or finished steps must not suppress
+    // Thinking — gaps between steps / summarize still need the indicator.
     for (let i = lastUserIdx + 1; i < list.length; i++) {
       const m = list[i]
-      if (m.type === 'tool' || m.type === 'step') return false
-      if (m.type === 'assistant') {
-        const text = ((m.content as MessageContent).content || '').trim()
-        if (text) return false
+      if (m.type === 'step') {
+        const step = m.content as StepContent
+        if (step.status === 'running' || step.status === 'pending') return false
+        if (step.tools?.some((t) => t.status === 'calling')) return false
+      } else if (m.type === 'tool') {
+        const tool = m.content as ToolContent
+        if (tool.status === 'calling') return false
       }
     }
     return true

@@ -23,7 +23,7 @@ from app.domain.models.event import (
     TerminalUpdateEvent,
     FileUpdateEvent,
 )
-from app.domain.services.flows.agent_loop import AgentLoopFlow
+from app.domain.services.flows.plan_act import PlanActFlow
 from app.domain.external.sandbox import Sandbox
 from app.domain.external.browser import Browser
 from app.domain.external.search import SearchEngine
@@ -73,7 +73,7 @@ class AgentTaskRunner(TaskRunner):
         self._project_repository = project_repository
         self._llm = llm
         self._mcp_tool = MCPToolkit()
-        self._flow = AgentLoopFlow(
+        self._flow = PlanActFlow(
             self._agent_id,
             self._repository,
             self._session_id,
@@ -282,15 +282,20 @@ class AgentTaskRunner(TaskRunner):
                 
                 flow = self._run_chat(message_obj) if is_chat else self._run_flow(message_obj)
                 async for event in flow:
+                    # Flip WAITING before streaming WaitEvent so consumers that
+                    # read Mongo for the trailing status_update do not see RUNNING.
+                    if isinstance(event, WaitEvent):
+                        await self._session_repository.update_status(
+                            self._session_id, SessionStatus.WAITING
+                        )
+                        await self._put_and_add_event(task, event)
+                        return
                     await self._put_and_add_event(task, event)
                     if isinstance(event, TitleEvent):
                         await self._session_repository.update_title(self._session_id, event.title)
                     elif isinstance(event, MessageEvent):
                         await self._session_repository.update_latest_message(self._session_id, event.message, event.timestamp)
                         await self._session_repository.increment_unread_message_count(self._session_id)
-                    elif isinstance(event, WaitEvent):
-                        await self._session_repository.update_status(self._session_id, SessionStatus.WAITING)
-                        return
                     if not await task.input_stream.is_empty():
                         break
 

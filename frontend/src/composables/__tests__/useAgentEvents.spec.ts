@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { ref } from 'vue'
 import { useAgentEvents } from '../useAgentEvents'
 import { isComputerPanelTool } from '../../constants/tool'
-import type { Message, ToolContent } from '../../types/message'
+import type { Message, StepContent, ToolContent } from '../../types/message'
 import type { PlanEventData, AgentEvent } from '../../types/event'
 
 function makeToolEvent(overrides: Partial<{
@@ -122,6 +122,37 @@ describe('useAgentEvents computer follow', () => {
     expect(lastTool.value).toBeUndefined()
     expect(lastNoMessageTool.value).toBeUndefined()
     expect(activity).toHaveLength(0)
+  })
+
+  it('seeds a running chat step from plan events', () => {
+    const messages = ref<Message[]>([])
+    const title = ref('')
+    const plan = ref<PlanEventData | undefined>()
+    const lastEventId = ref<string | undefined>()
+    const lastTool = ref<ToolContent | undefined>()
+    const lastNoMessageTool = ref<ToolContent | undefined>()
+
+    const { handleEvent } = useAgentEvents(
+      { messages, title, plan, lastEventId, lastTool, lastNoMessageTool },
+    )
+
+    handleEvent({
+      event: 'plan',
+      data: {
+        event_id: 'p1',
+        timestamp: Math.floor(Date.now() / 1000),
+        steps: [
+          { event_id: 'p1', timestamp: 1, id: '1', description: 'Research topic', status: 'running' },
+          { event_id: 'p1', timestamp: 1, id: '2', description: 'Write report', status: 'pending' },
+        ],
+      },
+    } as AgentEvent)
+
+    expect(messages.value).toHaveLength(1)
+    expect(messages.value[0].type).toBe('step')
+    const step = messages.value[0].content as StepContent
+    expect(step.id).toBe('1')
+    expect(step.status).toBe('running')
   })
 
   it('follows file tools for the computer panel', () => {

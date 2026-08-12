@@ -37,6 +37,11 @@ body,html {
   animation: manus-text-shimmer 2.2s linear infinite;
 }
 
+/* Official AgentIsTyping / live status label */
+.animate-live-status-shimmer {
+  animation: manus-text-shimmer 2.2s linear infinite;
+}
+
 .shadow-menu {
   box-shadow:
     0 0 0 1px var(--border-dark),

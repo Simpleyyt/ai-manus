@@ -107,6 +107,13 @@ const showComputerPanel = (content: ToolContent, isLive: boolean = false) => {
   live.value = isLive
 }
 
+/** Official: Computer stays closed by default; only follow live tools when already open. */
+const followLiveToolIfOpen = (content: ToolContent, isLive: boolean = true) => {
+  if (!isShow.value) return
+  toolContent.value = content
+  live.value = isLive
+}
+
 const hideComputerPanel = () => {
   isShow.value = false
   presentation.value = 'sidebar'
@@ -145,6 +152,7 @@ onUnmounted(() => {
 
 defineExpose({
   showComputerPanel,
+  followLiveToolIfOpen,
   hideComputerPanel,
   isShow
 })

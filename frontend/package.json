@@ -29,6 +29,7 @@
     "clsx": "^2.1.1",
     "dompurify": "^3.2.5",
     "framer-motion": "^10.12.16",
+    "lottie-web": "^5.13.0",
     "lucide-vue-next": "^0.511.0",
     "marked": "^15.0.8",
     "mitt": "^3.0.1",

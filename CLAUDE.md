@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-AI Manus is a general-purpose AI Agent system. A user message drives a **plan-and-execute agent loop** in the backend, which runs tools (shell, browser, file, search, MCP) inside a **per-session Docker sandbox** and streams every event back to the browser over **WebSocket**. The repo is a monorepo of five cooperating services:
+AI Manus is a general-purpose AI Agent system. A user message drives a **Plan-Act agent loop** in the backend (Planner + per-step Executor), which runs tools (shell, browser, file, search, MCP) inside a **per-session Docker sandbox** and streams every event back to the browser over **WebSocket**. The repo is a monorepo of five cooperating services:
 
 | Service | Stack | Dev Port | Entry Point |
 |---|---|---|---|
@@ -71,16 +71,16 @@ The backend follows **Domain-Driven Design** with strict layer dependencies poin
 
 This is the heart of the system; understanding it requires reading several files together:
 
-1. **`domain/services/flows/plan_act.py`** — `PlanActFlow.run()` is a state machine: `IDLE → PLANNING → EXECUTING → UPDATING → (repeat) → SUMMARIZING → COMPLETED`. It constructs the toolkit list (Shell, Browser, File, Message, MCP, optional Search) and drives two agents.
-2. **`domain/services/agents/`** — `PlannerAgent` (`planner.py`) creates/updates the plan; `ExecutionAgent` (`execution.py`) runs each step. Both extend `BaseAgent` (`base.py`), which wraps LangChain's `init_chat_model`, handles tool-call parsing with retry/repair (`domain/utils/robust_json_parser.py`), memory compaction, and iteration limits.
+1. **`domain/services/flows/plan_act.py`** — `PlanActFlow.run()` state machine: `IDLE → PLANNING → EXECUTING → UPDATING → (repeat) → SUMMARIZING → COMPLETED`. Planner creates/updates the plan; Executor runs **one step at a time** then `complete_step`. (`agent_loop.py` remains as the experimental single-loop alternative, not wired by default.)
+2. **`domain/services/agents/`** — `PlannerAgent` (`planner.py`) creates/updates plans; `ExecutionAgent` (`execution.py`) runs each step. Both extend `BaseAgent` (`base.py`), which wraps LangChain's `init_chat_model`, handles tool-call parsing with retry/repair (`domain/utils/robust_json_parser.py`), memory compaction, and iteration limits.
 3. **`domain/services/agent_task_runner.py`** — `AgentTaskRunner` runs the flow as a cancellable background `Task`, so sessions can be stopped/resumed. `AgentDomainService` (`agent_domain_service.py`) coordinates: it lazily creates a sandbox per session (`session.sandbox_id`) and manages task lifecycle.
-4. **Events & streaming** — every step yields typed events (`domain/models/event.py`: `PlanEvent`, `MessageEvent`, `ToolEvent`, `TitleEvent`, `DoneEvent`, `WaitEvent`, …). These flow through Redis message queues out to the frontend over **WebSocket** (`/api/v1/ws/chat` with `join_session` / `leave_session`; session list via `/api/v1/ws/sessions`; Claw via `/api/v1/ws/claw`; VNC takeover via `/api/v1/ws/vnc/{session_id}`). Tool output content types (`FileToolContent`, `ShellToolContent`, `BrowserToolContent`, …) let the UI render rich tool views.
+4. **Events & streaming** — every step yields typed events (`domain/models/event.py`: `PlanEvent`, `StepEvent`, `MessageEvent`, `ToolEvent`, `TitleEvent`, `DoneEvent`, `WaitEvent`, …). These flow through Redis message queues out to the frontend over **WebSocket** (`/api/v1/ws/chat` with `join_session` / `leave_session`; session list via `/api/v1/ws/sessions`; Claw via `/api/v1/ws/claw`; VNC takeover via `/api/v1/ws/vnc/{session_id}`). Tool output content types (`FileToolContent`, `ShellToolContent`, `BrowserToolContent`, …) let the UI render rich tool views.
 
 Session state lives in MongoDB; `SessionStatus` (`PENDING`/`RUNNING`/`WAITING`/etc.) is what lets the flow resume or roll back a message on reconnect.
 
 ### Tools
 
-Each toolkit in `domain/services/tools/` (shell, browser, file, search, message, mcp) extends `BaseToolkit` and exposes methods decorated as `Tool`s. Shell/file tools call the **sandbox** API; browser tools drive the sandbox's headless Chrome (viewable via VNC→websockify→NoVNC); `mcp.py` loads external MCP servers from a mounted `mcp.json` (see `mcp.json.example`).
+Each toolkit in `domain/services/tools/` (shell, browser, file, search, message, mcp) extends `BaseToolkit` and exposes methods decorated as `Tool`s. Shell/file tools call the **sandbox** API; browser tools drive the sandbox's headless Chrome (viewable via VNC→websockify→NoVNC); `mcp.py` loads external MCP servers from a mounted `mcp.json` (see `mcp.json.example`). Plan progress for the UI comes from Flow/`ExecutionAgent` `StepEvent`s and Planner `PlanEvent`s (not from parsing `todo.md`).
 
 ## Sandbox & Claw
 

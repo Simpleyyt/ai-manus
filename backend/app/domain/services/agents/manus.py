@@ -36,9 +36,23 @@ _CONTROL_TOOLS = frozenset({
     "message_ask_user",
 })
 
+# Allowed after every plan step is done (until deliver_result / replan adds work).
+_AFTER_PLAN_DONE_TOOLS = frozenset({
+    "message_notify_user",
+    "message_ask_user",
+    "plan_report",
+    "replan",
+})
+
 _NOTIFY_REQUIRED_BEFORE_WORK = (
     "Blocked: call message_notify_user first with a brief acknowledgment "
     "in the user's language, then retry this work tool."
+)
+
+_PLAN_FINISHED_BLOCK = (
+    "Blocked: all authoritative plan steps are already completed or failed. "
+    "Call deliver_result now with the final answer (and attachments). "
+    "Call replan only if new remaining work is genuinely required."
 )
 
 
@@ -71,6 +85,8 @@ class ManusAgent(BaseAgent):
         self._user_notified = False
         self._user_message = ""
         self._injected_plan_text: str | None = None
+        self._injected_plan_complete_hint: str | None = None
+        self._plan_finished = False
 
     def build_system_prompt(self) -> str:
         return build_system_prompt(
@@ -93,6 +109,20 @@ class ManusAgent(BaseAgent):
                 content=result.model_dump_json(),
                 artifact=result,
             )
+        if (
+            self._plan_finished
+            and name not in _AFTER_PLAN_DONE_TOOLS
+        ):
+            result = ToolResult(
+                success=False,
+                message=_PLAN_FINISHED_BLOCK,
+            )
+            return LLMMessage.tool(
+                tool_call_id=tool_call.id,
+                name=name,
+                content=result.model_dump_json(),
+                artifact=result,
+            )
         return await super().invoke_tool(tool, tool_call)
 
     async def ask_with_messages(self, messages: List[LLMMessage]) -> LLMMessage:
@@ -101,6 +131,12 @@ class ManusAgent(BaseAgent):
                 if message.role == Role.TOOL and message.name == "replan":
                     message.content += f"\n\n{self._injected_plan_text}"
                     self._injected_plan_text = None
+                    break
+        if self._injected_plan_complete_hint:
+            for message in reversed(messages):
+                if message.role == Role.TOOL and message.name == "plan_report":
+                    message.content += f"\n\n{self._injected_plan_complete_hint}"
+                    self._injected_plan_complete_hint = None
                     break
         return await super().ask_with_messages(messages)
 
@@ -114,6 +150,13 @@ class ManusAgent(BaseAgent):
                 if (
                     event.function_name not in _CONTROL_TOOLS
                     and not self._user_notified
+                ):
+                    continue
+
+                # Hide work tools blocked after the plan is fully finished.
+                if (
+                    self._plan_finished
+                    and event.function_name not in _AFTER_PLAN_DONE_TOOLS
                 ):
                     continue
 

@@ -56,6 +56,13 @@ class TestToolSchema:
         assert "Do a thing with an id" in fn["description"]
         assert "Args:" not in fn["description"]
 
+    def test_openai_schema_includes_brief(self):
+        params = self.tk.get_tool_schemas()[0]["function"]["parameters"]
+        assert "brief" in params["properties"]
+        assert "user-facing" in params["properties"]["brief"]["description"]
+        # Official timeline needs brief — require it on every executable tool
+        assert "brief" in params.get("required", [])
+
     def test_parameter_descriptions_from_docstring(self):
         params = self.tk.get_tool_schemas()[0]["function"]["parameters"]
         assert params["type"] == "object"
@@ -90,5 +97,34 @@ class TestToolLookupAndInvoke:
         assert result.data == "abc:3"
         assert self.backend.calls == [("abc", 3)]
 
+    async def test_invoke_strips_brief_before_calling_impl(self):
+        tool_obj = self.tk.get_tool("do_thing")
+        result = await tool_obj.invoke({
+            "id": "abc",
+            "count": 1,
+            "brief": "编写 Python 示例代码",
+        })
+        assert result.data == "abc:1"
+        assert self.backend.calls == [("abc", 1)]
+
     def test_tool_carries_toolkit_reference(self):
         assert self.tk.get_tool("do_thing").toolkit is self.tk
+
+
+class TestTakeBrief:
+    def test_take_brief_splits_ui_label(self):
+        from app.domain.services.tools.base import take_brief
+
+        brief, args = take_brief({
+            "file": "/home/ubuntu/a.py",
+            "brief": "  编写 Python 示例代码  ",
+        })
+        assert brief == "编写 Python 示例代码"
+        assert args == {"file": "/home/ubuntu/a.py"}
+
+    def test_take_brief_missing(self):
+        from app.domain.services.tools.base import take_brief
+
+        brief, args = take_brief({"file": "a.py"})
+        assert brief is None
+        assert args == {"file": "a.py"}

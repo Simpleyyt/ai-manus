@@ -30,7 +30,10 @@ from app.domain.services.flows.base import BaseFlow
 from app.domain.services.plan_progress import (
     apply_plan_report,
     complete_plan,
+    complete_plan_events,
+    is_plan_finished,
     mark_first_step_running,
+    step_started_events,
 )
 from app.domain.services.tools.browser import BrowserToolkit
 from app.domain.services.tools.file import FileToolkit
@@ -60,6 +63,14 @@ def format_plan_for_manus(plan: Plan) -> str:
         ),
     ])
     return "\n".join(lines)
+
+
+PLAN_COMPLETE_HINT = (
+    "All authoritative plan steps are completed or failed. "
+    "Do not start new work tools. Call deliver_result now with the final answer "
+    "and any output file paths. Use replan only if genuinely new remaining work "
+    "is required."
+)
 
 
 class AgentLoopFlow(BaseFlow):
@@ -123,6 +134,8 @@ class AgentLoopFlow(BaseFlow):
 
         await self._apply_project_instruction(session.project_id)
         initial_status = session.status
+        self.agent._plan_finished = False
+        self.agent._injected_plan_complete_hint = None
         if initial_status != SessionStatus.PENDING:
             await self.agent.roll_back(message)
 
@@ -148,6 +161,10 @@ class AgentLoopFlow(BaseFlow):
                         yield TitleEvent(title=self.plan.title)
                     if self.plan.message and self.plan.message.strip():
                         yield MessageEvent(message=self.plan.message.strip())
+                    # Chat timeline (official-style): step rows come from StepEvents,
+                    # not from PlanEvent alone (PlanEvent feeds Computer PlanPanel).
+                    for step_event in step_started_events(self.plan):
+                        yield step_event
                 yield event
 
             if not self.plan or not self.plan.steps:
@@ -195,6 +212,9 @@ class AgentLoopFlow(BaseFlow):
                         continue
                     for plan_event in apply_plan_report(self.plan, report):
                         yield plan_event
+                    if is_plan_finished(self.plan):
+                        self.agent._plan_finished = True
+                        self.agent._injected_plan_complete_hint = PLAN_COMPLETE_HINT
                 continue
 
             if isinstance(event, ToolEvent) and event.function_name == "replan":
@@ -231,6 +251,13 @@ class AgentLoopFlow(BaseFlow):
                                 self.agent._injected_plan_text = (
                                     format_plan_for_manus(self.plan)
                                 )
+                                self.agent._plan_finished = is_plan_finished(self.plan)
+                                if self.agent._plan_finished:
+                                    self.agent._injected_plan_complete_hint = (
+                                        PLAN_COMPLETE_HINT
+                                    )
+                                else:
+                                    self.agent._injected_plan_complete_hint = None
                             yield plan_event
                 continue
 
@@ -239,10 +266,8 @@ class AgentLoopFlow(BaseFlow):
             yield event
 
         if not waited and self.plan:
-            yield PlanEvent(
-                status=PlanStatus.COMPLETED,
-                plan=complete_plan(self.plan),
-            )
+            for plan_event in complete_plan_events(self.plan):
+                yield plan_event
         self._done = not waited
         if not waited:
             yield DoneEvent()

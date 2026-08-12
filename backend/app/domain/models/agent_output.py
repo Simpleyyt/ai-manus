@@ -98,8 +98,9 @@ class StepReport(BaseModel):
     success: bool = Field(description="Whether the step was completed successfully")
     result: str = Field(
         description=(
-            "Concrete outcome of the step: what was done and what was produced,"
-            " in the working language"
+            "Concrete verified outcome of the step: what was done, what was"
+            " produced, and how it was checked (e.g. command output), in the"
+            " working language. Do not claim success without verification."
         )
     )
     attachments: List[str] = Field(

@@ -4,7 +4,7 @@ import uuid
 from abc import ABC
 from typing import Any, List, Literal, Optional, AsyncGenerator
 from app.domain.models.message import Message, LLMMessage, Role, ToolCall
-from app.domain.services.tools.base import BaseToolkit, OutputTool, Tool, ValidationError
+from app.domain.services.tools.base import BaseToolkit, OutputTool, Tool, ValidationError, take_brief
 from app.domain.models.event import (
     BaseEvent,
     ToolEvent,
@@ -237,7 +237,7 @@ class BaseAgent(ABC):
                 if not tool_call.id:
                     tool_call.id = str(uuid.uuid4())
                 tool_call_id = tool_call.id
-                function_args = tool_call.args
+                brief, function_args = take_brief(tool_call.args)
 
                 if (
                     self._output_tool
@@ -263,7 +263,8 @@ class BaseAgent(ABC):
                     tool_call_id=tool_call_id,
                     tool_name=tool.toolkit.name,
                     function_name=function_name,
-                    function_args=function_args
+                    function_args=function_args,
+                    brief=brief,
                 )
 
                 # Official terminalUpdate: poll shell console while the tool runs
@@ -330,7 +331,8 @@ class BaseAgent(ABC):
                     tool_name=tool.toolkit.name,
                     function_name=function_name,
                     function_args=function_args,
-                    function_result=tool_result.artifact
+                    function_result=tool_result.artifact,
+                    brief=brief,
                 )
 
                 tool_responses.append(tool_result)

@@ -8,6 +8,8 @@ from app.domain.models.event import (
     MessageEvent,
     PlanEvent,
     PlanStatus,
+    StepEvent,
+    StepStatus,
     TitleEvent,
     ToolEvent,
     WaitEvent,
@@ -55,6 +57,9 @@ class ScriptedLLM:
 
 
 class FakeSandbox:
+    def __init__(self) -> None:
+        self.shell_exec_calls = 0
+
     async def file_write(self, **kwargs: Any) -> ToolResult:
         return ToolResult(success=True, message="written")
 
@@ -69,6 +74,24 @@ class FakeSandbox:
 
     async def file_find_by_name(self, **kwargs: Any) -> ToolResult:
         return ToolResult(success=True, data=[])
+
+    async def exec_command(self, id: str, exec_dir: str, command: str) -> ToolResult:
+        self.shell_exec_calls += 1
+        return ToolResult(success=True, message="Command executed", data={})
+
+    async def view_shell(self, id: str, console: bool = False) -> ToolResult:
+        return ToolResult(success=True, data={"console": []})
+
+    async def wait_for_process(self, id: str, seconds: int | None = None) -> ToolResult:
+        return ToolResult(success=True, data={})
+
+    async def write_to_process(
+        self, id: str, input: str, press_enter: bool = True
+    ) -> ToolResult:
+        return ToolResult(success=True, data={})
+
+    async def kill_process(self, id: str) -> ToolResult:
+        return ToolResult(success=True, data={})
 
 
 class FakeSession:
@@ -189,6 +212,12 @@ async def test_agent_loop_flow_create_plan_then_manus_deliver():
         PlanStatus.COMPLETED,
     ]
     assert created_step_status == ExecutionStatus.RUNNING
+    assert any(
+        isinstance(event, StepEvent)
+        and event.status == StepStatus.STARTED
+        and event.step.id == "1"
+        for event in events
+    )
     assert plan_events[1].plan.steps[0].result == "Work finished"
     assert any(
         isinstance(event, TitleEvent) and event.title == "Do the work"
@@ -206,6 +235,92 @@ async def test_agent_loop_flow_create_plan_then_manus_deliver():
     )
     assert isinstance(events[-1], DoneEvent)
     assert flow.is_done()
+    assert llm.responses == []
+
+
+@pytest.mark.asyncio
+async def test_agent_loop_blocks_work_tools_after_plan_finished():
+    """Once every plan step is done, further shell/file work must be rejected."""
+    sandbox = FakeSandbox()
+    llm = ScriptedLLM([
+        LLMMessage.assistant(tool_calls=[
+            ToolCall(
+                id="plan-1",
+                name="create_plan",
+                args={
+                    "message": "I will do the work.",
+                    "language": "en",
+                    "title": "Do the work",
+                    "goal": "Finish",
+                    "steps": [{"id": "1", "description": "Do the work"}],
+                },
+            ),
+        ]),
+        LLMMessage.assistant(tool_calls=[
+            ToolCall(
+                id="notify-1",
+                name="message_notify_user",
+                args={"text": "Starting."},
+            ),
+        ]),
+        LLMMessage.assistant(tool_calls=[
+            ToolCall(
+                id="report-1",
+                name="plan_report",
+                args={"steps": [{"id": "1", "status": "completed"}]},
+            ),
+        ]),
+        # Model wrongly keeps working after the plan is finished.
+        LLMMessage.assistant(tool_calls=[
+            ToolCall(
+                id="shell-1",
+                name="shell_exec",
+                args={
+                    "id": "main",
+                    "exec_dir": "/home/ubuntu",
+                    "command": "echo should-not-run",
+                },
+            ),
+        ]),
+        LLMMessage.assistant(tool_calls=[
+            ToolCall(
+                id="result-1",
+                name="deliver_result",
+                args={"message": "Done", "attachments": []},
+            ),
+        ]),
+    ])
+    flow = AgentLoopFlow(
+        agent_id="agent-1",
+        agent_repository=FakeAgentRepository(),
+        session_id="session-1",
+        session_repository=FakeSessionRepository(FakeSession()),
+        sandbox=sandbox,
+        browser=object(),
+        mcp_tool=MessageToolkit(),
+        llm=llm,
+    )
+
+    events = [event async for event in flow.run(Message(message="Do it"))]
+
+    assert sandbox.shell_exec_calls == 0
+    # Hint must be visible to the model after plan_report.
+    plan_report_tool_msgs = [
+        msg
+        for call in llm.calls
+        for msg in call
+        if msg.role == Role.TOOL and msg.name == "plan_report"
+    ]
+    assert plan_report_tool_msgs
+    assert any(
+        "deliver_result" in (msg.content or "")
+        for msg in plan_report_tool_msgs
+    )
+    assert any(
+        isinstance(event, MessageEvent) and event.message == "Done"
+        for event in events
+    )
+    assert isinstance(events[-1], DoneEvent)
     assert llm.responses == []
 
 

@@ -87,6 +87,8 @@ class ToolEvent(BaseEvent):
     function_args: Dict[str, Any]
     status: ToolStatus
     function_result: Optional[Any] = None
+    # Official Manus StandardToolUsed prefers ``brief`` (NL action) over path/args.
+    brief: Optional[str] = None
 
 class TitleEvent(BaseEvent):
     """Title event"""

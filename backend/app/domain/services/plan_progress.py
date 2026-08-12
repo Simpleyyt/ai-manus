@@ -91,3 +91,33 @@ def complete_plan(plan: Plan) -> Plan:
             step.success = True
     plan.status = ExecutionStatus.COMPLETED
     return plan
+
+
+def is_plan_finished(plan: Plan) -> bool:
+    """True when every step is completed or failed (empty plan counts as finished)."""
+    return all(step.is_done() for step in plan.steps)
+
+
+def step_started_events(plan: Plan) -> List[BaseEvent]:
+    """Emit chat timeline StepEvents for steps already marked RUNNING."""
+    return [
+        StepEvent(status=StepStatus.STARTED, step=step)
+        for step in plan.steps
+        if step.status == ExecutionStatus.RUNNING
+    ]
+
+
+def complete_plan_events(plan: Plan) -> List[BaseEvent]:
+    """Complete open steps and emit StepEvents for ones that were RUNNING."""
+    events: List[BaseEvent] = []
+    for step in plan.steps:
+        if step.status == ExecutionStatus.RUNNING:
+            step.status = ExecutionStatus.COMPLETED
+            step.success = True
+            events.append(StepEvent(status=StepStatus.COMPLETED, step=step))
+        elif step.status not in (ExecutionStatus.COMPLETED, ExecutionStatus.FAILED):
+            step.status = ExecutionStatus.COMPLETED
+            step.success = True
+    plan.status = ExecutionStatus.COMPLETED
+    events.append(PlanEvent(status=PlanStatus.COMPLETED, plan=plan))
+    return events

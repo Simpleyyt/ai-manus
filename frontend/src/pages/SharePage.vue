@@ -34,7 +34,7 @@
             @toolClick="handleToolClick" />
 
           <!-- Loading indicator: only before first visible replay output -->
-          <LoadingIndicator v-if="showThinking" :text="$t('{name} is thinking', { name: 'Manus' })" />
+          <LoadingIndicator v-if="showThinking" :text="$t('Thinking')" />
           <div v-else-if="isLoading" aria-hidden="true" class="h-5 invisible" />
         </div>
 
@@ -210,8 +210,9 @@ const { handleEvent } = useAgentEvents(
   { messages, title, plan, lastEventId, lastTool, lastNoMessageTool },
   {
     onToolActivity: (tool: ToolContent) => {
+      // Official: Computer closed by default; only follow tools if already open.
       if (realTime.value) {
-        computerPanel.value?.showComputerPanel(tool, false);
+        computerPanel.value?.followLiveToolIfOpen(tool, false);
       }
     },
   }

@@ -7,6 +7,7 @@ requires-python = ">=3.10"
 dependencies = [
     "email-validator>=2.3.0",
     "fastapi>=0.121.2",
+    "libtmux>=0.46.2",
     "pydantic>=2.12.4",
     "pydantic-settings>=2.12.0",
     "python-multipart>=0.0.20",

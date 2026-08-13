@@ -127,7 +127,9 @@ class ShellService:
         result = pane.cmd("capture-pane", "-J", "-p", "-S", "-", "-E", "-")
         if result.stderr and not result.stdout:
             raise ShellDeadError("\n".join(result.stderr))
-        return "\n".join(result.stdout)
+        # `-J` joins wrapped lines but preserves trailing spaces (tmux pads
+        # lines to the pane width on some versions, e.g. 3.2a), so strip them
+        return "\n".join(line.rstrip() for line in result.stdout)
 
     def _parse_blocks(self, content: str) -> List[Tuple[re.Match, Dict[str, Any]]]:
         """Find all valid PS1 sentinel blocks (match + parsed metadata)"""

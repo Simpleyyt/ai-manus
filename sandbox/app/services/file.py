@@ -19,8 +19,13 @@ from app.core.exceptions import AppException, ResourceNotFoundException, BadRequ
 class FileService:
     """File Operation Service"""
 
+    # Default cap for file/read responses so agents cannot dump huge files into context.
+    # Pass max_length=None for full content (used by replace/search and UI viewers).
+    DEFAULT_READ_MAX_LENGTH = 10000
+
     async def read_file(self, file: str, start_line: Optional[int] = None, 
-                 end_line: Optional[int] = None, sudo: bool = False, max_length: Optional[int] = None) -> FileReadResult:
+                 end_line: Optional[int] = None, sudo: bool = False,
+                 max_length: Optional[int] = DEFAULT_READ_MAX_LENGTH) -> FileReadResult:
         """
         Asynchronously read file content
         
@@ -29,7 +34,7 @@ class FileService:
             start_line: Starting line (0-based)
             end_line: Ending line (not included)
             sudo: Whether to use sudo privileges
-            max_length: Optional max content length; None means return full content
+            max_length: Max content length to return; None means return full content
         """
         # Check if file exists
         if not os.path.exists(file) and not sudo:
@@ -72,7 +77,11 @@ class FileService:
                 content = '\n'.join(lines[start:end])
             
             if max_length is not None and max_length > 0 and len(content) > max_length:
-                content = content[:max_length] + "(truncated)"
+                omitted = len(content) - max_length
+                content = (
+                    content[:max_length]
+                    + f"\n... (truncated {omitted} chars; use start_line/end_line to read more)"
+                )
             
             return FileReadResult(
                 content=content,

@@ -1,5 +1,4 @@
 """Unit tests for file read truncation and replace/search full-file behavior."""
-import asyncio
 import os
 import tempfile
 
@@ -21,14 +20,29 @@ def _write_temp(content: str) -> str:
 
 
 @pytest.mark.asyncio
-async def test_read_file_returns_full_content_by_default(file_service):
-    """Default read must not truncate large files (used by UI / tool views)."""
+async def test_read_file_truncates_by_default_for_agents(file_service):
+    """Default read caps large files so models cannot dump huge files into context."""
     body = "A" * 25000 + "TAIL_MARKER"
     path = _write_temp(body)
     try:
         result = await file_service.read_file(path)
+        assert len(result.content) < len(body)
+        assert result.content.startswith("A" * 100)
+        assert "truncated" in result.content
+        assert "start_line/end_line" in result.content
+        assert "TAIL_MARKER" not in result.content
+    finally:
+        os.unlink(path)
+
+
+@pytest.mark.asyncio
+async def test_read_file_full_content_when_max_length_none(file_service):
+    body = "A" * 25000 + "TAIL_MARKER"
+    path = _write_temp(body)
+    try:
+        result = await file_service.read_file(path, max_length=None)
         assert result.content == body
-        assert "(truncated)" not in result.content
+        assert "truncated" not in result.content
     finally:
         os.unlink(path)
 
@@ -39,7 +53,8 @@ async def test_read_file_honors_explicit_max_length(file_service):
     path = _write_temp(body)
     try:
         result = await file_service.read_file(path, max_length=10)
-        assert result.content == "ABCDEFGHIJ(truncated)"
+        assert result.content.startswith("ABCDEFGHIJ")
+        assert "truncated" in result.content
     finally:
         os.unlink(path)
 
@@ -55,17 +70,17 @@ async def test_str_replace_on_large_file_preserves_tail(file_service):
         result = await file_service.str_replace(path, "PREFIX_TOKEN", "REPLACED")
         assert result.replaced_count == 1
 
-        after = await file_service.read_file(path)
+        after = await file_service.read_file(path, max_length=None)
         assert after.content.startswith("REPLACED")
         assert after.content.endswith("SUFFIX_KEEP_ME")
-        assert "(truncated)" not in after.content
+        assert "truncated" not in after.content
         assert len(after.content) == len("REPLACED" + middle + suffix)
     finally:
         os.unlink(path)
 
 
 @pytest.mark.asyncio
-async def test_find_in_content_matches_past_former_default_cap(file_service):
+async def test_find_in_content_matches_past_default_cap(file_service):
     """Search must scan the whole file, not only the first 10k chars."""
     path = _write_temp("Y" * 15000 + "NEEDLE_AT_END")
     try:

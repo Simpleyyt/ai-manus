@@ -113,7 +113,8 @@ class Sandbox(Protocol):
         file: str, 
         start_line: int = None, 
         end_line: int = None, 
-        sudo: bool = False
+        sudo: bool = False,
+        max_length: int = None,
     ) -> ToolResult:
         """Read file content
         
@@ -122,6 +123,8 @@ class Sandbox(Protocol):
             start_line: Start line number
             end_line: End line number
             sudo: Whether to use sudo privileges
+            max_length: Content length cap. Omit for sandbox default (~10k for agents).
+                Pass None explicitly via implementations that support full reads for UI.
             
         Returns:
             File content

@@ -20,18 +20,18 @@ readme:
     title_zh: 基本功能
     task_en: Code Use, Browser Use, and multi-session switching
     task_zh: Code Use、Browser Use 与多会话切换
-    url: https://github.com/user-attachments/assets/83d9549b-1a99-4c06-b39e-1bc0b48b3055
+    url: https://github.com/user-attachments/assets/a73e5be2-822a-4aa9-b2c1-08adc30629a5
 
   - id: browser
     title_en: Browser Use
     title_zh: Browser Use
     task_en: Find latest news
     task_zh: 找一下最新新闻
-    url: https://github.com/user-attachments/assets/f7297f8f-51fd-44c0-9ff9-0b7fcfaabf0f
+    url: https://github.com/user-attachments/assets/be459984-561a-4aa3-8c6d-868d2ed9fa56
 
   - id: code
     title_en: Code Use
     title_zh: Code Use
     task_en: Write a complex Python example
     task_zh: 写一个复杂的 python 示例
-    url: https://github.com/user-attachments/assets/7b39b828-ec27-4b8f-b5f7-527e29efbe48
+    url: https://github.com/user-attachments/assets/db4e4048-35c3-4511-a13b-d4f71c54d647

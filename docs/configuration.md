@@ -276,12 +276,27 @@ API_KEY=sk-...
 
 ### JWT 配置
 
+JWT 主要用于文件 / VNC 等 URL 签名，以及迁移期内对旧登录 JWT 的兼容（`SESSION_JWT_GRACE_ENABLED`）。浏览器登录本身发放的是 Redis 不透明 session（见下一节）。
+
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
 | `JWT_SECRET_KEY` | `your-secret-key-here` | 是 | JWT 签名密钥（生产环境必须更改） |
 | `JWT_ALGORITHM` | `HS256` | 否 | JWT 签名算法 |
 | `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | 否 | 访问令牌过期时间（分钟） |
 | `JWT_REFRESH_TOKEN_EXPIRE_DAYS` | `7` | 否 | 刷新令牌过期时间（天） |
+
+### 登录 Session 配置
+
+`/auth/login` 返回的 `access_token` 是 Redis 中的 `session_id`（不是 JWT）。浏览器用 HttpOnly Cookie；App 用 `Authorization: Bearer <session_id>`。WebSocket 使用相同的 Cookie / Bearer，不再支持 `?token=` 查询参数。
+
+| 配置项 | 默认值 | 是否必需 | 说明 |
+|--------|--------|----------|------|
+| `SESSION_COOKIE_NAME` | `session_id` | 否 | 浏览器 Cookie 名称 |
+| `SESSION_WEB_TTL_DAYS` | `14` | 否 | Web 会话 TTL（天） |
+| `SESSION_APP_TTL_DAYS` | `30` | 否 | App Bearer 会话 TTL（天） |
+| `SESSION_COOKIE_SECURE` | `false` | 否 | HTTPS 下应设为 `true` |
+| `SESSION_COOKIE_SAMESITE` | `lax` | 否 | Cookie SameSite：`lax` / `strict` / `none` |
+| `SESSION_JWT_GRACE_ENABLED` | `true` | 否 | 迁移期是否仍接受旧的 JWT access token |
 
 ### 邮箱配置
 

@@ -18,7 +18,7 @@ AI Manus 中每个服务与工具都包含一个 Built-in 版本，可以做到�
 
 ## 基本功能
 
-[](https://github.com/user-attachments/assets/37060a09-c647-4bcb-920c-959f7fa73ebe ':include :type=video controls width="100%"')
+[](https://github.com/user-attachments/assets/a73e5be2-822a-4aa9-b2c1-08adc30629a5 ':include :type=video controls width="100%"')
 
 ## 核心功能
 

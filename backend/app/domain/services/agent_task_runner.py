@@ -187,7 +187,7 @@ class AgentTaskRunner(TaskRunner):
             ):
                 try:
                     file_path = event.function_args["file"]
-                    prior = await self._sandbox.file_read(file_path)
+                    prior = await self._sandbox.file_read(file_path, max_length=None)
                     if prior and prior.success and isinstance(prior.data, dict):
                         self._file_old_by_call[event.tool_call_id] = prior.data.get("content", "") or ""
                 except Exception:
@@ -212,7 +212,8 @@ class AgentTaskRunner(TaskRunner):
                 elif event.tool_name == "file":
                     if "file" in event.function_args:
                         file_path = event.function_args["file"]
-                        file_read_result = await self._sandbox.file_read(file_path)
+                        # Full content for Computer panel / Diff — agent tool reads stay capped.
+                        file_read_result = await self._sandbox.file_read(file_path, max_length=None)
                         file_content: str = file_read_result.data.get("content", "")
                         old_content = self._file_old_by_call.pop(event.tool_call_id, None)
                         # Only expose old_content when there was a prior snapshot (enables Diff tabs).

@@ -321,7 +321,7 @@ class AgentService:
         if not sandbox:
             raise RuntimeError("Sandbox environment not found")
         
-        result = await sandbox.file_read(file_path)
+        result = await sandbox.file_read(file_path, max_length=None)
         if result.success:
             return FileViewResponse(**result.data)
         else:

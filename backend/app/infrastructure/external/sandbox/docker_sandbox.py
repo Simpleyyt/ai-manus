@@ -16,6 +16,10 @@ from app.domain.external.browser import Browser
 
 logger = logging.getLogger(__name__)
 
+# Sentinel: omit max_length from the request so sandbox applies its agent-facing default.
+_UNSET = object()
+
+
 class DockerSandbox(Sandbox):
     def __init__(self, ip: str = None, container_name: str = None):
         """Initialize Docker sandbox and API interaction client"""
@@ -259,8 +263,14 @@ class DockerSandbox(Sandbox):
         )
         return ToolResult(**response.json())
 
-    async def file_read(self, file: str, start_line: int = None, 
-                        end_line: int = None, sudo: bool = False) -> ToolResult:
+    async def file_read(
+        self,
+        file: str,
+        start_line: int = None,
+        end_line: int = None,
+        sudo: bool = False,
+        max_length=_UNSET,
+    ) -> ToolResult:
         """Read file content
         
         Args:
@@ -268,18 +278,23 @@ class DockerSandbox(Sandbox):
             start_line: Start line number
             end_line: End line number
             sudo: Whether to use sudo privileges
+            max_length: Omit for sandbox default (agent-safe cap). Pass None for full content
+                (UI / diffs). Pass an int to set an explicit cap.
             
         Returns:
             File content
         """
+        payload = {
+            "file": file,
+            "start_line": start_line,
+            "end_line": end_line,
+            "sudo": sudo,
+        }
+        if max_length is not _UNSET:
+            payload["max_length"] = max_length
         response = await self.client.post(
             f"{self.base_url}/api/v1/file/read",
-            json={
-                "file": file,
-                "start_line": start_line,
-                "end_line": end_line,
-                "sudo": sudo
-            }
+            json=payload,
         )
         return ToolResult(**response.json())
         

@@ -13,6 +13,8 @@ class FileToolkit(BaseToolkit):
 - Optionally keep /home/ubuntu/todo.md as personal working notes; it does not drive the Plan UI
 - Use append mode to concatenate content onto an existing file
 - Only read text, code, or markdown files; never read binary files
+- Use line range limits appropriately; when uncertain, start by reading the first 20 lines
+- Be mindful of performance impact with large files
 """
     
     def __init__(self, sandbox: Sandbox):
@@ -36,9 +38,9 @@ class FileToolkit(BaseToolkit):
         
         Args:
             file: Absolute path of the file to read
-            start_line: (Optional) Starting line to read from, 0-based
-            end_line: (Optional) Ending line number (exclusive)
-            sudo: (Optional) Whether to use sudo privileges
+            start_line: (Optional) Starting line to read from, 0-based. If not specified, starts from beginning
+            end_line: (Optional) Ending line number (exclusive). If not specified, reads entire file
+            sudo: (Optional) Whether to use sudo privileges, defaults to false
         """
         # Directly call sandbox's file_read method
         return await self.sandbox.file_read(

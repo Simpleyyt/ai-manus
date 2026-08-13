@@ -110,7 +110,8 @@ class BaseAgent(ABC):
         omitted = len(content) - self.max_tool_result_chars
         return (
             content[: self.max_tool_result_chars]
-            + f"... [truncated {omitted} chars to save context]"
+            + f"... [truncated {omitted} chars to save context; "
+            "for files, re-read with start_line/end_line]"
         )
 
     async def invoke_tool(self, tool: Tool, tool_call: ToolCall) -> LLMMessage:

@@ -12,10 +12,10 @@ class FileReadRequest(BaseModel):
     end_line: Optional[int] = Field(None, description="End line (not inclusive)")
     sudo: Optional[bool] = Field(False, description="Whether to use sudo privileges")
     max_length: Optional[int] = Field(
-        10000,
+        None,
         description=(
-            "Maximum length of content to return (default 10000). "
-            "Pass null for no truncation. Prefer start_line/end_line for large files."
+            "Optional maximum content length. Omit/null returns full content "
+            "(Manus-style; prefer start_line/end_line for large files)."
         ),
     )
 

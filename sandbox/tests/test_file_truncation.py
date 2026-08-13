@@ -1,4 +1,8 @@
-"""Unit tests for file read truncation and replace/search full-file behavior."""
+"""Unit tests for file read truncation and replace/search full-file behavior.
+
+Aligned with Manus: file/read has no default char cap; agents are guided to use
+start_line/end_line. Context budgets live in the backend agent layer.
+"""
 import os
 import tempfile
 
@@ -20,29 +24,27 @@ def _write_temp(content: str) -> str:
 
 
 @pytest.mark.asyncio
-async def test_read_file_truncates_by_default_for_agents(file_service):
-    """Default read caps large files so models cannot dump huge files into context."""
+async def test_read_file_returns_full_content_by_default(file_service):
+    """Manus-style: no default char truncation on file/read."""
     body = "A" * 25000 + "TAIL_MARKER"
     path = _write_temp(body)
     try:
         result = await file_service.read_file(path)
-        assert len(result.content) < len(body)
-        assert result.content.startswith("A" * 100)
-        assert "truncated" in result.content
-        assert "start_line/end_line" in result.content
-        assert "TAIL_MARKER" not in result.content
+        assert result.content == body
+        assert "truncated" not in result.content
     finally:
         os.unlink(path)
 
 
 @pytest.mark.asyncio
-async def test_read_file_full_content_when_max_length_none(file_service):
-    body = "A" * 25000 + "TAIL_MARKER"
-    path = _write_temp(body)
+async def test_read_file_honors_line_range(file_service):
+    path = _write_temp("\n".join(f"line-{i}" for i in range(30)))
     try:
-        result = await file_service.read_file(path, max_length=None)
-        assert result.content == body
-        assert "truncated" not in result.content
+        result = await file_service.read_file(path, start_line=0, end_line=20)
+        lines = result.content.splitlines()
+        assert len(lines) == 20
+        assert lines[0] == "line-0"
+        assert lines[-1] == "line-19"
     finally:
         os.unlink(path)
 
@@ -70,7 +72,7 @@ async def test_str_replace_on_large_file_preserves_tail(file_service):
         result = await file_service.str_replace(path, "PREFIX_TOKEN", "REPLACED")
         assert result.replaced_count == 1
 
-        after = await file_service.read_file(path, max_length=None)
+        after = await file_service.read_file(path)
         assert after.content.startswith("REPLACED")
         assert after.content.endswith("SUFFIX_KEEP_ME")
         assert "truncated" not in after.content
@@ -80,8 +82,8 @@ async def test_str_replace_on_large_file_preserves_tail(file_service):
 
 
 @pytest.mark.asyncio
-async def test_find_in_content_matches_past_default_cap(file_service):
-    """Search must scan the whole file, not only the first 10k chars."""
+async def test_find_in_content_matches_past_former_default_cap(file_service):
+    """Search must scan the whole file."""
     path = _write_temp("Y" * 15000 + "NEEDLE_AT_END")
     try:
         result = await file_service.find_in_content(path, r"NEEDLE_AT_END")

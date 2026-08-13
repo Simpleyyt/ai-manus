@@ -19,13 +19,12 @@ from app.core.exceptions import AppException, ResourceNotFoundException, BadRequ
 class FileService:
     """File Operation Service"""
 
-    # Default cap for file/read responses so agents cannot dump huge files into context.
-    # Pass max_length=None for full content (used by replace/search and UI viewers).
-    DEFAULT_READ_MAX_LENGTH = 10000
-
+    # No default char cap — align with Manus: agents use start_line/end_line;
+    # context budgets (backend max_tool_result_chars) bound what enters the LLM.
+    # Callers may still pass max_length explicitly when they need a hard cap.
     async def read_file(self, file: str, start_line: Optional[int] = None, 
                  end_line: Optional[int] = None, sudo: bool = False,
-                 max_length: Optional[int] = DEFAULT_READ_MAX_LENGTH) -> FileReadResult:
+                 max_length: Optional[int] = None) -> FileReadResult:
         """
         Asynchronously read file content
         
@@ -34,7 +33,7 @@ class FileService:
             start_line: Starting line (0-based)
             end_line: Ending line (not included)
             sudo: Whether to use sudo privileges
-            max_length: Max content length to return; None means return full content
+            max_length: Optional max content length; None means return full content
         """
         # Check if file exists
         if not os.path.exists(file) and not sudo:

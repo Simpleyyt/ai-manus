@@ -8,7 +8,7 @@ MCP (Model Context Protocol) is an open standard protocol for providing secure c
 
 > Task: Analyze the GitHub repositories of user simpleyyt
 
-![](https://raw.githubusercontent.com/Simpleyyt/picgo-image/master/mcp.mp4 ':include controls width="100%"')
+![](https://github.com/user-attachments/assets/1eeecd48-7c03-4ecd-ae5c-865a4a44a430 ':include controls width="100%"')
 
 ## Configuration Guide
 

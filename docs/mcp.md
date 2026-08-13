@@ -8,7 +8,7 @@ MCP（Model Context Protocol）是一个开放的标准协议，用于在语言�
 
 > 任务：统计一下 simpleyyt 用户的 github 仓库
 
-![](https://raw.githubusercontent.com/Simpleyyt/picgo-image/master/mcp.mp4 ':include controls width="100%"')
+![](https://github.com/user-attachments/assets/1eeecd48-7c03-4ecd-ae5c-865a4a44a430 ':include controls width="100%"')
 
 ## 配置说明
 

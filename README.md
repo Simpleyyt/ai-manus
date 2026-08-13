@@ -10,8 +10,6 @@ AI Manus is a general-purpose AI Agent system that supports running various tool
 
 Enjoy your own agent with AI Manus!
 
-👏 Join [QQ Group(1005477581)](https://qun.qq.com/universal-share/share?ac=1&authKey=p4X3Da5iMpR4liAenxwvhs7IValPKiCFtUevRlJouz9qSTSZsMnPJc3hzsJjgQYv&busi_data=eyJncm91cENvZGUiOiIxMDA1NDc3NTgxIiwidG9rZW4iOiJNZmUrTmQ0UzNDZDNqNDFVdjVPS1VCRkJGRWVlV0R3RFJSRVFoZDAwRjFDeUdUM0t6aUIyczlVdzRjV1BYN09IIiwidWluIjoiMzQyMjExODE1In0%3D&data=C3B-E6BlEbailV32co77iXL5vxPIhtD9y_itWLSq50hKqosO_55_isOZym2Faaq4hs9-517tUY8GSWaDwPom-A&svctype=4&tempid=h5_group_info)
-
 ❤️ Like AI Manus? Give it a star 🌟 or [Sponsor](docs/sponsor.md) to support the development!
 
 🚀 [Try a Demo](https://app.ai-manus.com)
@@ -25,19 +23,19 @@ Enjoy your own agent with AI Manus!
 
 * Task: Code Use, Browser Use, and multi-session switching
 
-https://github.com/user-attachments/assets/83d9549b-1a99-4c06-b39e-1bc0b48b3055
+https://github.com/user-attachments/assets/a73e5be2-822a-4aa9-b2c1-08adc30629a5
 
 ### Browser Use
 
 * Task: Find latest news
 
-<https://github.com/user-attachments/assets/f7297f8f-51fd-44c0-9ff9-0b7fcfaabf0f>
+<https://github.com/user-attachments/assets/be459984-561a-4aa3-8c6d-868d2ed9fa56>
 
 ### Code Use
 
 * Task: Write a complex Python example
 
-<https://github.com/user-attachments/assets/7b39b828-ec27-4b8f-b5f7-527e29efbe48>
+<https://github.com/user-attachments/assets/db4e4048-35c3-4511-a13b-d4f71c54d647>
 <!-- /demos:readme:en -->
 
 ## Key Features

@@ -255,11 +255,22 @@ PASSWORD_HASH_ROUNDS=10
 #LOCAL_AUTH_EMAIL=admin@example.com
 #LOCAL_AUTH_PASSWORD=admin
 
-# JWT configuration
+# JWT configuration (URL signing + optional login grace for legacy tokens)
 JWT_SECRET_KEY=your-secret-key-here
 JWT_ALGORITHM=HS256
 JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
 JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
+
+# Opaque Redis auth sessions (browser HttpOnly Cookie + App Bearer)
+# /auth/login returns access_token = opaque session_id (not a JWT).
+# Browser: Cookie session_id; App: Authorization: Bearer <session_id>
+# WS: same Cookie / Bearer header — no ?token= query
+#SESSION_COOKIE_NAME=session_id
+#SESSION_WEB_TTL_DAYS=14
+#SESSION_APP_TTL_DAYS=30
+#SESSION_COOKIE_SECURE=false
+#SESSION_COOKIE_SAMESITE=lax
+#SESSION_JWT_GRACE_ENABLED=true
 
 # Email configuration
 # Only used when AUTH_PROVIDER=password

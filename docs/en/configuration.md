@@ -277,12 +277,27 @@ Used only when `AUTH_PROVIDER=local`:
 
 ### JWT Configuration
 
+JWT is used for signing file / VNC URLs, plus an optional grace period for legacy login JWTs (`SESSION_JWT_GRACE_ENABLED`). Browser login itself issues an opaque Redis session (see the next section).
+
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
 | `JWT_SECRET_KEY` | `your-secret-key-here` | Yes | JWT signing key (must be changed in production) |
 | `JWT_ALGORITHM` | `HS256` | No | JWT signing algorithm |
 | `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | No | Access token expiration time in minutes |
 | `JWT_REFRESH_TOKEN_EXPIRE_DAYS` | `7` | No | Refresh token expiration time in days |
+
+### Login Session Configuration
+
+`/auth/login` returns `access_token` as a Redis `session_id` (not a JWT). Browsers use an HttpOnly Cookie; apps use `Authorization: Bearer <session_id>`. WebSockets use the same Cookie / Bearer header — the `?token=` query parameter is not supported.
+
+| Configuration | Default Value | Required | Description |
+|---------------|---------------|----------|-------------|
+| `SESSION_COOKIE_NAME` | `session_id` | No | Browser cookie name |
+| `SESSION_WEB_TTL_DAYS` | `14` | No | Web session TTL in days |
+| `SESSION_APP_TTL_DAYS` | `30` | No | App Bearer session TTL in days |
+| `SESSION_COOKIE_SECURE` | `false` | No | Set `true` behind HTTPS |
+| `SESSION_COOKIE_SAMESITE` | `lax` | No | Cookie SameSite: `lax` / `strict` / `none` |
+| `SESSION_JWT_GRACE_ENABLED` | `true` | No | Whether to still accept legacy JWT access tokens during migration |
 
 ### Email Configuration
 

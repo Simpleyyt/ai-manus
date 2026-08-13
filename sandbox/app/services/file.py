@@ -20,7 +20,7 @@ class FileService:
     """File Operation Service"""
 
     async def read_file(self, file: str, start_line: Optional[int] = None, 
-                 end_line: Optional[int] = None, sudo: bool = False, max_length: Optional[int] = 10000) -> FileReadResult:
+                 end_line: Optional[int] = None, sudo: bool = False, max_length: Optional[int] = None) -> FileReadResult:
         """
         Asynchronously read file content
         
@@ -29,6 +29,7 @@ class FileService:
             start_line: Starting line (0-based)
             end_line: Ending line (not included)
             sudo: Whether to use sudo privileges
+            max_length: Optional max content length; None means return full content
         """
         # Check if file exists
         if not os.path.exists(file) and not sudo:
@@ -53,7 +54,7 @@ class FileService:
                 content = stdout.decode('utf-8')
             else:
                 # Asynchronously read file
-                def read_file_async():
+                def read_file_sync():
                     try:
                         with open(file, 'r', encoding='utf-8') as f:
                             return f.read()
@@ -61,7 +62,7 @@ class FileService:
                         raise AppException(message=f"Failed to read file: {str(e)}")
                 
                 # Execute IO operation in thread pool
-                content = await asyncio.to_thread(read_file_async)
+                content = await asyncio.to_thread(read_file_sync)
             
             # Process line range
             if start_line is not None or end_line is not None:
@@ -165,8 +166,8 @@ class FileService:
             new_str: New replacement string
             sudo: Whether to use sudo privileges
         """
-        # First read file content
-        file_result = await self.read_file(file, sudo=sudo)
+        # Always read the full file — truncating here would corrupt content on write-back
+        file_result = await self.read_file(file, sudo=sudo, max_length=None)
         content = file_result.content
         
         # Calculate replacement count
@@ -198,8 +199,8 @@ class FileService:
             regex: Regular expression pattern
             sudo: Whether to use sudo privileges
         """
-        # Read file
-        file_result = await self.read_file(file, sudo=sudo)
+        # Always search the full file so matches past any read cap are not missed
+        file_result = await self.read_file(file, sudo=sudo, max_length=None)
         content = file_result.content
         
         # Process line by line

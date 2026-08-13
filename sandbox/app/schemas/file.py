@@ -11,7 +11,10 @@ class FileReadRequest(BaseModel):
     start_line: Optional[int] = Field(None, description="Start line (0-based)")
     end_line: Optional[int] = Field(None, description="End line (not inclusive)")
     sudo: Optional[bool] = Field(False, description="Whether to use sudo privileges")
-    max_length: Optional[int] = Field(10000, description="Maximum length of the content to return")
+    max_length: Optional[int] = Field(
+        None,
+        description="Optional maximum length of content to return; omit or null for no truncation",
+    )
 
 class FileWriteRequest(BaseModel):
     """File write request"""

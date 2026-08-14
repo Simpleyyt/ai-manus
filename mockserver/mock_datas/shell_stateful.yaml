@@ -1,0 +1,133 @@
+# Demonstrates the real persistent (tmux-backed) sandbox shell:
+# env vars and cwd survive between shell_exec calls in the same session,
+# and long-running commands can be awaited with shell_wait.
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: create_plan
+              arguments: |
+                {
+                  "message": "Testing the persistent shell",
+                  "language": "en",
+                  "goal": "demonstrate stateful shell",
+                  "title": "Stateful shell demo",
+                  "steps": [
+                    {
+                      "id": "1",
+                      "description": "run stateful shell commands"
+                    }
+                  ]
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: shell_exec
+              arguments: |
+                {
+                    "id": "shell-1",
+                    "exec_dir": "/home/ubuntu",
+                    "command": "export GREETING=hello_from_step1 && cd /tmp"
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: shell_exec
+              arguments: |
+                {
+                    "id": "shell-1",
+                    "exec_dir": "/tmp",
+                    "command": "echo GREETING=$GREETING && pwd"
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: shell_exec
+              arguments: |
+                {
+                    "id": "shell-1",
+                    "exec_dir": "/tmp",
+                    "command": "sleep 8 && echo long_task_done"
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: shell_wait
+              arguments: |
+                {
+                    "id": "shell-1",
+                    "seconds": 20
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: shell_view
+              arguments: |
+                {
+                    "id": "shell-1"
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: complete_step
+              arguments: |
+                {
+                  "success": true,
+                  "result": "stateful shell demo finished",
+                  "attachments": []
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: deliver_result
+              arguments: |
+                {
+                  "message": "Persistent shell demo finished: GREETING and cwd survived across shell_exec calls.",
+                  "attachments": []
+                }

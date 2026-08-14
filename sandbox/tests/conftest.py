@@ -12,8 +12,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import requests
 
-# Base URL for API testing
-BASE_URL = "http://localhost:8080"
+# Base URL for API testing (override with SANDBOX_API_URL)
+BASE_URL = os.environ.get("SANDBOX_API_URL", "http://localhost:8080")
 
 @pytest.fixture
 def client():

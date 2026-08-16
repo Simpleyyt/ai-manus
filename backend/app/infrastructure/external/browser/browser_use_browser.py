@@ -1,25 +1,66 @@
-from typing import Any, Optional, List
-import asyncio
-import logging
+"""Browser implementation built on the browser_use library, following its
+official Tools patterns (browser_use/tools/service.py):
 
+- Every action is dispatched as an event on the session event bus
+  (ClickElementEvent, TypeTextEvent, ScrollEvent, SendKeysEvent, ...) so the
+  library's watchdogs handle waiting, scrolling into view, new-tab switching
+  and error validation — no hand-rolled CDP action code.
+- Page state comes from ``session.get_browser_state_summary()`` and the DOM
+  tree is serialized with the official ``dom_state.llm_representation()``
+  (``[index]<tag ... />`` format), the same representation the browser-use
+  agent itself consumes.
+- Page content is extracted to Markdown with the official
+  ``extract_clean_markdown()`` helper (no LLM call involved).
+- Console output is captured via CDP ``Runtime.consoleAPICalled`` /
+  ``Runtime.exceptionThrown`` events, the same way DevTools does.
+"""
+
+from typing import Any, List, Optional
+import asyncio
+import json
+import logging
+from collections import deque
+
+from browser_use.browser.events import (
+    ClickCoordinateEvent,
+    ClickElementEvent,
+    GetDropdownOptionsEvent,
+    NavigateToUrlEvent,
+    ScrollEvent,
+    SelectDropdownOptionEvent,
+    SendKeysEvent,
+    SwitchTabEvent,
+    TypeTextEvent,
+)
 from browser_use.browser.session import BrowserSession, CDPSession
-from browser_use.dom.views import EnhancedDOMTreeNode
+from browser_use.browser.views import BrowserStateSummary
+from browser_use.dom.markdown_extractor import extract_clean_markdown
 
 from app.domain.models.tool_result import ToolResult
 
 logger = logging.getLogger(__name__)
 
+# The agent truncates whole tool results at ~16000 chars (BaseAgent
+# max_tool_result_chars), so cap the two big fields below that budget.
+MAX_ELEMENT_TREE_CHARS = 6000
+MAX_MARKDOWN_CHARS = 8000
+MAX_CONSOLE_LOG_ENTRIES = 500
+DEFAULT_VIEWPORT_HEIGHT = 1000
+
 
 class BrowserUseBrowser:
     """Browser implementation using the browser_use library (BrowserSession + CDP).
 
-    Connects to an existing Chrome instance via CDP URL and exposes the same
-    interface as PlaywrightBrowser so it can be used as a drop-in replacement.
+    Connects to an existing Chrome instance via CDP URL and implements the
+    domain ``Browser`` protocol.
     """
 
     def __init__(self, cdp_url: str):
         self.cdp_url = cdp_url
         self._session: Optional[BrowserSession] = None
+        self._console_logs: deque[str] = deque(maxlen=MAX_CONSOLE_LOG_ENTRIES)
+        self._console_clients: set[int] = set()
+        self._console_enabled_sessions: set[str] = set()
 
     # ------------------------------------------------------------------
     # Session lifecycle
@@ -44,6 +85,7 @@ class BrowserUseBrowser:
                 )
                 await session.start()
                 self._session = session
+                await self._ensure_console_capture()
                 return session
             except Exception as exc:
                 last_error = exc
@@ -76,204 +118,214 @@ class BrowserUseBrowser:
                 logger.error("Error stopping BrowserSession: %s", exc)
             finally:
                 self._session = None
+                self._console_clients.clear()
+                self._console_enabled_sessions.clear()
 
     # ------------------------------------------------------------------
-    # Internal helpers
+    # Event dispatch helper (official browser-use tools pattern)
     # ------------------------------------------------------------------
 
-    async def _get_current_page(self):
-        """Return the actor Page for the currently focused tab."""
-        session = await self._ensure_session()
-        page = await session.get_current_page()
-        if page is None:
-            page = await session.new_page()
-        return page
+    async def _dispatch(self, event: Any) -> Any:
+        """Dispatch an event on the session event bus and await its result.
 
-    async def _get_cdp_session(self) -> CDPSession:
-        """Return the CDPSession for the currently focused tab."""
-        session = await self._ensure_session()
-        return await session.get_or_create_cdp_session()
+        This mirrors the pattern used by browser_use/tools/service.py::
 
-    # Map from CSS icon-font class keywords → human-readable symbol.
-    # Covers Layui icons used by the leaftools.net calculator (and similar sites).
-    _ICON_CLASS_SYMBOLS: dict = {
-        "layui-icon-addition": "+",
-        "layui-icon-subtraction": "-",
-        "layui-icon-close": "×",
-        "layui-icon-search": "🔍",
-        "layui-icon-refresh": "↻",
-        "layui-icon-left": "←",
-        "layui-icon-right": "→",
-        "layui-icon-up": "↑",
-        "layui-icon-down": "↓",
-        "bi-backspace": "⌫",
-        "bi-plus-slash-minus": "±",
-        # generic fallbacks
-        "addition": "+",
-        "subtraction": "-",
-        "multiply": "×",
-        "divide": "÷",
-        "equals": "=",
-        "backspace": "⌫",
-        "clear": "C",
-    }
-
-    @staticmethod
-    def _get_node_hint(node) -> str:
-        """Return a human-readable hint for a node whose visible text is empty.
-
-        Priority order:
-        1. ``data-key`` / ``data-val`` attribute on the node itself (e.g. calculator buttons)
-        2. AX accessibility tree ``name`` field
-        3. CSS icon-font class keywords on the node's child <i> / <span> / <svg>
+            event = browser_session.event_bus.dispatch(SomeEvent(...))
+            await event
+            result = await event.event_result(raise_if_any=True, raise_if_none=False)
         """
-        attrs: dict = getattr(node, "attributes", None) or {}
+        session = await self._ensure_session()
+        handle = session.event_bus.dispatch(event)
+        await handle
+        return await handle.event_result(raise_if_any=True, raise_if_none=False)
 
-        # 1. data-key / data-val (most reliable for widget buttons)
-        for attr in ("data-key", "data-val", "data-value"):
-            val = attrs.get(attr, "").strip()
-            if val:
-                return val
-
-        # 2. AX name
-        ax_node = getattr(node, "ax_node", None)
-        if ax_node:
-            ax_name = getattr(ax_node, "name", None) or ""
-            if ax_name.strip():
-                return ax_name.strip()
-
-        # 3. Icon-font class on child elements
-        children = getattr(node, "children_nodes", None) or []
-        for child in children:
-            child_tag = (getattr(child, "tag_name", "") or "").lower()
-            if child_tag not in ("i", "span", "em", "svg", "use"):
-                continue
-            child_attrs: dict = getattr(child, "attributes", None) or {}
-            class_str = child_attrs.get("class", "").lower()
-            for keyword, symbol in BrowserUseBrowser._ICON_CLASS_SYMBOLS.items():
-                if keyword in class_str:
-                    return symbol
-
-        return ""
+    # ------------------------------------------------------------------
+    # Console log capture (CDP Runtime events, like DevTools)
+    # ------------------------------------------------------------------
 
     @staticmethod
-    def _format_selector_map(selector_map: dict) -> List[str]:
-        """Format a selector map dict into the standard index:<tag>text</tag> list."""
-        formatted: List[str] = []
-        for idx, node in sorted(selector_map.items()):
-            tag = node.tag_name or "element"
-            text = node.get_meaningful_text_for_llm() if hasattr(node, "get_meaningful_text_for_llm") else ""
+    def _format_remote_object(obj: dict) -> str:
+        """Render a CDP RemoteObject roughly the way DevTools console would."""
+        if "value" in obj:
+            value = obj["value"]
+            return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, default=str)
+        return obj.get("description") or obj.get("unserializableValue") or obj.get("type", "")
 
-            # Fallback: explicit HTML attributes (placeholder / aria-label / title)
-            if not text and node.attributes:
-                text = (
-                    node.attributes.get("placeholder", "")
-                    or node.attributes.get("aria-label", "")
-                    or node.attributes.get("title", "")
-                    or ""
+    async def _ensure_console_capture(self) -> None:
+        """Register CDP console/exception listeners for the focused tab."""
+        if self._session is None:
+            return
+        try:
+            cdp_session: CDPSession = await self._session.get_or_create_cdp_session()
+
+            client_key = id(cdp_session.cdp_client)
+            if client_key not in self._console_clients:
+                self._console_clients.add(client_key)
+
+                def _on_console(event: dict, _session_id: Optional[str] = None) -> None:
+                    level = event.get("type", "log")
+                    args = event.get("args", []) or []
+                    text = " ".join(self._format_remote_object(arg) for arg in args)
+                    self._console_logs.append(f"[{level}] {text}")
+
+                def _on_exception(event: dict, _session_id: Optional[str] = None) -> None:
+                    details = event.get("exceptionDetails", {}) or {}
+                    exception = details.get("exception", {}) or {}
+                    text = (
+                        exception.get("description")
+                        or details.get("text")
+                        or "Uncaught exception"
+                    )
+                    self._console_logs.append(f"[error] {text}")
+
+                cdp_session.cdp_client.register.Runtime.consoleAPICalled(_on_console)
+                cdp_session.cdp_client.register.Runtime.exceptionThrown(_on_exception)
+
+            session_key = str(cdp_session.session_id)
+            if session_key not in self._console_enabled_sessions:
+                self._console_enabled_sessions.add(session_key)
+                await cdp_session.cdp_client.send.Runtime.enable(session_id=cdp_session.session_id)
+        except Exception as exc:
+            logger.warning("Failed to set up console capture: %s", exc)
+
+    # ------------------------------------------------------------------
+    # Browser state helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _truncate(text: str, limit: int, note: str) -> str:
+        if len(text) <= limit:
+            return text
+        return text[:limit] + f"... [{note}]"
+
+    def _build_state_data(
+        self,
+        state: BrowserStateSummary,
+        content: Optional[str] = None,
+    ) -> dict:
+        """Build the tool payload from a BrowserStateSummary.
+
+        Mirrors the layout of browser-use's own <browser_state> agent message:
+        url/title, tabs, scroll position in pages, then the serialized element
+        tree wrapped in [Start of page]/[End of page] markers.
+        """
+        data: dict = {"url": state.url, "title": state.title}
+
+        if len(state.tabs) > 1:
+            data["tabs"] = [
+                f"Tab {tab.target_id[-4:]}: {tab.url} - {(tab.title or '')[:40]}"
+                for tab in state.tabs
+            ]
+
+        viewport_height = DEFAULT_VIEWPORT_HEIGHT
+        pixels_above = state.pixels_above
+        pixels_below = state.pixels_below
+        if state.page_info:
+            viewport_height = state.page_info.viewport_height or DEFAULT_VIEWPORT_HEIGHT
+            pixels_above = state.page_info.pixels_above
+            pixels_below = state.page_info.pixels_below
+        data["scroll_position"] = (
+            f"{pixels_above / viewport_height:.1f} pages above, "
+            f"{pixels_below / viewport_height:.1f} pages below"
+        )
+
+        tree = ""
+        if state.dom_state is not None:
+            tree = state.dom_state.llm_representation() or ""
+        tree = self._truncate(
+            tree, MAX_ELEMENT_TREE_CHARS, "element tree truncated, scroll to see more"
+        )
+        if pixels_above <= 0:
+            tree = "[Start of page]\n" + tree
+        if pixels_below <= 0:
+            tree = tree + "\n[End of page]"
+        data["interactive_elements"] = tree
+
+        if content is not None:
+            data["content"] = self._truncate(
+                content, MAX_MARKDOWN_CHARS, "content truncated, scroll to see more"
+            )
+        return data
+
+    async def _get_state_data(self, include_content: bool = True) -> dict:
+        """Return the current page state (and optionally Markdown content)."""
+        session = await self._ensure_session()
+        await self._ensure_console_capture()
+        state = await session.get_browser_state_summary(include_screenshot=False)
+
+        content: Optional[str] = None
+        if include_content:
+            try:
+                content, _stats = await extract_clean_markdown(
+                    browser_session=session, extract_links=False, extract_images=False
                 )
+            except Exception as exc:
+                logger.warning("Markdown extraction failed: %s", exc)
 
-            # Fallback: data-key / AX name / icon-font class
-            if not text:
-                text = BrowserUseBrowser._get_node_hint(node)
+        return self._build_state_data(state, content)
 
-            if len(text) > 100:
-                text = text[:97] + "..."
-            formatted.append(f"{idx}:<{tag}>{text}</{tag}>")
-        return formatted
+    async def _get_node(self, index: int):
+        session = await self._ensure_session()
+        node = await session.get_element_by_index(index)
+        if node is None:
+            raise ValueError(
+                f"Element index {index} not available - page may have changed. "
+                "Use browser_view to refresh the element list."
+            )
+        return node
 
-    async def _get_interactive_elements(self) -> List[str]:
-        """Return a formatted list of interactive elements from the DOM selector map.
+    async def _detect_new_tab_opened(self, tabs_before: set) -> str:
+        """Detect if an action opened a new tab and automatically switch to it.
 
-        browser_use's get_selector_map() only returns populated data after
-        get_browser_state_summary() has been called (which triggers the DOM
-        serialisation event).  If the cached map is empty we trigger a fresh
-        state summary to ensure the selector map is populated.
+        Same behaviour as browser_use/tools/service.py::_detect_new_tab_opened.
         """
         try:
+            await asyncio.sleep(0.05)
             session = await self._ensure_session()
-            selector_map: dict[int, EnhancedDOMTreeNode] = await session.get_selector_map()
+            tabs_after = await session.get_tabs()
+            new_tabs = [t for t in tabs_after if t.target_id not in tabs_before]
+            if new_tabs:
+                new_tab = new_tabs[0]
+                try:
+                    await self._dispatch(SwitchTabEvent(target_id=new_tab.target_id))
+                    await self._ensure_console_capture()
+                    return f". Automatically switched to new tab ({new_tab.url})"
+                except Exception:
+                    return f". Note: this opened a new tab ({new_tab.url})"
+        except Exception:
+            pass
+        return ""
 
-            if not selector_map:
-                logger.debug(
-                    "Selector map is empty – triggering get_browser_state_summary to populate DOM cache"
-                )
-                state = await session.get_browser_state_summary(include_screenshot=False)
-                if state.dom_state is not None:
-                    selector_map = state.dom_state.selector_map or {}
-
-            return self._format_selector_map(selector_map)
-        except Exception as exc:
-            logger.warning("Failed to get interactive elements: %s", exc)
-            return []
-
-    async def _dispatch_mouse_event(
-        self,
-        event_type: str,
-        x: float,
-        y: float,
-        button: str = "none",
-        click_count: int = 0,
-    ) -> None:
-        """Send a raw CDP mouse event to the currently focused tab."""
-        cdp_sess = await self._get_cdp_session()
-        params: dict[str, Any] = {
-            "type": event_type,
-            "x": x,
-            "y": y,
-            "button": button,
-            "clickCount": click_count,
-        }
-        await cdp_sess.cdp_client.send.Input.dispatchMouseEvent(
-            params=params,
-            session_id=str(cdp_sess.session_id),
-        )
+    async def _viewport_height(self) -> int:
+        """Return the CSS viewport height, matching the official scroll tool."""
+        try:
+            session = await self._ensure_session()
+            cdp_session = await session.get_or_create_cdp_session()
+            metrics = await cdp_session.cdp_client.send.Page.getLayoutMetrics(
+                session_id=cdp_session.session_id
+            )
+            viewport = metrics.get("cssVisualViewport") or metrics.get("cssLayoutViewport") or {}
+            height = int(viewport.get("clientHeight", 0))
+            return height or DEFAULT_VIEWPORT_HEIGHT
+        except Exception:
+            return DEFAULT_VIEWPORT_HEIGHT
 
     # ------------------------------------------------------------------
     # Browser Protocol implementation
     # ------------------------------------------------------------------
 
     async def view_page(self) -> ToolResult:
-        """Return the current page content and interactive elements."""
+        """Return the current page state, element tree and Markdown content."""
         try:
-            session = await self._ensure_session()
-            state = await session.get_browser_state_summary(include_screenshot=False)
-
-            content = ""
-            interactive_elements: List[str] = []
-            if state.dom_state is not None:
-                content = state.dom_state.llm_representation()
-                selector_map = state.dom_state.selector_map or {}
-                interactive_elements = self._format_selector_map(selector_map)
-
-            return ToolResult(
-                success=True,
-                data={
-                    "interactive_elements": interactive_elements,
-                    "content": content,
-                },
-            )
+            return ToolResult(success=True, data=await self._get_state_data())
         except Exception as exc:
             return ToolResult(success=False, message=f"Failed to view page: {exc}")
 
     async def navigate(self, url: str) -> ToolResult:
-        """Navigate to the given URL."""
+        """Navigate to the given URL and return the resulting page state."""
         try:
-            session = await self._ensure_session()
-            await session.navigate_to(url)
-            # navigate_to() completes before the DOM watchdog has serialised the new page,
-            # so _cached_selector_map is empty at this point.  Calling
-            # get_browser_state_summary() triggers DOM serialisation and populates the
-            # selector map so the caller immediately receives the correct element list.
-            state = await session.get_browser_state_summary(include_screenshot=False)
-            interactive_elements: List[str] = []
-            if state.dom_state is not None:
-                selector_map = state.dom_state.selector_map or {}
-                interactive_elements = self._format_selector_map(selector_map)
-            return ToolResult(
-                success=True,
-                data={"interactive_elements": interactive_elements},
-            )
+            await self._dispatch(NavigateToUrlEvent(url=url))
+            return ToolResult(success=True, data=await self._get_state_data())
         except Exception as exc:
             return ToolResult(success=False, message=f"Failed to navigate to {url}: {exc}")
 
@@ -288,31 +340,43 @@ class BrowserUseBrowser:
         coordinate_x: Optional[float] = None,
         coordinate_y: Optional[float] = None,
     ) -> ToolResult:
-        """Click an element by DOM index or by screen coordinates."""
+        """Click an element by DOM index or by viewport coordinates."""
         try:
+            session = await self._ensure_session()
+            tabs_before = {t.target_id for t in await session.get_tabs()}
+
             if coordinate_x is not None and coordinate_y is not None:
-                # Move mouse to target before pressing to trigger hover/focus events
-                await self._dispatch_mouse_event("mouseMoved", coordinate_x, coordinate_y)
-                await asyncio.sleep(0.05)
-                await self._dispatch_mouse_event(
-                    "mousePressed", coordinate_x, coordinate_y, "left", 1
-                )
-                await asyncio.sleep(0.08)
-                await self._dispatch_mouse_event(
-                    "mouseReleased", coordinate_x, coordinate_y, "left", 1
-                )
-            elif index is not None:
-                session = await self._ensure_session()
-                node = await session.get_dom_element_by_index(index)
-                if node is None:
-                    return ToolResult(
-                        success=False,
-                        message=f"Cannot find interactive element with index {index}",
+                await self._dispatch(
+                    ClickCoordinateEvent(
+                        coordinate_x=int(coordinate_x),
+                        coordinate_y=int(coordinate_y),
+                        force=True,
                     )
-                page = await self._get_current_page()
-                element = await page.get_element(node.backend_node_id)
-                await element.click()
-            return ToolResult(success=True)
+                )
+                message = f"Clicked at coordinates ({coordinate_x:.0f}, {coordinate_y:.0f})"
+            elif index is not None:
+                node = await self._get_node(index)
+                metadata = await self._dispatch(ClickElementEvent(node=node))
+                if isinstance(metadata, dict) and "validation_error" in metadata:
+                    error_msg = str(metadata["validation_error"])
+                    if "Cannot click on <select>" in error_msg:
+                        return ToolResult(
+                            success=False,
+                            message=(
+                                f"Element {index} is a dropdown; "
+                                f"use browser_select_option instead."
+                            ),
+                        )
+                    return ToolResult(success=False, message=error_msg)
+                message = f"Clicked element [{index}]"
+            else:
+                return ToolResult(
+                    success=False,
+                    message="Either index or coordinate_x/coordinate_y must be provided",
+                )
+
+            message += await self._detect_new_tab_opened(tabs_before)
+            return ToolResult(success=True, message=message)
         except Exception as exc:
             return ToolResult(success=False, message=f"Failed to click element: {exc}")
 
@@ -324,36 +388,34 @@ class BrowserUseBrowser:
         coordinate_x: Optional[float] = None,
         coordinate_y: Optional[float] = None,
     ) -> ToolResult:
-        """Type text into an element identified by DOM index or screen coordinates."""
+        """Type text into an element identified by DOM index or coordinates."""
         try:
-            page = await self._get_current_page()
-
-            if coordinate_x is not None and coordinate_y is not None:
-                # Click first to focus, then insert text via CDP
-                await self._dispatch_mouse_event(
-                    "mousePressed", coordinate_x, coordinate_y, "left", 1
-                )
-                await self._dispatch_mouse_event(
-                    "mouseReleased", coordinate_x, coordinate_y, "left", 1
-                )
-                cdp_sess = await self._get_cdp_session()
-                await cdp_sess.cdp_client.send.Input.insertText(
-                    params={"text": text},
-                    session_id=str(cdp_sess.session_id),
-                )
-            elif index is not None:
-                session = await self._ensure_session()
-                node = await session.get_dom_element_by_index(index)
-                if node is None:
-                    return ToolResult(
-                        success=False,
-                        message=f"Cannot find interactive element with index {index}",
+            if index is not None:
+                node = await self._get_node(index)
+                await self._dispatch(TypeTextEvent(node=node, text=text, clear=True))
+            elif coordinate_x is not None and coordinate_y is not None:
+                # Click to focus the element under the cursor, then insert text.
+                await self._dispatch(
+                    ClickCoordinateEvent(
+                        coordinate_x=int(coordinate_x),
+                        coordinate_y=int(coordinate_y),
+                        force=True,
                     )
-                element = await page.get_element(node.backend_node_id)
-                await element.fill(text)
+                )
+                session = await self._ensure_session()
+                cdp_session = await session.get_or_create_cdp_session()
+                await cdp_session.cdp_client.send.Input.insertText(
+                    params={"text": text},
+                    session_id=cdp_session.session_id,
+                )
+            else:
+                return ToolResult(
+                    success=False,
+                    message="Either index or coordinate_x/coordinate_y must be provided",
+                )
 
             if press_enter:
-                await page.press("Enter")
+                await self._dispatch(SendKeysEvent(keys="Enter"))
 
             return ToolResult(success=True)
         except Exception as exc:
@@ -366,57 +428,92 @@ class BrowserUseBrowser:
     ) -> ToolResult:
         """Move the mouse cursor to the given coordinates."""
         try:
-            await self._dispatch_mouse_event("mouseMoved", coordinate_x, coordinate_y)
+            session = await self._ensure_session()
+            page = await session.get_current_page()
+            if page is None:
+                return ToolResult(success=False, message="No active page")
+            mouse = await page.mouse
+            await mouse.move(int(coordinate_x), int(coordinate_y))
             return ToolResult(success=True)
         except Exception as exc:
             return ToolResult(success=False, message=f"Failed to move mouse: {exc}")
 
     async def press_key(self, key: str) -> ToolResult:
-        """Simulate a key press."""
+        """Simulate a key press or shortcut (e.g. Enter, Control+A)."""
         try:
-            page = await self._get_current_page()
-            await page.press(key)
+            await self._dispatch(SendKeysEvent(keys=key))
             return ToolResult(success=True)
         except Exception as exc:
             return ToolResult(success=False, message=f"Failed to press key: {exc}")
 
     async def select_option(self, index: int, option: int) -> ToolResult:
-        """Select an option in a <select> element by DOM index."""
+        """Select an option (by position) in a dropdown identified by DOM index."""
         try:
-            session = await self._ensure_session()
-            node = await session.get_dom_element_by_index(index)
-            if node is None:
+            node = await self._get_node(index)
+
+            options_result = await self._dispatch(GetDropdownOptionsEvent(node=node))
+            options: List[dict] = []
+            if isinstance(options_result, dict) and options_result.get("options"):
+                try:
+                    options = json.loads(options_result["options"])
+                except (TypeError, ValueError):
+                    options = []
+            if not options:
                 return ToolResult(
                     success=False,
-                    message=f"Cannot find selector element with index {index}",
+                    message=f"No options found in dropdown at index {index}",
                 )
-            page = await self._get_current_page()
-            element = await page.get_element(node.backend_node_id)
-            await element.select_option(str(option))
-            return ToolResult(success=True)
+
+            selected = next((o for o in options if o.get("index") == option), None)
+            if selected is None and 0 <= option < len(options):
+                selected = options[option]
+            if selected is None:
+                available = ", ".join(
+                    f"{o.get('index')}: {o.get('text')}" for o in options
+                )
+                return ToolResult(
+                    success=False,
+                    message=(
+                        f"Option {option} not found in dropdown at index {index}. "
+                        f"Available options: {available}"
+                    ),
+                )
+
+            result = await self._dispatch(
+                SelectDropdownOptionEvent(node=node, text=str(selected.get("text", "")))
+            )
+            message = None
+            if isinstance(result, dict):
+                message = result.get("message")
+            return ToolResult(
+                success=True,
+                message=message or f"Selected option {option}: {selected.get('text')}",
+            )
         except Exception as exc:
             return ToolResult(success=False, message=f"Failed to select option: {exc}")
 
     async def scroll_up(self, to_top: Optional[bool] = None) -> ToolResult:
-        """Scroll the page upward (or to the very top when to_top is True)."""
+        """Scroll up one viewport, or jump to the page top when to_top is True."""
         try:
-            page = await self._get_current_page()
             if to_top:
-                await page.evaluate("() => window.scrollTo(0, 0)")
+                await self._evaluate_expression("window.scrollTo(0, 0)")
             else:
-                await page.evaluate("() => window.scrollBy(0, -window.innerHeight)")
+                amount = await self._viewport_height()
+                await self._dispatch(ScrollEvent(direction="up", amount=amount))
             return ToolResult(success=True)
         except Exception as exc:
             return ToolResult(success=False, message=f"Failed to scroll up: {exc}")
 
     async def scroll_down(self, to_bottom: Optional[bool] = None) -> ToolResult:
-        """Scroll the page downward (or to the very bottom when to_bottom is True)."""
+        """Scroll down one viewport, or jump to the page bottom when to_bottom is True."""
         try:
-            page = await self._get_current_page()
             if to_bottom:
-                await page.evaluate("() => window.scrollTo(0, document.body.scrollHeight)")
+                await self._evaluate_expression(
+                    "window.scrollTo(0, document.body.scrollHeight)"
+                )
             else:
-                await page.evaluate("() => window.scrollBy(0, window.innerHeight)")
+                amount = await self._viewport_height()
+                await self._dispatch(ScrollEvent(direction="down", amount=amount))
             return ToolResult(success=True)
         except Exception as exc:
             return ToolResult(success=False, message=f"Failed to scroll down: {exc}")
@@ -426,35 +523,50 @@ class BrowserUseBrowser:
         session = await self._ensure_session()
         return await session.take_screenshot(full_page=bool(full_page))
 
+    async def _evaluate_expression(self, expression: str) -> Any:
+        """Evaluate a JavaScript expression via CDP Runtime.evaluate.
+
+        Unlike the actor Page.evaluate (which requires an arrow function),
+        Runtime.evaluate accepts arbitrary console-style expressions and
+        reports exceptions, matching browser-console semantics.
+        """
+        session = await self._ensure_session()
+        cdp_session = await session.get_or_create_cdp_session()
+        result = await cdp_session.cdp_client.send.Runtime.evaluate(
+            params={
+                "expression": expression,
+                "returnByValue": True,
+                "awaitPromise": True,
+                "userGesture": True,
+            },
+            session_id=cdp_session.session_id,
+        )
+        exception_details = result.get("exceptionDetails")
+        if exception_details:
+            exception = exception_details.get("exception", {}) or {}
+            raise RuntimeError(
+                exception.get("description")
+                or exception_details.get("text")
+                or "JavaScript execution failed"
+            )
+        return result.get("result", {}).get("value")
+
     async def console_exec(self, javascript: str) -> ToolResult:
-        """Execute arbitrary JavaScript in the current page context."""
+        """Execute JavaScript in the page with browser-console semantics."""
         try:
-            page = await self._get_current_page()
-            # browser_use actor Page.evaluate() requires arrow-function syntax
-            js = javascript.strip()
-            if not (js.startswith("(") and "=>" in js):
-                js = f"() => {{ {js} }}"
-            result = await page.evaluate(js)
-            return ToolResult(success=True, data={"result": result})
+            await self._ensure_console_capture()
+            value = await self._evaluate_expression(javascript)
+            return ToolResult(success=True, data={"result": value})
         except Exception as exc:
             return ToolResult(success=False, message=f"Failed to execute JavaScript: {exc}")
 
     async def console_view(self, max_lines: Optional[int] = None) -> ToolResult:
-        """Return captured console log lines from the current page."""
+        """Return console output captured via CDP Runtime events."""
         try:
-            page = await self._get_current_page()
-            logs_raw = await page.evaluate("() => window.console.logs || []")
-
-            import json
-
-            try:
-                logs = json.loads(logs_raw) if isinstance(logs_raw, str) else logs_raw
-            except (TypeError, ValueError):
-                logs = logs_raw
-
-            if max_lines is not None and isinstance(logs, list):
+            await self._ensure_console_capture()
+            logs = list(self._console_logs)
+            if max_lines is not None:
                 logs = logs[-max_lines:]
-
             return ToolResult(success=True, data={"logs": logs})
         except Exception as exc:
             return ToolResult(success=False, message=f"Failed to view console: {exc}")

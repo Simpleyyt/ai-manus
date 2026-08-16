@@ -58,7 +58,7 @@
               name: browser_click
               arguments: |
                 {
-                    "index": 0
+                    "index": 1
                 }
 
 - choices:
@@ -74,7 +74,7 @@
                 {
                     "text": "search query",
                     "press_enter": true,
-                    "index": 0
+                    "index": 1
                 }
 
 - choices:
@@ -117,7 +117,7 @@
               name: browser_select_option
               arguments: |
                 {
-                    "index": 0,
+                    "index": 1,
                     "option": 2
                 }
 

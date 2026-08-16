@@ -10,7 +10,6 @@ from async_lru import alru_cache
 from app.core.config import get_settings
 from app.domain.models.tool_result import ToolResult
 from app.domain.external.sandbox import Sandbox
-from app.infrastructure.external.browser.playwright_browser import PlaywrightBrowser
 from app.infrastructure.external.browser.browser_use_browser import BrowserUseBrowser
 from app.domain.external.browser import Browser
 
@@ -497,20 +496,9 @@ class DockerSandbox(Sandbox):
             return False
     
     async def get_browser(self) -> Browser:
-        """Get browser instance
-
-        Returns a browser implementation connected to the sandbox's Chrome via CDP.
-        The concrete implementation is selected by the BROWSER_ENGINE setting:
-          - "playwright"   → PlaywrightBrowser
-          - "browser_use"  → BrowserUseBrowser  (default)
-        """
-        settings = get_settings()
-        engine = (settings.browser_engine or "browser_use").lower().strip()
-        if engine == "browser_use":
-            logger.info("Using BrowserUseBrowser engine for CDP URL: %s", self.cdp_url)
-            return BrowserUseBrowser(self.cdp_url)
-        logger.info("Using PlaywrightBrowser engine for CDP URL: %s", self.cdp_url)
-        return PlaywrightBrowser(self.cdp_url)
+        """Get a browser instance connected to the sandbox's Chrome via CDP."""
+        logger.info("Using BrowserUseBrowser engine for CDP URL: %s", self.cdp_url)
+        return BrowserUseBrowser(self.cdp_url)
 
     @staticmethod
     @alru_cache(maxsize=128, typed=True)

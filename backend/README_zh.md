@@ -33,7 +33,7 @@ backend/
 1. **会话管理**：创建和管理对话会话实例
 2. **实时对话**：通过 WebSocket（`/ws/sessions`、`/ws/chat`、`/ws/claw`、`/ws/vnc/{session_id}`）推送会话列表、聊天、Claw 与 VNC
 3. **工具调用**：支持多种工具调用，包括：
-   - 浏览器自动化操作（使用Playwright）
+   - 浏览器自动化操作（使用 browser-use，经 CDP 连接）
    - Shell命令执行与查看
    - 文件读写操作
    - 网络搜索集成

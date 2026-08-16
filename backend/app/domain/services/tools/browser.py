@@ -10,7 +10,8 @@ class BrowserToolkit(BaseToolkit):
     instructions: str = """
 - Use browser tools to open every URL provided by the user and URLs from search results
 - Actively explore valuable links for deeper information
-- Tools return elements in the visible viewport as `index[:]<tag>text</tag>`; use the index for subsequent interactions
+- Tools return the interactive element tree as `[index]<tag ... />` lines (indexes start at 1); use the index for subsequent interactions
+- Elements marked `*[index]` are new since the previous state; indentation shows nesting
 - Not all interactive elements are listed; use coordinates for unlisted elements
 - Pages are auto-extracted to Markdown when possible; the extraction may include off-screen text but omits links/images and is not guaranteed complete
 - If the extracted Markdown already covers what you need, don't scroll; otherwise scroll to view the full page

@@ -201,20 +201,6 @@
         tool_calls:
           - type: function
             function:
-              name: update_plan
-              arguments: |
-                {
-                  "steps": []
-                }
-
-- choices:
-    - index: 0
-      message:
-        role: assistant
-        content: null
-        tool_calls:
-          - type: function
-            function:
               name: deliver_result
               arguments: |
                 {

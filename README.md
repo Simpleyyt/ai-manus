@@ -263,4 +263,4 @@ export IMAGE_TAG=latest
 
 ## ⭐️ Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Simpleyyt/ai-manus&type=Date)](https://www.star-history.com/#Simpleyyt/ai-manus&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=Simpleyyt/ai-manus&type=Date)](https://star-history.dera.page/#Simpleyyt/ai-manus&type=Date)

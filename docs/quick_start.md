@@ -160,6 +160,14 @@ SANDBOX_NETWORK=manus-network
 #SANDBOX_HTTP_PROXY=
 #SANDBOX_NO_PROXY=
 
+# Browser engine configuration
+# Options: browser_use (default), playwright
+# - browser_use: drives Chrome through the browser-use library's event bus
+#                (official DOM serializer, watchdog-managed waits/tab switching)
+# - playwright:  lightweight Playwright-over-CDP engine emitting the same
+#                tool payload shape (element tree, Markdown content, console)
+#BROWSER_ENGINE=browser_use
+
 # Search engine configuration
 # Options: baidu, baidu_web, google, bing, bing_web, tavily, serper, custom
 # baidu:    uses the Baidu Qianfan AI Search API (requires BAIDU_SEARCH_API_KEY)

@@ -61,6 +61,9 @@ class Settings(BaseSettings):
     sandbox_http_proxy: str | None = None
     sandbox_no_proxy: str | None = None
 
+    # Browser engine configuration
+    browser_engine: str = "browser_use"  # "browser_use" or "playwright"
+
     # Search engine configuration
     search_provider: str | None = "bing_web"  # "baidu", "baidu_web", "google", "bing", "bing_web", "tavily", "serper", "custom"
     baidu_search_api_key: str | None = None

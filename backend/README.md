@@ -33,7 +33,7 @@ backend/
 1. **Session Management**: Create and manage conversation session instances
 2. **Real-time Conversation**: Stream session list, chat, Claw, and VNC over WebSocket (`/ws/sessions`, `/ws/chat`, `/ws/claw`, `/ws/vnc/{session_id}`)
 3. **Tool Invocation**: Support for various tool calls, including:
-   - Browser automation operations (using browser-use via CDP)
+   - Browser automation operations (browser-use or Playwright via CDP, selected by BROWSER_ENGINE)
    - Shell command execution and viewing
    - File read/write operations
    - Web search integration

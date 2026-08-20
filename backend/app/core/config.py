@@ -123,17 +123,6 @@ class Settings(BaseSettings):
     
     # Extra headers for LLM requests (parsed from EXTRA_HEADERS env var, JSON)
     extra_headers: dict | None = None
-    
-    # Claw (OpenClaw) configuration
-    claw_enabled: bool = False
-    claw_image: str = "simpleyyt/manus-claw"
-    claw_name_prefix: str = "manus-claw"
-    claw_ttl_seconds: int = 3600
-    claw_network: str | None = None  # Docker network bridge name for claw containers
-    claw_ready_timeout: int = 300  # Max seconds to wait for claw container to become ready
-    claw_address: str | None = None  # If set, use this fixed host instead of creating Docker containers
-    claw_api_key: str | None = None  # Static API key accepted by the LLM proxy (for dev/fixed container)
-    manus_api_base_url: str = "http://backend:8000"  # URL of this backend accessible from claw containers
 
     # Task backend configuration: "local" (in-process asyncio, default)
     # or "celery" (distributed Celery workers; requires running `app.worker`)

@@ -8,7 +8,6 @@ from app.infrastructure.models.memory_serialization import deserialize_memory, s
 from app.domain.models.session import Session, SessionStatus, TaskMode
 from app.domain.models.file import FileInfo
 from app.domain.models.user import User, UserRole
-from app.domain.models.claw import Claw, ClawStatus, ClawMessage
 from app.domain.models.project import Project
 from pymongo import IndexModel, ASCENDING, DESCENDING
 
@@ -181,26 +180,4 @@ class FileFavoriteDocument(Document):
                 unique=True,
                 name="user_id_file_id",
             ),
-        ]
-
-
-class ClawDocument(BaseDocument[Claw], id_field="claw_id", domain_model_class=Claw):
-    """MongoDB document for Claw instance"""
-    claw_id: str
-    user_id: str
-    container_name: Optional[str] = None
-    container_ip: Optional[str] = None
-    api_key: str
-    status: ClawStatus = ClawStatus.CREATING
-    error_message: Optional[str] = None
-    expires_at: Optional[datetime] = None
-    messages: List[ClawMessage] = []
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-    class Settings:
-        name = "claws"
-        indexes = [
-            "claw_id",
-            IndexModel([("user_id", ASCENDING)], unique=True),  # One claw per user
         ]

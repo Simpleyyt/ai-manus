@@ -1,8 +1,8 @@
-# AI Manus × Claw Frontend
+# AI Manus Frontend
 
 English | [中文](README_zh.md)
 
-This is the frontend for AI Manus × Claw, built with Vue 3 + TypeScript + Vite.
+This is the frontend for AI Manus, built with Vue 3 + TypeScript + Vite.
 
 ## Features
 
@@ -11,7 +11,6 @@ This is the frontend for AI Manus × Claw, built with Vue 3 + TypeScript + Vite.
 - VNC viewer for real-time sandbox viewing and takeover
 - Login/authentication, session sharing, and file upload/download
 - Internationalization (Chinese and English) via vue-i18n
-- **Claw page** — integrated [OpenClaw](https://github.com/anthropics/openclaw) chat experience with real-time WebSocket messaging, auto-expiry countdown, and file upload/download
 
 ## Installation
 
@@ -67,7 +66,7 @@ docker run -d -p 8080:80 ai-chatbot-vue
 
 ```
 src/
-├── api/             # API layer (axios client, WebSocket, auth, files, claw, config)
+├── api/             # API layer (axios client, WebSocket, auth, files, config)
 ├── assets/          # Static resources and CSS files
 ├── components/      # Reusable components
 │   ├── toolViews/       # Rich tool renderers (Browser, File, Shell, Search, MCP)
@@ -83,7 +82,6 @@ src/
 ├── pages/           # Page components
 │   ├── HomePage.vue     # Home page
 │   ├── ChatPage.vue     # Chat page
-│   ├── ClawPage.vue     # Claw (OpenClaw) page
 │   ├── LoginPage.vue    # Login page
 │   ├── SharePage.vue    # Shared session page
 │   ├── MainLayout.vue   # Main layout

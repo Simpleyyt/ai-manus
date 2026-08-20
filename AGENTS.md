@@ -1,22 +1,21 @@
 # AGENTS.md
 
-> Canonical guide for AI coding agents working on the **AI Manus × Claw** codebase.
+> Canonical guide for AI coding agents working on the **AI Manus** codebase.
 
 ---
 
 ## Project Overview
 
-AI Manus × Claw is a general-purpose AI Agent system with an integrated [OpenClaw](https://github.com/anthropics/openclaw) AI assistant, comprising five services:
+AI Manus is a general-purpose AI Agent system, comprising four services:
 
 | Service | Stack | Port (dev) | Entry Point |
 |---|---|---|---|
 | **Frontend** | Vue 3 + TypeScript, Vite 4, Tailwind CSS | 5173 | `frontend/src/main.ts` |
 | **Backend** | Python 3.12, FastAPI, LangChain, Beanie/Motor | 8000 | `backend/app/main.py` |
 | **Sandbox** | Python 3.10, FastAPI, Xvfb/Chrome/VNC | 8080 (API), 5900 (VNC) | `sandbox/app/main.py` |
-| **Claw** | Node.js, OpenClaw Gateway, manus-claw plugin | 18788 | `claw/entrypoint.sh` |
 | **Mockserver** | Python, FastAPI | 8090 | `mockserver/main.py` |
 
-Infrastructure: **MongoDB 7.0**, **Redis 7.0**, **Docker** (sandbox & Claw orchestration).
+Infrastructure: **MongoDB 7.0**, **Redis 7.0**, **Docker** (sandbox orchestration).
 
 ---
 
@@ -28,14 +27,12 @@ ai-manus/
 ├── backend/           # FastAPI backend (DDD layout)
 │   └── app/
 │       ├── domain/           # Models, services, tools, agents, repositories
-│       ├── application/      # Application services (auth, agent, file, token, email, claw)
-│       ├── infrastructure/   # External integrations (search, browser, sandbox, claw, DB, cache)
+│       ├── application/      # Application services (auth, agent, file, token, email)
+│       ├── infrastructure/   # External integrations (search, browser, sandbox, DB, cache)
 │       ├── interfaces/       # API routes, schemas, error handlers, dependencies
 │       ├── core/             # Config (config.py)
 │       └── main.py
 ├── sandbox/           # Sandbox service (shell, file, supervisor APIs)
-├── claw/              # Claw service (OpenClaw Gateway + manus-claw plugin)
-│   └── manus-claw/   # Node.js plugin bridging OpenClaw with Manus backend
 ├── mockserver/        # Mock LLM server for dev/testing
 ├── docs/              # Docsify documentation site
 ├── .cursor/skills/    # Cursor agent skills
@@ -256,6 +253,5 @@ The dev compose starts the backend with **debugpy** on port `5678`. Attach a rem
 | `.cursor/skills/update-docs/SKILL.md` | Sync compose/env embeds + README demos via `.cursor/skills/update-docs/update_doc.sh` (not docs/demo.md scenarios). |
 | `.cursor/skills/demo-videos/SKILL.md` | Recording/uploading README demo MP4s (`tmp/videos` + `gh image` + `docs/demos.yml`; never commit binaries; publish only after user confirmation). |
 | `.cursor/skills/release/SKILL.md` | Cutting `vX.Y.Z` GitHub releases (bilingual notes like v2.4.0/v2.5.0; no demo-videos-* releases). |
-| `.cursor/skills/debug-claw/SKILL.md` | Debugging OpenClaw / Claw chat, history, uploads, WebSocket, containers. |
 
-Personal (not in repo): `~/.cursor/skills/telegram-screenshots/SKILL.md` — UI screenshots → Telegram Bot MCP, not OpenClaw.
+Personal (not in repo): `~/.cursor/skills/telegram-screenshots/SKILL.md` — UI screenshots → Telegram Bot MCP.

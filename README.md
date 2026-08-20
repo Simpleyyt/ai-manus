@@ -6,7 +6,7 @@ English | [中文](README_zh.md) | [Official Site](https://ai-manus.com) | [Docu
 &ensp;
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-AI Manus is a general-purpose AI Agent system that supports running various tools and operations in a sandbox environment. Now with **Claw** — a deeply integrated [OpenClaw](https://github.com/anthropics/openclaw) AI assistant that brings one-click deployment, per-user isolated containers, and seamless chat history to the Manus ecosystem.
+AI Manus is a general-purpose AI Agent system that supports running various tools and operations in a sandbox environment.
 
 Enjoy your own agent with AI Manus!
 
@@ -43,7 +43,6 @@ https://github.com/user-attachments/assets/a73e5be2-822a-4aa9-b2c1-08adc30629a5
  * Deployment: Minimal deployment requires only an LLM service, with no dependency on other external services.
  * Agent loop: Plan-and-execute flow with composable system prompts and native structured output tools (no fragile JSON-in-prompt protocol).
  * Tools: Supports Terminal, Browser, File, Web Search, and messaging tools with real-time viewing and takeover capabilities, supports external MCP tool integration.
- * Claw: Integrated [OpenClaw](https://github.com/anthropics/openclaw) AI assistant with one-click deployment, per-user isolated containers, auto-expiry countdown, and full chat history.
  * Sandbox: Each task is allocated a separate sandbox that runs in a local Docker environment.
  * Task Sessions: Session history is managed through MongoDB/Redis, supporting background tasks.
  * Library: The sidebar Library aggregates attachments and artifacts across your sessions, with type filters, search, per-file favorites, preview, and jump-back to the source task.
@@ -113,7 +112,6 @@ services:
     image: simpleyyt/manus-backend
     depends_on:
       - sandbox
-      - claw
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -128,13 +126,6 @@ services:
   sandbox:
     image: simpleyyt/manus-sandbox
     command: /bin/sh -c "exit 0"  # prevent sandbox from starting, ensure image is pulled
-    restart: "no"
-    networks:
-      - manus-network
-
-  claw:
-    image: simpleyyt/manus-claw
-    entrypoint: /bin/sh -c "exit 0"  # prevent claw from starting, ensure image is pulled
     restart: "no"
     networks:
       - manus-network
@@ -193,7 +184,6 @@ This project consists of the following sub-projects:
 * `frontend`: Manus frontend
 * `backend`: Manus backend
 * `sandbox`: Manus sandbox
-* `claw`: Manus Claw — OpenClaw plugin & container image bridging OpenClaw Gateway with Manus backend
 * `mockserver`: Mock LLM server (for development/testing)
 
 ### Environment Setup
@@ -231,7 +221,6 @@ All services will run in reload mode, and code changes will be automatically rel
 - 5678: Server debugpy port (remote Python debugging)
 - 8080: Sandbox API service port
 - 5902: Sandbox VNC port (mapped to 5900 inside the container)
-- 18788: Claw (OpenClaw Gateway) port
 - 27017: MongoDB port
 
 > *Note: In Debug mode, only one sandbox will be started globally*

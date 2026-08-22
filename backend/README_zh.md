@@ -1,8 +1,8 @@
-# AI Manus × Claw 后端服务
+# AI Manus 后端服务
 
 [English](README.md) | 中文
 
-AI Manus × Claw 是一个基于 FastAPI 和 LangChain Chat Model 的智能对话代理系统。该后端采用领域驱动设计(DDD)架构，支持智能对话、文件操作、Shell命令执行、浏览器自动化，以及集成 [OpenClaw](https://github.com/anthropics/openclaw) AI 助手管理（Claw）等功能。
+AI Manus 是一个基于 FastAPI 和 LangChain Chat Model 的智能对话代理系统。该后端采用领域驱动设计(DDD)架构，支持智能对话、文件操作、Shell命令执行、浏览器自动化等功能。
 
 ## 项目架构
 
@@ -16,9 +16,9 @@ backend/
 │   │   ├── services/    # 领域服务（agents、tools、prompts、flows）
 │   │   └── external/    # 外部服务接口（Protocol）
 │   ├── application/     # 应用层：编排业务流程
-│   │   └── services/    # 应用服务（agent、auth、file、token、email、claw）
+│   │   └── services/    # 应用服务（agent、auth、file、token、email）
 │   ├── interfaces/      # 接口层：定义系统对外接口
-│   │   ├── api/         # API 路由（会话、文件、认证、配置、Claw、OpenAI 代理）
+│   │   ├── api/         # API 路由（会话、文件、认证、配置）
 │   │   └── schemas/     # 请求/响应与实时事件模式
 │   ├── infrastructure/  # 基础设施层：提供技术实现
 │   ├── core/            # 核心配置（config.py）
@@ -31,7 +31,7 @@ backend/
 ## 核心功能
 
 1. **会话管理**：创建和管理对话会话实例
-2. **实时对话**：通过 WebSocket（`/ws/sessions`、`/ws/chat`、`/ws/claw`、`/ws/vnc/{session_id}`）推送会话列表、聊天、Claw 与 VNC
+2. **实时对话**：通过 WebSocket（`/ws/sessions`、`/ws/chat`、`/ws/vnc/{session_id}`）推送会话列表、聊天与 VNC
 3. **工具调用**：支持多种工具调用，包括：
    - 浏览器自动化操作（browser-use 或 Playwright,经 CDP 连接,由 BROWSER_ENGINE 选择）
    - Shell命令执行与查看
@@ -39,7 +39,6 @@ backend/
    - 网络搜索集成
 4. **沙盒环境**：使用Docker容器提供隔离的执行环境
 5. **VNC可视化**：通过WebSocket连接支持远程查看沙盒环境
-6. **Claw（Manus × Claw）**：为每个用户管理 OpenClaw 容器生命周期，合并聊天历史（MongoDB + OpenClaw `.jsonl` 会话），WebSocket 实时通信，文件上传/解析，以及为 Claw 容器提供 OpenAI 兼容 LLM 代理
 
 ## 环境要求
 
@@ -89,11 +88,6 @@ SANDBOX_NETWORK=manus-network            # Docker 网络名称，用于沙盒容
 # Authentication configuration
 AUTH_PROVIDER=password                   # password / local / none
 JWT_SECRET_KEY=your-secret-key-here      # JWT 签名密钥（生产环境必须设置）
-
-# Claw (OpenClaw) configuration
-CLAW_ENABLED=false                       # 是否启用 Claw 集成
-CLAW_IMAGE=simpleyyt/manus-claw          # Claw 容器 Docker 镜像
-CLAW_TTL_SECONDS=3600                    # Claw 容器生存时间（秒）
 
 # MCP configuration
 MCP_CONFIG_PATH=/etc/mcp.json            # 外部 MCP 服务配置文件路径
@@ -172,7 +166,6 @@ docker run -p 8000:8000 --env-file .env -v /var/run/docker.sock:/var/run/docker.
 |---|---|
 | WebSocket | `/ws/sessions` | 会话列表通道（`snapshot` / `upsert` / `remove` / `ping`） |
 | WebSocket | `/ws/chat` | 聊天通道（协议 `version: 2`）— 每标签页一条连接；`join_session` / `leave_session` / `chat` / `stop_session`；信封含 `id`+`timestamp`；通过 `request_id` 可等待 ack |
-| WebSocket | `/ws/claw` | Claw 聊天通道（`chat` / `text` / `file` / `done` / `heartbeat`） |
 | WebSocket | `/ws/vnc/{session_id}` | 沙盒 VNC 代理（binary 子协议；Cookie/Bearer） |
 
 客户端→服务端信封：`{ id, timestamp, version: 2, type, session_id, ... }`。
@@ -210,26 +203,11 @@ docker run -p 8000:8000 --env-file .env -v /var/run/docker.sock:/var/run/docker.
 | POST | `/auth/user/{user_id}/activate` | 激活用户 |
 | POST | `/auth/user/{user_id}/deactivate` | 停用用户 |
 
-### Claw 接口（`/api/v1/claw`）
-
-| 方法 | 路径 | 描述 |
-|---|---|---|
-| GET | `/claw` | 获取当前用户的 Claw 实例 |
-| POST | `/claw` | 为当前用户创建 Claw 实例 |
-| DELETE | `/claw` | 删除当前用户的 Claw 实例 |
-| GET | `/claw/api-key` | 获取用于 LLM 代理认证的用户级 API 密钥 |
-| GET | `/claw/history` | 获取合并后的 Claw 聊天历史 |
-| POST | `/claw/upload` | 从 Claw 工作区上传文件（Claw API 密钥认证） |
-| GET | `/claw/files/{filename}` | 代理下载 Claw 工作区中的文件 |
-| GET | `/claw/resolve/{file_id}` | 解析 `manus-file://` 元信息（Claw API 密钥认证） |
-| GET | `/claw/resolve/{file_id}/download` | 下载 `manus-file://` 内容（Claw API 密钥认证） |
-
 ### 其它接口
 
 | 方法 | 路径 | 描述 |
 |---|---|---|
 | GET | `/api/v1/config/frontend` | 前端运行时配置 |
-| POST | `/v1/chat/completions` | 供 Claw 容器使用的 OpenAI 兼容 LLM 代理 |
 
 ## 错误处理
 

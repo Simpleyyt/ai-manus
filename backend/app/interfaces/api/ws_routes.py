@@ -1,4 +1,4 @@
-"""WebSocket routes for realtime session list, chat, and Claw."""
+"""WebSocket routes for realtime session list, chat, and VNC."""
 
 from __future__ import annotations
 
@@ -7,17 +7,13 @@ import logging
 from datetime import datetime
 from typing import Any, Optional
 
-import httpx
 import websockets
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from app.domain.models.claw import ClawAttachment
 from app.domain.models.file import FileInfo
 from app.interfaces.dependencies import (
     resolve_ws_user,
     get_agent_service,
-    get_claw_service,
-    get_file_service,
 )
 from app.interfaces.schemas.event import EventMapper
 from app.interfaces.schemas.session import ListSessionItem
@@ -33,7 +29,6 @@ router = APIRouter(prefix="/ws", tags=["ws"])
 
 SESSION_LIST_KEEPALIVE_SECONDS = 20.0
 CHAT_WS_PING_SECONDS = 20.0
-CLAW_HEARTBEAT_INTERVAL = 15
 
 # Chat WS protocol (aligned with official Manus control-plane contract).
 CHAT_WS_PROTOCOL_VERSION = 2
@@ -514,140 +509,6 @@ async def chat_ws(websocket: WebSocket):
             pass
     finally:
         await cancel_stream()
-
-
-@router.websocket("/claw")
-async def claw_ws(websocket: WebSocket):
-    """Claw chat channel — same Cookie / Bearer resolve as /ws/sessions and /ws/chat.
-
-    Client → Server:
-      {"type":"chat","message":"...","session_id":"default","file_ids":[]}
-
-    Server → Client:
-      {"type":"text","content":"..."}
-      {"type":"file",...}
-      {"type":"done","stop_reason":"..."}
-      {"type":"error","error":"..."}
-      {"type":"catchup","content":"..."}
-      {"type":"heartbeat"}
-    """
-    try:
-        user = await resolve_ws_user(websocket)
-    except Exception:
-        await websocket.close(code=4001, reason="Unauthorized")
-        return
-
-    await websocket.accept()
-
-    claw_service = get_claw_service()
-    queue = claw_service.event_bus.subscribe(user.id)
-
-    async def _write_events() -> None:
-        try:
-            pending = claw_service.get_pending_content(user.id)
-            if pending:
-                await websocket.send_json({"type": "catchup", "content": pending})
-
-            while True:
-                try:
-                    event = await asyncio.wait_for(queue.get(), timeout=CLAW_HEARTBEAT_INTERVAL)
-                    await websocket.send_json(event)
-                except asyncio.TimeoutError:
-                    await websocket.send_json({"type": "heartbeat"})
-        except (WebSocketDisconnect, asyncio.CancelledError, Exception):
-            pass
-
-    file_service = get_file_service()
-
-    async def _process_files(
-        file_ids: list[str], uid: str
-    ) -> tuple[str, list[ClawAttachment]]:
-        claw = await claw_service.claw_repository.get_by_user_id(uid)
-        claw_base_url = claw.http_base_url if claw else None
-
-        refs: list[str] = []
-        attachments: list[ClawAttachment] = []
-        for fid in file_ids:
-            try:
-                stream, info = await file_service.download_file(fid, uid)
-                ct = info.content_type or ""
-                filename = info.filename or fid
-                raw = stream.read() if hasattr(stream, "read") else b""
-
-                attachments.append(ClawAttachment(
-                    file_id=fid, filename=filename,
-                    content_type=ct, size=info.size or 0,
-                ))
-
-                if not claw_base_url:
-                    refs.append(f'<MANUS_FILE name="{filename}" id="{fid}" status="no_claw" />')
-                    continue
-
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    resp = await client.post(
-                        f"{claw_base_url}/workspace",
-                        params={"file_id": fid, "filename": filename},
-                        content=raw,
-                        headers={"Content-Type": "application/octet-stream"},
-                    )
-                    resp.raise_for_status()
-                    result = resp.json()
-                    local_path = result.get("path", "")
-
-                refs.append(
-                    f'<MANUS_FILE path="{local_path}" name="{filename}" '
-                    f'id="{fid}" type="{ct}" size="{info.size}" />'
-                )
-                logger.info("[claw-ws] pushed %s to workspace: %s", filename, local_path)
-
-            except Exception as e:
-                logger.warning("[claw-ws] failed to process file %s: %s", fid, e)
-                refs.append(
-                    f'<MANUS_FILE name="{fid}" id="{fid}" status="download_failed" '
-                    f'reason="{str(e)[:100]}" />'
-                )
-
-        return "\n".join(refs), attachments
-
-    async def _read_messages() -> None:
-        try:
-            while True:
-                data = await websocket.receive_json()
-                msg_type = data.get("type")
-                if msg_type == "chat":
-                    message = data.get("message", "").strip()
-                    session_id = data.get("session_id", "default")
-                    file_ids = data.get("file_ids", [])
-                    user_attachments: list[ClawAttachment] = []
-
-                    if file_ids:
-                        file_refs, user_attachments = await _process_files(file_ids, user.id)
-                        if file_refs:
-                            message = f"{message}\n\n{file_refs}" if message else file_refs
-
-                    if message:
-                        try:
-                            await claw_service.send_message(user.id, message, session_id)
-                            if user_attachments:
-                                await claw_service.claw_repository.append_message(
-                                    user.id, "attachments", "user", attachments=user_attachments,
-                                )
-                        except Exception as e:
-                            await websocket.send_json({"type": "error", "error": str(e)})
-        except (WebSocketDisconnect, asyncio.CancelledError, Exception):
-            pass
-
-    write_task = asyncio.create_task(_write_events())
-    read_task = asyncio.create_task(_read_messages())
-
-    try:
-        _done, pending = await asyncio.wait(
-            [write_task, read_task], return_when=asyncio.FIRST_COMPLETED,
-        )
-        for t in pending:
-            t.cancel()
-    finally:
-        claw_service.event_bus.unsubscribe(user.id, queue)
 
 
 @router.websocket("/vnc/{session_id}")

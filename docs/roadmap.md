@@ -2,15 +2,6 @@
 
 > 持续迭代中：Deploy & Expose、多集群部署、企业级沙盒安全
 
-## Claw（Manus × Claw）
-
- * [x] 集成 [OpenClaw](https://github.com/anthropics/openclaw) AI 助手
- * [x] 一键部署、用户隔离容器
- * [x] 自动过期倒计时
- * [x] 完整聊天历史（MongoDB + OpenClaw 会话合并）
- * [x] 文件上传与下载
- * [x] OpenAI 兼容 LLM 代理
-
 ## 工具
 
  * [x] 支持浏览器接管

@@ -7,4 +7,3 @@ class ClientConfigResponse(BaseModel):
     show_github_button: bool
     github_repository_url: str
     google_analytics_id: str | None = None
-    claw_enabled: bool

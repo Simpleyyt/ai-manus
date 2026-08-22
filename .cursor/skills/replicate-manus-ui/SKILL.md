@@ -66,7 +66,7 @@ Prefer a **logged-in** session (guest marketing pages lack Computer / sidebar).
 # (local install often /tmp/pw)
 ```
 
-Save under `tmp/screenshots/` (gitignored). 「截图发过来」→ personal skill **telegram-screenshots**, not OpenClaw.
+Save under `tmp/screenshots/` (gitignored). 「截图发过来」→ personal skill **telegram-screenshots**.
 
 **Capture gotchas (process, not a finished-page museum):**
 

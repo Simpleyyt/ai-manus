@@ -1,4 +1,4 @@
-# 🤖 AI Manus × Claw 开源通用智能体
+# 🤖 AI Manus 开源通用智能体
 
 官网地址：<https://ai-manus.com>
 
@@ -8,7 +8,7 @@ GitHub：<https://github.com/simpleyyt/ai-manus> | Demo：<https://app.ai-manus.
 
 ---
 
-AI Manus 是一个通用的 AI Agent 系统，可以完全私有部署，支持在沙盒环境中运行各种工具和操作。现已深度集成 **Claw**（基于 [OpenClaw](https://github.com/anthropics/openclaw)），实现 Manus × Claw 联合体验：一键部署 AI 助手、用户隔离容器、自动过期倒计时与完整聊天历史。
+AI Manus 是一个通用的 AI Agent 系统，可以完全私有部署，支持在沙盒环境中运行各种工具和操作。
 
 AI Manus 项目目标是希望成为可完全私有部署的企业级 Manus 应用。垂类 Manus 的应用有多种重复性的工程化工作，这个项目希望把这部分统一，让大家可以像搭积木一下建立起一个垂类 Manus 应用。
 
@@ -25,7 +25,6 @@ AI Manus 中每个服务与工具都包含一个 Built-in 版本，可以做到�
  * **部署：**最小只需要一个 LLM 服务即可完成部署，不需要依赖其它外部服务。
  * **Agent 循环：**Plan-and-Execute，可组合 System Prompt，原生结构化输出工具（`create_plan` / `complete_step` 等）。
  * **工具：**支持 Terminal、Browser、File、Web Search、消息工具，并支持实时查看和接管，支持外部 MCP 工具集成。
- * **Claw：**集成 [OpenClaw](https://github.com/anthropics/openclaw) AI 助手，一键部署、用户隔离容器、自动过期倒计时、完整聊天历史。
  * **沙盒：**每个 Task 会分配单独的一个沙盒，沙盒在本地 Docker 环境里面运行。
  * **任务会话：**通过 Mongo/Redis 对会话历史进行管理，支持后台任务。
  * **库：**侧栏「库」页面聚合用户各会话中的附件与产物，支持类型筛选、搜索、文件级收藏与预览，并可跳转回原任务。

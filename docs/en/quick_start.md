@@ -47,7 +47,6 @@ services:
     image: simpleyyt/manus-backend
     depends_on:
       - sandbox
-      - claw
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -62,13 +61,6 @@ services:
   sandbox:
     image: simpleyyt/manus-sandbox
     command: /bin/sh -c "exit 0"  # prevent sandbox from starting, ensure image is pulled
-    restart: "no"
-    networks:
-      - manus-network
-
-  claw:
-    image: simpleyyt/manus-claw
-    entrypoint: /bin/sh -c "exit 0"  # prevent claw from starting, ensure image is pulled
     restart: "no"
     networks:
       - manus-network
@@ -112,7 +104,7 @@ API_BASE=https://api.openai.com/v1
 MODEL_NAME=gpt-4o
 ```
 
-The full `.env.example` is shown below (search engine, authentication, sandbox, Claw, and more options):
+The full `.env.example` is shown below (search engine, authentication, sandbox, and more options):
 
 <!-- .env.example -->
 ```ini
@@ -280,26 +272,6 @@ JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
 #EMAIL_USERNAME=your-email@gmail.com
 #EMAIL_PASSWORD=your-password
 #EMAIL_FROM=your-email@gmail.com
-
-# Claw (OpenClaw) configuration
-# Enable or disable Claw feature (hides sidebar entry when false)
-#CLAW_ENABLED=false
-# Docker image used for Claw containers
-#CLAW_IMAGE=simpleyyt/manus-claw
-# Prefix for Claw container names
-#CLAW_NAME_PREFIX=manus-claw
-# Time-to-live for Claw containers in seconds (0 = unlimited)
-#CLAW_TTL_SECONDS=3600
-# Docker network bridge name for Claw containers
-#CLAW_NETWORK=manus-network
-# Max seconds to wait for Claw container to become ready
-#CLAW_READY_TIMEOUT=300
-# Fixed Claw address (for development; skips Docker container creation)
-#CLAW_ADDRESS=
-# Static API key for Claw (for development / fixed container)
-#CLAW_API_KEY=
-# Backend API URL used by Claw containers for callbacks
-#MANUS_API_BASE_URL=http://backend:8000
 
 # Extra headers for LLM API requests (JSON format)
 #EXTRA_HEADERS={"X-Custom-Header": "value"}

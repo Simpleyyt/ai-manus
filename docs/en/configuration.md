@@ -132,20 +132,6 @@ API_KEY=sk-...
 | `SANDBOX_HTTP_PROXY` | - | No | HTTP proxy settings |
 | `SANDBOX_NO_PROXY` | - | No | List of addresses to exclude from proxy |
 
-### Claw (OpenClaw) Configuration
-
-| Configuration | Default Value | Required | Description |
-|---------------|---------------|----------|-------------|
-| `CLAW_ENABLED` | `false` | No | Enable Claw feature; set to `true` to show the sidebar entry |
-| `CLAW_IMAGE` | `simpleyyt/manus-claw` | No | Claw Docker image name |
-| `CLAW_NAME_PREFIX` | `manus-claw` | No | Claw container name prefix |
-| `CLAW_TTL_SECONDS` | `3600` | No | Claw container time-to-live in seconds; set to `0` for unlimited |
-| `CLAW_NETWORK` | - | No | Docker network bridge name for Claw containers |
-| `CLAW_READY_TIMEOUT` | `300` | No | Max seconds to wait for Claw container to become ready (default 5 minutes) |
-| `CLAW_ADDRESS` | - | No | Fixed Claw address (for development; skips Docker container creation) |
-| `CLAW_API_KEY` | - | No | Static API key (for development / fixed container) |
-| `MANUS_API_BASE_URL` | `http://backend:8000` | No | Backend API URL used by Claw containers for callbacks |
-
 ### Search Engine Configuration
 
 | Configuration | Default Value | Required | Description |

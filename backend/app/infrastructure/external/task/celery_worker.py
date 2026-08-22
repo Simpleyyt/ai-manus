@@ -75,7 +75,6 @@ async def _ensure_initialized() -> None:
         AgentDocument,
         SessionDocument,
         UserDocument,
-        ClawDocument,
         ProjectDocument,
         FileFavoriteDocument,
     )
@@ -88,7 +87,6 @@ async def _ensure_initialized() -> None:
             AgentDocument,
             SessionDocument,
             UserDocument,
-            ClawDocument,
             ProjectDocument,
             FileFavoriteDocument,
         ],

@@ -1,9 +1,9 @@
 """Framework-agnostic tool abstraction for the domain layer.
 
-A lightweight ``@tool`` decorator parses the method signature and its
-Google-style docstring into an OpenAI-compatible function schema, and
-``Tool`` / ``BaseToolkit`` expose the tools for the agent loop and the LLM
-gateway.
+Tools are written as classes — ``name``, ``description``, a Pydantic
+``Args`` / ``args_schema``, and ``run`` — matching the usual structured-tool
+shape without depending on LangChain. ``Tool`` / ``BaseToolkit`` expose them
+to the agent loop and the LLM gateway.
 
 Two additional concepts support modern context engineering:
 
@@ -16,47 +16,10 @@ Two additional concepts support modern context engineering:
   errors back to the model for self-repair. This replaces the legacy
   "JSON-in-prompt + repair parser" protocol with native function calling.
 """
-import inspect
-import re
 import copy
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Type, get_type_hints
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, Type
 
-from pydantic import BaseModel, Field, ValidationError, create_model
-
-
-def _parse_docstring(doc: Optional[str]) -> tuple[str, Dict[str, str]]:
-    """Split a Google-style docstring into (summary, {param: description})."""
-    if not doc:
-        return "", {}
-
-    lines = doc.strip("\n").split("\n")
-    summary_lines: List[str] = []
-    param_docs: Dict[str, str] = {}
-    in_args = False
-    current: Optional[str] = None
-
-    for raw in lines:
-        line = raw.strip()
-        if re.match(r"^(Args|Arguments|Parameters)\s*:\s*$", line):
-            in_args = True
-            current = None
-            continue
-        if in_args and re.match(r"^(Returns?|Raises?|Yields?|Examples?|Note)\s*:", line):
-            in_args = False
-            current = None
-            continue
-        if in_args:
-            m = re.match(r"^(\w+)\s*(?:\([^)]*\))?\s*:\s*(.*)$", line)
-            if m:
-                current = m.group(1)
-                param_docs[current] = m.group(2).strip()
-            elif current and line:
-                param_docs[current] += " " + line
-        else:
-            summary_lines.append(line)
-
-    summary = " ".join(s for s in summary_lines if s).strip()
-    return summary, param_docs
+from pydantic import BaseModel, ValidationError
 
 
 def _clean_schema(schema: Dict[str, Any]) -> Dict[str, Any]:
@@ -122,89 +85,57 @@ def take_brief(args: Optional[Dict[str, Any]]) -> tuple[Optional[str], Dict[str,
     return (text or None), clean
 
 
-def _build_parameters(func: Callable, param_docs: Dict[str, str]) -> Dict[str, Any]:
-    """Derive an OpenAI ``parameters`` JSON schema from a function signature."""
-    sig = inspect.signature(func)
-    try:
-        hints = get_type_hints(func)
-    except Exception:
-        hints = {}
-
-    fields: Dict[str, Any] = {}
-    for pname, param in sig.parameters.items():
-        if pname == "self":
-            continue
-        annotation = hints.get(pname, str)
-        default = ... if param.default is inspect.Parameter.empty else param.default
-        fields[pname] = (annotation, Field(default, description=param_docs.get(pname)))
-
-    model = create_model(f"{func.__name__}Args", **fields)
-    return _clean_schema(model.model_json_schema())
-
-
-class ToolFunction:
-    """Marker produced by ``@tool``; collected by ``BaseToolkit`` at init."""
-
-    def __init__(self, func: Callable, name: str, description: str, parameters: Dict[str, Any]):
-        self.func = func
-        self.name = name
-        self.description = description
-        self.parameters = parameters
-
-
-def tool(func: Optional[Callable] = None, **_kwargs: Any):
-    """Decorator that turns an async method into a :class:`ToolFunction`.
-
-    Accepts and ignores extra keyword arguments (e.g. ``parse_docstring``) for
-    drop-in compatibility with the previous LangChain decorator call sites.
-    """
-
-    def decorator(f: Callable) -> ToolFunction:
-        summary, param_docs = _parse_docstring(f.__doc__)
-        parameters = _build_parameters(f, param_docs)
-        return ToolFunction(
-            func=f,
-            name=f.__name__,
-            description=summary,
-            parameters=parameters,
-        )
-
-    if callable(func):
-        return decorator(func)
-    return decorator
+def _nested_args_schema(cls: Type["Tool"]) -> Optional[Type[BaseModel]]:
+    """Return a nested ``Args`` model declared on ``cls``, if any."""
+    nested = cls.__dict__.get("Args")
+    if isinstance(nested, type) and issubclass(nested, BaseModel):
+        return nested
+    return None
 
 
 class Tool:
-    """An invocable tool bound to its owning toolkit."""
+    """An invocable tool bound to its owning toolkit.
+
+    Subclass and set ``name`` / ``description``, declare arguments as a nested
+    ``Args`` Pydantic model (or ``args_schema``), and implement ``run``.
+    Runtime-discovered tools (MCP) are built with :meth:`dynamic` instead.
+    """
+
+    name: str = ""
+    description: str = ""
+    args_schema: Optional[Type[BaseModel]] = None
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        if cls.__dict__.get("args_schema") is None:
+            nested = _nested_args_schema(cls)
+            if nested is not None:
+                cls.args_schema = nested
 
     def __init__(
         self,
-        name: str,
-        description: str,
-        parameters: Dict[str, Any],
-        invoker: Callable[[Dict[str, Any]], Awaitable[Any]],
-        toolkit: "BaseToolkit",
+        *,
+        toolkit: Optional["BaseToolkit"] = None,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        parameters: Optional[Dict[str, Any]] = None,
+        invoker: Optional[Callable[[Dict[str, Any]], Awaitable[Any]]] = None,
+        args_schema: Optional[Type[BaseModel]] = None,
     ):
-        self.name = name
-        self.description = description
-        self.parameters = parameters
         self.toolkit = toolkit
+        if name is not None:
+            self.name = name
+        if description is not None:
+            self.description = description
+        if args_schema is not None:
+            self.args_schema = args_schema
         self._invoker = invoker
-
-    @classmethod
-    def from_function(cls, tool_function: ToolFunction, toolkit: "BaseToolkit") -> "Tool":
-        """Build a tool from a ``@tool``-decorated toolkit method."""
-
-        async def invoker(args: Dict[str, Any]) -> Any:
-            return await tool_function.func(toolkit, **(args or {}))
-
-        return cls(
-            name=tool_function.name,
-            description=tool_function.description,
-            parameters=tool_function.parameters,
-            invoker=invoker,
-            toolkit=toolkit,
-        )
+        if parameters is not None:
+            self.parameters = parameters
+        elif self.args_schema is not None:
+            self.parameters = _clean_schema(self.args_schema.model_json_schema())
+        else:
+            self.parameters = {"type": "object", "properties": {}}
 
     @classmethod
     def dynamic(
@@ -224,10 +155,19 @@ class Tool:
             toolkit=toolkit,
         )
 
+    async def run(self, **kwargs: Any) -> Any:
+        """Execute the tool implementation. Subclasses override this."""
+        raise NotImplementedError(f"{type(self).__name__} must implement run()")
+
     async def invoke(self, args: Dict[str, Any]) -> Any:
-        """Invoke the underlying coroutine with the given arguments."""
+        """Invoke the tool, stripping UI-only ``brief`` and validating args."""
         _, clean = take_brief(args)
-        return await self._invoker(clean)
+        if self._invoker is not None:
+            return await self._invoker(clean)
+        if self.args_schema is not None:
+            validated = self.args_schema.model_validate(clean)
+            return await self.run(**validated.model_dump())
+        return await self.run(**clean)
 
     def to_openai_schema(self) -> Dict[str, Any]:
         """Render this tool as an OpenAI function-calling schema."""
@@ -287,20 +227,18 @@ class OutputTool:
 class BaseToolkit:
     """Base toolset class, providing common tool discovery and lookup.
 
-    Subclasses may set ``instructions`` — usage guidance that is assembled
-    into the system prompt only when the toolkit is actually bound to the
-    agent, keeping prompt content and available tools in sync.
+    Subclasses set ``tool_types`` to the :class:`Tool` classes they expose.
+    They may also set ``instructions`` — usage guidance assembled into the
+    system prompt only when the toolkit is actually bound to the agent,
+    keeping prompt content and available tools in sync.
     """
 
     name: str = ""
     instructions: str = ""
+    tool_types: Sequence[Type[Tool]] = ()
 
     def __init__(self):
-        self.tools: List[Tool] = []
-        for _, member in inspect.getmembers(
-            type(self), lambda x: isinstance(x, ToolFunction)
-        ):
-            self.tools.append(Tool.from_function(member, toolkit=self))
+        self.tools: List[Tool] = [cls(toolkit=self) for cls in type(self).tool_types]
 
     def get_tools(self) -> List[Tool]:
         """Return all invocable tools in this toolkit."""
@@ -334,9 +272,7 @@ def describe_toolkits(toolkits: List[BaseToolkit]) -> str:
 
 
 __all__ = [
-    "tool",
     "Tool",
-    "ToolFunction",
     "OutputTool",
     "BaseToolkit",
     "describe_toolkits",

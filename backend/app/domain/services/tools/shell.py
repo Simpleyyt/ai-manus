@@ -24,66 +24,56 @@ class ShellToolkit(BaseToolkit):
         super().__init__()
         self.sandbox = sandbox
         
-    @tool
+    @tool(
+        description="Execute commands in a specified shell session. Use for running code, installing packages, or managing files.",
+        id="Unique identifier of the target shell session",
+        exec_dir="Working directory for command execution (must use absolute path)",
+        command="Shell command to execute",
+    )
     async def shell_exec(
         self,
         id: str,
         exec_dir: str,
         command: str
     ) -> ToolResult:
-        """Execute commands in a specified shell session. Use for running code, installing packages, or managing files.
-        
-        Args:
-            id: Unique identifier of the target shell session
-            exec_dir: Working directory for command execution (must use absolute path)
-            command: Shell command to execute
-        """
         return await self.sandbox.exec_command(id, exec_dir, command)
     
-    @tool
+    @tool(
+        description="View the content of a specified shell session. Use for checking command execution results or monitoring output.",
+        id="Unique identifier of the target shell session",
+    )
     async def shell_view(self, id: str) -> ToolResult:
-        """View the content of a specified shell session. Use for checking command execution results or monitoring output.
-        
-        Args:
-            id: Unique identifier of the target shell session
-        """
         return await self.sandbox.view_shell(id)
     
-    @tool
+    @tool(
+        description="Wait for the running process in a specified shell session to return. Use after running commands that require longer runtime.",
+        id="Unique identifier of the target shell session",
+        seconds="Wait duration in seconds",
+    )
     async def shell_wait(
         self,
         id: str,
         seconds: Optional[int] = None
     ) -> ToolResult:
-        """Wait for the running process in a specified shell session to return. Use after running commands that require longer runtime.
-        
-        Args:
-            id: Unique identifier of the target shell session
-            seconds: Wait duration in seconds
-        """
         return await self.sandbox.wait_for_process(id, seconds)
     
-    @tool
+    @tool(
+        description="Write input to a running process in a specified shell session. Use for responding to interactive command prompts.",
+        id="Unique identifier of the target shell session",
+        input="Input content to write to the process",
+        press_enter="Whether to press Enter key after input",
+    )
     async def shell_write_to_process(
         self,
         id: str,
         input: str,
         press_enter: bool
     ) -> ToolResult:
-        """Write input to a running process in a specified shell session. Use for responding to interactive command prompts.
-        
-        Args:
-            id: Unique identifier of the target shell session
-            input: Input content to write to the process
-            press_enter: Whether to press Enter key after input
-        """
         return await self.sandbox.write_to_process(id, input, press_enter)
     
-    @tool
+    @tool(
+        description="Terminate a running process in a specified shell session. Use for stopping long-running processes or handling frozen commands.",
+        id="Unique identifier of the target shell session",
+    )
     async def shell_kill_process(self, id: str) -> ToolResult:
-        """Terminate a running process in a specified shell session. Use for stopping long-running processes or handling frozen commands.
-        
-        Args:
-            id: Unique identifier of the target shell session
-        """
         return await self.sandbox.kill_process(id)

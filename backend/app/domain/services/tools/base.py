@@ -1,8 +1,8 @@
 """Framework-agnostic tool abstraction for the domain layer.
 
-A lightweight ``@tool`` decorator marks toolkit methods and parses the
-signature plus Google-style docstring into an OpenAI-compatible function
-schema. The method stays a normal method; ``Tool`` / ``BaseToolkit`` expose
+A lightweight ``@tool`` decorator marks toolkit methods. Descriptions come
+from **either** ``@tool(...)`` arguments **or** a Google-style docstring,
+not a mix. The method stays callable; ``Tool`` / ``BaseToolkit`` expose
 the bound tools to the agent loop and the LLM gateway.
 
 Two additional concepts support modern context engineering:
@@ -142,6 +142,25 @@ def _build_parameters(func: Callable, param_docs: Dict[str, str]) -> Dict[str, A
     return _clean_schema(model.model_json_schema())
 
 
+def _normalize_parameters(
+    parameters: Dict[str, Any],
+    required: Optional[List[str]] = None,
+) -> Dict[str, Any]:
+    """Accept a full JSON schema or a ``{name: {type, description}}`` map."""
+    if parameters.get("type") == "object" and "properties" in parameters:
+        schema = copy.deepcopy(parameters)
+        if required is not None:
+            schema["required"] = list(required)
+        return _clean_schema(schema)
+    schema: Dict[str, Any] = {
+        "type": "object",
+        "properties": copy.deepcopy(parameters),
+    }
+    if required is not None:
+        schema["required"] = list(required)
+    return _clean_schema(schema)
+
+
 class ToolFunction:
     """Metadata attached by ``@tool``; collected by ``BaseToolkit`` at init."""
 
@@ -152,27 +171,68 @@ class ToolFunction:
         self.parameters = parameters
 
 
-def tool(func: Optional[Callable] = None):
+def tool(__fn_or_description: Any = None, /, **kwargs: Any):
     """Mark an async toolkit method as an invocable tool.
 
-    The wrapped method is unchanged and remains callable on the instance.
-    Schema fields come from the signature; descriptions come from a
-    Google-style ``Args:`` docstring.
+    Two mutually exclusive ways to supply descriptions:
+
+    * ``@tool`` plus a Google-style docstring (summary + ``Args:``).
+    * ``@tool(...)`` with ``description`` / parameter docs — the docstring
+      is ignored.
+
+    Parameter types still come from the method signature unless a full
+    ``parameters`` schema is passed. The method itself stays callable.
     """
 
-    def decorator(f: Callable) -> Callable:
-        summary, param_docs = _parse_docstring(f.__doc__)
+    explicit_name = kwargs.pop("name", None)
+    explicit_description = kwargs.pop("description", None)
+    explicit_parameters = kwargs.pop("parameters", None)
+    explicit_required = kwargs.pop("required", None)
+    explicit_args = kwargs.pop("args", None)
+    if explicit_args is None:
+        explicit_args = {}
+    elif not isinstance(explicit_args, dict):
+        raise TypeError("@tool args= must be a dict of parameter descriptions")
+
+    extra_param_docs: Dict[str, str] = {}
+    for key, value in kwargs.items():
+        if not isinstance(value, str):
+            raise TypeError(f"@tool {key}= must be a description string")
+        extra_param_docs[key] = value
+
+    positional_description = (
+        __fn_or_description if isinstance(__fn_or_description, str) else None
+    )
+    use_decorator_docs = bool(
+        positional_description
+        or explicit_description
+        or explicit_parameters is not None
+        or explicit_args
+        or extra_param_docs
+    )
+
+    def decorate(f: Callable) -> Callable:
+        if use_decorator_docs:
+            desc = explicit_description or positional_description or ""
+            if explicit_parameters is not None:
+                parameters = _normalize_parameters(explicit_parameters, explicit_required)
+            else:
+                parameters = _build_parameters(f, {**explicit_args, **extra_param_docs})
+        else:
+            desc, param_docs = _parse_docstring(f.__doc__)
+            parameters = _build_parameters(f, param_docs)
+
         f._tool = ToolFunction(
             func=f,
-            name=f.__name__,
-            description=summary,
-            parameters=_build_parameters(f, param_docs),
+            name=explicit_name or f.__name__,
+            description=desc,
+            parameters=parameters,
         )
         return f
 
-    if func is None:
-        return decorator
-    return decorator(func)
+    if callable(__fn_or_description):
+        return decorate(__fn_or_description)
+    return decorate
 
 
 class Tool:

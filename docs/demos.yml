@@ -11,8 +11,8 @@
 # Local recordings stay in tmp/videos/ (gitignored).
 # Do not commit MP4s into the repo.
 #
-# 2026-08-13: re-recorded in English with Computer panel, waiting until
-# Task completed; Basic Features shows multi-session switching.
+# 2026-08-22: re-recorded with Jump to live on Computer panel
+# (English UI, Task completed; Basic Features still shows multi-session switching).
 
 readme:
   - id: basic
@@ -20,18 +20,18 @@ readme:
     title_zh: 基本功能
     task_en: Code Use, Browser Use, and multi-session switching
     task_zh: Code Use、Browser Use 与多会话切换
-    url: https://github.com/user-attachments/assets/a73e5be2-822a-4aa9-b2c1-08adc30629a5
+    url: https://github.com/user-attachments/assets/89e0da0f-789f-464f-8648-49eb5035fe2f
 
   - id: browser
     title_en: Browser Use
     title_zh: Browser Use
     task_en: Find latest news
     task_zh: 找一下最新新闻
-    url: https://github.com/user-attachments/assets/be459984-561a-4aa3-8c6d-868d2ed9fa56
+    url: https://github.com/user-attachments/assets/11a0aa98-4a74-4de9-a72f-2d384e89799a
 
   - id: code
     title_en: Code Use
     title_zh: Code Use
     task_en: Write a complex Python example
     task_zh: 写一个复杂的 python 示例
-    url: https://github.com/user-attachments/assets/db4e4048-35c3-4511-a13b-d4f71c54d647
+    url: https://github.com/user-attachments/assets/fa45bcac-92c7-41ce-b8f6-7d9d99747f92

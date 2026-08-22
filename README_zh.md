@@ -23,19 +23,19 @@ AI Manus 是一个通用的 AI Agent 系统，支持在沙盒环境中运行各�
 
 * 任务: Code Use、Browser Use 与多会话切换
 
-https://github.com/user-attachments/assets/a73e5be2-822a-4aa9-b2c1-08adc30629a5
+https://github.com/user-attachments/assets/89e0da0f-789f-464f-8648-49eb5035fe2f
 
 ### Browser Use
 
 * 任务: 找一下最新新闻
 
-https://github.com/user-attachments/assets/be459984-561a-4aa3-8c6d-868d2ed9fa56
+https://github.com/user-attachments/assets/11a0aa98-4a74-4de9-a72f-2d384e89799a
 
 ### Code Use
 
 * 任务: 写一个复杂的 python 示例
 
-https://github.com/user-attachments/assets/db4e4048-35c3-4511-a13b-d4f71c54d647
+https://github.com/user-attachments/assets/fa45bcac-92c7-41ce-b8f6-7d9d99747f92
 <!-- /demos:readme:zh -->
 
 ## 主要特性

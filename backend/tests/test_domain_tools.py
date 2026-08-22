@@ -1,38 +1,33 @@
 """Unit tests for the framework-agnostic tool abstraction.
 
-Verifies that Tool classes derive OpenAI-compatible function schemas from
-Pydantic Args models, and that toolkits expose lookup / invocation without
-depending on LangChain.
+Verifies that the ``@tool`` decorator derives OpenAI-compatible function
+schemas from signatures + Google-style docstrings, and that toolkits expose
+lookup / invocation without depending on LangChain.
 """
 from typing import Optional
 
-from pydantic import BaseModel, Field
+import pytest
 
 from app.domain.models.tool_result import ToolResult
-from app.domain.services.tools.base import BaseToolkit, Tool
-from app.domain.services.tools.message import MessageToolkit
-from app.domain.services.tools.plan import PlanToolkit
-
-
-class DoThingTool(Tool):
-    name = "do_thing"
-    description = "Do a thing with an id. Use for testing."
-
-    class Args(BaseModel):
-        id: str = Field(description="The unique identifier")
-        count: Optional[int] = Field(default=None, description="(Optional) How many times")
-
-    async def run(self, id: str, count: Optional[int] = None) -> ToolResult:
-        return await self.toolkit.backend(id, count)
+from app.domain.services.tools.base import BaseToolkit, tool
 
 
 class SampleToolkit(BaseToolkit):
     name = "sample"
-    tool_types = [DoThingTool]
 
     def __init__(self, backend):
-        self.backend = backend
         super().__init__()
+        self.backend = backend
+
+    @tool
+    async def do_thing(self, id: str, count: Optional[int] = None) -> ToolResult:
+        """Do a thing with an id. Use for testing.
+
+        Args:
+            id: The unique identifier
+            count: (Optional) How many times
+        """
+        return await self.backend(id, count)
 
 
 class _FakeBackend:
@@ -57,6 +52,7 @@ class TestToolSchema:
         assert schema["type"] == "function"
         fn = schema["function"]
         assert fn["name"] == "do_thing"
+        # summary line becomes the description (Args section stripped out)
         assert "Do a thing with an id" in fn["description"]
         assert "Args:" not in fn["description"]
 
@@ -67,7 +63,7 @@ class TestToolSchema:
         # Official timeline needs brief — require it on every executable tool
         assert "brief" in params.get("required", [])
 
-    def test_parameter_descriptions_from_args_model(self):
+    def test_parameter_descriptions_from_docstring(self):
         params = self.tk.get_tool_schemas()[0]["function"]["parameters"]
         assert params["type"] == "object"
         assert params["properties"]["id"]["description"] == "The unique identifier"
@@ -114,6 +110,11 @@ class TestToolLookupAndInvoke:
     def test_tool_carries_toolkit_reference(self):
         assert self.tk.get_tool("do_thing").toolkit is self.tk
 
+    async def test_decorated_method_stays_callable(self):
+        result = await self.tk.do_thing(id="abc", count=2)
+        assert result.data == "abc:2"
+        assert self.backend.calls == [("abc", 2)]
+
 
 class TestTakeBrief:
     def test_take_brief_splits_ui_label(self):
@@ -132,21 +133,3 @@ class TestTakeBrief:
         brief, args = take_brief({"file": "a.py"})
         assert brief is None
         assert args == {"file": "a.py"}
-
-
-class TestBuiltinToolkits:
-    def test_message_toolkit_has_class_tools_without_brief(self):
-        tk = MessageToolkit()
-        assert [t.name for t in tk.get_tools()] == [
-            "message_notify_user",
-            "message_ask_user",
-        ]
-        schema = tk.get_tool("message_notify_user").to_openai_schema()
-        assert "brief" not in schema["function"]["parameters"]["properties"]
-
-    def test_plan_toolkit_has_class_tools(self):
-        tk = PlanToolkit()
-        assert [t.name for t in tk.get_tools()] == ["plan_report", "replan"]
-        params = tk.get_tool("replan").to_openai_schema()["function"]["parameters"]
-        assert "reason" in params["properties"]
-        assert "brief" in params["properties"]

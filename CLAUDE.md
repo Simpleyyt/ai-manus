@@ -79,7 +79,7 @@ Session state lives in MongoDB; `SessionStatus` (`PENDING`/`RUNNING`/`WAITING`/e
 
 ### Tools
 
-Each toolkit in `domain/services/tools/` (shell, browser, file, search, message, mcp) extends `BaseToolkit` and lists `Tool` subclasses (`name` / `description` / Pydantic `Args` / `run`). Shell/file tools call the **sandbox** API; browser tools drive the sandbox's headless Chrome (viewable via VNC→websockify→NoVNC); `mcp.py` loads external MCP servers from a mounted `mcp.json` (see `mcp.json.example`). Plan progress for the UI comes from Flow/`ExecutionAgent` `StepEvent`s and Planner `PlanEvent`s (not from parsing `todo.md`).
+Each toolkit in `domain/services/tools/` (shell, browser, file, search, message, mcp) extends `BaseToolkit` and exposes methods decorated as `Tool`s. Shell/file tools call the **sandbox** API; browser tools drive the sandbox's headless Chrome (viewable via VNC→websockify→NoVNC); `mcp.py` loads external MCP servers from a mounted `mcp.json` (see `mcp.json.example`). Plan progress for the UI comes from Flow/`ExecutionAgent` `StepEvent`s and Planner `PlanEvent`s (not from parsing `todo.md`).
 
 ## Sandbox
 

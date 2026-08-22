@@ -21,39 +21,33 @@ from app.domain.services.tools.base import (
     OutputTool,
     Tool,
     describe_toolkits,
+    tool,
 )
-
-
-class EchoTool(Tool):
-    name = "echo"
-    description = "Echo the given text back."
-
-    class Args(BaseModel):
-        text: str
-
-    async def run(self, text: str) -> ToolResult:
-        return ToolResult(success=True, data=text)
 
 
 class EchoToolkit(BaseToolkit):
     name = "echo"
     instructions = "- Echo things back verbatim"
-    tool_types = [EchoTool]
 
+    @tool
+    async def echo(self, text: str) -> ToolResult:
+        """Echo the given text back.
 
-class NoopTool(Tool):
-    name = "noop"
-    description = "Do nothing."
-
-    async def run(self) -> ToolResult:
-        return ToolResult(success=True)
+        Args:
+            text: Text to echo
+        """
+        return ToolResult(success=True, data=text)
 
 
 class SilentToolkit(BaseToolkit):
     """Toolkit without instructions — must not add a prompt section."""
 
     name = "silent"
-    tool_types = [NoopTool]
+
+    @tool
+    async def noop(self) -> ToolResult:
+        """Do nothing."""
+        return ToolResult(success=True)
 
 
 class TestSystemPromptBuilder:
@@ -301,16 +295,13 @@ class TestAgentLoopStructuredOutput:
 
 class TestToolResultTruncation:
     async def test_oversized_tool_result_truncated(self):
-        class BigTool(Tool):
-            name = "big"
-            description = "Return something huge."
-
-            async def run(self) -> ToolResult:
-                return ToolResult(success=True, data="y" * 100000)
-
         class BigToolkit(BaseToolkit):
             name = "big"
-            tool_types = [BigTool]
+
+            @tool
+            async def big(self) -> ToolResult:
+                """Return something huge."""
+                return ToolResult(success=True, data="y" * 100000)
 
         llm = _ScriptedLLM([
             LLMMessage.assistant("", tool_calls=[ToolCall(id="c1", name="big", args={})]),

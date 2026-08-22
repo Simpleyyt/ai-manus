@@ -21,7 +21,7 @@ class MessageToolkit(BaseToolkit):
         """Initialize message tool class"""
         super().__init__()
 
-    @tool(parse_docstring=True)
+    @tool
     async def message_notify_user(
         self,
         text: str
@@ -35,7 +35,7 @@ class MessageToolkit(BaseToolkit):
         # Return success result, actual UI display logic implemented by caller
         return ToolResult(success=True, message="OK")
     
-    @tool(parse_docstring=True)
+    @tool
     async def message_ask_user(
         self,
         text: str,

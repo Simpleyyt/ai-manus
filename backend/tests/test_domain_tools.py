@@ -1,8 +1,8 @@
 """Unit tests for the framework-agnostic tool abstraction.
 
-Verifies that the ``@tool`` decorator derives OpenAI-compatible function
-schemas from signatures + Google-style docstrings, and that toolkits expose
-lookup / invocation without depending on LangChain.
+Verifies that ``@tool`` takes descriptions from either decorator arguments
+or a Google-style docstring, and that toolkits expose lookup / invocation
+without depending on LangChain.
 """
 from typing import Optional
 
@@ -19,7 +19,7 @@ class SampleToolkit(BaseToolkit):
         super().__init__()
         self.backend = backend
 
-    @tool(parse_docstring=True)
+    @tool
     async def do_thing(self, id: str, count: Optional[int] = None) -> ToolResult:
         """Do a thing with an id. Use for testing.
 
@@ -109,6 +109,86 @@ class TestToolLookupAndInvoke:
 
     def test_tool_carries_toolkit_reference(self):
         assert self.tk.get_tool("do_thing").toolkit is self.tk
+
+    async def test_decorated_method_stays_callable(self):
+        result = await self.tk.do_thing(id="abc", count=2)
+        assert result.data == "abc:2"
+        assert self.backend.calls == [("abc", 2)]
+
+
+class ExplicitToolkit(BaseToolkit):
+    name = "explicit"
+
+    @tool(
+        description="Do a thing with an id. Use for testing.",
+        id="The unique identifier",
+        count="(Optional) How many times",
+    )
+    async def do_thing(self, id: str, count: Optional[int] = None) -> ToolResult:
+        """This docstring must be ignored in decorator mode.
+
+        Args:
+            id: WRONG id docs
+            count: WRONG count docs
+        """
+        return ToolResult(success=True, data=f"{id}:{count}")
+
+    @tool("Rename a file.", path="Absolute path of the file")
+    async def rename(self, path: str) -> ToolResult:
+        return ToolResult(success=True, data=path)
+
+
+class SchemaToolkit(BaseToolkit):
+    name = "schema"
+
+    @tool(
+        description="Look something up",
+        parameters={
+            "q": {"type": "string", "description": "Search query"},
+        },
+        required=["q"],
+    )
+    async def lookup(self, q: str) -> ToolResult:
+        return ToolResult(success=True, data=q)
+
+
+class TestDecoratorDocs:
+    def test_parameter_descriptions_from_decorator(self):
+        tk = ExplicitToolkit()
+        params = tk.get_tool("do_thing").to_openai_schema()["function"]["parameters"]
+        assert params["properties"]["id"]["description"] == "The unique identifier"
+        assert "How many times" in params["properties"]["count"]["description"]
+        assert "WRONG" not in params["properties"]["id"]["description"]
+
+    def test_decorator_description_ignores_docstring(self):
+        tk = ExplicitToolkit()
+        fn = tk.get_tool("do_thing").to_openai_schema()["function"]
+        assert fn["description"] == "Do a thing with an id. Use for testing."
+        assert "ignored" not in fn["description"]
+
+    def test_positional_description(self):
+        tk = ExplicitToolkit()
+        fn = tk.get_tool("rename").to_openai_schema()["function"]
+        assert fn["description"] == "Rename a file."
+        assert fn["parameters"]["properties"]["path"]["description"] == "Absolute path of the file"
+
+    def test_explicit_parameters_schema(self):
+        tk = SchemaToolkit()
+        params = tk.get_tool("lookup").to_openai_schema()["function"]["parameters"]
+        assert params["properties"]["q"]["description"] == "Search query"
+        assert "q" in params["required"]
+
+    def test_shell_toolkit_uses_decorator_docs(self):
+        from types import SimpleNamespace
+
+        from app.domain.services.tools.shell import ShellToolkit
+
+        tk = ShellToolkit(SimpleNamespace())
+        fn = tk.get_tool("shell_exec").to_openai_schema()["function"]
+        assert "Execute commands in a specified shell session" in fn["description"]
+        assert fn["parameters"]["properties"]["exec_dir"]["description"].startswith(
+            "Working directory"
+        )
 
 
 class TestTakeBrief:

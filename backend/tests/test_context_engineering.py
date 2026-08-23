@@ -29,7 +29,7 @@ class EchoToolkit(BaseToolkit):
     name = "echo"
     instructions = "- Echo things back verbatim"
 
-    @tool(parse_docstring=True)
+    @tool
     async def echo(self, text: str) -> ToolResult:
         """Echo the given text back.
 
@@ -44,7 +44,7 @@ class SilentToolkit(BaseToolkit):
 
     name = "silent"
 
-    @tool(parse_docstring=True)
+    @tool
     async def noop(self) -> ToolResult:
         """Do nothing."""
         return ToolResult(success=True)
@@ -298,7 +298,7 @@ class TestToolResultTruncation:
         class BigToolkit(BaseToolkit):
             name = "big"
 
-            @tool(parse_docstring=True)
+            @tool
             async def big(self) -> ToolResult:
                 """Return something huge."""
                 return ToolResult(success=True, data="y" * 100000)

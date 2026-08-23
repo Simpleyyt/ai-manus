@@ -26,13 +26,13 @@ class BrowserToolkit(BaseToolkit):
         super().__init__()
         self.browser = browser
     
-    @tool(parse_docstring=True)
+    @tool
     async def browser_view(self) -> ToolResult:
         """View content of the current browser page. Use for checking the latest state of previously opened pages.
         """
         return await self.browser.view_page()
     
-    @tool(parse_docstring=True)
+    @tool
     async def browser_navigate(self, url: str) -> ToolResult:
         """Navigate browser to specified URL. Use when accessing new pages is needed.
         
@@ -41,7 +41,7 @@ class BrowserToolkit(BaseToolkit):
         """
         return await self.browser.navigate(url)
     
-    @tool(parse_docstring=True)
+    @tool
     async def browser_restart(self, url: str) -> ToolResult:
         """Restart browser and navigate to specified URL. Use when browser state needs to be reset.
         
@@ -50,7 +50,7 @@ class BrowserToolkit(BaseToolkit):
         """
         return await self.browser.restart(url)
     
-    @tool(parse_docstring=True)
+    @tool
     async def browser_click(
         self,
         index: Optional[int] = None,
@@ -66,7 +66,7 @@ class BrowserToolkit(BaseToolkit):
         """
         return await self.browser.click(index, coordinate_x, coordinate_y)
     
-    @tool(parse_docstring=True)
+    @tool
     async def browser_input(
         self,
         text: str,
@@ -86,7 +86,7 @@ class BrowserToolkit(BaseToolkit):
         """
         return await self.browser.input(text, press_enter, index, coordinate_x, coordinate_y)
     
-    @tool(parse_docstring=True)
+    @tool
     async def browser_move_mouse(
         self,
         coordinate_x: float,
@@ -100,7 +100,7 @@ class BrowserToolkit(BaseToolkit):
         """
         return await self.browser.move_mouse(coordinate_x, coordinate_y)
     
-    @tool(parse_docstring=True)
+    @tool
     async def browser_press_key(
         self,
         key: str
@@ -112,7 +112,7 @@ class BrowserToolkit(BaseToolkit):
         """
         return await self.browser.press_key(key)
     
-    @tool(parse_docstring=True)
+    @tool
     async def browser_select_option(
         self,
         index: int,
@@ -126,7 +126,7 @@ class BrowserToolkit(BaseToolkit):
         """
         return await self.browser.select_option(index, option)
     
-    @tool(parse_docstring=True)
+    @tool
     async def browser_scroll_up(
         self,
         to_top: Optional[bool] = None
@@ -138,7 +138,7 @@ class BrowserToolkit(BaseToolkit):
         """
         return await self.browser.scroll_up(to_top)
     
-    @tool(parse_docstring=True)
+    @tool
     async def browser_scroll_down(
         self,
         to_bottom: Optional[bool] = None
@@ -150,7 +150,7 @@ class BrowserToolkit(BaseToolkit):
         """
         return await self.browser.scroll_down(to_bottom)
     
-    @tool(parse_docstring=True)
+    @tool
     async def browser_console_exec(
         self,
         javascript: str
@@ -162,7 +162,7 @@ class BrowserToolkit(BaseToolkit):
         """
         return await self.browser.console_exec(javascript)
     
-    @tool(parse_docstring=True)
+    @tool
     async def browser_console_view(
         self,
         max_lines: Optional[int] = None

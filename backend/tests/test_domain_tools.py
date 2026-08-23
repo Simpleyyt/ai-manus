@@ -121,8 +121,10 @@ class ExplicitToolkit(BaseToolkit):
 
     @tool(
         description="Do a thing with an id. Use for testing.",
-        id="The unique identifier",
-        count="(Optional) How many times",
+        args={
+            "id": "The unique identifier",
+            "count": "(Optional) How many times",
+        },
     )
     async def do_thing(self, id: str, count: Optional[int] = None) -> ToolResult:
         """This docstring must be ignored in decorator mode.
@@ -133,7 +135,7 @@ class ExplicitToolkit(BaseToolkit):
         """
         return ToolResult(success=True, data=f"{id}:{count}")
 
-    @tool("Rename a file.", path="Absolute path of the file")
+    @tool("Rename a file.", args={"path": "Absolute path of the file"})
     async def rename(self, path: str) -> ToolResult:
         return ToolResult(success=True, data=path)
 
@@ -177,6 +179,12 @@ class TestDecoratorDocs:
         params = tk.get_tool("lookup").to_openai_schema()["function"]["parameters"]
         assert params["properties"]["q"]["description"] == "Search query"
         assert "q" in params["required"]
+
+    def test_param_docs_must_use_args(self):
+        with pytest.raises(TypeError, match="args="):
+            @tool(description="oops", id="not nested")
+            async def bad(self, id: str) -> ToolResult:
+                return ToolResult(success=True)
 
     def test_shell_toolkit_uses_decorator_docs(self):
         from types import SimpleNamespace

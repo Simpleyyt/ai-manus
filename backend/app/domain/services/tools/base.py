@@ -171,14 +171,30 @@ class ToolFunction:
         self.parameters = parameters
 
 
+def _coerce_arg_docs(args: Dict[str, Any]) -> Dict[str, str]:
+    """Accept ``{name: description}`` or ``{name: {description: ...}}``."""
+    docs: Dict[str, str] = {}
+    for key, value in args.items():
+        if isinstance(value, str):
+            docs[key] = value
+        elif isinstance(value, dict):
+            desc = value.get("description")
+            if not isinstance(desc, str):
+                raise TypeError(f"@tool args[{key!r}] needs a description string")
+            docs[key] = desc
+        else:
+            raise TypeError(f"@tool args[{key!r}] must be a description string")
+    return docs
+
+
 def tool(__fn_or_description: Any = None, /, **kwargs: Any):
     """Mark an async toolkit method as an invocable tool.
 
     Two mutually exclusive ways to supply descriptions:
 
     * ``@tool`` plus a Google-style docstring (summary + ``Args:``).
-    * ``@tool(...)`` with ``description`` / parameter docs — the docstring
-      is ignored.
+    * ``@tool(description=..., args={...})`` — parameter docs go in
+      ``args``, not as sibling kwargs. The docstring is ignored.
 
     Parameter types still come from the method signature unless a full
     ``parameters`` schema is passed. The method itself stays callable.
@@ -189,16 +205,18 @@ def tool(__fn_or_description: Any = None, /, **kwargs: Any):
     explicit_parameters = kwargs.pop("parameters", None)
     explicit_required = kwargs.pop("required", None)
     explicit_args = kwargs.pop("args", None)
+    if kwargs:
+        unexpected = ", ".join(sorted(kwargs))
+        raise TypeError(
+            f"@tool got unexpected keyword(s): {unexpected}. "
+            "Put parameter descriptions in args={...}."
+        )
     if explicit_args is None:
-        explicit_args = {}
+        arg_docs: Dict[str, str] = {}
     elif not isinstance(explicit_args, dict):
         raise TypeError("@tool args= must be a dict of parameter descriptions")
-
-    extra_param_docs: Dict[str, str] = {}
-    for key, value in kwargs.items():
-        if not isinstance(value, str):
-            raise TypeError(f"@tool {key}= must be a description string")
-        extra_param_docs[key] = value
+    else:
+        arg_docs = _coerce_arg_docs(explicit_args)
 
     positional_description = (
         __fn_or_description if isinstance(__fn_or_description, str) else None
@@ -207,8 +225,7 @@ def tool(__fn_or_description: Any = None, /, **kwargs: Any):
         positional_description
         or explicit_description
         or explicit_parameters is not None
-        or explicit_args
-        or extra_param_docs
+        or arg_docs
     )
 
     def decorate(f: Callable) -> Callable:
@@ -217,7 +234,7 @@ def tool(__fn_or_description: Any = None, /, **kwargs: Any):
             if explicit_parameters is not None:
                 parameters = _normalize_parameters(explicit_parameters, explicit_required)
             else:
-                parameters = _build_parameters(f, {**explicit_args, **extra_param_docs})
+                parameters = _build_parameters(f, arg_docs)
         else:
             desc, param_docs = _parse_docstring(f.__doc__)
             parameters = _build_parameters(f, param_docs)

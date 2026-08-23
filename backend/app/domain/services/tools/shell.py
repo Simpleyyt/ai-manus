@@ -26,9 +26,11 @@ class ShellToolkit(BaseToolkit):
         
     @tool(
         description="Execute commands in a specified shell session. Use for running code, installing packages, or managing files.",
-        id="Unique identifier of the target shell session",
-        exec_dir="Working directory for command execution (must use absolute path)",
-        command="Shell command to execute",
+        args={
+            "id": "Unique identifier of the target shell session",
+            "exec_dir": "Working directory for command execution (must use absolute path)",
+            "command": "Shell command to execute",
+        },
     )
     async def shell_exec(
         self,
@@ -40,15 +42,19 @@ class ShellToolkit(BaseToolkit):
     
     @tool(
         description="View the content of a specified shell session. Use for checking command execution results or monitoring output.",
-        id="Unique identifier of the target shell session",
+        args={
+            "id": "Unique identifier of the target shell session",
+        },
     )
     async def shell_view(self, id: str) -> ToolResult:
         return await self.sandbox.view_shell(id)
     
     @tool(
         description="Wait for the running process in a specified shell session to return. Use after running commands that require longer runtime.",
-        id="Unique identifier of the target shell session",
-        seconds="Wait duration in seconds",
+        args={
+            "id": "Unique identifier of the target shell session",
+            "seconds": "Wait duration in seconds",
+        },
     )
     async def shell_wait(
         self,
@@ -59,9 +65,11 @@ class ShellToolkit(BaseToolkit):
     
     @tool(
         description="Write input to a running process in a specified shell session. Use for responding to interactive command prompts.",
-        id="Unique identifier of the target shell session",
-        input="Input content to write to the process",
-        press_enter="Whether to press Enter key after input",
+        args={
+            "id": "Unique identifier of the target shell session",
+            "input": "Input content to write to the process",
+            "press_enter": "Whether to press Enter key after input",
+        },
     )
     async def shell_write_to_process(
         self,
@@ -73,7 +81,9 @@ class ShellToolkit(BaseToolkit):
     
     @tool(
         description="Terminate a running process in a specified shell session. Use for stopping long-running processes or handling frozen commands.",
-        id="Unique identifier of the target shell session",
+        args={
+            "id": "Unique identifier of the target shell session",
+        },
     )
     async def shell_kill_process(self, id: str) -> ToolResult:
         return await self.sandbox.kill_process(id)

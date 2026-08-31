@@ -13,7 +13,7 @@
 
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
-| `MODEL_PROVIDER` | `openai` | 否 | 模型提供商，决定底层使用哪个 LLM 集成（如 `openai`、`deepseek`、`anthropic`、`ollama`），仅在 `LLM_PROVIDER=langchain` 时生效 |
+| `MODEL_PROVIDER` | `openai` | 否 | 模型提供商，决定底层使用哪个 LLM 集成（如 `openai`、`deepseek`、`anthropic`、`ollama`、`orcarouter`），仅在 `LLM_PROVIDER=langchain` 时生效 |
 | `MODEL_NAME` | `deepseek-chat` | 是 | 要使用的模型名称 |
 | `TEMPERATURE` | `0.7` | 否 | 模型响应的随机性程度，范围 0-1 |
 | `MAX_TOKENS` | `2000` | 否 | 模型响应的最大 token 数量 |
@@ -32,6 +32,7 @@
 | `deepseek` | DeepSeek 原生集成 | `langchain-deepseek` |
 | `anthropic` | Anthropic Claude | `langchain-anthropic` |
 | `ollama` | 本地 Ollama 运行的开源模型 | `langchain-ollama` |
+| `orcarouter` | OrcaRouter 网关（OpenAI 兼容，暴露 `provider/model` 模型命名空间），默认端点 `https://api.orcarouter.ai/v1`，可用 `API_BASE` 覆盖 | `langchain-openai` |
 
 **配置示例：**
 
@@ -71,6 +72,14 @@
   MODEL_NAME=llama3.1
   API_BASE=http://host.docker.internal:11434
   API_KEY=ollama   # Ollama 无需真实密钥，但 API_KEY 必须非空以通过校验
+  ```
+
+- **OrcaRouter**
+  ```env
+  MODEL_PROVIDER=orcarouter
+  MODEL_NAME=anthropic/claude-sonnet-4.5
+  API_KEY=sk-orcarouter-...
+  # API_BASE 可省略，默认指向 https://api.orcarouter.ai/v1；自建网关时可覆盖
   ```
 
 > **接入更多提供商**：`init_chat_model` 还支持 Google Gemini、AWS Bedrock、Azure OpenAI、Mistral 等更多提供商。只需在 `backend/pyproject.toml` 增加对应的 `langchain-xxx` 集成包（如 `langchain-google-genai`）并重新构建镜像（`./build.sh` 或 `./dev.sh build`），再将 `MODEL_PROVIDER` 设为对应值即可。完整的提供商列表与命名参见 [LangChain `init_chat_model` 文档](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html)。

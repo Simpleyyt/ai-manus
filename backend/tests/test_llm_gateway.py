@@ -6,8 +6,12 @@ which is the boundary that keeps LangChain out of the domain.
 """
 from langchain.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 
+from app.core.config import Settings
 from app.domain.models.message import LLMMessage, Role, ToolCall
-from app.infrastructure.external.llm.langchain_llm import LangchainLLM
+from app.infrastructure.external.llm.langchain_llm import (
+    ORCAROUTER_API_BASE,
+    LangchainLLM,
+)
 
 
 def _gateway() -> LangchainLLM:
@@ -65,3 +69,29 @@ class TestRoundTrip:
         assert back.tool_calls[0].name == "info_search_web"
         assert back.tool_calls[0].args == {"query": "x"}
         assert back.tool_calls[0].id == "c3"
+
+
+class TestOrcaRouterProvider:
+    """OrcaRouter is wired as a named provider backed by ChatOpenAI."""
+
+    def test_orcarouter_defaults_to_orca_base_url(self):
+        gw = LangchainLLM(
+            settings=Settings(
+                api_key="test",
+                model_provider="orcarouter",
+                model_name="anthropic/claude-sonnet-4.5",
+            )
+        )
+        assert gw._model.openai_api_base == ORCAROUTER_API_BASE
+        assert gw._model.model_name == "anthropic/claude-sonnet-4.5"
+
+    def test_orcarouter_respects_explicit_api_base(self):
+        gw = LangchainLLM(
+            settings=Settings(
+                api_key="test",
+                model_provider="orcarouter",
+                model_name="anthropic/claude-sonnet-4.5",
+                api_base="https://selfhost.example.com/v1",
+            )
+        )
+        assert gw._model.openai_api_base == "https://selfhost.example.com/v1"

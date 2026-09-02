@@ -114,8 +114,9 @@ API_BASE=http://mockserver:8090/v1
 
 # Model configuration
 # MODEL_PROVIDER selects the LLM integration (via LangChain init_chat_model).
-# Built-in providers: openai, deepseek, anthropic, ollama. OpenAI-compatible
-# endpoints (DeepSeek / OneAPI / vLLM / ...) work with openai + API_BASE.
+# Built-in providers: openai, deepseek, anthropic, ollama, orcarouter.
+# OpenAI-compatible endpoints (DeepSeek / OneAPI / vLLM / ...) work with
+# openai + API_BASE. orcarouter points at the OrcaRouter gateway by default.
 # See docs/configuration.md for per-provider examples.
 MODEL_PROVIDER=openai
 MODEL_NAME=deepseek-chat

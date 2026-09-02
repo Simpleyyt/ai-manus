@@ -145,7 +145,7 @@ API_KEY=sk-...
 
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
-| `SEARCH_PROVIDER` | `bing_web` | 否 | 搜索引擎提供商（`baidu`、`baidu_web`、`google`、`bing`、`bing_web`、`tavily`、`serper` 或 `custom`） |
+| `SEARCH_PROVIDER` | `bing_web` | 否 | 搜索引擎提供商（`baidu`、`baidu_web`、`google`、`bing`、`bing_web`、`tavily`、`serper`、`youcom` 或 `custom`） |
 
 #### 百度搜索配置
 
@@ -191,6 +191,14 @@ API_KEY=sk-...
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
 | `SERPER_API_KEY` | - | 是 | Serper.dev API 密钥，从 [serper.dev](https://serper.dev) 获取（提供免费额度） |
+
+#### You.com 搜索配置
+
+仅当 `SEARCH_PROVIDER=youcom` 时使用。You.com 提供 AI 优先的网络搜索 API，返回排序后的结果和摘要：
+
+| 配置项 | 默认值 | 是否必需 | 说明 |
+|--------|--------|----------|------|
+| `YOUCOM_API_KEY` | - | 是 | You.com API 密钥，从 [you.com](https://you.com) 获取 |
 
 #### 自定义搜索 API 配置
 

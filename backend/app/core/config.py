@@ -65,7 +65,7 @@ class Settings(BaseSettings):
     browser_engine: str = "browser_use"  # "browser_use" or "playwright"
 
     # Search engine configuration
-    search_provider: str | None = "bing_web"  # "baidu", "baidu_web", "google", "bing", "bing_web", "tavily", "serper", "custom"
+    search_provider: str | None = "bing_web"  # "baidu", "baidu_web", "google", "bing", "bing_web", "tavily", "serper", "youcom", "custom"
     baidu_search_api_key: str | None = None
     bing_search_api_key: str | None = None
     google_search_api_key: str | None = None
@@ -73,6 +73,8 @@ class Settings(BaseSettings):
     tavily_api_key: str | None = None
     # Serper.dev search configuration (SEARCH_PROVIDER=serper)
     serper_api_key: str | None = None
+    # You.com search configuration (SEARCH_PROVIDER=youcom)
+    youcom_api_key: str | None = None
     # Custom search API configuration (SEARCH_PROVIDER=custom)
     search_api_url: str | None = None
     search_api_key: str | None = None

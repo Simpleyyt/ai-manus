@@ -145,7 +145,7 @@ API_KEY=sk-...
 
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
-| `SEARCH_PROVIDER` | `bing_web` | No | Search engine provider (`baidu`, `baidu_web`, `google`, `bing`, `bing_web`, `tavily`, `serper`, or `custom`) |
+| `SEARCH_PROVIDER` | `bing_web` | No | Search engine provider (`baidu`, `baidu_web`, `google`, `bing`, `bing_web`, `tavily`, `serper`, `youcom`, or `custom`) |
 
 #### Baidu Search Configuration
 
@@ -191,6 +191,14 @@ Used only when `SEARCH_PROVIDER=serper`. Serper.dev delivers reliable Google sea
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
 | `SERPER_API_KEY` | - | Yes | Serper.dev API key, get from [serper.dev](https://serper.dev) (free tier available) |
+
+#### You.com Search Configuration
+
+Used only when `SEARCH_PROVIDER=youcom`. You.com provides an AI-first web search API with ranked results and snippets:
+
+| Configuration | Default Value | Required | Description |
+|---------------|---------------|----------|-------------|
+| `YOUCOM_API_KEY` | - | Yes | You.com API key, get from [you.com](https://you.com) |
 
 #### Custom Search API Configuration
 

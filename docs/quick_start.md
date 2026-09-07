@@ -162,7 +162,7 @@ SANDBOX_NETWORK=manus-network
 #BROWSER_ENGINE=browser_use
 
 # Search engine configuration
-# Options: baidu, baidu_web, google, bing, bing_web, tavily, serper, youcom, custom
+# Options: baidu, baidu_web, google, bing, bing_web, tavily, serper, custom
 # baidu:    uses the Baidu Qianfan AI Search API (requires BAIDU_SEARCH_API_KEY)
 # baidu_web: scrapes Baidu search results with browser impersonation (no API key needed)
 # bing:     uses the official Bing Web Search API (requires BING_SEARCH_API_KEY)

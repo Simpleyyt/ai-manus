@@ -112,8 +112,14 @@ jobs:
       - name: Reclaim bind-mount mountpoint dirs
         # The dev compose anonymous volumes (/app/.venv, /app/node_modules)
         # make Docker create root-owned mountpoint dirs inside the bind
-        # sources; remove them so host-side uv/npm installs can write.
-        run: sudo rm -rf backend/.venv frontend/node_modules
+        # sources, blocking host-side uv/npm installs. chown them instead of
+        # deleting: these dirs are live mountpoints of running containers,
+        # and removing the inode rips the volume out from under the container
+        # (observed: vite lost node_modules the second the dir was rm'ed).
+        run: |
+          for d in backend/.venv frontend/node_modules; do
+            if [ -d "$d" ]; then sudo chown -R "$(id -u):$(id -g)" "$d"; fi
+          done
       - uses: astral-sh/setup-uv@v5
       - name: API e2e
         working-directory: backend

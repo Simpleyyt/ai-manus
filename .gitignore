@@ -33,6 +33,7 @@ venv.bak/
 .idea/
 .cursor/*
 !.cursor/skills/
+!.cursor/agents/
 .vscode/
 *.swp
 *.swo

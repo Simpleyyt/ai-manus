@@ -185,6 +185,28 @@ curl -X POST http://localhost:8090/v1/chat/completions \
 
 ---
 
+## AI Coding Loop
+
+The standard working loop for AI agents making changes in this repo:
+
+1. **Scope** — identify the change type and read the matching skill first (see Skills table; harness changes → `.cursor/skills/harness/SKILL.md`, UI parity → `replicate-manus-ui`, docs → `update-docs`).
+2. **Implement** — follow Code Conventions; match surrounding style; keep layer boundaries (`domain` ← `infrastructure`, wired in `interfaces/dependencies.py`).
+3. **Verify** — run the test pyramid for the affected layers (see Testing Strategy by Change Type). Delegate to the `test-pyramid` subagent to run all layers and get a per-layer failure report.
+4. **Guard** — for changes under `backend/app/domain/services` or `domain/models`, run the `harness-reviewer` subagent (read-only) to check the diff against harness invariants and required companion updates.
+5. **Sync** — update companions in the same change: tests (`backend/tests/`, shared fakes in `tests/harness.py`), eval scenarios (`backend/evals/scenarios.py`), skill docs (invariants in the harness skill), and doc embeds via `.cursor/skills/update-docs/update_doc.sh`.
+6. **Ship** — one logical change per commit; verify lint/type-check for frontend changes (`npm run type-check && npm run lint`).
+
+### Subagents (`.cursor/agents/`)
+
+| Subagent | Mode | Use |
+|---|---|---|
+| `test-pyramid` | read/write | Runs all four automated verification layers (unit → evals → API e2e → browser e2e) and reports per-layer results with failure diagnosis. Use after harness/test/scenario/chat-UI changes. |
+| `harness-reviewer` | read-only | Reviews a diff against the harness invariants and the companion-update checklist (tests/evals/skill/mock scenarios). Use before committing `domain/services` changes. |
+
+Cursor loads these from `.cursor/agents/*.md` (also compatible with `.claude/agents/`). Invoke explicitly with `/test-pyramid` / `/harness-reviewer`, or let the agent delegate automatically.
+
+---
+
 ## Code Conventions
 
 ### Backend (Python)

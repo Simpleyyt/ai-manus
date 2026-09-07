@@ -97,6 +97,10 @@ coverage.xml
 # Node.js
 node_modules/
 npm-debug.log*
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*

@@ -206,6 +206,19 @@ The standard working loop for AI agents making changes in this repo:
 
 Cursor loads these from `.cursor/agents/*.md` (also compatible with `.claude/agents/`). Invoke explicitly with `/test-pyramid` / `/harness-reviewer`, or let the agent delegate automatically.
 
+### Autonomy Stack (unattended-by-design)
+
+Four gate layers remove the human from the verify-fix loop; each outer layer backstops the inner ones:
+
+| Layer | Mechanism | What it enforces |
+|---|---|---|
+| L1 — session gate | `.cursor/hooks.json` `stop` hook → `.cursor/hooks/verify_on_stop.py` | The agent cannot end a turn while backend offline tests/evals or frontend unit tests/type-check fail for touched areas. Failures come back as an auto follow-up with the failure tail (max 3 loops). Fail-open on missing env (no venv/node_modules) — environment problems must not trap the agent. |
+| L2 — guard subagents | `.cursor/agents/` (`test-pyramid`, `harness-reviewer`, `ui-parity-auditor`) | Heavy verification (e2e layers) and semantic review (invariants, UI parity) on demand, per the AI Coding Loop. |
+| L3 — CI hard gate | `.github/workflows/tests.yml` | Every push/PR to `main`/`develop` runs backend offline tests + evals, frontend unit/type-check/lint/build, and full-stack e2e (API + browser) against the dev compose stack. |
+| L4 — platform | Branch protection + review bots (one-time human setup on GitHub/Cursor) | PRs merge only when L3 is green; automated review comments feed back into agent runs. |
+
+Offline test selection is exclusion-based (`--ignore` the three server-dependent files + `-m "not e2e"`) and must stay in sync across the hook, the `test-pyramid` subagent, and CI.
+
 ---
 
 ## Code Conventions

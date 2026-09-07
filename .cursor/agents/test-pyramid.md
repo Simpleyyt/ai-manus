@@ -16,14 +16,14 @@ you verify, diagnose, and hand back a precise failure report.
 
 ```bash
 cd backend && uv sync   # first run only
-env -u API_BASE uv run pytest tests/test_plan_act_flow.py \
-  tests/test_context_engineering.py tests/test_single_loop_manus.py \
-  tests/test_domain_tools.py tests/test_execution_context.py \
-  tests/test_llm_gateway.py tests/test_llm_message.py \
-  tests/test_memory_serialization.py tests/test_openai_gateway.py \
-  tests/test_plan_act_prompts.py tests/test_plan_progress.py \
-  tests/test_todo_projection.py -q
+env -u API_BASE uv run pytest \
+  --ignore=tests/test_api_file.py --ignore=tests/test_auth_routes.py \
+  --ignore=tests/test_sandbox_file.py -m "not e2e" -q
 ```
+
+(Exclusion-based selection: everything is offline except the three files that
+hit a running backend/sandbox and the `e2e` marker. New offline test files
+are covered automatically.)
 
 2. **Behavioral evals** (offline, deterministic; exit 1 on failure):
 

@@ -1,0 +1,124 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-offline:
+    name: Backend offline tests + evals
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install dependencies
+        working-directory: backend
+        run: uv sync --frozen
+      - name: Offline unit tests
+        working-directory: backend
+        # Exclusion-based offline selection — keep in sync with
+        # .cursor/hooks/verify_on_stop.py and .cursor/agents/test-pyramid.md
+        run: >
+          uv run pytest
+          --ignore=tests/test_api_file.py
+          --ignore=tests/test_auth_routes.py
+          --ignore=tests/test_sandbox_file.py
+          -m "not e2e"
+      - name: Behavioral evals
+        working-directory: backend
+        run: uv run python -m evals.run
+
+  frontend:
+    name: Frontend unit + type-check + lint + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Unit tests
+        working-directory: frontend
+        run: npm run test
+      - name: Type-check
+        working-directory: frontend
+        run: npm run type-check
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+  e2e:
+    name: E2E (API + browser) against dev stack
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare .env
+        run: |
+          cp .env.example .env
+          sed -i 's|^API_KEY=.*|API_KEY=test|' .env
+          sed -i 's|^AUTH_PROVIDER=.*|AUTH_PROVIDER=none|' .env
+      - name: Start dev stack
+        run: docker compose -f docker-compose-development.yml up -d --build
+      - name: Wait for services
+        run: |
+          wait_for() {
+            for i in $(seq 1 60); do
+              if curl -fsS "$1" >/dev/null 2>&1; then echo "$1 ready"; return 0; fi
+              sleep 5
+            done
+            echo "$1 not ready after 300s"
+            docker compose -f docker-compose-development.yml logs --tail=100
+            return 1
+          }
+          wait_for http://localhost:8000/api/v1/sessions
+          wait_for http://localhost:8090/mock/scenario
+          wait_for http://localhost:5173
+      - uses: astral-sh/setup-uv@v5
+      - name: API e2e
+        working-directory: backend
+        run: |
+          uv sync --frozen
+          uv run pytest -m e2e -rs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install Playwright
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Browser e2e
+        working-directory: frontend
+        run: npm run test:e2e
+      - name: Dump stack logs on failure
+        if: failure()
+        run: docker compose -f docker-compose-development.yml logs --tail=200
+      - name: Upload Playwright artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: frontend/test-results/
+          if-no-files-found: ignore

@@ -7,9 +7,11 @@ stdout. A non-empty {"followup_message": ...} re-prompts the agent (bounded
 by loop_limit in .cursor/hooks.json); {} lets the turn end.
 
 Scope: only the fast, service-free layers run here — backend offline unit
-tests + behavioral evals, frontend unit tests + type-check — and only for
-the areas actually touched (vs origin/main + uncommitted work). Heavier
-layers (API/browser e2e) stay in CI and the test-pyramid subagent.
+tests + behavioral evals, frontend unit tests — and only for areas touched
+by work that CI has not seen yet (uncommitted changes + commits not pushed
+to the upstream branch). Once everything is pushed, CI owns verification and
+this gate passes through instantly. Heavier layers (type-check, API/browser
+e2e) stay in CI and the test-pyramid subagent.
 
 Fail-open policy: a missing interpreter/venv/node_modules or a hook crash
 must never trap the agent — those are environment problems, not code
@@ -47,9 +49,19 @@ def sh(args, cwd, env=None, timeout=240):
 
 
 def changed_files():
+    """Files changed by work CI has not seen: unpushed commits + local edits."""
+    ranges = []
+    try:
+        up = sh(["git", "rev-parse", "--abbrev-ref", "@{upstream}"], ROOT, timeout=10)
+        if up.returncode == 0:
+            ranges.append("@{upstream}...HEAD")
+        else:
+            ranges.append("origin/main...HEAD")
+    except Exception:
+        pass
     files = set()
     for args in (
-        ["git", "diff", "--name-only", "origin/main...HEAD"],
+        *(["git", "diff", "--name-only", r] for r in ranges),
         ["git", "diff", "--name-only", "HEAD"],
         ["git", "ls-files", "--others", "--exclude-standard"],
     ):
@@ -115,11 +127,10 @@ def main():
     if frontend_touched:
         frontend = os.path.join(ROOT, "frontend")
         if os.path.isdir(os.path.join(frontend, "node_modules")):
+            # type-check (vue-tsc, ~12s) is deliberately left to CI; this
+            # gate stays fast so every turn can afford it.
             failures.append(run_gate(
                 "frontend unit tests", ["npm", "run", "-s", "test"], frontend,
-            ))
-            failures.append(run_gate(
-                "frontend type-check", ["npm", "run", "-s", "type-check"], frontend,
             ))
 
     failures = [f for f in failures if f]
@@ -132,9 +143,10 @@ def main():
         "these fast offline checks are red. Fix the failures (or the test "
         "expectations, if the behavior change is intentional), then finish.\n\n"
         + "\n\n".join(failures)
-        + "\n\nRe-run locally: backend `cd backend && env -u API_BASE uv run "
-        "pytest <offline tests> -q && uv run python -m evals.run`; frontend "
-        "`cd frontend && npm run test && npm run type-check`. "
+        + "\n\nRe-run locally: backend `cd backend && uv run pytest "
+        "--ignore=tests/test_api_file.py --ignore=tests/test_auth_routes.py "
+        "--ignore=tests/test_sandbox_file.py -m 'not e2e' -q && uv run python "
+        "-m evals.run`; frontend `cd frontend && npm run test`. "
         "If a failure is purely environmental (missing services/deps you "
         "cannot install), state that explicitly in your final answer."
     )

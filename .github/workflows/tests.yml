@@ -9,6 +9,7 @@ on:
     branches:
       - main
       - develop
+  workflow_call: {}
 
 concurrency:
   group: tests-${{ github.ref }}
@@ -65,6 +66,21 @@ jobs:
       - name: Build
         working-directory: frontend
         run: npm run build
+
+  docs-drift:
+    name: Docs embeds in sync
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Regenerate doc embeds
+        run: bash .cursor/skills/update-docs/update_doc.sh
+      - name: Fail on drift
+        run: |
+          if ! git diff --exit-code; then
+            echo "::error::Doc embeds are out of sync. Run .cursor/skills/update-docs/update_doc.sh and commit the result."
+            exit 1
+          fi
 
   e2e:
     name: E2E (API + browser) against dev stack

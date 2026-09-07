@@ -208,13 +208,31 @@ Cursor loads these from `.cursor/agents/*.md` (also compatible with `.claude/age
 
 ### Autonomy Stack (unattended-by-design)
 
+**Lifecycle**: every stage from task intake to regression repair is wired so no human sits in the loop:
+
+| Stage | Automation |
+|---|---|
+| Task intake | GitHub issues labeled for agents / `@cursor` mentions / Cursor automations dispatch a Cloud Agent; nightly regressions self-file issues (label `autonomy-regression`) that feed back into intake |
+| Develop | AI Coding Loop (above) + skills; agent commits and opens the PR itself |
+| Verify (inner) | L1 `stop` hook — the turn cannot end red |
+| Review | L2 guard subagents + platform review bots on the PR |
+| Merge gate | L3 CI (`tests.yml`): offline tests + evals, frontend checks, docs-drift, full e2e; branch protection makes green mandatory |
+| Release | `docker-build-and-push.yml` publishes images on merge to `main` and tags (`release` skill covers versioned notes) |
+| Watch | `nightly.yml` reruns the full gate on `main` daily; failures open/append the regression issue automatically |
+
+Reproducibility: `backend/uv.lock` and `frontend/package-lock.json` are committed; CI installs with `uv sync --frozen` / `npm ci`. Doc embeds are generated (`update_doc.sh`) and drift-gated in CI.
+
+**Remaining human touchpoints** (by design, one-time or judgment-only):
+- One-time GitHub setup: branch protection requiring the `Tests` jobs, enabling auto-merge, allowing Actions to create issues; optional Cursor automations for issue → agent dispatch.
+- Judgment calls: merging (or enabling auto-merge per PR), product/UX decisions, mining manus.im dumps (needs a logged-in browser), and rotating secrets.
+
 Four gate layers remove the human from the verify-fix loop; each outer layer backstops the inner ones:
 
 | Layer | Mechanism | What it enforces |
 |---|---|---|
 | L1 — session gate | `.cursor/hooks.json` `stop` hook → `.cursor/hooks/verify_on_stop.py` | The agent cannot end a turn while backend offline tests/evals or frontend unit tests/type-check fail for touched areas. Failures come back as an auto follow-up with the failure tail (max 3 loops). Fail-open on missing env (no venv/node_modules) — environment problems must not trap the agent. |
 | L2 — guard subagents | `.cursor/agents/` (`test-pyramid`, `harness-reviewer`, `ui-parity-auditor`) | Heavy verification (e2e layers) and semantic review (invariants, UI parity) on demand, per the AI Coding Loop. |
-| L3 — CI hard gate | `.github/workflows/tests.yml` | Every push/PR to `main`/`develop` runs backend offline tests + evals, frontend unit/type-check/lint/build, and full-stack e2e (API + browser) against the dev compose stack. |
+| L3 — CI hard gate | `.github/workflows/tests.yml` + `nightly.yml` | Every push/PR to `main`/`develop` runs backend offline tests + evals, frontend unit/type-check/lint/build, docs-drift, and full-stack e2e (API + browser) against the dev compose stack. Nightly reruns it all on `main` and files/updates an `autonomy-regression` issue on failure. |
 | L4 — platform | Branch protection + review bots (one-time human setup on GitHub/Cursor) | PRs merge only when L3 is green; automated review comments feed back into agent runs. |
 
 Offline test selection is exclusion-based (`--ignore` the three server-dependent files + `-m "not e2e"`) and must stay in sync across the hook, the `test-pyramid` subagent, and CI.

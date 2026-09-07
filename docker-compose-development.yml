@@ -89,6 +89,8 @@ services:
       - /app/__pycache__  # Avoid overwriting cache files
       - /app/.venv  # Avoid overwriting virtual environment
     restart: unless-stopped
+    ports:
+      - "8090:8090" # Host access for e2e scenario control (POST /mock/scenario)
     environment:
       - MOCK_DATA_FILE=default.yaml
       - MOCK_DELAY=1

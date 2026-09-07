@@ -1,0 +1,72 @@
+# PlanAct e2e smoke script: create_plan -> shell_exec -> complete_step
+# -> deliver_result. Used by backend/tests/test_e2e_plan_act.py via
+# POST /mock/scenario.
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: create_plan
+              arguments: |
+                {
+                  "message": "I will run a quick smoke command.",
+                  "language": "en",
+                  "title": "E2E Smoke Task",
+                  "goal": "Run a shell command and report the result",
+                  "steps": [
+                    {
+                      "id": "1",
+                      "description": "Run the smoke command"
+                    }
+                  ]
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: shell_exec
+              arguments: |
+                {
+                  "id": "e2e",
+                  "exec_dir": "/home/ubuntu",
+                  "command": "echo e2e-smoke-ok"
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: complete_step
+              arguments: |
+                {
+                  "success": true,
+                  "result": "Smoke command executed",
+                  "attachments": []
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: deliver_result
+              arguments: |
+                {
+                  "message": "E2E smoke finished",
+                  "attachments": []
+                }

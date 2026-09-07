@@ -109,6 +109,11 @@ jobs:
           wait_for http://localhost:8000/api/v1/sessions
           wait_for http://localhost:8090/mock/scenario
           wait_for http://localhost:5173
+      - name: Reclaim bind-mount mountpoint dirs
+        # The dev compose anonymous volumes (/app/.venv, /app/node_modules)
+        # make Docker create root-owned mountpoint dirs inside the bind
+        # sources; remove them so host-side uv/npm installs can write.
+        run: sudo rm -rf backend/.venv frontend/node_modules
       - uses: astral-sh/setup-uv@v5
       - name: API e2e
         working-directory: backend

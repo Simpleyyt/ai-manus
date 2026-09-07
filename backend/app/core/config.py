@@ -152,8 +152,10 @@ class Settings(BaseSettings):
 @lru_cache()
 def get_settings() -> Settings:
     """Get application settings"""
-    if not os.environ.get("OPENAI_API_KEY"):
-        os.environ["OPENAI_API_KEY"] = os.getenv("API_KEY")
+    # Bridge API_KEY to OPENAI_API_KEY for SDKs that only read the latter.
+    # Guard against an unset API_KEY: os.environ[...] = None raises TypeError.
+    if not os.environ.get("OPENAI_API_KEY") and os.environ.get("API_KEY"):
+        os.environ["OPENAI_API_KEY"] = os.environ["API_KEY"]
     settings = Settings()
     settings.extra_headers = _parse_extra_headers()
     settings.validate()

@@ -95,11 +95,12 @@ budget, replans, self-repairs, premature-complete rejections, error events.
 Add a scenario when you add or change a harness behavior; the report is a
 regression gate for prompt/loop changes.
 
-**3. E2E over the real stack (`uv run pytest -m e2e`):** with the dev stack
-up (`./dev.sh up -d`), `tests/test_e2e_plan_act.py` creates a session over
-the real API, drives the chat WebSocket, lets the mockserver replay a
-scripted scenario and the real sandbox execute tools, then asserts on the
-wire events (`plan`/`step`/`tool`/`message`/`status_update`/`stream_end`).
+**3. API e2e over the real stack (`cd backend && uv run pytest -m e2e`):**
+with the dev stack up (`./dev.sh up -d`), `tests/test_e2e_plan_act.py`
+creates a session over the real API, drives the chat WebSocket, lets the
+mockserver replay a scripted scenario and the real sandbox execute tools,
+then asserts on the wire events
+(`plan`/`step`/`tool`/`message`/`status_update`/`stream_end`).
 Tests self-skip when the stack is down. Switch scripts programmatically via
 the mockserver control API (no restart needed):
 
@@ -133,9 +134,20 @@ Script-writing gotcha: a step that only asked the user cannot
 (shell/file/browser/search/mcp) ran in that step. Script real work before
 completing.
 
-**4. Full stack manual:** `./dev.sh up -d`, open `http://localhost:5173`,
+**4. Browser e2e (`cd frontend && npm run test:e2e`):** Playwright
+(`frontend/e2e/plan-act.spec.ts`, config `frontend/playwright.config.ts`)
+drives the real UI at `localhost:5173` as a user: type a task into the
+TipTap chat box, press Enter, and assert the rendered chat timeline (plan
+message, step row, final answer, "Task completed" badge, waiting banner +
+resume). Needs the dev stack up and browsers installed
+(`npx playwright install chromium`). Runs serially (`workers: 1`) because
+the mockserver replay index is global. UI assertion gotcha: the plan title
+from `TitleEvent` goes to the sidebar/tab — assert on chat-visible texts
+(plan `message`, step description, deliver_result message) instead.
+
+**5. Full stack manual:** `./dev.sh up -d`, open `http://localhost:5173`,
 watch `./dev.sh logs -f backend`. Needed for sandbox/browser/VNC behavior
-that fakes can't cover.
+that automation can't cover.
 
 ## Maintenance
 

@@ -50,6 +50,7 @@ cd sandbox && uv run pytest
 
 # Frontend — Vitest unit tests + type-check + lint + build
 cd frontend && npm run test && npm run type-check && npm run lint && npm run build
+cd frontend && npm run test:e2e # Playwright browser e2e against the dev stack (localhost:5173)
 ```
 
 ### Running a service outside Docker

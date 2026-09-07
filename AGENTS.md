@@ -131,15 +131,19 @@ Config: `backend/pytest.ini` (`asyncio_mode = auto`, markers: `file_api`, `e2e`)
 ### Agent Harness E2E + Evals
 
 ```bash
-# E2E over the real stack (self-skips if the stack is down)
+# API e2e over the real stack (self-skips if the stack is down)
 ./dev.sh up -d
 cd backend && uv run pytest -m e2e
+
+# Browser e2e (Playwright drives the real UI at localhost:5173)
+cd frontend && npx playwright install chromium   # once
+cd frontend && npm run test:e2e
 
 # Offline behavioral evals (deterministic, no services needed; exit 1 on failure)
 cd backend && uv run python -m evals.run
 ```
 
-E2E tests (`backend/tests/test_e2e_plan_act.py`) drive the chat WebSocket with mockserver scenarios switched via `POST localhost:8090/mock/scenario`. Evals (`backend/evals/`) score PlanActFlow behavior (completion, LLM-call budget, replans, self-repairs, rejections). See `.cursor/skills/harness/SKILL.md`.
+API e2e (`backend/tests/test_e2e_plan_act.py`) drives the chat WebSocket directly; browser e2e (`frontend/e2e/plan-act.spec.ts`) drives the rendered UI as a user. Both replay mockserver scenarios switched via `POST localhost:8090/mock/scenario`. Evals (`backend/evals/`) score PlanActFlow behavior (completion, LLM-call budget, replans, self-repairs, rejections). See `.cursor/skills/harness/SKILL.md`.
 
 ### Sandbox Tests (pytest)
 
@@ -242,7 +246,7 @@ When running in a Cloud Agent environment:
 | Backend API routes | `cd backend && uv run pytest` against running server |
 | Frontend Vue/TS | `cd frontend && npm run test && npm run type-check && npm run lint && npm run build` |
 | Frontend UI changes | Type-check + build + manual GUI testing via `computerUse` subagent |
-| Agent harness (`domain/services` flows/agents/prompts/tools) | Offline: `uv run pytest tests/test_plan_act_flow.py tests/test_context_engineering.py tests/test_single_loop_manus.py` + `uv run python -m evals.run`; full stack: `uv run pytest -m e2e` |
+| Agent harness (`domain/services` flows/agents/prompts/tools) | Offline: `uv run pytest tests/test_plan_act_flow.py tests/test_context_engineering.py tests/test_single_loop_manus.py` + `uv run python -m evals.run`; full stack: `uv run pytest -m e2e` + `cd frontend && npm run test:e2e` |
 | Sandbox changes | `cd sandbox && uv run pytest` |
 | Config / env changes | Verify with `./dev.sh up -d` and check service logs |
 | Documentation / README | No testing needed |

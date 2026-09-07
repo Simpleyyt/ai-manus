@@ -41,6 +41,8 @@ Backend and sandbox tests are **integration-style**: they hit a *running* server
 cd backend && uv run pytest                            # all
 cd backend && uv run pytest tests/test_auth_routes.py  # single file
 cd backend && uv run pytest -m file_api                # by marker (see backend/pytest.ini)
+cd backend && uv run pytest -m e2e                     # agent-loop e2e over the dev stack (self-skips when down)
+cd backend && uv run python -m evals.run               # offline harness behavior evals
 
 # Sandbox
 ./dev.sh up -d sandbox

@@ -82,14 +82,44 @@ turns, run the flow, assert on the yielded events and on
 Gotchas: run `uv sync` first; `Settings` reads real env vars, so unset
 `API_BASE` etc. when testing config defaults (`env -u API_BASE uv run pytest …`).
 
-**2. Mockserver scenarios (end-to-end over real HTTP):** the mockserver
-replays a YAML script of chat completions in order. Select with
-`MOCK_DATA_FILE=<name>.yaml` (default `default.yaml`), tune `MOCK_DELAY`;
-restart mockserver to reset the reply index (`./dev.sh restart mockserver`).
+**2. Behavioral evals (offline, deterministic — `backend/evals/`):**
+
+```bash
+cd backend && uv run python -m evals.run            # exit 1 on failure
+cd backend && uv run python -m evals.run --json out.json --scenario ask_user_waits
+```
+
+Each scenario in `evals/scenarios.py` drives the real `PlanActFlow` with a
+scripted LLM and scores the run (`evals/metrics.py`): completion, LLM-call
+budget, replans, self-repairs, premature-complete rejections, error events.
+Add a scenario when you add or change a harness behavior; the report is a
+regression gate for prompt/loop changes.
+
+**3. E2E over the real stack (`uv run pytest -m e2e`):** with the dev stack
+up (`./dev.sh up -d`), `tests/test_e2e_plan_act.py` creates a session over
+the real API, drives the chat WebSocket, lets the mockserver replay a
+scripted scenario and the real sandbox execute tools, then asserts on the
+wire events (`plan`/`step`/`tool`/`message`/`status_update`/`stream_end`).
+Tests self-skip when the stack is down. Switch scripts programmatically via
+the mockserver control API (no restart needed):
+
+```bash
+curl -X POST localhost:8090/mock/scenario -H 'Content-Type: application/json' \
+  -d '{"file": "plan_act_e2e.yaml"}'   # also resets the replay index
+curl localhost:8090/mock/scenario      # inspect file/index
+curl -X POST localhost:8090/mock/reset # back to MOCK_DATA_FILE default
+```
+
+Mockserver replays a YAML list of chat completions in order (default file
+via `MOCK_DATA_FILE`, per-reply delay via `MOCK_DELAY`). Wire-format note:
+the WS `plan` event carries only flat `steps` (no title/status); titles
+arrive as `title` events, and step events are flat (`id`/`status`/`result`).
 
 | Scenario | Covers |
 |---|---|
-| `default.yaml` | Baseline plan → step → deliver flow |
+| `plan_act_e2e.yaml` | PlanAct smoke: create_plan → shell_exec → complete_step → deliver_result |
+| `plan_act_wait_e2e.yaml` | PlanAct wait/resume: ask_user → WAITING → reply → work → deliver |
+| `default.yaml` | Single-loop Manus protocol (notify + todo.md) — **not** PlanAct-shaped |
 | `shell_tools.yaml` / `shell_stateful.yaml` | Shell toolkit, live terminal updates |
 | `file_tools.yaml` | File toolkit views |
 | `browser_tools.yaml` | Browser toolkit + VNC view |
@@ -98,12 +128,18 @@ restart mockserver to reset the reply index (`./dev.sh restart mockserver`).
 | `chat_page_parity_e2e.yaml` / `computer_ui_e2e.yaml` | Frontend UI e2e |
 | `single-loop-ui-demo.yaml` | Experimental single-loop flow |
 
-**3. Full stack:** `./dev.sh up -d`, open `http://localhost:5173`, watch
-`./dev.sh logs -f backend`. Needed for sandbox/browser/VNC behavior that
-fakes can't cover.
+Script-writing gotcha: a step that only asked the user cannot
+`complete_step(success=true)` — the executor rejects it until a work tool
+(shell/file/browser/search/mcp) ran in that step. Script real work before
+completing.
+
+**4. Full stack manual:** `./dev.sh up -d`, open `http://localhost:5173`,
+watch `./dev.sh logs -f backend`. Needed for sandbox/browser/VNC behavior
+that fakes can't cover.
 
 ## Maintenance
 
 When you change flow transitions, event contracts, memory/rollback
-semantics, or output tools, update the **Invariants** section above and the
-affected scripted tests in the same PR.
+semantics, or output tools, update the **Invariants** section above, the
+affected scripted tests, and the eval scenarios in `backend/evals/` in the
+same PR.

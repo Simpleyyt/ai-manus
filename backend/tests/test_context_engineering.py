@@ -6,15 +6,13 @@ result truncation, and the dynamic MCP tool bridge. Pure unit tests — no
 running backend required.
 """
 import json
-from typing import List, Optional
-
-from pydantic import BaseModel
+from typing import Optional
 
 from app.domain.models.agent_output import PlanOutput, StepReport
 from app.domain.models.memory import Memory, estimate_tokens
 from app.domain.models.message import LLMMessage, Role, ToolCall
 from app.domain.models.tool_result import ToolResult
-from app.domain.services.agents.base import BaseAgent, StructuredOutputEvent
+from app.domain.services.agents.base import StructuredOutputEvent
 from app.domain.services.prompts.system import build_system_prompt
 from app.domain.services.tools.base import (
     BaseToolkit,
@@ -23,6 +21,8 @@ from app.domain.services.tools.base import (
     describe_toolkits,
     tool,
 )
+
+from tests.harness import FakeAgentRepository, ScriptedLLM, StubAgent, collect
 
 
 class EchoToolkit(BaseToolkit):
@@ -147,43 +147,10 @@ class TestMemoryCompaction:
         assert all(msg.role in (Role.SYSTEM, Role.ASSISTANT, Role.TOOL) for msg in m.messages)
 
 
-class _FakeRepository:
-    def __init__(self):
-        self.memory = Memory()
-
-    async def get_memory(self, agent_id: str, name: str) -> Memory:
-        return self.memory
-
-    async def save_memory(self, agent_id: str, name: str, memory: Memory) -> None:
-        self.memory = memory
-
-
-class _ScriptedLLM:
-    """LLM stub returning scripted assistant messages in order."""
-
-    def __init__(self, responses: List[LLMMessage]):
-        self._responses = list(responses)
-        self.requests = []
-
-    async def ask(self, messages, tools=None, response_format=None, tool_choice=None):
-        self.requests.append({"messages": list(messages), "tools": tools, "tool_choice": tool_choice})
-        return self._responses.pop(0)
-
-    async def parse_json(self, text: str):
-        raise AssertionError("parse_json must not be used by the agent loop anymore")
-
-
-class _TestAgent(BaseAgent):
-    name = "test"
-
-    def build_system_prompt(self) -> str:
-        return "test system prompt"
-
-
-def _agent(llm: _ScriptedLLM, toolkits: Optional[list] = None) -> _TestAgent:
-    return _TestAgent(
+def _agent(llm: ScriptedLLM, toolkits: Optional[list] = None) -> StubAgent:
+    return StubAgent(
         agent_id="a1",
-        agent_repository=_FakeRepository(),
+        agent_repository=FakeAgentRepository(),
         llm=llm,
         tools=toolkits or [],
     )
@@ -192,20 +159,16 @@ def _agent(llm: _ScriptedLLM, toolkits: Optional[list] = None) -> _TestAgent:
 REPORT_TOOL = OutputTool("complete_step", "Report the step outcome.", StepReport)
 
 
-async def _collect(gen):
-    return [event async for event in gen]
-
-
 class TestAgentLoopStructuredOutput:
     async def test_output_tool_call_yields_structured_output(self):
-        llm = _ScriptedLLM([
+        llm = ScriptedLLM([
             LLMMessage.assistant("", tool_calls=[
                 ToolCall(id="c1", name="complete_step",
                          args={"success": True, "result": "done", "attachments": []}),
             ]),
         ])
         agent = _agent(llm)
-        events = await _collect(agent.execute("do it", output_tool=REPORT_TOOL))
+        events = await collect(agent.execute("do it", output_tool=REPORT_TOOL))
 
         outputs = [e for e in events if isinstance(e, StructuredOutputEvent)]
         assert len(outputs) == 1
@@ -220,7 +183,7 @@ class TestAgentLoopStructuredOutput:
         assert last.role == Role.TOOL and last.tool_call_id == "c1"
 
     async def test_invalid_output_args_trigger_self_repair(self):
-        llm = _ScriptedLLM([
+        llm = ScriptedLLM([
             # First attempt: missing required fields.
             LLMMessage.assistant("", tool_calls=[
                 ToolCall(id="c1", name="complete_step", args={"success": True}),
@@ -232,7 +195,7 @@ class TestAgentLoopStructuredOutput:
             ]),
         ])
         agent = _agent(llm)
-        events = await _collect(agent.execute("do it", output_tool=REPORT_TOOL))
+        events = await collect(agent.execute("do it", output_tool=REPORT_TOOL))
 
         outputs = [e for e in events if isinstance(e, StructuredOutputEvent)]
         assert len(outputs) == 1 and outputs[0].output.result == "fixed"
@@ -245,7 +208,7 @@ class TestAgentLoopStructuredOutput:
         assert len(error_feedback) == 1
 
     async def test_plain_message_is_nudged_to_output_tool(self):
-        llm = _ScriptedLLM([
+        llm = ScriptedLLM([
             LLMMessage.assistant("I think I'm done."),
             LLMMessage.assistant("", tool_calls=[
                 ToolCall(id="c1", name="complete_step",
@@ -253,14 +216,14 @@ class TestAgentLoopStructuredOutput:
             ]),
         ])
         agent = _agent(llm)
-        events = await _collect(agent.execute("do it", output_tool=REPORT_TOOL))
+        events = await collect(agent.execute("do it", output_tool=REPORT_TOOL))
         assert any(isinstance(e, StructuredOutputEvent) for e in events)
         # The nudge mentions the output tool by name.
         nudge = llm.requests[1]["messages"][-1]
         assert "complete_step" in nudge.content
 
     async def test_regular_tools_still_execute(self):
-        llm = _ScriptedLLM([
+        llm = ScriptedLLM([
             LLMMessage.assistant("", tool_calls=[
                 ToolCall(id="c1", name="echo", args={"text": "hello"}),
             ]),
@@ -270,21 +233,21 @@ class TestAgentLoopStructuredOutput:
             ]),
         ])
         agent = _agent(llm, toolkits=[EchoToolkit()])
-        events = await _collect(agent.execute("echo hello", output_tool=REPORT_TOOL))
+        events = await collect(agent.execute("echo hello", output_tool=REPORT_TOOL))
         assert any(isinstance(e, StructuredOutputEvent) for e in events)
         tool_msgs = [m for m in agent.memory.get_messages() if m.role == Role.TOOL and m.name == "echo"]
         assert len(tool_msgs) == 1
         assert json.loads(tool_msgs[0].content)["data"] == "hello"
 
     async def test_unknown_tool_gets_error_response(self):
-        llm = _ScriptedLLM([
+        llm = ScriptedLLM([
             LLMMessage.assistant("", tool_calls=[
                 ToolCall(id="c1", name="not_a_tool", args={}),
             ]),
             LLMMessage.assistant("all done"),
         ])
         agent = _agent(llm)
-        events = await _collect(agent.execute("do it"))
+        events = await collect(agent.execute("do it"))
         # The dangling tool call was answered so the history stays valid.
         unknown = [
             m for m in agent.memory.get_messages()
@@ -303,12 +266,12 @@ class TestToolResultTruncation:
                 """Return something huge."""
                 return ToolResult(success=True, data="y" * 100000)
 
-        llm = _ScriptedLLM([
+        llm = ScriptedLLM([
             LLMMessage.assistant("", tool_calls=[ToolCall(id="c1", name="big", args={})]),
             LLMMessage.assistant("done"),
         ])
         agent = _agent(llm, toolkits=[BigToolkit()])
-        await _collect(agent.execute("go"))
+        await collect(agent.execute("go"))
 
         tool_msg = [m for m in agent.memory.get_messages() if m.role == Role.TOOL][0]
         assert len(tool_msg.content) <= agent.max_tool_result_chars + 100

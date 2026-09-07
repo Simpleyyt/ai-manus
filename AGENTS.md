@@ -212,7 +212,7 @@ Cursor loads these from `.cursor/agents/*.md` (also compatible with `.claude/age
 
 | Stage | Automation |
 |---|---|
-| Task intake | GitHub issues labeled for agents / `@cursor` mentions / Cursor automations dispatch a Cloud Agent; nightly regressions self-file issues (label `autonomy-regression`) that feed back into intake |
+| Task intake | **Features**: file an issue with the `Agent task` template (`.github/ISSUE_TEMPLATE/agent-task.yml`, goal + acceptance criteria, auto-labeled `agent-task`) → a Cursor automation on the label (or an `@cursor` comment) dispatches a Cloud Agent, whose PR closes the issue. **Defects**: nightly regressions self-file `autonomy-regression` issues that enter the same dispatch path. Ad-hoc: `@cursor` on any issue/PR, Slack, cursor.com/agents, or the Cloud Agents API |
 | Develop | AI Coding Loop (above) + skills; agent commits and opens the PR itself |
 | Verify (inner) | L1 `stop` hook — the turn cannot end red |
 | Review | L2 guard subagents + platform review bots on the PR |

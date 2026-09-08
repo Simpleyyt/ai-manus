@@ -36,6 +36,10 @@ Planning rules:
   with blank strings.
 - If the task is infeasible, return an empty step list and an empty goal, and
   explain why in ``message``.
+- When an ``<active_skill>`` block is present, the first plan step MUST be a
+  short load label in the working language (zh: ``加载 {{skill_name}} 技能``;
+  en: ``Load {{skill_name}} skill``) so the executor calls ``load_skill`` and
+  follows it; do not invent an unrelated workflow from the skill name alone.
 </role>
 
 <executor_capabilities>

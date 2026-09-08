@@ -32,6 +32,7 @@ from app.domain.services.tools.mcp import MCPToolkit
 from app.domain.services.tools.message import MessageToolkit
 from app.domain.services.tools.search import SearchToolkit
 from app.domain.services.tools.shell import ShellToolkit
+from app.domain.services.tools.skill import SkillToolkit
 
 logger = logging.getLogger(__name__)
 
@@ -85,11 +86,13 @@ class PlanActFlow(BaseFlow):
         self._done = False
         self._resume_waiting = False
 
+        self._skill_toolkit = SkillToolkit()
         tools = [
             ShellToolkit(sandbox),
             BrowserToolkit(browser),
             FileToolkit(sandbox),
             MessageToolkit(),
+            self._skill_toolkit,
             mcp_tool,
         ]
         if search_engine:
@@ -116,6 +119,48 @@ class PlanActFlow(BaseFlow):
                 instruction = project.instruction
         self.planner.set_project_instruction(instruction)
         self.executor.set_project_instruction(instruction)
+
+    def set_skill_catalog(self, catalog: Optional[str]) -> None:
+        """Inject L1 skill metadata into planner and executor system prompts."""
+        self.planner.set_skill_catalog(catalog)
+        self.executor.set_skill_catalog(catalog)
+
+    def set_enabled_skills(
+        self,
+        skills: Optional[list[tuple[str, str]]] = None,
+        bodies: Optional[dict[str, str]] = None,
+    ) -> None:
+        """Refresh ``load_skill`` catalog + bodies from the user's enabled skills."""
+        self._skill_toolkit.set_skills(list(skills or []))
+        self._skill_toolkit.set_bodies(dict(bodies or {}))
+
+    async def _apply_skill_context(self, message: Message) -> None:
+        from app.domain.services.prompts.system import (
+            format_skill_context,
+            format_skill_planner_context,
+        )
+
+        if not message.skill:
+            self.planner.set_skill_context(None)
+            self.executor.set_skill_context(None)
+            return
+
+        # Planner: activation only — must schedule a first load_skill step.
+        # Executor: soft MUST call load_skill before other work.
+        self.planner.set_skill_context(
+            format_skill_planner_context(
+                name=message.skill.name,
+                task=message.message,
+            )
+        )
+        self.executor.set_skill_context(
+            format_skill_context(
+                name=message.skill.name,
+                task=message.message,
+            )
+        )
+
+    async def _sync_agent_prompts(self) -> None:
         await self.planner.sync_system_prompt()
         await self.executor.sync_system_prompt()
 
@@ -126,6 +171,8 @@ class PlanActFlow(BaseFlow):
             raise ValueError(f"Session {self._session_id} not found")
 
         await self._apply_project_instruction(session.project_id)
+        await self._apply_skill_context(message)
+        await self._sync_agent_prompts()
 
         if session.status != SessionStatus.PENDING:
             await self.executor.roll_back(message)
@@ -152,10 +199,17 @@ class PlanActFlow(BaseFlow):
             elif self.status == AgentStatus.PLANNING:
                 async for event in self.planner.create_plan(message):
                     if isinstance(event, PlanEvent) and event.status == PlanStatus.CREATED:
+                        plan = event.plan
+                        if message.skill and plan:
+                            from app.domain.services.skills.plan_steps import (
+                                ensure_skill_read_first_step,
+                            )
+
+                            ensure_skill_read_first_step(plan, message.skill.name)
                         self.plan = (
-                            mark_first_step_running(event.plan)
-                            if event.plan.steps
-                            else event.plan
+                            mark_first_step_running(plan)
+                            if plan and plan.steps
+                            else plan
                         )
                         event = PlanEvent(status=PlanStatus.CREATED, plan=self.plan)
                         if self.plan.title and self.plan.title.strip():

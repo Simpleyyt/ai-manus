@@ -3,10 +3,31 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, field_validator
 
 
+class SkillContext(BaseModel):
+    """Active skill resolved for one user turn (chip or /name).
+
+    Planner gets a system marker; executor gets a short system pointer plus a
+    conversation message containing the full L2 body.
+    """
+
+    skill_id: str
+    name: str
+    body: str
+
+
+class RequiredSkill(BaseModel):
+    """Structured skill invocation from a chat skillTag chip (official requiredSkills)."""
+
+    skill_id: str
+    name: str
+
+
 class Message(BaseModel):
     """User-facing input message (a chat turn from the user)."""
     message: str = ""
     attachments: List[str] = []
+    required_skills: List[RequiredSkill] = []
+    skill: Optional[SkillContext] = None
 
 
 class Role(str, Enum):

@@ -491,11 +491,15 @@ const chatStreamCallbacks = (): agentApi.ChatStreamCallbacks => ({
   },
 });
 
-const handleSubmit = () => {
-  chat(inputMessage.value, attachments.value);
+const handleSubmit = (requiredSkills: agentApi.RequiredSkillRef[] = []) => {
+  chat(inputMessage.value, attachments.value, requiredSkills);
 }
 
-const chat = async (message: string = '', files: FileInfo[] = []) => {
+const chat = async (
+  message: string = '',
+  files: FileInfo[] = [],
+  requiredSkills: agentApi.RequiredSkillRef[] = [],
+) => {
   if (!sessionId.value) return;
 
   // Cancel any existing chat connection before starting a new one
@@ -536,7 +540,8 @@ const chat = async (message: string = '', files: FileInfo[] = []) => {
         onOpen: () => {
           noteOptimisticRun();
         },
-      }
+      },
+      requiredSkills,
     );
   } catch (error) {
     console.error('Chat error:', error);
@@ -631,6 +636,7 @@ onMounted(() => {
     // Get initial message / mode from history.state (HomePage → new chat)
     const message = history.state?.message as string | undefined;
     const files = history.state?.files as FileInfo[] | undefined;
+    const requiredSkills = history.state?.requiredSkills as agentApi.RequiredSkillRef[] | undefined;
     const seededMode = history.state?.taskMode as 'agent' | 'chat' | undefined;
     history.replaceState({}, document.title);
     if (seededMode === 'chat' || seededMode === 'agent') {
@@ -646,7 +652,7 @@ onMounted(() => {
         } catch (e) {
           console.error('Failed to load session meta before initial chat', e);
         }
-        await chat(message || '', files || []);
+        await chat(message || '', files || [], requiredSkills || []);
       })();
     } else {
       restoreSession();

@@ -101,7 +101,8 @@ class AgentDomainService:
         message: Optional[str] = None,
         timestamp: Optional[datetime] = None,
         latest_event_id: Optional[str] = None,
-        attachments: Optional[List[FileInfo]] = None
+        attachments: Optional[List[FileInfo]] = None,
+        required_skills: Optional[List[dict]] = None,
     ) -> AsyncGenerator[BaseEvent, None]:
         """
         Chat with an agent
@@ -126,7 +127,8 @@ class AgentDomainService:
                 message_event = MessageEvent(
                     message=message, 
                     role="user", 
-                    attachments=attachments
+                    attachments=attachments,
+                    required_skills=required_skills,
                 )
 
                 event_id = await task.input_stream.put(message_event.model_dump_json())

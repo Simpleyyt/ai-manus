@@ -1,7 +1,3 @@
-from .agent_domain_service import AgentDomainService
-from .claw_domain_service import ClawDomainService
+"""Domain services package. Import submodules directly to avoid import cycles."""
 
-__all__ = [
-    'AgentDomainService',
-    'ClawDomainService',
-]
+__all__: list[str] = []

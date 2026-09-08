@@ -10,6 +10,7 @@ from app.domain.models.file import FileInfo
 from app.domain.models.user import User, UserRole
 from app.domain.models.claw import Claw, ClawStatus, ClawMessage
 from app.domain.models.project import Project
+from app.domain.models.skill import Skill, SkillOwnerType, SkillSource, UserSkill
 from pymongo import IndexModel, ASCENDING, DESCENDING
 
 T = TypeVar('T', bound=BaseModel)
@@ -164,6 +165,51 @@ class ProjectDocument(BaseDocument[Project], id_field="project_id", domain_model
                 [("user_id", ASCENDING), ("is_pinned", DESCENDING), ("sort_order", ASCENDING), ("updated_at", DESCENDING)],
                 name="user_id_pinned_sort",
             ),
+        ]
+
+
+class SkillDocument(BaseDocument[Skill], id_field="skill_id", domain_model_class=Skill):
+    """MongoDB document for user-created personal skills."""
+    skill_id: str
+    name: str
+    description: str
+    body: Optional[str] = None
+    owner_type: SkillOwnerType = SkillOwnerType.PERSONAL
+    owner_user_id: Optional[str] = None
+    source: SkillSource = SkillSource.CATALOG
+    source_url: Optional[str] = None
+    package_file_id: Optional[str] = None
+    package_sha256: Optional[str] = None
+    created_at: datetime = datetime.now(timezone.utc)
+    updated_at: datetime = datetime.now(timezone.utc)
+
+    class Settings:
+        name = "skills"
+        indexes = [
+            "skill_id",
+            IndexModel([("owner_user_id", ASCENDING), ("updated_at", DESCENDING)], name="owner_user_updated"),
+        ]
+
+
+class UserSkillDocument(BaseDocument[UserSkill], id_field="user_skill_id", domain_model_class=UserSkill):
+    """MongoDB document for a user's skill subscription."""
+    user_skill_id: str
+    user_id: str
+    skill_id: str
+    enabled: bool = True
+    created_at: datetime = datetime.now(timezone.utc)
+    updated_at: datetime = datetime.now(timezone.utc)
+
+    class Settings:
+        name = "user_skills"
+        indexes = [
+            "user_skill_id",
+            IndexModel(
+                [("user_id", ASCENDING), ("skill_id", ASCENDING)],
+                unique=True,
+                name="user_id_skill_id",
+            ),
+            IndexModel([("user_id", ASCENDING), ("created_at", ASCENDING)], name="user_id_created"),
         ]
 
 

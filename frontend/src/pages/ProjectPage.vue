@@ -328,7 +328,7 @@ const refreshAll = async () => {
   await Promise.all([loadProject(), loadSessions(), loadProjectsList()])
 }
 
-const handleNewTask = async () => {
+const handleNewTask = async (requiredSkills: { id: string; name: string }[] = []) => {
   if ((!draft.value.trim() && attachments.value.length === 0) || creatingTask.value || !project.value) return
   creatingTask.value = true
   try {
@@ -346,7 +346,7 @@ const handleNewTask = async () => {
     }))
     await router.push({
       path: `/chat/${session.session_id}`,
-      state: { message, files },
+      state: { message, files, requiredSkills },
     })
   } catch (e) {
     console.error(e)

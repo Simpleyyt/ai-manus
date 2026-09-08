@@ -3,19 +3,47 @@ import Suggestion, {
   type SuggestionKeyDownProps,
   type SuggestionProps,
 } from '@tiptap/suggestion'
+import type { Skill } from '@/types/skill'
 
-export type SlashItem = {
-  id: 'add_local_files'
-  titleKey: string
-  run: () => void
-}
+export type SlashItem =
+  | {
+      id: 'add_local_files'
+      kind: 'local'
+      titleKey: string
+      run: () => void
+    }
+  | {
+      id: string
+      kind: 'skill'
+      titleKey: string
+      skillId: string
+      name: string
+      description: string
+      run: () => void
+    }
 
-export function buildSlashItems(runAddLocalFiles: () => void): SlashItem[] {
+export function buildSlashItems(opts: {
+  runAddLocalFiles: () => void
+  skills: Skill[]
+  onInsertSkill: (skill: Skill) => void
+}): SlashItem[] {
+  const skillItems: SlashItem[] = opts.skills.map((skill) => ({
+    id: skill.id,
+    kind: 'skill',
+    titleKey: skill.name,
+    skillId: skill.id,
+    name: skill.name,
+    description: skill.description,
+    run: () => opts.onInsertSkill(skill),
+  }))
+
   return [
+    ...skillItems,
     {
       id: 'add_local_files',
+      kind: 'local',
       titleKey: 'Add local files',
-      run: runAddLocalFiles,
+      run: opts.runAddLocalFiles,
     },
   ]
 }
@@ -62,12 +90,16 @@ export function createSlashSuggestion(opts: {
           allowSpaces: false,
           items: ({ query }) => {
             const q = query.toLowerCase()
-            return opts.items().filter(
-              (item) =>
-                q === '' ||
-                item.id.includes(q) ||
-                item.titleKey.toLowerCase().includes(q),
-            )
+            return opts.items().filter((item) => {
+              if (q === '') return true
+              if (item.kind === 'local') {
+                return item.id.includes(q) || item.titleKey.toLowerCase().includes(q)
+              }
+              return (
+                item.name.toLowerCase().includes(q) ||
+                item.description.toLowerCase().includes(q)
+              )
+            })
           },
           command: ({ editor, range, props }) => {
             editor.chain().focus().deleteRange(range).run()

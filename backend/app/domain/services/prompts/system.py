@@ -70,10 +70,90 @@ def format_project_instructions(instruction: Optional[str] = None) -> str:
     )
 
 
+def format_skill_catalog(skills: List[tuple[str, str]]) -> str:
+    """L1 metadata catalog — name and description for enabled skills at session start."""
+    if not skills:
+        return ""
+    lines = [
+        "<available_skills>",
+        "The user has enabled these skills (metadata only — not the full instructions).",
+        "Each skill package lives in the sandbox at `/home/ubuntu/skills/{name}/`.",
+        "When a skill is relevant (including after `/{name}` or a skill chip), call "
+        "`load_skill` with that skill's name to load its SKILL.md instructions, then "
+        "follow them (and any scripts/assets under that directory).",
+        "Do not invent skill behavior from the short description alone.",
+        "",
+    ]
+    for name, description in skills:
+        desc = (description or "").strip().replace("\n", " ")
+        lines.append(f"- `/{name}` → `/home/ubuntu/skills/{name}/SKILL.md`: {desc}")
+    lines.append("</available_skills>")
+    return "\n".join(lines)
+
+
+def format_skill_planner_context(
+    *,
+    name: str,
+    task: str = "",
+) -> str:
+    """Activation marker for the planner — no SKILL.md body inject.
+
+    Planner has no executor tools; it must put a first step for the executor to
+    call ``load_skill``, then plan remaining work around that skill workflow.
+    """
+    package_path = f"/home/ubuntu/skills/{name}"
+    sections = [
+        "<active_skill>",
+        f"The user invoked skill `/{name}` for this turn.",
+        "Do not invent skill behavior from the name alone — you do not have the "
+        "full SKILL.md text.",
+        "The first plan step MUST be a short load label in the working language "
+        f"(zh: 加载 {name} 技能; en: Load {name} skill). The executor will call "
+        "`load_skill` and follow the returned instructions.",
+        "Subsequent steps must follow that skill's workflow, not an unrelated plan.",
+        f"Package path: `{package_path}/`.",
+    ]
+    user_task = (task or "").strip()
+    if user_task:
+        sections.extend(["", "User task for this turn:", user_task])
+    sections.append("</active_skill>")
+    return "\n".join(sections)
+
+
+def format_skill_context(
+    *,
+    name: str,
+    task: str = "",
+    body: str = "",
+) -> str:
+    """Soft L2 for the executor: require ``load_skill`` before other work.
+
+    ``body`` is accepted for call-site compatibility but never injected here —
+    full instructions enter context only via the ``load_skill`` tool result.
+    """
+    _ = body  # progressive disclosure: never inject body into the executor prompt
+    package_path = f"/home/ubuntu/skills/{name}"
+    sections = [
+        "<active_skill>",
+        f"The user invoked skill `/{name}` for this turn.",
+        f"You MUST call `load_skill` with name `{name}` before other work, then "
+        "follow the returned instructions (and any scripts/assets under the package).",
+        "Do not invent skill behavior from the name or short description alone.",
+        f"Package path: `{package_path}/`.",
+    ]
+    user_task = (task or "").strip()
+    if user_task:
+        sections.extend(["", "User task for this turn:", user_task])
+    sections.append("</active_skill>")
+    return "\n".join(sections)
+
+
 def build_system_prompt(
     toolkits: Optional[List[BaseToolkit]] = None,
     role_prompt: str = "",
     project_instruction: Optional[str] = None,
+    skill_catalog: Optional[str] = None,
+    skill_context: Optional[str] = None,
 ) -> str:
     """Assemble the system prompt for an agent.
 
@@ -85,6 +165,10 @@ def build_system_prompt(
             ``Project.instruction``.
     """
     sections = [CORE_PROMPT]
+    # Active skill first after core so explicit invoke beats long toolkit/catalog text.
+    skill_section = (skill_context or "").strip()
+    if skill_section:
+        sections.append(skill_section)
     for toolkit in toolkits or []:
         instructions = (toolkit.instructions or "").strip()
         if instructions:
@@ -96,4 +180,7 @@ def build_system_prompt(
     project_section = format_project_instructions(project_instruction)
     if project_section:
         sections.append(project_section)
+    catalog_section = (skill_catalog or "").strip()
+    if catalog_section:
+        sections.append(catalog_section)
     return "\n\n".join(sections)

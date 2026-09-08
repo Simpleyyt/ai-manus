@@ -39,6 +39,9 @@ export const TOOL_FUNCTION_MAP: {[key: string]: string} = {
 
   // Soft plan (single-loop) — timeline only; not a Computer panel tool
   "todo_write": "Updating plan",
+
+  // Skills — progressive disclosure (L2 via tool result)
+  "load_skill": "Loading skill",
 };
 
 /**
@@ -69,7 +72,8 @@ export const TOOL_FUNCTION_ARG_MAP: {[key: string]: string} = {
   "browser_console_view": "console",
   "info_search_web": "query",
   "message_notify_user": "message",
-  "message_ask_user": "question"
+  "message_ask_user": "question",
+  "load_skill": "file",
 };
 
 /**
@@ -83,6 +87,7 @@ export const TOOL_NAME_MAP: {[key: string]: string} = {
   "message": "Message",
   "mcp": "MCP Tool",
   "todo": "Plan",
+  "skill": "Skill",
 };
 
 import SearchIcon from '../components/icons/SearchIcon.vue';
@@ -101,7 +106,8 @@ export const TOOL_ICON_MAP: {[key: string]: any} = {
   "search": SearchIcon,
   "message": "",
   "todo": ListTodo,
-  "mcp": SearchIcon  // 暂时使用搜索图标，可以后续创建专门的MCP图标
+  "mcp": SearchIcon,  // 暂时使用搜索图标，可以后续创建专门的MCP图标
+  "skill": EditIcon,
 };
 
 import ShellToolView from '@/components/toolViews/ShellToolView.vue';
@@ -118,7 +124,8 @@ export const TOOL_COMPONENT_MAP: {[key: string]: any} = {
   "file": FileToolView,
   "search": SearchToolView,
   "browser": BrowserToolView,
-  "mcp": McpToolView
+  "mcp": McpToolView,
+  "skill": FileToolView,
 };
 
 /**

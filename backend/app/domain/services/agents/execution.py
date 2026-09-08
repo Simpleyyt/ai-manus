@@ -76,6 +76,8 @@ class ExecutionAgent(BaseAgent):
             toolkits=self.toolkits,
             role_prompt=EXECUTION_ROLE_PROMPT,
             project_instruction=self._project_instruction,
+            skill_catalog=self._skill_catalog,
+            skill_context=self._skill_context,
         )
 
     def _reset_step_work_counter(self) -> None:

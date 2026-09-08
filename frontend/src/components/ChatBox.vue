@@ -71,11 +71,16 @@ import {
   createSlashSuggestion,
   type SlashItem,
 } from './chatbox/slashSuggestion'
+import { SkillTag } from './chatbox/skillTag'
+import { collectRequiredSkills } from './chatbox/requiredSkills'
+import { useSkills } from '@/composables/useSkills'
+import type { PendingHomeDraft } from '@/composables/usePendingHomeMessage'
 import { Plus } from 'lucide-vue-next'
 import type { FileInfo } from '../api/file'
 import type { Range } from '@tiptap/core'
 
 const { t } = useI18n()
+const { slashSkills } = useSkills()
 const hasTextInput = ref(false)
 const chatBoxFileListRef = ref()
 const showPlusMenu = ref(false)
@@ -88,9 +93,6 @@ const slashPositionStyle = ref<Record<string, string>>({})
 let slashCommand: ((item: SlashItem) => void) | null = null
 let slashRange: Range | null = null
 
-const plusMenuItems: SlashMenuItem[] = [
-  { id: 'add_local_files', titleKey: 'Add local files' },
-]
 const plusMenuPositionStyle = {
   position: 'absolute',
   bottom: 'calc(100% + 8px)',
@@ -128,13 +130,14 @@ const sendEnabled = computed(() => {
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
   (e: 'update:attachments', value: FileInfo[]): void
-  (e: 'submit'): void
+  (e: 'submit', requiredSkills: { id: string; name: string }[]): void
   (e: 'stop'): void
 }>()
 
 const handleSubmit = () => {
   if (!sendEnabled.value) return
-  emit('submit')
+  const requiredSkills = editor.value ? collectRequiredSkills(editor.value) : []
+  emit('submit', requiredSkills)
 }
 
 const handleStop = () => {
@@ -151,6 +154,32 @@ const runAddLocalFiles = () => {
   uploadFile()
 }
 
+const insertSkillTag = (skill: { id: string; name: string; description?: string; owner_type?: string }) => {
+  slashMenuOpen.value = false
+  editor.value
+    ?.chain()
+    .focus()
+    .insertSkillTag({
+      skillId: skill.id,
+      name: skill.name,
+      description: skill.description || '',
+      ownerType: skill.owner_type || '',
+    })
+    .insertContent(' ')
+    .run()
+}
+
+const getSlashItems = () =>
+  buildSlashItems({
+    runAddLocalFiles,
+    skills: slashSkills.value,
+    onInsertSkill: insertSkillTag,
+  })
+
+const plusMenuItems = computed((): SlashMenuItem[] => [
+  { id: 'add_local_files', kind: 'local', titleKey: 'Add local files', run: runAddLocalFiles },
+])
+
 const handlePlusSelect = (_item: SlashMenuItem) => {
   showPlusMenu.value = false
   uploadFile()
@@ -159,9 +188,10 @@ const handlePlusSelect = (_item: SlashMenuItem) => {
 const handleSlashSelect = (item: SlashMenuItem) => {
   const full: SlashItem =
     slashMenuItems.value.find((i) => i.id === item.id) ??
-    buildSlashItems(runAddLocalFiles).find((i) => i.id === item.id) ??
+    getSlashItems().find((i) => i.id === item.id) ??
     {
       id: 'add_local_files',
+      kind: 'local',
       titleKey: 'Add local files',
       run: runAddLocalFiles,
     }
@@ -212,8 +242,9 @@ const editor = useEditor({
       // keep bold/italic/lists/hardBreak
     }),
     Placeholder.configure({ placeholder: () => placeholderText.value }),
+    SkillTag,
     createSlashSuggestion({
-      items: () => buildSlashItems(runAddLocalFiles),
+      items: getSlashItems,
       onOpenChange: (open) => {
         slashMenuOpen.value = open
         if (!open) {
@@ -323,7 +354,37 @@ watch(placeholderText, () => {
 
 onBeforeUnmount(() => editor.value?.destroy())
 
-defineExpose({ editor })
+/** Seed TipTap with text + skillTag chip (official Create Skill with Manus draft). */
+const seedDraft = (draft: PendingHomeDraft) => {
+  if (!editor.value) return
+  const paragraphContent: Array<Record<string, unknown>> = []
+  if (draft.before) {
+    paragraphContent.push({ type: 'text', text: draft.before })
+  }
+  if (draft.skill.skillId && draft.skill.name) {
+    paragraphContent.push({
+      type: 'skillTag',
+      attrs: {
+        skillId: draft.skill.skillId,
+        name: draft.skill.name,
+        description: draft.skill.description || '',
+        ownerType: draft.skill.ownerType || '',
+      },
+    })
+  }
+  if (draft.after) {
+    paragraphContent.push({ type: 'text', text: draft.after })
+  }
+  editor.value.commands.setContent({
+    type: 'doc',
+    content: [{ type: 'paragraph', content: paragraphContent }],
+  })
+  const text = editor.value.getText({ blockSeparator: '\n' })
+  hasTextInput.value = !!text.trim()
+  emit('update:modelValue', text)
+}
+
+defineExpose({ editor, seedDraft })
 
 const onDocClick = (e: MouseEvent) => {
   if (showPlusMenu.value && plusMenuRef.value && !plusMenuRef.value.contains(e.target as Node)) {

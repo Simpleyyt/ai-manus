@@ -4,7 +4,7 @@ import logging
 import os
 import debugpy
 from pydantic import TypeAdapter
-from app.domain.models.message import Message, LLMMessage, Role
+from app.domain.models.message import Message, RequiredSkill, LLMMessage, Role
 from app.domain.models.event import (
     BaseEvent,
     ErrorEvent,
@@ -40,8 +40,23 @@ from app.domain.services.tools.mcp import MCPToolkit
 from app.domain.models.tool_result import ToolResult
 from app.domain.models.search import SearchResults
 from app.domain.services.prompts.system import format_project_instructions
+from app.application.services.skill_runtime_service import SkillRuntimeService
 
 logger = logging.getLogger(__name__)
+
+
+def _required_skills_from_event(event: MessageEvent) -> List[RequiredSkill]:
+    if not event.required_skills:
+        return []
+    out: List[RequiredSkill] = []
+    for item in event.required_skills:
+        if not isinstance(item, dict):
+            continue
+        skill_id = str(item.get("id") or item.get("skill_id") or "").strip()
+        name = str(item.get("name") or "").strip().lstrip("/")
+        if skill_id and name:
+            out.append(RequiredSkill(skill_id=skill_id, name=name))
+    return out
 
 class AgentTaskRunner(TaskRunner):
     """Agent task that can be cancelled"""
@@ -59,6 +74,7 @@ class AgentTaskRunner(TaskRunner):
         llm: LLM,
         search_engine: Optional[SearchEngine] = None,
         project_repository: Optional[ProjectRepository] = None,
+        skill_runtime_service: Optional[SkillRuntimeService] = None,
     ):
         self._session_id = session_id
         self._agent_id = agent_id
@@ -71,6 +87,7 @@ class AgentTaskRunner(TaskRunner):
         self._file_storage = file_storage
         self._mcp_repository = mcp_repository
         self._project_repository = project_repository
+        self._skill_runtime_service = skill_runtime_service
         self._llm = llm
         self._mcp_tool = MCPToolkit()
         self._flow = PlanActFlow(
@@ -224,6 +241,27 @@ class AgentTaskRunner(TaskRunner):
                         await self._sync_file_to_storage(file_path)
                     else:
                         event.tool_content = FileToolContent(content="(No Content)")
+                elif event.tool_name == "skill":
+                    # Progressive disclosure: reuse FileToolView with SKILL.md path + body.
+                    data = {}
+                    result = event.function_result
+                    if result is not None and getattr(result, "data", None) is not None:
+                        if isinstance(result.data, dict):
+                            data = result.data
+                    content = data.get("content") or (
+                        (result.message if result and not getattr(result, "success", True) else None)
+                        or "(No Content)"
+                    )
+                    file_path = data.get("file") or ""
+                    if not file_path:
+                        skill_name = (event.function_args or {}).get("name") or data.get("name") or ""
+                        if skill_name:
+                            from app.domain.skills.package import skill_md_path
+
+                            file_path = skill_md_path(str(skill_name).lstrip("/"))
+                    if file_path:
+                        event.function_args = {**(event.function_args or {}), "file": file_path}
+                    event.tool_content = FileToolContent(content=content)
                 elif event.tool_name == "mcp":
                     logger.debug(f"Processing MCP tool event: function_result={event.function_result}")
                     if event.function_result:
@@ -262,6 +300,10 @@ class AgentTaskRunner(TaskRunner):
                 if not is_chat:
                     await self._sandbox.ensure_sandbox()
                     await self._mcp_tool.initialized(await self._mcp_repository.get_mcp_config())
+                    if self._skill_runtime_service:
+                        await self._skill_runtime_service.sync_enabled_skills_to_sandbox(
+                            self._user_id, self._sandbox
+                        )
 
                 event = await self._pop_event(task)
                 message = ""
@@ -279,7 +321,12 @@ class AgentTaskRunner(TaskRunner):
                         for attachment in (event.attachments or [])
                         if attachment.file_path
                     ],
+                    required_skills=_required_skills_from_event(event),
                 )
+                if self._skill_runtime_service:
+                    message_obj = await self._skill_runtime_service.resolve_message(
+                        self._user_id, message_obj
+                    )
                 
                 flow = self._run_chat(message_obj) if is_chat else self._run_flow(message_obj)
                 async for event in flow:
@@ -338,6 +385,15 @@ class AgentTaskRunner(TaskRunner):
         project_section = format_project_instructions(project_instruction)
         if project_section:
             system_content = f"{system_content}\n\n{project_section}"
+        if self._skill_runtime_service:
+            catalog = await self._skill_runtime_service.build_skill_catalog_section(
+                self._user_id
+            )
+            if catalog:
+                system_content = f"{system_content}\n\n{catalog}"
+            skill_marker = self._skill_runtime_service.format_chat_system_skill(message)
+            if skill_marker:
+                system_content = f"{system_content}\n\n{skill_marker}"
 
         history: List[LLMMessage] = [
             LLMMessage(
@@ -364,6 +420,18 @@ class AgentTaskRunner(TaskRunner):
 
     async def _run_flow(self, message: Message) -> AsyncGenerator[BaseEvent, None]:
         """Process a single message through the agent's flow and yield events"""
+        if self._skill_runtime_service:
+            pairs = await self._skill_runtime_service.list_enabled_skill_pairs(
+                self._user_id
+            )
+            bodies = await self._skill_runtime_service.build_enabled_skill_bodies(
+                self._user_id
+            )
+            self._flow.set_enabled_skills(pairs, bodies)
+            catalog = await self._skill_runtime_service.build_skill_catalog_section(
+                self._user_id
+            )
+            self._flow.set_skill_catalog(catalog or None)
         if not message.message:
             logger.warning(f"Agent {self._agent_id} received empty message")
             yield ErrorEvent(error="No message")
@@ -384,7 +452,10 @@ class AgentTaskRunner(TaskRunner):
                             shell_id=event.function_args["id"],
                             output=console if console is not None else [],
                         )
-                    elif event.tool_name == "file" and event.function_args.get("file"):
+                    elif (
+                        event.tool_name in ("file", "skill")
+                        and event.function_args.get("file")
+                    ):
                         path = event.function_args["file"]
                         content = ""
                         old_content = None
@@ -454,6 +525,7 @@ class AgentTaskRunnerFactory(TaskRunnerFactory):
         llm: LLM,
         search_engine: Optional[SearchEngine] = None,
         project_repository: Optional[ProjectRepository] = None,
+        skill_runtime_service: Optional[SkillRuntimeService] = None,
     ):
         self._agent_repository = agent_repository
         self._session_repository = session_repository
@@ -463,6 +535,7 @@ class AgentTaskRunnerFactory(TaskRunnerFactory):
         self._llm = llm
         self._search_engine = search_engine
         self._project_repository = project_repository
+        self._skill_runtime_service = skill_runtime_service
 
     @staticmethod
     def build_params(session_id: str, agent_id: str, user_id: str, sandbox_id: str) -> Dict[str, Any]:
@@ -494,4 +567,5 @@ class AgentTaskRunnerFactory(TaskRunnerFactory):
             llm=self._llm,
             search_engine=self._search_engine,
             project_repository=self._project_repository,
+            skill_runtime_service=self._skill_runtime_service,
         )

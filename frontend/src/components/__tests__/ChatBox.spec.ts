@@ -9,6 +9,14 @@ import { applySlashSelection, type SlashItem } from '../chatbox/slashSuggestion'
 
 export const uploadFileMock = vi.fn()
 
+vi.mock('@/api/skills', () => ({
+  fetchSkillsState: vi.fn().mockResolvedValue({ catalog: [], added: [] }),
+  addSkills: vi.fn(),
+  setSkillEnabled: vi.fn(),
+  importSkillFromGitHub: vi.fn(),
+  importSkillFromUpload: vi.fn(),
+}))
+
 vi.mock('../ChatBoxFiles.vue', () => ({
   default: {
     name: 'ChatBoxFiles',
@@ -165,6 +173,7 @@ describe('ChatBox TipTap', () => {
     const run = vi.fn()
     const item: SlashItem = {
       id: 'add_local_files',
+      kind: 'local',
       titleKey: 'Add local files',
       run,
     }
@@ -187,5 +196,78 @@ describe('ChatBox TipTap', () => {
     expect(editor.getText()).toBe('')
     expect(run).toHaveBeenCalled()
     editor.destroy()
+  })
+
+  it('slash skill inserts chip and getText is /{name}', async () => {
+    const wrapper = mount(ChatBox, {
+      props: { modelValue: '', rows: 1, isRunning: false, attachments: [] },
+      global: { plugins: [i18n] },
+      attachTo: document.body,
+    })
+    await flushPromises()
+    await nextTick()
+
+    type EditorLike = {
+      commands: {
+        insertSkillTag: (attrs: { skillId: string; name: string }) => boolean
+        setContent: (c: unknown, o?: unknown) => boolean
+      }
+      getText: (o?: { blockSeparator?: string }) => string
+      view: { dom: HTMLElement }
+    }
+    const exposed = wrapper.vm as unknown as { editor: EditorLike | { value?: EditorLike } }
+    const raw = exposed.editor
+    const ed = raw && 'commands' in raw ? raw : raw?.value
+    expect(ed).toBeTruthy()
+
+    const { MOCK_SKILLS } = await import('../../mocks/skills')
+    const skill = MOCK_SKILLS[0]
+    ed!.commands.insertSkillTag({ skillId: skill.id, name: skill.name })
+    await flushPromises()
+    await nextTick()
+
+    expect(ed!.getText()).toBe(`/${skill.name}`)
+    expect(ed!.view.dom.querySelector('[data-skill-tag]')).toBeTruthy()
+    wrapper.unmount()
+  })
+
+  it('seedDraft inserts text around a skill chip', async () => {
+    const wrapper = mount(ChatBox, {
+      props: { modelValue: '', rows: 1, isRunning: false, attachments: [] },
+      global: { plugins: [i18n] },
+      attachTo: document.body,
+    })
+    await flushPromises()
+    await nextTick()
+
+    type Exposed = {
+      seedDraft: (draft: {
+        before: string
+        skill: { skillId: string; name: string; description?: string; ownerType?: string }
+        after: string
+      }) => void
+      editor: { getText: () => string; view: { dom: HTMLElement } }
+    }
+    const vm = wrapper.vm as unknown as Exposed
+    vm.seedDraft({
+      before: 'Help me create a skill together using ',
+      skill: {
+        skillId: 'skill_creator',
+        name: 'skill-creator',
+        description: 'Build a skill',
+        ownerType: 'official',
+      },
+      after: ' to create a skill. First ask me what the skill should do.',
+    })
+    await flushPromises()
+    await nextTick()
+
+    expect(vm.editor.getText()).toContain('/skill-creator')
+    expect(vm.editor.getText()).toContain('Help me create a skill together using ')
+    expect(vm.editor.view.dom.querySelector('[data-skill-tag]')).toBeTruthy()
+    expect(vm.editor.view.dom.querySelector('[data-skill-name]')?.getAttribute('data-skill-name')).toBe(
+      '/skill-creator',
+    )
+    wrapper.unmount()
   })
 })

@@ -19,6 +19,9 @@
         <template #personalization>
           <PersonalizationSettings />
         </template>
+        <template #skills>
+          <SkillsSettings />
+        </template>
         <template #help>
           <HelpSettings />
         </template>
@@ -41,6 +44,7 @@ import GeneralSettings from './GeneralSettings.vue'
 import AccountSettings from './AccountSettings.vue'
 import ShortcutsSettings from './ShortcutsSettings.vue'
 import PersonalizationSettings from './PersonalizationSettings.vue'
+import SkillsSettings from './SkillsSettings.vue'
 import HelpSettings from './HelpSettings.vue'
 
 const { t } = useI18n()

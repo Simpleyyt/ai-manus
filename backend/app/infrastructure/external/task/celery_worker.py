@@ -50,16 +50,30 @@ def _build_runner_factory():
     from app.infrastructure.repositories.mongo_session_repository import MongoSessionRepository
     from app.infrastructure.repositories.mongo_project_repository import MongoProjectRepository
     from app.infrastructure.repositories.file_mcp_repository import FileMCPRepository
+    from app.application.services.skill_runtime_service import SkillRuntimeService
+    from app.application.services.skill_service import SkillService
+    from app.infrastructure.repositories.mongo_skill_repository import MongoSkillRepository
+    from app.infrastructure.repositories.mongo_user_skill_repository import MongoUserSkillRepository
+
+    file_storage = get_file_storage()
+    skill_runtime = SkillRuntimeService(
+        skill_service=SkillService(
+            skill_repository=MongoSkillRepository(),
+            user_skill_repository=MongoUserSkillRepository(),
+            file_storage=file_storage,
+        )
+    )
 
     return AgentTaskRunnerFactory(
         agent_repository=MongoAgentRepository(),
         session_repository=MongoSessionRepository(),
         sandbox_cls=DockerSandbox,
-        file_storage=get_file_storage(),
+        file_storage=file_storage,
         mcp_repository=FileMCPRepository(),
         llm=get_llm(),
         search_engine=get_search_engine(),
         project_repository=MongoProjectRepository(),
+        skill_runtime_service=skill_runtime,
     )
 
 
@@ -78,6 +92,8 @@ async def _ensure_initialized() -> None:
         ClawDocument,
         ProjectDocument,
         FileFavoriteDocument,
+        SkillDocument,
+        UserSkillDocument,
     )
 
     settings = get_settings()
@@ -91,6 +107,8 @@ async def _ensure_initialized() -> None:
             ClawDocument,
             ProjectDocument,
             FileFavoriteDocument,
+            SkillDocument,
+            UserSkillDocument,
         ],
     )
     await get_redis().initialize()

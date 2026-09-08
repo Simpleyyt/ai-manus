@@ -61,11 +61,23 @@ class BaseAgent(ABC):
         self.memory = None
         self._output_tool: Optional[OutputTool] = None
         self._project_instruction: Optional[str] = None
+        self._skill_catalog: Optional[str] = None
+        self._skill_context: Optional[str] = None
 
     def set_project_instruction(self, instruction: Optional[str]) -> None:
         """Bind project-level guidance used when assembling the system prompt."""
         text = (instruction or "").strip()
         self._project_instruction = text or None
+
+    def set_skill_catalog(self, catalog: Optional[str]) -> None:
+        """Bind L1 skill metadata catalog (name + description per enabled skill)."""
+        text = (catalog or "").strip()
+        self._skill_catalog = text or None
+
+    def set_skill_context(self, context: Optional[str]) -> None:
+        """Bind active skill guidance for the current user turn."""
+        text = (context or "").strip()
+        self._skill_context = text or None
 
     def build_system_prompt(self) -> str:
         """Assemble the system prompt for this agent; overridden by subclasses."""

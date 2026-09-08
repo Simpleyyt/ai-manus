@@ -67,6 +67,18 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+  secrets-scan:
+    name: Secret leak scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   docs-drift:
     name: Docs embeds in sync
     runs-on: ubuntu-latest
@@ -117,7 +129,7 @@ jobs:
         # and removing the inode rips the volume out from under the container
         # (observed: vite lost node_modules the second the dir was rm'ed).
         run: |
-          for d in backend/.venv frontend/node_modules; do
+          for d in backend/.venv sandbox/.venv frontend/node_modules; do
             if [ -d "$d" ]; then sudo chown -R "$(id -u):$(id -g)" "$d"; fi
           done
       - uses: astral-sh/setup-uv@v5
@@ -126,6 +138,11 @@ jobs:
         run: |
           uv sync --frozen
           uv run pytest -m e2e -rs
+      - name: Sandbox API tests
+        working-directory: sandbox
+        run: |
+          uv sync --frozen
+          uv run pytest -q
       - uses: actions/setup-node@v4
         with:
           node-version: 20

@@ -4,6 +4,7 @@
  * [📅 开发计划](roadmap.md)
  * 🛠️ 功能使用
    * [✨ 场景演示](demo.md)
+   * [🧩 Skills 技能](skills.md)
    * [🔧 MCP 配置](mcp.md)
  * [📋 配置说明](configuration.md)
  * 👨‍💻 开发指南

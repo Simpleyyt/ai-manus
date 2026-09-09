@@ -28,7 +28,7 @@
     "axios": "^1.8.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "dompurify": "^3.2.5",
+    "dompurify": "^3.4.15",
     "framer-motion": "^10.12.16",
     "lottie-web": "^5.13.0",
     "lucide-vue-next": "^0.511.0",

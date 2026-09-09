@@ -16,7 +16,8 @@ from app.infrastructure.external.llm.langchain_llm import (
 
 def _gateway() -> LangchainLLM:
     # init_chat_model only constructs the client; no network call is made here.
-    return LangchainLLM()
+    # Explicit Settings so the test never depends on host env vars (API_KEY).
+    return LangchainLLM(settings=Settings(api_key="test"))
 
 
 class TestToLangChain:

@@ -29,7 +29,7 @@ Respond in **中文** unless the user writes in English.
 7. **No `localStorage` for product data** — Favorites, pins, lists, and any user preference that official syncs to the server must use **backend APIs + Mongo** (e.g. session `is_favorite`, Library `file_favorites`). Do **not** ship a temporary `localStorage` stand-in “for now”. UI chrome prefs already in the app (sidebar expand) may stay as-is; **do not add new localStorage keys** for Manus-parity features.
 8. **Do not commit** unless asked. Do not commit `tmp/` screenshots or scraped bundles.
 
-## Workflow
+## Workflow (the parity agent loop)
 
 ```
 Manus UI replicate:
@@ -38,8 +38,15 @@ Manus UI replicate:
 - [ ] 3. Extract FULL className trees (paste into notes / gap table)
 - [ ] 4. Map official node → local file; mark reuse (ChatBox) vs new
 - [ ] 5. Implement by PASTING tokens: shell → chrome → content
-- [ ] 6. Diff Vue classes vs mined snippet; delete anything not in source
+- [ ] 6. Audit: delegate to the `ui-parity-auditor` subagent
+       (.cursor/agents/) — Vue classes vs mined snippet; fix deviations,
+       re-audit until 对齐
 ```
+
+**Division of labor:** steps 1–3 (mining) need the **user's logged-in Chrome
+CDP session** — agents without that access must request dumps instead of
+guessing. Steps 4–6 are agent work; step 6 is read-only and audits strictly
+against mined evidence.
 
 ### 直接抄 checklist (before claiming done)
 

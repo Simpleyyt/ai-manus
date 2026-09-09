@@ -51,9 +51,17 @@ class ChatCompletionResponse(BaseModel):
     #model: str
     choices: List[Dict[str, Any]]
 
+# Runtime override for MOCK_DATA_FILE, set via POST /mock/scenario (used by
+# e2e tests to switch scripts without restarting the container).
+scenario_override: Optional[str] = None
+
+
+def current_mock_file() -> str:
+    return scenario_override or os.getenv("MOCK_DATA_FILE", "default.yaml")
+
+
 def load_mock_data():
-    # Get mock data filename from environment variable, default to default.yaml
-    mock_file = os.getenv("MOCK_DATA_FILE", "default.yaml")
+    mock_file = current_mock_file()
     mock_file_path = Path(__file__).parent / "mock_datas" / mock_file
 
     with open(mock_file_path, 'r', encoding='utf-8') as f:
@@ -64,6 +72,45 @@ def load_mock_data():
             return yaml.safe_load(f)
 
 current_index = 0
+
+
+class ScenarioRequest(BaseModel):
+    file: str
+
+
+@app.get("/mock/scenario")
+async def get_scenario():
+    """Inspect the active scenario and replay position."""
+    try:
+        total = len(load_mock_data())
+    except FileNotFoundError:
+        total = None
+    return {"file": current_mock_file(), "index": current_index, "responses": total}
+
+
+@app.post("/mock/scenario")
+async def set_scenario(request: ScenarioRequest):
+    """Switch the active scenario file and reset the replay index."""
+    global scenario_override, current_index
+    if "/" in request.file or "\\" in request.file:
+        raise HTTPException(status_code=400, detail="Invalid scenario file name")
+    path = Path(__file__).parent / "mock_datas" / request.file
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail=f"Scenario not found: {request.file}")
+    scenario_override = request.file
+    current_index = 0
+    data = load_mock_data()
+    logger.info(f"Scenario switched to {request.file} ({len(data)} responses)")
+    return {"file": request.file, "index": 0, "responses": len(data)}
+
+
+@app.post("/mock/reset")
+async def reset_scenario():
+    """Reset the replay index (and clear any scenario override)."""
+    global scenario_override, current_index
+    scenario_override = None
+    current_index = 0
+    return {"file": current_mock_file(), "index": 0}
 
 @app.post("/v1/chat/completions", response_model=ChatCompletionResponse)
 async def chat_completions(request: ChatCompletionRequest):

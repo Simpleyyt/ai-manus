@@ -1,0 +1,88 @@
+# PlanAct e2e wait/resume script: create_plan -> message_ask_user (WaitEvent,
+# session goes WAITING) -> user replies -> file_write (real work: the executor
+# rejects complete_step(success=true) without work tools) -> complete_step
+# -> deliver_result. Used by backend/tests/test_e2e_plan_act.py via
+# POST /mock/scenario.
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: create_plan
+              arguments: |
+                {
+                  "message": "I need your choice before continuing.",
+                  "language": "en",
+                  "title": "E2E Wait Task",
+                  "goal": "Use the option chosen by the user",
+                  "steps": [
+                    {
+                      "id": "1",
+                      "description": "Ask the user which option to use"
+                    }
+                  ]
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: message_ask_user
+              arguments: |
+                {
+                  "text": "Which option do you want, A or B?"
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: file_write
+              arguments: |
+                {
+                  "file": "/home/ubuntu/e2e-choice.txt",
+                  "content": "chosen option applied\n",
+                  "append": false
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: complete_step
+              arguments: |
+                {
+                  "success": true,
+                  "result": "Used the option chosen by the user",
+                  "attachments": []
+                }
+
+- choices:
+    - index: 0
+      message:
+        role: assistant
+        content: null
+        tool_calls:
+          - type: function
+            function:
+              name: deliver_result
+              arguments: |
+                {
+                  "message": "Done with the chosen option",
+                  "attachments": []
+                }

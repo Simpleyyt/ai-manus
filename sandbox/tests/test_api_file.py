@@ -12,7 +12,10 @@ logger = logging.getLogger(__name__)
 @pytest.mark.file_api
 def test_upload_file_success(client):
     """Test successful file upload"""
-    temp_path = "resource/test_upload_unique.txt"  # Use unique filename
+    # Use /tmp inside the container: /app is bind-mounted from the host in dev
+    # and CI, so a repo-relative path is only writable when the host checkout
+    # happens to be owned by the container's uid (1000) — not true on CI runners.
+    temp_path = "/tmp/test_upload_unique.txt"
     
     # Create test file content
     test_content = b"This is test upload content"
@@ -43,6 +46,9 @@ def test_upload_file_success(client):
     logger.info(f"Read response: {read_data}")
     assert read_response.status_code == 200
     assert read_data["data"]["content"] == test_content.decode()
+
+    # Clean up so reruns start fresh (the file API has no delete endpoint)
+    client.post(f"{BASE_URL}/api/v1/file/write", json={"file": temp_path, "content": ""})
 
 
 @pytest.mark.file_api

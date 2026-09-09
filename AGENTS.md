@@ -126,7 +126,24 @@ Key test files:
 - `tests/test_api_file.py` — file upload/download
 - `tests/test_sandbox_file.py` — sandbox file operations
 
-Config: `backend/pytest.ini` (`asyncio_mode = auto`, markers: `file_api`).
+Config: `backend/pytest.ini` (`asyncio_mode = auto`, markers: `file_api`, `e2e`).
+
+### Agent Harness E2E + Evals
+
+```bash
+# API e2e over the real stack (self-skips if the stack is down)
+./dev.sh up -d
+cd backend && uv run pytest -m e2e
+
+# Browser e2e (Playwright drives the real UI at localhost:5173)
+cd frontend && npx playwright install chromium   # once
+cd frontend && npm run test:e2e
+
+# Offline behavioral evals (deterministic, no services needed; exit 1 on failure)
+cd backend && uv run python -m evals.run
+```
+
+API e2e (`backend/tests/test_e2e_plan_act.py`) drives the chat WebSocket directly; browser e2e (`frontend/e2e/plan-act.spec.ts`) drives the rendered UI as a user. Both replay mockserver scenarios switched via `POST localhost:8090/mock/scenario`. Evals (`backend/evals/`) score PlanActFlow behavior (completion, LLM-call budget, replans, self-repairs, rejections). See `.cursor/skills/harness/SKILL.md`.
 
 ### Sandbox Tests (pytest)
 
@@ -165,6 +182,61 @@ curl -X POST http://localhost:8090/v1/chat/completions \
 4. Create session, send message — mockserver returns canned tool calls
 5. Check logs: `./dev.sh logs -f backend`
 6. Check VNC at `localhost:5902` for sandbox desktop
+
+---
+
+## AI Coding Loop
+
+The standard working loop for AI agents making changes in this repo:
+
+1. **Scope** — identify the change type and read the matching skill first (see Skills table; harness changes → `.cursor/skills/harness/SKILL.md`, UI parity → `replicate-manus-ui`, docs → `update-docs`).
+2. **Implement** — follow Code Conventions; match surrounding style; keep layer boundaries (`domain` ← `infrastructure`, wired in `interfaces/dependencies.py`).
+3. **Verify** — run the test pyramid for the affected layers (see Testing Strategy by Change Type). Delegate to the `test-pyramid` subagent to run all layers and get a per-layer failure report.
+4. **Guard** — for changes under `backend/app/domain/services` or `domain/models`, run the `harness-reviewer` subagent (read-only) to check the diff against harness invariants and required companion updates. For Manus UI parity work, run the `ui-parity-auditor` subagent before claiming a surface is aligned.
+5. **Sync** — update companions in the same change: tests (`backend/tests/`, shared fakes in `tests/harness.py`), eval scenarios (`backend/evals/scenarios.py`), skill docs (invariants in the harness skill), and doc embeds via `.cursor/skills/update-docs/update_doc.sh`.
+6. **Ship** — one logical change per commit; verify lint/type-check for frontend changes (`npm run type-check && npm run lint`).
+
+### Subagents (`.cursor/agents/`)
+
+| Subagent | Mode | Use |
+|---|---|---|
+| `test-pyramid` | read/write | Runs all four automated verification layers (unit → evals → API e2e → browser e2e) and reports per-layer results with failure diagnosis. Use after harness/test/scenario/chat-UI changes. |
+| `harness-reviewer` | read-only | Reviews a diff against the harness invariants and the companion-update checklist (tests/evals/skill/mock scenarios). Use before committing `domain/services` changes. |
+| `ui-parity-auditor` | read-only | Audits Manus-parity frontend changes against mined official class trees and the 直接抄 rules (`replicate-manus-ui` skill). Use before claiming a surface is aligned; mining itself still needs the user's logged-in Chrome. |
+
+Cursor loads these from `.cursor/agents/*.md` (also compatible with `.claude/agents/`). Invoke explicitly with `/test-pyramid` / `/harness-reviewer`, or let the agent delegate automatically.
+
+### Autonomy Stack (unattended-by-design)
+
+**Lifecycle**: every stage from task intake to regression repair is wired so no human sits in the loop:
+
+| Stage | Automation |
+|---|---|
+| Task intake | **Features**: file an issue with the `Agent task` template (`.github/ISSUE_TEMPLATE/agent-task.yml`, goal + acceptance criteria, auto-labeled `agent-task`) → a Cursor automation on the label (or an `@cursor` comment) dispatches a Cloud Agent, whose PR closes the issue. **Defects**: nightly regressions self-file `autonomy-regression` issues that enter the same dispatch path. Ad-hoc: `@cursor` on any issue/PR, Slack, cursor.com/agents, or the Cloud Agents API |
+| Develop | AI Coding Loop (above) + skills; agent commits and opens the PR itself |
+| Verify (inner) | L1 `stop` hook — the turn cannot end red |
+| Review | L2 guard subagents + platform review bots on the PR |
+| Merge gate | L3 CI (`tests.yml`): offline tests + evals, frontend checks, secret scan, docs-drift, full e2e (API + browser + sandbox); branch protection makes green mandatory |
+| Dependencies | Dependabot (`.github/dependabot.yml`) opens weekly upgrade PRs for uv (backend/sandbox), npm, pip, Docker base images, and Actions; L3 green + auto-merge lands them unattended |
+| Release | `docker-build-and-push.yml` publishes images on merge to `main` and tags (`release` skill covers versioned notes) |
+| Watch | `nightly.yml` reruns the full gate on `main` daily; failures open/append the regression issue automatically |
+
+Reproducibility: `backend/uv.lock`, `sandbox/uv.lock` and `frontend/package-lock.json` are committed; CI installs with `uv sync --frozen` / `npm ci`; Dependabot keeps them fresh. Doc embeds are generated (`update_doc.sh`) and drift-gated in CI.
+
+**Remaining human touchpoints** (by design, one-time or judgment-only):
+- One-time GitHub setup: branch protection requiring the `Tests` jobs, enabling auto-merge, allowing Actions to create issues; optional Cursor automations for issue → agent dispatch.
+- Judgment calls: merging (or enabling auto-merge per PR), product/UX decisions, mining manus.im dumps (needs a logged-in browser), and rotating secrets.
+
+Four gate layers remove the human from the verify-fix loop; each outer layer backstops the inner ones:
+
+| Layer | Mechanism | What it enforces |
+|---|---|---|
+| L1 — session gate | `.cursor/hooks.json` `stop` hook → `.cursor/hooks/verify_on_stop.py` | The agent cannot end a turn while backend offline tests/evals or frontend unit tests fail for areas touched by **unpushed** work (uncommitted + commits ahead of `@{upstream}`). Once pushed, CI owns verification and the gate passes in milliseconds. Failures come back as an auto follow-up with the failure tail (max 3 loops). Fail-open on missing env — environment problems must not trap the agent. |
+| L2 — guard subagents | `.cursor/agents/` (`test-pyramid`, `harness-reviewer`, `ui-parity-auditor`) | Heavy verification (e2e layers) and semantic review (invariants, UI parity) on demand, per the AI Coding Loop. |
+| L3 — CI hard gate | `.github/workflows/tests.yml` + `nightly.yml` | Every push/PR to `main`/`develop` runs backend offline tests + evals, frontend unit/type-check/lint/build, gitleaks secret scan, docs-drift, and full-stack e2e (API + browser + sandbox API tests) against the dev compose stack. Nightly reruns it all on `main` and files/updates an `autonomy-regression` issue on failure. |
+| L4 — platform | Branch protection + review bots (one-time human setup on GitHub/Cursor) | PRs merge only when L3 is green; automated review comments feed back into agent runs. |
+
+Offline test selection is exclusion-based (`--ignore` the three server-dependent files + `-m "not e2e"`) and must stay in sync across the hook, the `test-pyramid` subagent, and CI.
 
 ---
 
@@ -229,6 +301,7 @@ When running in a Cloud Agent environment:
 | Backend API routes | `cd backend && uv run pytest` against running server |
 | Frontend Vue/TS | `cd frontend && npm run test && npm run type-check && npm run lint && npm run build` |
 | Frontend UI changes | Type-check + build + manual GUI testing via `computerUse` subagent |
+| Agent harness (`domain/services` flows/agents/prompts/tools) | Offline: `uv run pytest tests/test_plan_act_flow.py tests/test_context_engineering.py tests/test_single_loop_manus.py` + `uv run python -m evals.run`; full stack: `uv run pytest -m e2e` + `cd frontend && npm run test:e2e` |
 | Sandbox changes | `cd sandbox && uv run pytest` |
 | Config / env changes | Verify with `./dev.sh up -d` and check service logs |
 | Documentation / README | No testing needed |
@@ -249,6 +322,7 @@ The dev compose starts the backend with **debugpy** on port `5678`. Attach a rem
 | Skill File | When to Use |
 |---|---|
 | `.cursor/skills/starter.md` | Setting up, running, or testing any part of the codebase. Contains detailed API reference, env var tables, and testing workflows. |
+| `.cursor/skills/harness/SKILL.md` | Changing the agent framework (`backend/app/domain/services`: flows, agents, prompts, tools, events). File map, invariants, extension recipes, offline test harness (`backend/tests/harness.py`) and mockserver scenarios. |
 | `.cursor/skills/manus-official-cdp/SKILL.md` | Logged-in manus.im over Chrome CDP via Default-profile `session_id` (inject / verify / geo `/unavailable`); use before replicate-manus-ui capture. |
 | `.cursor/skills/replicate-manus-ui/SKILL.md` | Align frontend UI with manus.im (mine official JS/DOM; Computer / sidebar / Library / Project / Search / chat chrome parity). |
 | `.cursor/skills/update-docs/SKILL.md` | Sync compose/env embeds + README demos via `.cursor/skills/update-docs/update_doc.sh` (not docs/demo.md scenarios). |

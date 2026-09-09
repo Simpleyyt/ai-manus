@@ -41,6 +41,8 @@ Backend and sandbox tests are **integration-style**: they hit a *running* server
 cd backend && uv run pytest                            # all
 cd backend && uv run pytest tests/test_auth_routes.py  # single file
 cd backend && uv run pytest -m file_api                # by marker (see backend/pytest.ini)
+cd backend && uv run pytest -m e2e                     # agent-loop e2e over the dev stack (self-skips when down)
+cd backend && uv run python -m evals.run               # offline harness behavior evals
 
 # Sandbox
 ./dev.sh up -d sandbox
@@ -48,6 +50,7 @@ cd sandbox && uv run pytest
 
 # Frontend — Vitest unit tests + type-check + lint + build
 cd frontend && npm run test && npm run type-check && npm run lint && npm run build
+cd frontend && npm run test:e2e # Playwright browser e2e against the dev stack (localhost:5173)
 ```
 
 ### Running a service outside Docker
@@ -99,3 +102,6 @@ Each toolkit in `domain/services/tools/` (shell, browser, file, search, message,
 - Config is centralized in `backend/app/core/config.py` (Pydantic `Settings`, `@lru_cache`d `get_settings()`); env vars come from `.env`. For dev, point `API_BASE` at `http://mockserver:8090/v1` and set `AUTH_PROVIDER=none` to skip both real LLM and login.
 - CI (`.github/workflows/docker-build-and-push.yml`) only builds/pushes multi-arch Docker images — it runs **no tests or lint**. Verify changes locally.
 - Docs site is Docsify under `docs/`; `.cursor/skills/update-docs/update_doc.sh` syncs compose/env embeds and README demos (not `docs/demo.md` scenario pages). See `.cursor/skills/update-docs/SKILL.md`. Version releases: `.cursor/skills/release/SKILL.md`.
+- When changing the agent harness (`domain/services` flows/agents/prompts/tools), read `.cursor/skills/harness/SKILL.md` first: it lists the loop invariants, extension recipes, and the offline test harness (`backend/tests/harness.py` fakes + mockserver scenario table).
+- The AI coding loop (scope → implement → verify → guard → sync → ship) is defined in AGENTS.md, with three project subagents in `.cursor/agents/`: `test-pyramid` (runs all verification layers), `harness-reviewer` (read-only invariant review for `domain/services` diffs), and `ui-parity-auditor` (read-only Manus UI parity audit).
+- Autonomy gates: a `stop` hook (`.cursor/hooks/verify_on_stop.py`) blocks ending a turn while fast offline checks fail for touched areas, and CI (`.github/workflows/tests.yml`) runs offline tests + evals, frontend checks, and full e2e on every push/PR to main/develop.

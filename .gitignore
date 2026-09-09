@@ -33,6 +33,9 @@ venv.bak/
 .idea/
 .cursor/*
 !.cursor/skills/
+!.cursor/agents/
+!.cursor/hooks.json
+!.cursor/hooks/
 .vscode/
 *.swp
 *.swo
@@ -97,6 +100,10 @@ coverage.xml
 # Node.js
 node_modules/
 npm-debug.log*
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
@@ -123,7 +130,6 @@ mcp.json
 # Frontend whitelist
 !frontend/src/lib/
 
-uv.lock
 specs
 
 # Local demo media (never commit). Upload via gh image, then update docs/demos.yml.

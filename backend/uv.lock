@@ -291,7 +291,7 @@ requires-dist = [
     { name = "playwright", specifier = ">=1.42.0" },
     { name = "pydantic", specifier = ">=2.12.4" },
     { name = "pydantic-settings", specifier = ">=2.12.0" },
-    { name = "pyjwt", extras = ["crypto"], specifier = ">=2.8.0" },
+    { name = "pyjwt", extras = ["crypto"], specifier = ">=2.13.0" },
     { name = "pymongo", specifier = ">=4.14.0" },
     { name = "python-dotenv", specifier = ">=1.2.1" },
     { name = "python-multipart", specifier = ">=0.0.20" },

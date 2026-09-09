@@ -15,6 +15,28 @@ Get a **logged-in** manus.im tab over Chrome DevTools Protocol using `session_id
 
 Pairs with **replicate-manus-ui** (DOM / className mining). Respond in **中文** unless the user writes in English.
 
+## Quick start (humans)
+
+本机已登录 manus.im 时，优先自动拉取（**不要**把 JWT 提交进 git）：
+
+```bash
+# 1) 可选：起带调试口的 Chrome，或复用已有 :9222
+# 2) 拉取 session_id → /tmp/manus_session_id.value（只打印元数据）
+node .cursor/skills/manus-official-cdp/scripts/fetch-session.cjs
+
+# 3) 写入当前 shell 环境变量
+eval "$(node .cursor/skills/manus-official-cdp/scripts/fetch-session.cjs --export)"
+
+# 4) 告诉 agent「已 export MANUS_SESSION_TOKEN」或直接让 agent 跑上面的脚本
+```
+
+手动交付：DevTools → Application → Cookies → `session_id`，然后任选：
+
+- `export MANUS_SESSION_TOKEN='eyJ…'`
+- 或聊天里只贴 JWT / JSON（见下方「How to give」）
+
+索引与环境变量表也写在 [AGENTS.md § Skills](../../../AGENTS.md#skills) / [CLAUDE.md](../../../CLAUDE.md) Frontend notes。
+
 ## Hard rules
 
 1. **Only `session_id` is required** for auth (domain `.manus.im`). Skip analytics (`_gcl_au`, `__stripe_*`, Intercom, `_fbp`, `_ga`, theme, ad-consent).

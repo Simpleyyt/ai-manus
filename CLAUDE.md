@@ -90,6 +90,7 @@ Each toolkit in `domain/services/tools/` (shell, browser, file, search, message,
 - Vue 3 Composition API, `<script setup lang="ts">` throughout; path alias `@/` → `src/`.
 - API layer in `src/api/` (axios + WebSocket clients for session list / chat); pages in `src/pages/`; reusable logic in `src/composables/`; rich tool renderers in `src/components/toolViews/`.
 - i18n via vue-i18n (Chinese + English) in `src/locales/`. Add keys to both locales.
+- **Official manus.im UI parity:** get a logged-in CDP session via `.cursor/skills/manus-official-cdp/SKILL.md` (`fetch-session.cjs` / `MANUS_SESSION_TOKEN`), then mine and paste with `.cursor/skills/replicate-manus-ui/SKILL.md`. Do not approximate from screenshots alone.
 
 ## Conventions & gotchas
 
@@ -99,3 +100,4 @@ Each toolkit in `domain/services/tools/` (shell, browser, file, search, message,
 - Config is centralized in `backend/app/core/config.py` (Pydantic `Settings`, `@lru_cache`d `get_settings()`); env vars come from `.env`. For dev, point `API_BASE` at `http://mockserver:8090/v1` and set `AUTH_PROVIDER=none` to skip both real LLM and login.
 - CI (`.github/workflows/docker-build-and-push.yml`) only builds/pushes multi-arch Docker images — it runs **no tests or lint**. Verify changes locally.
 - Docs site is Docsify under `docs/`; `.cursor/skills/update-docs/update_doc.sh` syncs compose/env embeds and README demos (not `docs/demo.md` scenario pages). See `.cursor/skills/update-docs/SKILL.md`. Version releases: `.cursor/skills/release/SKILL.md`.
+- **Cursor agent skills** live under `.cursor/skills/` — full index in [AGENTS.md](AGENTS.md#skills). `MANUS_SESSION_TOKEN` / `MANUS_COOKIE` are **agent-local** for official-site CDP mining; they are **not** product `.env` knobs and must never be committed.

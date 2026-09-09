@@ -213,7 +213,27 @@ Upload and download files.
 
 ---
 
-## 6 · Updating This Skill
+## 6 · Related project skills
+
+Full index: [AGENTS.md](../../AGENTS.md#skills).
+
+| Skill | When |
+|---|---|
+| `.cursor/skills/manus-official-cdp/SKILL.md` | Need a **logged-in** manus.im tab over CDP before mining official UI (`fetch-session.cjs` / `MANUS_SESSION_TOKEN`). Agent-local — never commit JWTs; not a product `.env` knob. |
+| `.cursor/skills/replicate-manus-ui/SKILL.md` | Align local Vue with manus.im by mining JS/DOM and pasting classNames (直接抄). |
+| `.cursor/skills/debug-claw/SKILL.md` | Claw / OpenClaw chat, history, uploads, containers. |
+| `.cursor/skills/update-docs/SKILL.md` | Sync compose/env embeds + README demos. |
+| `.cursor/skills/demo-videos/SKILL.md` | Record / upload README demo MP4s. |
+| `.cursor/skills/release/SKILL.md` | Cut `vX.Y.Z` GitHub releases. |
+
+Quick CDP session check:
+
+```bash
+node .cursor/skills/manus-official-cdp/scripts/fetch-session.cjs
+# expect {"ok":true,"source":"cdp:…"|…,"valueLen":…} — no full JWT in output
+```
+
+## 7 · Updating This Skill
 
 When you discover a new testing trick, environment workaround, or operational runbook step:
 
@@ -227,3 +247,5 @@ Examples of things worth adding:
 - A new pytest marker was introduced → add it to the backend testing section.
 - A new env var controls behavior → add it to the `.env` knobs table.
 - A workaround for a flaky test or Docker issue → add a troubleshooting subsection.
+
+<!-- Added 2026-09-09: related skills + manus-official-cdp pointer -->

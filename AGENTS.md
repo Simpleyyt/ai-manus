@@ -249,10 +249,32 @@ The dev compose starts the backend with **debugpy** on port `5678`. Attach a rem
 | Skill File | When to Use |
 |---|---|
 | `.cursor/skills/starter.md` | Setting up, running, or testing any part of the codebase. Contains detailed API reference, env var tables, and testing workflows. |
-| `.cursor/skills/manus-official-cdp/SKILL.md` | Logged-in manus.im over Chrome CDP via Default-profile `session_id` (inject / verify / geo `/unavailable`); use before replicate-manus-ui capture. |
+| `.cursor/skills/manus-official-cdp/SKILL.md` | Logged-in manus.im over Chrome CDP: auto `fetch-session.cjs` / `MANUS_SESSION_TOKEN` / `MANUS_COOKIE`, inject `session_id`, API verify; geo `/unavailable` ≠ auth failure. Use **before** replicate-manus-ui capture. Never commit JWTs. |
 | `.cursor/skills/replicate-manus-ui/SKILL.md` | Align frontend UI with manus.im (mine official JS/DOM; Computer / sidebar / Library / Project / Search / chat chrome parity). |
 | `.cursor/skills/update-docs/SKILL.md` | Sync compose/env embeds + README demos via `.cursor/skills/update-docs/update_doc.sh` (not docs/demo.md scenarios). |
 | `.cursor/skills/demo-videos/SKILL.md` | Recording/uploading README demo MP4s (`tmp/videos` + `gh image` + `docs/demos.yml`; never commit binaries; publish only after user confirmation). |
 | `.cursor/skills/release/SKILL.md` | Cutting `vX.Y.Z` GitHub releases (bilingual notes like v2.4.0/v2.5.0; no demo-videos-* releases). |
+| `.cursor/skills/debug-claw/SKILL.md` | Debugging OpenClaw / Claw chat, history, uploads, WebSocket, containers. |
 
-Personal (not in repo): `~/.cursor/skills/telegram-screenshots/SKILL.md` — UI screenshots → Telegram Bot MCP.
+Personal (not in repo): `~/.cursor/skills/telegram-screenshots/SKILL.md` — UI screenshots → Telegram Bot MCP, not OpenClaw.
+
+### Official manus.im capture (agents)
+
+Agent-local only — **not** product `.env` / `.env.example`:
+
+| Var / file | Purpose |
+|---|---|
+| `MANUS_SESSION_TOKEN` | Raw `session_id` JWT |
+| `MANUS_COOKIE` | `session_id=…` or full Cookie header |
+| `MANUS_SESSION_FILE` | Path to JWT file (default `/tmp/manus_session_id.value`) |
+| `MANUS_CDP_URL` | CDP endpoint (default `http://127.0.0.1:9222`) |
+
+```bash
+# Auto-fetch from CDP Chrome or Default profile Cookies (prints metadata only)
+node .cursor/skills/manus-official-cdp/scripts/fetch-session.cjs
+eval "$(node .cursor/skills/manus-official-cdp/scripts/fetch-session.cjs --export)"
+
+# Then mine UI with replicate-manus-ui (logged-in /app required)
+```
+
+Details (how humans export a cookie for the agent, geo `/unavailable`, security): `.cursor/skills/manus-official-cdp/SKILL.md`.

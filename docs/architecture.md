@@ -9,7 +9,7 @@
 1. Web 向 Server 发送创建 Agent 请求，Server 通过`/var/run/docker.sock`创建出 Sandbox，并返回会话 ID。
 2. Sandbox 是一个 Ubuntu Docker 环境，里面会启动 chrome 浏览器及 File/Shell 等工具的 API 服务。
 3. Web 往会话 ID 中发送用户消息，Server 收到用户消息后，将消息发送给 PlanAct Agent 处理。
-4. PlanAct Agent 进行规划与执行：规划器/执行器通过原生工具调用提交结构化结果（如 `create_plan` / `complete_step`），并按需调用沙盒工具（Shell / Browser / File / Search / MCP）。
+4. PlanAct Agent 进行规划与执行：规划器/执行器通过原生工具调用提交结构化结果（如 `create_plan` / `complete_step`），并按需调用沙盒工具（Shell / Browser / File / Search / MCP）与技能工具（`load_skill`）。
 5. Agent 处理过程中产生的所有事件经 Redis 队列，通过 WebSocket（`/api/v1/ws/chat`，`join_session` / `leave_session`）推回 Web；会话列表增量通过 `/api/v1/ws/sessions` 推送。
 
 **当用户浏览工具时：**
@@ -18,6 +18,18 @@
     1. Sandbox 的无头浏览器通过 xvfb 与 x11vnc 启动了 vnc 服务，并且通过 websockify 将 vnc 转化成 websocket。
     2. Web 的 NoVNC 组件通过 Server 的 `/api/v1/ws/vnc/{session_id}`（Cookie / Bearer）转发到 Sandbox，实现浏览器查看。
 - 其它工具：其它工具原理也是差不多。
+
+## Skills（技能）
+
+Skills 是可复用的工作流说明包（`SKILL.md` + 可选资源），用户在设置中添加/启用，在对话里用 `/` 或 chip 调用。
+
+**运行时分层（Agent 模式）：**
+
+1. **L1：**启用技能的 name/description 写入系统提示（及 `load_skill` 工具说明）。
+2. **L2：**用户显式调用后，模型应先调用 `load_skill` 获取完整 `SKILL.md`。
+3. **L3：**启用中的技能包同步到沙盒 `/home/ubuntu/skills/{name}/`。
+
+用户操作、导入格式与 HTTP API 见 [Skills 技能](skills.md)。
 
 ## Claw（Manus × Claw）
 

@@ -53,11 +53,13 @@ Manus UI replicate:
 
 Prefer a **logged-in** session (guest marketing pages lack Computer / sidebar).
 
+**Login / CDP session:** follow project skill **manus-official-cdp** (Default-profile `session_id` → CDP inject → API verify → open `/app`). Do not re-learn cookie names ad hoc; geo `/unavailable` ≠ auth failure.
+
 ```bash
-# Chrome with sticky login profile
+# Chrome with sticky login profile (or attach existing :9222 — see manus-official-cdp)
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
   --remote-debugging-port=9222 \
-  --user-data-dir=/tmp/chrome-manus-debug \
+  --user-data-dir=/tmp/chrome-manus-cdp \
   --profile-directory=Default \
   --no-first-run --no-default-browser-check \
   "https://manus.im/app/…"

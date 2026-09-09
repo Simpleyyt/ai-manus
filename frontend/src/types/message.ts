@@ -15,6 +15,8 @@ export interface MessageContent extends BaseContent {
   content: string;
   /** User-turn attachments rendered above the text bubble (official ChatQuestion). */
   attachments?: FileInfo[];
+  /** Skill chips for this user turn (chat-detail icon card). */
+  required_skills?: { id: string; name: string }[];
 }
 
 export interface ToolContent extends BaseContent {

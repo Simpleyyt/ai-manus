@@ -516,6 +516,7 @@ const chat = async (
         content: message,
         timestamp: Math.floor(Date.now() / 1000),
         attachments: files.length > 0 ? files : undefined,
+        required_skills: requiredSkills.length > 0 ? requiredSkills : undefined,
       } as MessageContent,
     });
   }

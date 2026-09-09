@@ -56,6 +56,8 @@ export interface MessageEventData extends BaseEventData {
   content: string;
   role: "user" | "assistant";
   attachments: FileInfo[];
+  /** Skill chips invoked with this user turn (composer → chat detail). */
+  required_skills?: { id: string; name: string }[];
 }
 
 export interface ErrorEventData extends BaseEventData {

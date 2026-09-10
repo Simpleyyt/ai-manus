@@ -24,7 +24,7 @@ Open **Settings → Skills**:
 | **Browse Skills** | Add unsubscribed skills from Official / Personal catalogs |
 | **Create ▾** | Add from official library, upload a package, import from GitHub, or “Create with Manus” (jump to chat) |
 
-On first load, a default set is auto-subscribed and enabled (e.g. `skill-creator`, `web-research`, `summarize`, `slides`). Official entries such as `market-research` must be added manually.
+On first load, all official skills are auto-subscribed and enabled (`skill-creator`, `web-research`, `summarize`, `slides`, `market-research`), plus a personal seed example `data-viz`.
 
 ### 2. Add custom skills
 
@@ -71,7 +71,7 @@ Shipped under `backend/app/application/data/official_skills/`:
 | `web-research` | Web research workflows |
 | `summarize` | Long-document summarization |
 | `slides` | Presentation / slides |
-| `market-research` | Market research (not auto-added; browse to add) |
+| `market-research` | Market research |
 
 ## HTTP API
 

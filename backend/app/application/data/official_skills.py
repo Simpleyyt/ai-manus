@@ -46,6 +46,7 @@ DEFAULT_ADDED_OFFICIAL_SKILL_IDS = [
     "skill_web_research",
     "skill_summarize",
     "skill_slides",
+    "skill_market_research",
 ]
 
 DEFAULT_PERSONAL_SKILL = {

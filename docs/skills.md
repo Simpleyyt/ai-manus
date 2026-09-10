@@ -24,7 +24,7 @@ Skills（技能）是可复用的工作流说明包：每个技能包含名称�
 | **浏览技能** | 从官方 / 个人目录添加未订阅的技能 |
 | **创建 ▾** | 从官方库添加、上传包、GitHub 导入，或「与 Manus 一起创建」跳转聊天 |
 
-首次进入时会自动订阅并启用一批默认技能（如 `skill-creator`、`web-research`、`summarize`、`slides` 等）。官方目录中的 `market-research` 等需手动添加。
+首次进入时会自动订阅并启用全部官方技能（`skill-creator`、`web-research`、`summarize`、`slides`、`market-research`），并 seed 一个个人示例 `data-viz`。
 
 ### 2. 添加自定义技能
 
@@ -71,7 +71,7 @@ Skills（技能）是可复用的工作流说明包：每个技能包含名称�
 | `web-research` | 网络调研类任务 |
 | `summarize` | 长文摘要 |
 | `slides` | 演示文稿 / 幻灯片 |
-| `market-research` | 市场调研（默认未自动添加，需在浏览中添加） |
+| `market-research` | 市场调研 |
 
 ## HTTP API
 

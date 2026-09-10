@@ -87,7 +87,14 @@ async def test_ensure_defaults_seeds_official_and_personal_skills(fake_file_stor
 
     catalog, added = await service.get_state("user-2")
 
-    assert len(added) == 5
+    assert len(added) == 6
     names = {skill.name for skill, _ in added}
-    assert names >= {"skill-creator", "web-research", "summarize", "slides", "data-viz"}
+    assert names >= {
+        "skill-creator",
+        "web-research",
+        "summarize",
+        "slides",
+        "market-research",
+        "data-viz",
+    }
     assert len(catalog) >= len(added)

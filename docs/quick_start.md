@@ -162,7 +162,7 @@ SANDBOX_NETWORK=manus-network
 #BROWSER_ENGINE=browser_use
 
 # Search engine configuration
-# Options: baidu, baidu_web, google, bing, bing_web, tavily, serper, custom
+# Options: baidu, baidu_web, google, bing, bing_web, tavily, serper, youcom, serply, custom
 # baidu:    uses the Baidu Qianfan AI Search API (requires BAIDU_SEARCH_API_KEY)
 # baidu_web: scrapes Baidu search results with browser impersonation (no API key needed)
 # bing:     uses the official Bing Web Search API (requires BING_SEARCH_API_KEY)
@@ -170,6 +170,7 @@ SANDBOX_NETWORK=manus-network
 # tavily:   uses the Tavily Search API (requires TAVILY_API_KEY)
 # serper:   uses the Serper.dev Google Search API (requires SERPER_API_KEY)
 # youcom:   uses the You.com Web Search API (requires YOUCOM_API_KEY)
+# serply:   uses the Serply Google Search API (requires SERPLY_API_KEY)
 # custom:   calls any third-party search REST API via SEARCH_API_URL + SEARCH_API_KEY
 SEARCH_PROVIDER=bing_web
 
@@ -196,6 +197,10 @@ SEARCH_PROVIDER=bing_web
 # You.com search configuration, only used when SEARCH_PROVIDER=youcom
 # Get your API key from https://you.com
 #YOUCOM_API_KEY=
+
+# Serply search configuration, only used when SEARCH_PROVIDER=serply
+# Returns structured Google results. Get your API key from https://serply.io
+#SERPLY_API_KEY=
 
 # Custom search API configuration, only used when SEARCH_PROVIDER=custom
 # Allows integration with any third-party search REST API.

@@ -145,7 +145,7 @@ API_KEY=sk-...
 
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
-| `SEARCH_PROVIDER` | `bing_web` | 否 | 搜索引擎提供商（`baidu`、`baidu_web`、`google`、`bing`、`bing_web`、`tavily`、`serper`、`youcom`、`keenable` 或 `custom`） |
+| `SEARCH_PROVIDER` | `bing_web` | 否 | 搜索引擎提供商（`baidu`、`baidu_web`、`google`、`bing`、`bing_web`、`tavily`、`serper`、`youcom`、`keenable`、`serply` 或 `custom`） |
 
 #### 百度搜索配置
 
@@ -207,6 +207,14 @@ API_KEY=sk-...
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
 | `KEENABLE_API_KEY` | - | 否 | 可选的 Keenable API 密钥，用于提高调用额度，从 [keenable.ai](https://keenable.ai) 获取 |
+
+#### Serply 搜索配置
+
+仅当 `SEARCH_PROVIDER=serply` 时使用。Serply 通过 REST API 返回结构化的 Google 搜索结果，并支持时间范围过滤：
+
+| 配置项 | 默认值 | 是否必需 | 说明 |
+|--------|--------|----------|------|
+| `SERPLY_API_KEY` | - | 是 | Serply API 密钥，从 [serply.io](https://serply.io) 获取，API 文档见 [serply.io/docs](https://serply.io/docs) |
 
 #### 自定义搜索 API 配置
 

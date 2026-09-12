@@ -145,7 +145,7 @@ API_KEY=sk-...
 
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
-| `SEARCH_PROVIDER` | `bing_web` | No | Search engine provider (`baidu`, `baidu_web`, `google`, `bing`, `bing_web`, `tavily`, `serper`, `youcom`, `keenable`, or `custom`) |
+| `SEARCH_PROVIDER` | `bing_web` | No | Search engine provider (`baidu`, `baidu_web`, `google`, `bing`, `bing_web`, `tavily`, `serper`, `youcom`, `keenable`, `serply`, or `custom`) |
 
 #### Baidu Search Configuration
 
@@ -207,6 +207,14 @@ Used only when `SEARCH_PROVIDER=keenable`. Keenable is a web search API for agen
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
 | `KEENABLE_API_KEY` | - | No | Optional Keenable API key for higher rate limits, get from [keenable.ai](https://keenable.ai) |
+
+#### Serply Search Configuration
+
+Used only when `SEARCH_PROVIDER=serply`. Serply returns structured Google search results through a REST API and supports the time range filter:
+
+| Configuration | Default Value | Required | Description |
+|---------------|---------------|----------|-------------|
+| `SERPLY_API_KEY` | - | Yes | Serply API key, get from [serply.io](https://serply.io); API reference at [serply.io/docs](https://serply.io/docs) |
 
 #### Custom Search API Configuration
 

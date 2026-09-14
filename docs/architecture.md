@@ -21,13 +21,14 @@
 
 ## Skills（技能）
 
-Skills 是可复用的工作流说明包（`SKILL.md` + 可选资源），用户在设置中添加/启用，在对话里用 `/` 或 chip 调用。
+Skills 是可复用的工作流说明包（`SKILL.md` + 可选资源）。用户在「设置 → 功能 → 技能」中添加/启用，在对话里用 `/`、输入框 `+` →「使用技能」，或 skill chip 调用；发送时附带 `required_skills`，历史消息以 chip + 悬停说明展示。
 
 **运行时分层（Agent 模式）：**
 
-1. **L1：**启用技能的 name/description 写入系统提示（及 `load_skill` 工具说明）。
-2. **L2：**用户显式调用后，模型应先调用 `load_skill` 获取完整 `SKILL.md`。
-3. **L3：**启用中的技能包同步到沙盒 `/home/ubuntu/skills/{name}/`。
+1. **L1：**启用技能的 name/description 写入系统提示（及 `load_skill` 工具说明中的 `<available_skills>`）。
+2. **软 L2：**用户显式调用后注入 `<active_skill>` 激活标记（不注入正文），要求先 `load_skill`；计划首步会被校正为「加载 {name} 技能」。
+3. **硬 L2：**完整 `SKILL.md` 仅通过工具 `load_skill` 的结果进入上下文。
+4. **L3：**启用中的技能包同步到沙盒 `/home/ubuntu/skills/{name}/`。
 
 用户操作、导入格式与 HTTP API 见 [Skills 技能](skills.md)。
 

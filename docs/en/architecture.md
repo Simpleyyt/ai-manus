@@ -21,13 +21,14 @@
 
 ## Skills
 
-Skills are reusable workflow packages (`SKILL.md` plus optional assets). Users add/enable them in Settings and invoke them in chat with `/` or skill chips.
+Skills are reusable workflow packages (`SKILL.md` plus optional assets). Users add/enable them under **Settings → Features → Skills**, and invoke them in chat with `/`, composer **`+` → Use skills**, or skill chips. Sends attach `required_skills`; history renders chips with hover tooltips.
 
 **Runtime layers (Agent mode):**
 
-1. **L1:** Enabled skill names/descriptions go into the system prompt (and the `load_skill` tool description).
-2. **L2:** After an explicit invocation, the model should call `load_skill` for the full `SKILL.md`.
-3. **L3:** Enabled packages sync into the sandbox at `/home/ubuntu/skills/{name}/`.
+1. **L1:** Enabled skill names/descriptions go into the system prompt (and the `<available_skills>` catalog inside the `load_skill` tool description).
+2. **Soft L2:** After an explicit invocation, inject an `<active_skill>` activation marker (no body); require `load_skill` first. The plan’s first step is corrected to `Load {name} skill`.
+3. **Hard L2:** Full `SKILL.md` enters context only via the `load_skill` tool result.
+4. **L3:** Enabled packages sync into the sandbox at `/home/ubuntu/skills/{name}/`.
 
 User flows, package format, and HTTP APIs: [Skills](skills.md).
 

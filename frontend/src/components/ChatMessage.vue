@@ -15,9 +15,10 @@
         />
         <div v-if="hasUserText" class="relative max-w-full w-fit">
           <div
+            ref="userBubbleRef"
             data-chat-question-bubble
             class="relative overflow-hidden rounded-[12px] p-3 bg-[var(--fill-white)] dark:bg-[var(--fill-tsp-white-main)] ltr:rounded-br-none rtl:rounded-bl-none border border-[var(--border-main)] dark:border-0 limited-markdown-content text-[var(--text-primary)] u-break-words [&_p]:m-0 [&_p]:leading-[22px] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
-            v-html="renderMarkdown(messageContent.content)">
+            v-html="renderUserBubbleHtml(messageContent)">
           </div>
         </div>
       </div>
@@ -206,7 +207,7 @@ import {
 import ToolUse from './ToolUse.vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { computed, ref, type Component } from 'vue';
+import { computed, ref, watch, nextTick, onBeforeUnmount, type Component } from 'vue';
 import { ToolContent, StepContent } from '../types/message';
 import { useRelativeTime } from '../composables/useTime';
 import { Bot, ChevronDown, ChevronRight } from 'lucide-vue-next';
@@ -215,7 +216,9 @@ import ChatMessageCopyButton from './ChatMessageCopyButton.vue';
 import ChatAttachmentList from './ChatAttachmentList.vue';
 import LiveStatusCanvas from './LiveStatusCanvas.vue';
 import StepCheckIcon from './icons/StepCheckIcon.vue';
-
+import { formatUserMessageWithSkillChips, type SkillChipRef } from './chatbox/skillChipHtml';
+import { bindSkillChipsInRoot } from './chatbox/skillChipHover';
+import { getSkillById } from '../composables/skillsStore';
 
 const props = defineProps<{
   message: Message;
@@ -313,6 +316,48 @@ const renderMarkdown = (text: string) => {
   const html = marked(text, { renderer }) as string;
   return DOMPurify.sanitize(html, { ADD_ATTR: ['target'] });
 };
+
+const renderUserBubbleHtml = (mc: MessageContent) => {
+  const skills: SkillChipRef[] = (mc.required_skills || []).map((s) => {
+    const full = s.id ? getSkillById(s.id) : undefined
+    return {
+      id: s.id,
+      name: s.name,
+      description: full?.description || '',
+      ownerType: full?.owner_type || '',
+    }
+  })
+  return formatUserMessageWithSkillChips(mc.content || '', skills)
+};
+
+const userBubbleRef = ref<HTMLElement | null>(null);
+let unbindSkillHover: (() => void) | null = null;
+
+const rebindSkillChipHover = async () => {
+  unbindSkillHover?.()
+  unbindSkillHover = null
+  await nextTick()
+  if (userBubbleRef.value) {
+    unbindSkillHover = bindSkillChipsInRoot(userBubbleRef.value)
+  }
+}
+
+watch(
+  () => [
+    props.message.type,
+    messageContent.value.content,
+    messageContent.value.required_skills,
+  ],
+  () => {
+    if (props.message.type === 'user') void rebindSkillChipHover()
+  },
+  { immediate: true, deep: true, flush: 'post' },
+)
+
+onBeforeUnmount(() => {
+  unbindSkillHover?.()
+  unbindSkillHover = null
+})
 </script>
 
 <style>

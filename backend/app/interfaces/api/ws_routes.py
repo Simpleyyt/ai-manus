@@ -257,6 +257,7 @@ async def chat_ws(websocket: WebSocket):
         last_event_id: Optional[str] = None,
         attachments: Optional[list[FileInfo]] = None,
         timestamp: Optional[datetime] = None,
+        required_skills: Optional[list[dict]] = None,
     ) -> None:
         saw_error = False
         saw_wait = False
@@ -268,6 +269,7 @@ async def chat_ws(websocket: WebSocket):
                 timestamp=timestamp,
                 event_id=last_event_id,
                 attachments=attachments,
+                required_skills=required_skills,
             ):
                 if joined_session_id != session_id:
                     break
@@ -446,6 +448,15 @@ async def chat_ws(websocket: WebSocket):
                                 filename=item.get("filename") or "",
                             )
                         )
+                required_skills_raw = raw.get("required_skills") or []
+                required_skills: list[dict] = []
+                for item in required_skills_raw:
+                    if not isinstance(item, dict):
+                        continue
+                    skill_id = item.get("id") or item.get("skill_id")
+                    name = item.get("name")
+                    if skill_id and name:
+                        required_skills.append({"id": skill_id, "name": name})
                 ts = raw.get("timestamp")
                 timestamp = datetime.fromtimestamp(ts) if isinstance(ts, (int, float)) else None
 
@@ -465,6 +476,7 @@ async def chat_ws(websocket: WebSocket):
                     last_event_id=raw.get("last_event_id") or raw.get("event_id"),
                     attachments=attachments or None,
                     timestamp=timestamp,
+                    required_skills=required_skills or None,
                 )
 
             elif msg_type == "stop_session":

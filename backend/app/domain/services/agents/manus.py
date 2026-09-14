@@ -93,6 +93,8 @@ class ManusAgent(BaseAgent):
             toolkits=self.toolkits,
             role_prompt=MANUS_ROLE_PROMPT,
             project_instruction=self._project_instruction,
+            skill_catalog=self._skill_catalog,
+            skill_context=self._skill_context,
         )
 
     async def invoke_tool(self, tool, tool_call: ToolCall) -> LLMMessage:

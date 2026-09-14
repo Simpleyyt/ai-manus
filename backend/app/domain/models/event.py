@@ -107,6 +107,7 @@ class MessageEvent(BaseEvent):
     role: Literal["user", "assistant"] = "assistant"
     message: str
     attachments: Optional[List[FileInfo]] = None
+    required_skills: Optional[List[dict]] = None
 
 class DoneEvent(BaseEvent):
     """Done event"""

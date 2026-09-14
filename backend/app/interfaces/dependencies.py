@@ -31,7 +31,11 @@ from app.infrastructure.repositories.mongo_session_repository import MongoSessio
 from app.infrastructure.repositories.file_mcp_repository import FileMCPRepository
 from app.infrastructure.repositories.user_repository import MongoUserRepository
 from app.application.services.project_service import ProjectService
+from app.application.services.skill_service import SkillService
+from app.application.services.skill_runtime_service import SkillRuntimeService
 from app.infrastructure.repositories.mongo_project_repository import MongoProjectRepository
+from app.infrastructure.repositories.mongo_skill_repository import MongoSkillRepository
+from app.infrastructure.repositories.mongo_user_skill_repository import MongoUserSkillRepository
 from app.infrastructure.repositories.mongo_file_favorite_repository import MongoFileFavoriteRepository
 
 
@@ -86,6 +90,7 @@ def get_agent_service() -> AgentService:
         llm=llm,
         search_engine=search_engine,
         project_repository=MongoProjectRepository(),
+        skill_runtime_service=get_skill_runtime_service(),
     ))
     
     # Create AgentService instance
@@ -120,6 +125,23 @@ def get_file_service() -> FileService:
         file_storage=file_storage,
         token_service=token_service,
     )
+
+
+@lru_cache()
+def get_skill_service() -> SkillService:
+    """Get skill service instance"""
+    logger.info("Creating SkillService instance")
+    return SkillService(
+        skill_repository=MongoSkillRepository(),
+        user_skill_repository=MongoUserSkillRepository(),
+        file_storage=get_file_storage(),
+    )
+
+
+@lru_cache()
+def get_skill_runtime_service() -> SkillRuntimeService:
+    """Get skill runtime service instance"""
+    return SkillRuntimeService(skill_service=get_skill_service())
 
 
 @lru_cache()

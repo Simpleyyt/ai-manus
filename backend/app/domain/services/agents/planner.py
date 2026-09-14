@@ -71,6 +71,8 @@ class PlannerAgent(BaseAgent):
                 capabilities=describe_toolkits(self._capability_toolkits)
             ),
             project_instruction=self._project_instruction,
+            skill_catalog=self._skill_catalog,
+            skill_context=self._skill_context,
         )
 
     async def create_plan(self, message: Message) -> AsyncGenerator[BaseEvent, None]:

@@ -33,6 +33,7 @@ describe('isComputerPanelTool', () => {
     expect(isComputerPanelTool('browser')).toBe(true)
     expect(isComputerPanelTool('search')).toBe(true)
     expect(isComputerPanelTool('mcp')).toBe(true)
+    expect(isComputerPanelTool('skill')).toBe(true)
   })
 
   it('excludes soft-plan and message tools', () => {

@@ -178,6 +178,11 @@ export interface ChatAttachment {
   filename: string;
 }
 
+export interface RequiredSkillRef {
+  id: string;
+  name: string;
+}
+
 /**
  * Chat with Session over persistent chat WS (join/leave).
  * Returns a cancel function that clears handlers for this call (does not close WS).
@@ -187,7 +192,8 @@ export const chatWithSession = async (
   message: string = '',
   eventId?: string,
   attachments?: ChatAttachment[],
-  callbacks?: ChatStreamCallbacks
+  callbacks?: ChatStreamCallbacks,
+  requiredSkills?: RequiredSkillRef[],
 ): Promise<() => void> => {
   const { getChatWebSocket } = await import('./chatWs');
   const ws = getChatWebSocket();
@@ -216,6 +222,7 @@ export const chatWithSession = async (
       message,
       lastEventId: eventId,
       attachments,
+      requiredSkills,
     });
   } else {
     // Resume / catch-up stream for running session

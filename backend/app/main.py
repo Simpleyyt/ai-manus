@@ -17,6 +17,8 @@ from app.infrastructure.models.documents import (
     UserDocument,
     ProjectDocument,
     FileFavoriteDocument,
+    SkillDocument,
+    UserSkillDocument,
 )
 from beanie import init_beanie
 
@@ -46,6 +48,8 @@ async def lifespan(app: FastAPI):
             UserDocument,
             ProjectDocument,
             FileFavoriteDocument,
+            SkillDocument,
+            UserSkillDocument,
         ]
     )
     logger.info("Successfully initialized Beanie")

@@ -1,3 +1,48 @@
+import io
+from datetime import UTC, datetime
+
+import pytest
+
+
+class FakeFileStorage:
+    def __init__(self):
+        self.files: dict[str, bytes] = {}
+
+    async def upload_file(
+        self,
+        file_data,
+        filename,
+        user_id,
+        content_type=None,
+        metadata=None,
+    ):
+        from app.domain.models.file import FileInfo
+
+        data = file_data.read()
+        file_id = f"file_{len(self.files) + 1}"
+        self.files[file_id] = data
+        return FileInfo(
+            file_id=file_id,
+            filename=filename,
+            size=len(data),
+            upload_date=datetime.now(UTC),
+        )
+
+    async def download_file(self, file_id, user_id=None):
+        from app.domain.models.file import FileInfo
+
+        data = self.files[file_id]
+        return io.BytesIO(data), FileInfo(
+            file_id=file_id,
+            filename="skill.zip",
+            size=len(data),
+            upload_date=datetime.now(UTC),
+        )
+
+
+@pytest.fixture
+def fake_file_storage():
+    return FakeFileStorage()
 """
 Pytest configuration and fixtures
 """

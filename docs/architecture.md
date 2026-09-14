@@ -9,7 +9,7 @@
 1. Web 向 Server 发送创建 Agent 请求，Server 通过`/var/run/docker.sock`创建出 Sandbox，并返回会话 ID。
 2. Sandbox 是一个 Ubuntu Docker 环境，里面会启动 chrome 浏览器及 File/Shell 等工具的 API 服务。
 3. Web 往会话 ID 中发送用户消息，Server 收到用户消息后，将消息发送给 PlanAct Agent 处理。
-4. PlanAct Agent 进行规划与执行：规划器/执行器通过原生工具调用提交结构化结果（如 `create_plan` / `complete_step`），并按需调用沙盒工具（Shell / Browser / File / Search / MCP）。
+4. PlanAct Agent 进行规划与执行：规划器/执行器通过原生工具调用提交结构化结果（如 `create_plan` / `complete_step`），并按需调用沙盒工具（Shell / Browser / File / Search / MCP）与技能工具（`load_skill`）。
 5. Agent 处理过程中产生的所有事件经 Redis 队列，通过 WebSocket（`/api/v1/ws/chat`，`join_session` / `leave_session`）推回 Web；会话列表增量通过 `/api/v1/ws/sessions` 推送。
 
 **当用户浏览工具时：**
@@ -19,7 +19,21 @@
     2. Web 的 NoVNC 组件通过 Server 的 `/api/v1/ws/vnc/{session_id}`（Cookie / Bearer）转发到 Sandbox，实现浏览器查看。
 - 其它工具：其它工具原理也是差不多。
 
+## Skills（技能）
+
+Skills 是可复用的工作流说明包（`SKILL.md` + 可选资源）。用户在「设置 → 功能 → 技能」中添加/启用，在对话里用 `/`、输入框 `+` →「使用技能」，或 skill chip 调用；发送时附带 `required_skills`，历史消息以 chip + 悬停说明展示。
+
+**运行时分层（Agent 模式）：**
+
+1. **L1：**启用技能的 name/description 写入系统提示（及 `load_skill` 工具说明中的 `<available_skills>`）。
+2. **软 L2：**用户显式调用后注入 `<active_skill>` 激活标记（不注入正文），要求先 `load_skill`；计划首步会被校正为「加载 {name} 技能」。
+3. **硬 L2：**完整 `SKILL.md` 仅通过工具 `load_skill` 的结果进入上下文。
+4. **L3：**启用中的技能包写入沙盒 `/home/ubuntu/skills/{name}/`（非 Docker volume 挂载；经沙盒 `file_write` API 同步，详见 [Skills 技能](skills.md#沙盒路径映射l3)）。
+
+用户操作、导入格式与 HTTP API 见 [Skills 技能](skills.md)。
+
 ## 库（Library）
+
 
 「库」是侧栏中的独立页面（路由 `/library`），用于浏览当前用户在各任务会话中产生或上传的文件。
 

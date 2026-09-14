@@ -9,7 +9,7 @@
 1. Web sends a create Agent request to Server, Server creates Sandbox through `/var/run/docker.sock` and returns session ID.
 2. Sandbox is an Ubuntu Docker environment that starts Chrome browser and API services for File/Shell and other tools.
 3. Web sends user messages to the session ID, Server receives user messages and forwards them to PlanAct Agent for processing.
-4. PlanAct Agent plans and executes steps: the planner/executor submit structured results through native tool calls (e.g. `create_plan` / `complete_step`), and invoke sandbox tools (Shell / Browser / File / Search / MCP) as needed.
+4. PlanAct Agent plans and executes steps: the planner/executor submit structured results through native tool calls (e.g. `create_plan` / `complete_step`), and invoke sandbox tools (Shell / Browser / File / Search / MCP) and skill tools (`load_skill`) as needed.
 5. All events generated during Agent processing flow through Redis queues and are pushed back to the Web over WebSocket (`/api/v1/ws/chat` with `join_session` / `leave_session`); session-list updates use `/api/v1/ws/sessions`.
 
 **When users browse tools:**
@@ -19,7 +19,21 @@
     2. Web's NoVNC component connects via Server `/api/v1/ws/vnc/{session_id}` (Cookie / Bearer) and forwards to the Sandbox, enabling browser viewing.
 - Other tools: Other tools work on similar principles.
 
+## Skills
+
+Skills are reusable workflow packages (`SKILL.md` plus optional assets). Users add/enable them under **Settings → Features → Skills**, and invoke them in chat with `/`, composer **`+` → Use skills**, or skill chips. Sends attach `required_skills`; history renders chips with hover tooltips.
+
+**Runtime layers (Agent mode):**
+
+1. **L1:** Enabled skill names/descriptions go into the system prompt (and the `<available_skills>` catalog inside the `load_skill` tool description).
+2. **Soft L2:** After an explicit invocation, inject an `<active_skill>` activation marker (no body); require `load_skill` first. The plan’s first step is corrected to `Load {name} skill`.
+3. **Hard L2:** Full `SKILL.md` enters context only via the `load_skill` tool result.
+4. **L3:** Enabled packages are written into the sandbox at `/home/ubuntu/skills/{name}/` (not a Docker volume mount — synced via the sandbox `file_write` API; see [Skills](skills.md#sandbox-path-mapping-l3)).
+
+User flows, package format, and HTTP APIs: [Skills](skills.md).
+
 ## Library
+
 
 Library is a dedicated sidebar page (route `/library`) for browsing files the current user uploaded or produced across task sessions.
 

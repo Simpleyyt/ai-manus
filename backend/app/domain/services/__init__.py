@@ -1,5 +1,3 @@
-from .agent_domain_service import AgentDomainService
+"""Domain services package. Import submodules directly to avoid import cycles."""
 
-__all__ = [
-    'AgentDomainService',
-]
+__all__: list[str] = []

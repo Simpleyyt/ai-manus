@@ -43,6 +43,8 @@ https://github.com/user-attachments/assets/89e0da0f-789f-464f-8648-49eb5035fe2f
  * Deployment: Minimal deployment requires only an LLM service, with no dependency on other external services.
  * Agent loop: Plan-and-execute flow with composable system prompts and native structured output tools (no fragile JSON-in-prompt protocol).
  * Tools: Supports Terminal, Browser, File, Web Search, and messaging tools with real-time viewing and takeover capabilities, supports external MCP tool integration.
+ * Skills: Reusable skill packages (official catalog / upload / GitHub). Manage under Settings → Features → Skills; invoke with `/` or `+` → Use skills; chat history keeps skill chips with hover tooltips. Agent loads via progressive `load_skill` and syncs packages into the sandbox. See [docs/en/skills.md](docs/en/skills.md).
+
  * Sandbox: Each task is allocated a separate sandbox that runs in a local Docker environment.
  * Task Sessions: Session history is managed through MongoDB/Redis, supporting background tasks.
  * Library: The sidebar Library aggregates attachments and artifacts across your sessions, with type filters, search, per-file favorites, preview, and jump-back to the source task.

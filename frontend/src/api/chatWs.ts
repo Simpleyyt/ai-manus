@@ -312,6 +312,7 @@ class ChatWebSocket {
     message?: string;
     lastEventId?: string;
     attachments?: ChatAttachment[];
+    requiredSkills?: { id: string; name: string }[];
   }) {
     await this.waitReady();
     if (this.joinedSessionId !== params.sessionId) {
@@ -325,6 +326,10 @@ class ChatWebSocket {
         message: params.message || '',
         last_event_id: params.lastEventId,
         attachments: params.attachments || [],
+        required_skills: (params.requiredSkills || []).map((s) => ({
+          id: s.id,
+          name: s.name,
+        })),
       },
       ['ack'],
     );

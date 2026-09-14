@@ -1,8 +1,8 @@
-# AI Manus × Claw 前端
+# AI Manus 前端
 
 [English](README.md) | 中文
 
-这是 AI Manus × Claw 的前端，使用 Vue 3 + TypeScript + Vite 构建。
+这是 AI Manus 的前端，使用 Vue 3 + TypeScript + Vite 构建。
 
 ## 特性
 
@@ -11,7 +11,6 @@
 - VNC 查看器，支持实时查看与接管沙盒
 - 登录认证、会话分享、文件上传与下载
 - 基于 vue-i18n 的国际化（中文与英文）
-- **Claw 页面** —— 集成 [OpenClaw](https://github.com/anthropics/openclaw) 聊天体验，支持 WebSocket 实时通信、自动过期倒计时、文件上传与下载
 
 ## 安装
 
@@ -67,7 +66,7 @@ docker run -d -p 8080:80 ai-chatbot-vue
 
 ```
 src/
-├── api/             # API 层（axios 客户端、WebSocket、认证、文件、Claw、配置）
+├── api/             # API 层（axios 客户端、WebSocket、认证、文件、配置）
 ├── assets/          # 静态资源和CSS文件
 ├── components/      # 可复用组件
 │   ├── toolViews/       # 工具富渲染视图（浏览器、文件、终端、搜索、MCP）
@@ -83,7 +82,6 @@ src/
 ├── pages/           # 页面组件
 │   ├── HomePage.vue     # 首页
 │   ├── ChatPage.vue     # 聊天页面
-│   ├── ClawPage.vue     # Claw（OpenClaw）页面
 │   ├── LoginPage.vue    # 登录页面
 │   ├── SharePage.vue    # 分享会话页面
 │   ├── MainLayout.vue   # 主布局

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "stop": [
+      {
+        "command": "python3 .cursor/hooks/verify_on_stop.py",
+        "timeout": 600,
+        "loop_limit": 3
+      }
+    ]
+  }
+}

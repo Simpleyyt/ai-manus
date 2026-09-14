@@ -26,7 +26,7 @@ class PlanToolkit(BaseToolkit):
 - Do not invent Plan UI updates by only editing todo.md.
 """
 
-    @tool(parse_docstring=True)
+    @tool
     async def plan_report(self, steps: list[dict], reflection: str = "") -> ToolResult:
         """Update authoritative plan step statuses for the Plan panel.
 
@@ -46,7 +46,7 @@ class PlanToolkit(BaseToolkit):
             data=parsed.model_dump(mode="json"),
         )
 
-    @tool(parse_docstring=True)
+    @tool
     async def replan(self, reason: str) -> ToolResult:
         """Request Planner to rewrite remaining steps.
 

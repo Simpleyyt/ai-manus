@@ -24,7 +24,7 @@ class SearchToolkit(BaseToolkit):
         super().__init__()
         self.search_engine = search_engine
     
-    @tool(parse_docstring=True)
+    @tool
     async def info_search_web(
         self,
         query: str,

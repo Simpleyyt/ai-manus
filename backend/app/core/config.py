@@ -65,7 +65,7 @@ class Settings(BaseSettings):
     browser_engine: str = "browser_use"  # "browser_use" or "playwright"
 
     # Search engine configuration
-    search_provider: str | None = "bing_web"  # "baidu", "baidu_web", "google", "bing", "bing_web", "tavily", "serper", "custom"
+    search_provider: str | None = "bing_web"  # "baidu", "baidu_web", "google", "bing", "bing_web", "tavily", "serper", "youcom", "custom"
     baidu_search_api_key: str | None = None
     bing_search_api_key: str | None = None
     google_search_api_key: str | None = None
@@ -73,6 +73,8 @@ class Settings(BaseSettings):
     tavily_api_key: str | None = None
     # Serper.dev search configuration (SEARCH_PROVIDER=serper)
     serper_api_key: str | None = None
+    # You.com search configuration (SEARCH_PROVIDER=youcom)
+    youcom_api_key: str | None = None
     # Custom search API configuration (SEARCH_PROVIDER=custom)
     search_api_url: str | None = None
     search_api_key: str | None = None
@@ -123,17 +125,6 @@ class Settings(BaseSettings):
     
     # Extra headers for LLM requests (parsed from EXTRA_HEADERS env var, JSON)
     extra_headers: dict | None = None
-    
-    # Claw (OpenClaw) configuration
-    claw_enabled: bool = False
-    claw_image: str = "simpleyyt/manus-claw"
-    claw_name_prefix: str = "manus-claw"
-    claw_ttl_seconds: int = 3600
-    claw_network: str | None = None  # Docker network bridge name for claw containers
-    claw_ready_timeout: int = 300  # Max seconds to wait for claw container to become ready
-    claw_address: str | None = None  # If set, use this fixed host instead of creating Docker containers
-    claw_api_key: str | None = None  # Static API key accepted by the LLM proxy (for dev/fixed container)
-    manus_api_base_url: str = "http://backend:8000"  # URL of this backend accessible from claw containers
 
     # Task backend configuration: "local" (in-process asyncio, default)
     # or "celery" (distributed Celery workers; requires running `app.worker`)
@@ -161,8 +152,10 @@ class Settings(BaseSettings):
 @lru_cache()
 def get_settings() -> Settings:
     """Get application settings"""
-    if not os.environ.get("OPENAI_API_KEY"):
-        os.environ["OPENAI_API_KEY"] = os.getenv("API_KEY")
+    # Bridge API_KEY to OPENAI_API_KEY for SDKs that only read the latter.
+    # Guard against an unset API_KEY: os.environ[...] = None raises TypeError.
+    if not os.environ.get("OPENAI_API_KEY") and os.environ.get("API_KEY"):
+        os.environ["OPENAI_API_KEY"] = os.environ["API_KEY"]
     settings = Settings()
     settings.extra_headers = _parse_extra_headers()
     settings.validate()

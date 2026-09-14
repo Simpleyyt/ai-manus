@@ -26,7 +26,7 @@ class FileToolkit(BaseToolkit):
         super().__init__()
         self.sandbox = sandbox
         
-    @tool(parse_docstring=True)
+    @tool
     async def file_read(
         self,
         file: str,
@@ -50,7 +50,7 @@ class FileToolkit(BaseToolkit):
             sudo=sudo
         )
     
-    @tool(parse_docstring=True)
+    @tool
     async def file_write(
         self,
         file: str,
@@ -87,7 +87,7 @@ class FileToolkit(BaseToolkit):
             sudo=sudo
         )
     
-    @tool(parse_docstring=True)
+    @tool
     async def file_str_replace(
         self,
         file: str,
@@ -111,7 +111,7 @@ class FileToolkit(BaseToolkit):
             sudo=sudo
         )
     
-    @tool(parse_docstring=True)
+    @tool
     async def file_find_in_content(
         self,
         file: str,
@@ -132,7 +132,7 @@ class FileToolkit(BaseToolkit):
             sudo=sudo
         )
     
-    @tool(parse_docstring=True)
+    @tool
     async def file_find_by_name(
         self,
         path: str,

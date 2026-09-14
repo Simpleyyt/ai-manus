@@ -13,7 +13,7 @@
 
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
-| `MODEL_PROVIDER` | `openai` | No | Model provider that selects the underlying LLM integration (e.g. `openai`, `deepseek`, `anthropic`, `ollama`); only used when `LLM_PROVIDER=langchain` |
+| `MODEL_PROVIDER` | `openai` | No | Model provider that selects the underlying LLM integration (e.g. `openai`, `deepseek`, `anthropic`, `ollama`, `orcarouter`); only used when `LLM_PROVIDER=langchain` |
 | `MODEL_NAME` | `deepseek-chat` | Yes | Name of the model to use |
 | `TEMPERATURE` | `0.7` | No | Randomness level of model responses, range 0-1 |
 | `MAX_TOKENS` | `2000` | No | Maximum number of tokens in model response |
@@ -32,6 +32,7 @@ The following providers are built in (their LangChain integration packages are p
 | `deepseek` | Native DeepSeek integration | `langchain-deepseek` |
 | `anthropic` | Anthropic Claude | `langchain-anthropic` |
 | `ollama` | Open-source models served locally by Ollama | `langchain-ollama` |
+| `orcarouter` | OrcaRouter gateway (OpenAI-compatible, exposes a `provider/model` model namespace); defaults to `https://api.orcarouter.ai/v1`, overridable via `API_BASE` | `langchain-openai` |
 
 **Examples:**
 
@@ -71,6 +72,14 @@ The following providers are built in (their LangChain integration packages are p
   MODEL_NAME=llama3.1
   API_BASE=http://host.docker.internal:11434
   API_KEY=ollama   # Ollama needs no real key, but API_KEY must be non-empty to pass validation
+  ```
+
+- **OrcaRouter**
+  ```env
+  MODEL_PROVIDER=orcarouter
+  MODEL_NAME=anthropic/claude-sonnet-4.5
+  API_KEY=sk-orcarouter-...
+  # API_BASE can be omitted to use the default https://api.orcarouter.ai/v1; set it to override for a self-hosted gateway
   ```
 
 > **Adding more providers**: `init_chat_model` also supports Google Gemini, AWS Bedrock, Azure OpenAI, Mistral and many more. Just add the matching `langchain-xxx` integration package (e.g. `langchain-google-genai`) to `backend/pyproject.toml`, rebuild the images (`./build.sh` or `./dev.sh build`), and set `MODEL_PROVIDER` accordingly. See the [LangChain `init_chat_model` docs](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html) for the full list of providers and names.
@@ -132,25 +141,11 @@ API_KEY=sk-...
 | `SANDBOX_HTTP_PROXY` | - | No | HTTP proxy settings |
 | `SANDBOX_NO_PROXY` | - | No | List of addresses to exclude from proxy |
 
-### Claw (OpenClaw) Configuration
-
-| Configuration | Default Value | Required | Description |
-|---------------|---------------|----------|-------------|
-| `CLAW_ENABLED` | `false` | No | Enable Claw feature; set to `true` to show the sidebar entry |
-| `CLAW_IMAGE` | `simpleyyt/manus-claw` | No | Claw Docker image name |
-| `CLAW_NAME_PREFIX` | `manus-claw` | No | Claw container name prefix |
-| `CLAW_TTL_SECONDS` | `3600` | No | Claw container time-to-live in seconds; set to `0` for unlimited |
-| `CLAW_NETWORK` | - | No | Docker network bridge name for Claw containers |
-| `CLAW_READY_TIMEOUT` | `300` | No | Max seconds to wait for Claw container to become ready (default 5 minutes) |
-| `CLAW_ADDRESS` | - | No | Fixed Claw address (for development; skips Docker container creation) |
-| `CLAW_API_KEY` | - | No | Static API key (for development / fixed container) |
-| `MANUS_API_BASE_URL` | `http://backend:8000` | No | Backend API URL used by Claw containers for callbacks |
-
 ### Search Engine Configuration
 
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
-| `SEARCH_PROVIDER` | `bing_web` | No | Search engine provider (`baidu`, `baidu_web`, `google`, `bing`, `bing_web`, `tavily`, `serper`, or `custom`) |
+| `SEARCH_PROVIDER` | `bing_web` | No | Search engine provider (`baidu`, `baidu_web`, `google`, `bing`, `bing_web`, `tavily`, `serper`, `youcom`, or `custom`) |
 
 #### Baidu Search Configuration
 
@@ -196,6 +191,14 @@ Used only when `SEARCH_PROVIDER=serper`. Serper.dev delivers reliable Google sea
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
 | `SERPER_API_KEY` | - | Yes | Serper.dev API key, get from [serper.dev](https://serper.dev) (free tier available) |
+
+#### You.com Search Configuration
+
+Used only when `SEARCH_PROVIDER=youcom`. You.com provides an AI-first web search API with ranked results and snippets:
+
+| Configuration | Default Value | Required | Description |
+|---------------|---------------|----------|-------------|
+| `YOUCOM_API_KEY` | - | Yes | You.com API key, get from [you.com](https://you.com) |
 
 #### Custom Search API Configuration
 

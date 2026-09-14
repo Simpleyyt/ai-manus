@@ -29,6 +29,11 @@ from app.infrastructure.external.llm.robust_json_parser import (
 
 logger = logging.getLogger(__name__)
 
+# Default base URL for the OrcaRouter gateway. Like OpenRouter, OrcaRouter
+# exposes a provider/model namespace (e.g. ``anthropic/claude-sonnet-4.5``)
+# over an OpenAI-compatible API, so it plugs into LangChain's OpenAI chat model.
+ORCAROUTER_API_BASE = "https://api.orcarouter.ai/v1"
+
 
 class LangchainLLM:
     """Concrete :class:`LLM` gateway backed by LangChain chat models."""
@@ -50,6 +55,19 @@ class LangchainLLM:
         )
         if settings.extra_headers:
             kwargs["default_headers"] = settings.extra_headers
+        # OrcaRouter is an OpenAI-compatible gateway. Expose it as a named
+        # provider with a built-in default endpoint so users don't have to
+        # point API_BASE at it manually; an explicit API_BASE still wins.
+        provider = (settings.model_provider or "openai").lower()
+        if provider == "orcarouter":
+            kwargs["model_provider"] = "openai"
+            kwargs["base_url"] = settings.api_base or ORCAROUTER_API_BASE
+            provider = "openai"
+        # Pass the key explicitly: relying on the OPENAI_API_KEY env bridge in
+        # get_settings() breaks any Settings-injected construction (tests,
+        # alternate wiring). Ollama models don't accept an api_key kwarg.
+        if settings.api_key and provider != "ollama":
+            kwargs["api_key"] = settings.api_key
         self._model = init_chat_model(**kwargs)
 
         self._json_output_parser = RetryWithErrorOutputParser.from_llm(

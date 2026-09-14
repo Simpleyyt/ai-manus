@@ -178,7 +178,7 @@ width: SESSION_LIST_WIDTH_FOLD 52 | UNFOLD 300
 |---|---|
 | Header | `h-[56px] pe-[10px] ps-[12px]` — logo + **Search** + Collapse |
 | Body | `p-[8px] pb-0 gap-px` |
-| Nav rows | New Task → Agent → Plugins → Scheduled → Library (+ Claw product) |
+| Nav rows | New Task → Agent → Plugins → Scheduled → Library |
 | Library icon | `LibraryBig` (not `Library`) |
 | New Task shortcut | hover-only `text-[11px] … opacity-0 group-hover:opacity-100` (local ⌘K) |
 | Row chrome | `ps-[8px] pe-[2px] h-[36px] gap-[8px] rounded-[10px]` |

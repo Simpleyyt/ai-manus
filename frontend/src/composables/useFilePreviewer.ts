@@ -21,13 +21,13 @@ let sideGuardStarted = false
 /**
  * Official rootSelectors.canUseSideFilePreview:
  * !!currentSessionId && !isMobile && tasksTabKey ∈ {task, newTask, agents}
- * Local: chat session route (not library / share / claw) && !mobile.
+ * Local: chat session route (not library / share) && !mobile.
  */
 function getCanUseSideFilePreview(isMobile: boolean): boolean {
   if (isMobile) return false
   const route = router.currentRoute.value
   const sessionId = route.params.sessionId
-  if (typeof sessionId !== 'string' || !sessionId || sessionId === 'claw') return false
+  if (typeof sessionId !== 'string' || !sessionId) return false
   return route.path.startsWith('/chat/')
 }
 

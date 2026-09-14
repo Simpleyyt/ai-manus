@@ -1,8 +1,8 @@
-# AI Manus × Claw Backend Service
+# AI Manus Backend Service
 
 English | [中文](README_zh.md)
 
-AI Manus × Claw is an intelligent conversation agent system based on FastAPI and LangChain chat models. The backend adopts Domain-Driven Design (DDD) architecture, supporting intelligent dialogue, file operations, Shell command execution, browser automation, and integrated [OpenClaw](https://github.com/anthropics/openclaw) AI assistant management (Claw).
+AI Manus is an intelligent conversation agent system based on FastAPI and LangChain chat models. The backend adopts Domain-Driven Design (DDD) architecture, supporting intelligent dialogue, file operations, Shell command execution, and browser automation.
 
 ## Project Architecture
 
@@ -16,9 +16,9 @@ backend/
 │   │   ├── services/    # Domain services (agents, tools, prompts, flows)
 │   │   └── external/    # External service interfaces (Protocols)
 │   ├── application/     # Application layer: orchestrates business processes
-│   │   └── services/    # Application services (agent, auth, file, token, email, claw)
+│   │   └── services/    # Application services (agent, auth, file, token, email)
 │   ├── interfaces/      # Interface layer: defines external system interfaces
-│   │   ├── api/         # API routes (sessions, files, auth, config, claw, OpenAI proxy)
+│   │   ├── api/         # API routes (sessions, files, auth, config)
 │   │   └── schemas/     # Request/response and realtime event schemas
 │   ├── infrastructure/  # Infrastructure layer: provides technical implementation
 │   ├── core/            # Core configuration (config.py)
@@ -31,7 +31,7 @@ backend/
 ## Core Features
 
 1. **Session Management**: Create and manage conversation session instances
-2. **Real-time Conversation**: Stream session list, chat, Claw, and VNC over WebSocket (`/ws/sessions`, `/ws/chat`, `/ws/claw`, `/ws/vnc/{session_id}`)
+2. **Real-time Conversation**: Stream session list, chat, and VNC over WebSocket (`/ws/sessions`, `/ws/chat`, `/ws/vnc/{session_id}`)
 3. **Tool Invocation**: Support for various tool calls, including:
    - Browser automation operations (browser-use or Playwright via CDP, selected by BROWSER_ENGINE)
    - Shell command execution and viewing
@@ -39,7 +39,6 @@ backend/
    - Web search integration
 4. **Sandbox Environment**: Use Docker containers to provide isolated execution environments
 5. **VNC Visualization**: Support remote viewing of the sandbox environment via WebSocket connection
-6. **Claw (Manus × Claw)**: Per-user OpenClaw container lifecycle management, chat history merge (MongoDB + OpenClaw `.jsonl` sessions), WebSocket real-time messaging, file upload/resolve, and OpenAI-compatible LLM proxy for Claw containers
 
 ## Requirements
 
@@ -89,11 +88,6 @@ SANDBOX_NETWORK=manus-network            # Docker network name for communication
 # Authentication configuration
 AUTH_PROVIDER=password                   # password / local / none
 JWT_SECRET_KEY=your-secret-key-here      # JWT signing key (set in production)
-
-# Claw (OpenClaw) configuration
-CLAW_ENABLED=false                       # Enable the Claw integration
-CLAW_IMAGE=simpleyyt/manus-claw          # Claw container Docker image
-CLAW_TTL_SECONDS=3600                    # Claw container time-to-live (seconds)
 
 # MCP configuration
 MCP_CONFIG_PATH=/etc/mcp.json            # Path to external MCP servers config
@@ -172,7 +166,6 @@ Auth: browser Cookie (`session_id`) or App `Authorization: Bearer` (no `?token=`
 |---|---|
 | WebSocket | `/ws/sessions` | Session list channel (`snapshot` / `upsert` / `remove` / `ping`) |
 | WebSocket | `/ws/chat` | Chat channel (protocol `version: 2`) — one connection per tab; `join_session` / `leave_session` / `chat` / `stop_session` with envelope `id`+`timestamp`; awaitable ack via `request_id` |
-| WebSocket | `/ws/claw` | Claw chat channel (`chat` / `text` / `file` / `done` / `heartbeat`) |
 | WebSocket | `/ws/vnc/{session_id}` | Sandbox VNC proxy (binary subprotocol; Cookie/Bearer) |
 
 Chat client→server envelope: `{ id, timestamp, version: 2, type, session_id, ... }`.
@@ -210,26 +203,11 @@ Event envelope: `{ type: "event", session_id, event, data }` where `event` is on
 | POST | `/auth/user/{user_id}/activate` | Activate a user |
 | POST | `/auth/user/{user_id}/deactivate` | Deactivate a user |
 
-### Claw Endpoints (`/api/v1/claw`)
-
-| Method | Path | Description |
-|---|---|---|
-| GET | `/claw` | Get the current user's Claw instance |
-| POST | `/claw` | Create a Claw instance for the current user |
-| DELETE | `/claw` | Delete the current user's Claw instance |
-| GET | `/claw/api-key` | Get the per-user API key for the LLM proxy |
-| GET | `/claw/history` | Get merged Claw chat history |
-| POST | `/claw/upload` | Upload a file from the Claw workspace (Claw API key auth) |
-| GET | `/claw/files/{filename}` | Proxy a file download from the Claw workspace |
-| GET | `/claw/resolve/{file_id}` | Resolve `manus-file://` metadata (Claw API key auth) |
-| GET | `/claw/resolve/{file_id}/download` | Download `manus-file://` content (Claw API key auth) |
-
 ### Other Endpoints
 
 | Method | Path | Description |
 |---|---|---|
 | GET | `/api/v1/config/frontend` | Frontend runtime configuration |
-| POST | `/v1/chat/completions` | OpenAI-compatible LLM proxy used by Claw containers |
 
 ## Error Handling
 

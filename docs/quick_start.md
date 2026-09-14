@@ -48,7 +48,6 @@ services:
     image: simpleyyt/manus-backend
     depends_on:
       - sandbox
-      - claw
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -63,13 +62,6 @@ services:
   sandbox:
     image: simpleyyt/manus-sandbox
     command: /bin/sh -c "exit 0"  # prevent sandbox from starting, ensure image is pulled
-    restart: "no"
-    networks:
-      - manus-network
-
-  claw:
-    image: simpleyyt/manus-claw
-    entrypoint: /bin/sh -c "exit 0"  # prevent claw from starting, ensure image is pulled
     restart: "no"
     networks:
       - manus-network
@@ -113,7 +105,7 @@ API_BASE=https://api.openai.com/v1
 MODEL_NAME=gpt-4o
 ```
 
-完整的 `.env.example` 如下（搜索引擎、认证方式、沙箱、Claw 等更多配置项）：
+完整的 `.env.example` 如下（搜索引擎、认证方式、沙箱等更多配置项）：
 
 <!-- .env.example -->
 ```ini
@@ -123,8 +115,9 @@ API_BASE=http://mockserver:8090/v1
 
 # Model configuration
 # MODEL_PROVIDER selects the LLM integration (via LangChain init_chat_model).
-# Built-in providers: openai, deepseek, anthropic, ollama. OpenAI-compatible
-# endpoints (DeepSeek / OneAPI / vLLM / ...) work with openai + API_BASE.
+# Built-in providers: openai, deepseek, anthropic, ollama, orcarouter.
+# OpenAI-compatible endpoints (DeepSeek / OneAPI / vLLM / ...) work with
+# openai + API_BASE. orcarouter points at the OrcaRouter gateway by default.
 # See docs/configuration.md for per-provider examples.
 MODEL_PROVIDER=openai
 MODEL_NAME=deepseek-chat
@@ -176,6 +169,7 @@ SANDBOX_NETWORK=manus-network
 # bing_web: scrapes Bing search results directly (no API key needed)
 # tavily:   uses the Tavily Search API (requires TAVILY_API_KEY)
 # serper:   uses the Serper.dev Google Search API (requires SERPER_API_KEY)
+# youcom:   uses the You.com Web Search API (requires YOUCOM_API_KEY)
 # custom:   calls any third-party search REST API via SEARCH_API_URL + SEARCH_API_KEY
 SEARCH_PROVIDER=bing_web
 
@@ -198,6 +192,10 @@ SEARCH_PROVIDER=bing_web
 # Serper.dev search configuration, only used when SEARCH_PROVIDER=serper
 # Returns reliable Google results. Get your API key from https://serper.dev
 #SERPER_API_KEY=
+
+# You.com search configuration, only used when SEARCH_PROVIDER=youcom
+# Get your API key from https://you.com
+#YOUCOM_API_KEY=
 
 # Custom search API configuration, only used when SEARCH_PROVIDER=custom
 # Allows integration with any third-party search REST API.
@@ -281,26 +279,6 @@ JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
 #EMAIL_USERNAME=your-email@gmail.com
 #EMAIL_PASSWORD=your-password
 #EMAIL_FROM=your-email@gmail.com
-
-# Claw (OpenClaw) configuration
-# Enable or disable Claw feature (hides sidebar entry when false)
-#CLAW_ENABLED=false
-# Docker image used for Claw containers
-#CLAW_IMAGE=simpleyyt/manus-claw
-# Prefix for Claw container names
-#CLAW_NAME_PREFIX=manus-claw
-# Time-to-live for Claw containers in seconds (0 = unlimited)
-#CLAW_TTL_SECONDS=3600
-# Docker network bridge name for Claw containers
-#CLAW_NETWORK=manus-network
-# Max seconds to wait for Claw container to become ready
-#CLAW_READY_TIMEOUT=300
-# Fixed Claw address (for development; skips Docker container creation)
-#CLAW_ADDRESS=
-# Static API key for Claw (for development / fixed container)
-#CLAW_API_KEY=
-# Backend API URL used by Claw containers for callbacks
-#MANUS_API_BASE_URL=http://backend:8000
 
 # Extra headers for LLM API requests (JSON format)
 #EXTRA_HEADERS={"X-Custom-Header": "value"}

@@ -1,0 +1,52 @@
+name: Nightly regression
+
+on:
+  schedule:
+    - cron: "30 18 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  tests:
+    uses: ./.github/workflows/tests.yml
+
+  report-regression:
+    name: File regression issue
+    runs-on: ubuntu-latest
+    needs: tests
+    if: failure()
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const label = 'autonomy-regression';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              `Nightly regression run failed on \`main\`: ${runUrl}`,
+              '',
+              'Layers covered: backend offline tests + evals, frontend unit/type-check/lint/build, docs-drift, full e2e (API + browser).',
+              'See the run logs for the failing job, then follow the AI Coding Loop in AGENTS.md to fix it.',
+            ].join('\n');
+            const { data: existing } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: label,
+            });
+            if (existing.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing[0].number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: 'Nightly regression failing on main',
+                labels: [label],
+                body,
+              });
+            }

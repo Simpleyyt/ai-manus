@@ -1,0 +1,37 @@
+name: Agent task (需求/任务)
+description: 结构化描述一个需求,供 AI agent 认领实现(目标 + 验收标准即可,验证由自动化守门负责)
+labels:
+  - agent-task
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: 目标 / Goal
+      description: 要什么,一段话说清。写"要什么"而不是"怎么做"。
+      placeholder: 例:会话列表支持按项目筛选。
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准 / Acceptance criteria
+      description: 逐条列出可验证的完成条件。agent 会把它们变成测试。
+      placeholder: |
+        - 侧栏出现项目筛选入口
+        - 中英文文案齐全(en.ts + zh.ts)
+        - 现有会话流转不受影响
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 范围与约束 / Scope & constraints(可选)
+      description: 明确不做什么、涉及哪些面(backend / frontend / sandbox)、UI 是否要求对齐 manus.im 等。
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: |
+        提交后:配置了 automation 时该 issue 会被自动派发给 Cloud Agent;否则在评论里 `@cursor 实现这个 issue` 手动派发。
+        agent 会按 AGENTS.md 的 AI Coding Loop 实现并开 PR(`Closes #<本 issue>`),CI 全绿后等待合并。
+        不必写测试要求——stop hook、测试金字塔和 CI 门会强制验证。

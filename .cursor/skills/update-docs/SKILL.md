@@ -79,12 +79,12 @@ Supported types: `yaml`, `json`, `javascript`, `typescript`, `python`, `bash`, `
 
 Tag name must match `FILES_TO_SYNC` exactly:
 
-```markdown
-<!-- docker-compose-example.yml -->
+````markdown
+<!-- filename -->
 ```yaml
 ```
-<!-- /docker-compose-example.yml -->
-```
+<!-- /filename -->
+````
 
 README demo blocks (managed by `sync_demos.py`):
 

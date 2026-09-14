@@ -6,7 +6,7 @@
 &ensp;
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-AI Manus 是一个通用的 AI Agent 系统，支持在沙盒环境中运行各种工具和操作。现已深度集成 **Claw** —— 基于 [OpenClaw](https://github.com/anthropics/openclaw) 的 AI 助手，一键部署、用户隔离容器、无缝聊天历史，为 Manus 生态带来全新体验。
+AI Manus 是一个通用的 AI Agent 系统，支持在沙盒环境中运行各种工具和操作。
 
 用 AI Manus 开启你的智能体之旅吧！
 
@@ -23,19 +23,19 @@ AI Manus 是一个通用的 AI Agent 系统，支持在沙盒环境中运行各�
 
 * 任务: Code Use、Browser Use 与多会话切换
 
-https://github.com/user-attachments/assets/a73e5be2-822a-4aa9-b2c1-08adc30629a5
+https://github.com/user-attachments/assets/89e0da0f-789f-464f-8648-49eb5035fe2f
 
 ### Browser Use
 
 * 任务: 找一下最新新闻
 
-https://github.com/user-attachments/assets/be459984-561a-4aa3-8c6d-868d2ed9fa56
+https://github.com/user-attachments/assets/11a0aa98-4a74-4de9-a72f-2d384e89799a
 
 ### Code Use
 
 * 任务: 写一个复杂的 python 示例
 
-https://github.com/user-attachments/assets/db4e4048-35c3-4511-a13b-d4f71c54d647
+https://github.com/user-attachments/assets/fa45bcac-92c7-41ce-b8f6-7d9d99747f92
 <!-- /demos:readme:zh -->
 
 ## 主要特性
@@ -44,7 +44,7 @@ https://github.com/user-attachments/assets/db4e4048-35c3-4511-a13b-d4f71c54d647
  * Agent 循环：Plan-and-Execute，可组合 System Prompt，以及原生结构化输出工具（不再使用脆弱的 Prompt 内嵌 JSON 协议）。
  * 工具：支持 Terminal、Browser、File、Web Search、消息工具，并支持实时查看和接管，支持外部 MCP 工具集成。
  * Skills：可复用技能包（官方目录 / 上传 / GitHub），对话中用 `/` 调用；Agent 经 `load_skill` 渐进加载并同步到沙盒。详见 [docs/skills.md](docs/skills.md)。
- * Claw：集成 [OpenClaw](https://github.com/anthropics/openclaw) AI 助手，一键部署、用户隔离容器、自动过期倒计时、完整聊天历史。
+
  * 沙盒：每个 Task 会分配单独的一个沙盒，沙盒在本地 Docker 环境里面运行。
  * 任务会话：通过 Mongo/Redis 对会话历史进行管理，支持后台任务。
  * 库：侧栏「库」聚合各会话产生的附件与产物，支持类型筛选、搜索、文件收藏与预览，并可定位回原任务。
@@ -96,7 +96,6 @@ services:
     image: simpleyyt/manus-backend
     depends_on:
       - sandbox
-      - claw
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -111,13 +110,6 @@ services:
   sandbox:
     image: simpleyyt/manus-sandbox
     command: /bin/sh -c "exit 0"  # prevent sandbox from starting, ensure image is pulled
-    restart: "no"
-    networks:
-      - manus-network
-
-  claw:
-    image: simpleyyt/manus-claw
-    entrypoint: /bin/sh -c "exit 0"  # prevent claw from starting, ensure image is pulled
     restart: "no"
     networks:
       - manus-network
@@ -176,7 +168,6 @@ docker compose up -d
 * `frontend`: Manus 前端
 * `backend`: Manus 后端
 * `sandbox`: Manus 沙盒
-* `claw`: Manus Claw —— OpenClaw 插件与容器镜像，桥接 OpenClaw Gateway 与 Manus 后端
 * `mockserver`: 模拟 LLM 服务（开发/测试用）
 
 ### 整体设计
@@ -233,7 +224,6 @@ MODEL_NAME=gpt-4o
 - 5678: Server debugpy 端口（Python 远程调试）
 - 8080: Sandbox API服务端口
 - 5902: Sandbox VNC端口（映射容器内 5900）
-- 18788: Claw（OpenClaw Gateway）端口
 - 27017: MongoDB 端口
 
 > *注意：在 Debug 模式全局只会启动一个沙盒*
@@ -265,4 +255,4 @@ export IMAGE_TAG=latest
 
 ## ⭐️ Star 记录
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Simpleyyt/ai-manus&type=Date)](https://www.star-history.com/#Simpleyyt/ai-manus&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=Simpleyyt/ai-manus&type=Date)](https://star-history.dera.page/#Simpleyyt/ai-manus&type=Date)

@@ -1,6 +1,6 @@
 """Plan-Act state machine (scheme C) smoke tests."""
 
-from typing import Any, List, Optional
+from typing import Optional
 
 import pytest
 
@@ -13,99 +13,14 @@ from app.domain.models.event import (
     StepStatus,
     WaitEvent,
 )
-from app.domain.models.memory import Memory
 from app.domain.models.message import LLMMessage, Message, ToolCall
-from app.domain.models.plan import Plan
-from app.domain.models.session import SessionStatus
-from app.domain.models.tool_result import ToolResult
 from app.domain.services.flows.plan_act import PlanActFlow
-from app.domain.services.tools.message import MessageToolkit
 
-
-class FakeAgentRepository:
-    def __init__(self) -> None:
-        self.memories: dict[str, Memory] = {}
-
-    @staticmethod
-    def _key(agent_id: str, name: str) -> str:
-        return f"{agent_id}:{name}"
-
-    async def get_memory(self, agent_id: str, name: str) -> Memory:
-        return self.memories.setdefault(self._key(agent_id, name), Memory())
-
-    async def save_memory(self, agent_id: str, name: str, memory: Memory) -> None:
-        self.memories[self._key(agent_id, name)] = memory
-
-
-class ScriptedLLM:
-    def __init__(self, responses: List[LLMMessage]) -> None:
-        self.responses = list(responses)
-        self.asked_tool_names: list[str] = []
-
-    async def ask(self, messages, tools=None, response_format=None, tool_choice=None):
-        names: list[str] = []
-        for tool in tools or []:
-            fn = (tool.get("function") or {}) if isinstance(tool, dict) else {}
-            name = fn.get("name") or tool.get("name")
-            if name:
-                names.append(name)
-        self.asked_tool_names.append(",".join(names))
-        return self.responses.pop(0)
-
-
-class FakeSandbox:
-    async def file_write(self, **kwargs: Any) -> ToolResult:
-        return ToolResult(success=True, message="written")
-
-    async def file_read(self, **kwargs: Any) -> ToolResult:
-        return ToolResult(success=True, message="ok", data="")
-
-    async def file_str_replace(self, **kwargs: Any) -> ToolResult:
-        return ToolResult(success=True, message="replaced")
-
-    async def file_find_in_content(self, **kwargs: Any) -> ToolResult:
-        return ToolResult(success=True, data=[])
-
-    async def file_find_by_name(self, **kwargs: Any) -> ToolResult:
-        return ToolResult(success=True, data=[])
-
-
-class FakeSession:
-    def __init__(
-        self,
-        status: SessionStatus = SessionStatus.PENDING,
-        plan: Plan | None = None,
-    ) -> None:
-        self.status = status
-        self.project_id = None
-        self.plan = plan
-
-    def get_last_plan(self):
-        return self.plan
-
-
-class FakeSessionRepository:
-    def __init__(self, session: FakeSession) -> None:
-        self.session = session
-
-    async def find_by_id(self, session_id: str):
-        return self.session
-
-    async def update_status(self, session_id: str, status: SessionStatus) -> None:
-        self.session.status = status
+from tests.harness import FakeSession, ScriptedLLM, build_plan_act_flow
 
 
 def _flow(llm: ScriptedLLM, session: Optional[FakeSession] = None) -> PlanActFlow:
-    return PlanActFlow(
-        agent_id="agent-1",
-        agent_repository=FakeAgentRepository(),
-        session_id="session-1",
-        session_repository=FakeSessionRepository(session or FakeSession()),
-        sandbox=FakeSandbox(),
-        browser=object(),
-        mcp_tool=MessageToolkit(),
-        llm=llm,
-    )
+    return build_plan_act_flow(llm, session=session)
 
 
 def _has_update_plan_call(llm: ScriptedLLM) -> bool:

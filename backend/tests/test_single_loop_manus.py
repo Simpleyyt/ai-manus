@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Optional
 
 import pytest
 
@@ -20,112 +20,21 @@ from app.domain.models.plan import ExecutionStatus, Plan, Step
 from app.domain.models.session import SessionStatus
 from app.domain.models.tool_result import ToolResult
 from app.domain.services.agents.manus import ManusAgent
-from app.domain.services.agents.base import BaseAgent, StructuredOutputEvent
+from app.domain.services.agents.base import StructuredOutputEvent
 from app.domain.services.flows.agent_loop import AgentLoopFlow
 from app.domain.services.tools.base import OutputTool
 from app.domain.services.tools.file import FileToolkit
 from app.domain.services.tools.message import MessageToolkit
 from app.domain.services.tools.plan import PlanToolkit
 
-
-class FakeAgentRepository:
-    def __init__(self) -> None:
-        self.memories: dict[str, Memory] = {}
-
-    @staticmethod
-    def _key(agent_id: str, name: str) -> str:
-        return f"{agent_id}:{name}"
-
-    async def get_memory(self, agent_id: str, name: str) -> Memory:
-        return self.memories.setdefault(self._key(agent_id, name), Memory())
-
-    async def save_memory(self, agent_id: str, name: str, memory: Memory) -> None:
-        self.memories[self._key(agent_id, name)] = memory
-
-
-class ScriptedLLM:
-    def __init__(self, responses: List[LLMMessage]) -> None:
-        self.responses = list(responses)
-        self.calls: list[list[LLMMessage]] = []
-
-    async def ask(self, messages, tools=None, response_format=None, tool_choice=None):
-        self.calls.append(list(messages))
-        return self.responses.pop(0)
-
-    async def parse_json(self, text: str):
-        raise AssertionError("parse_json must not be used by the agent loop")
-
-
-class FakeSandbox:
-    def __init__(self) -> None:
-        self.shell_exec_calls = 0
-
-    async def file_write(self, **kwargs: Any) -> ToolResult:
-        return ToolResult(success=True, message="written")
-
-    async def file_read(self, **kwargs: Any) -> ToolResult:
-        return ToolResult(success=True, message="ok", data="")
-
-    async def file_str_replace(self, **kwargs: Any) -> ToolResult:
-        return ToolResult(success=True, message="replaced")
-
-    async def file_find_in_content(self, **kwargs: Any) -> ToolResult:
-        return ToolResult(success=True, data=[])
-
-    async def file_find_by_name(self, **kwargs: Any) -> ToolResult:
-        return ToolResult(success=True, data=[])
-
-    async def exec_command(self, id: str, exec_dir: str, command: str) -> ToolResult:
-        self.shell_exec_calls += 1
-        return ToolResult(success=True, message="Command executed", data={})
-
-    async def view_shell(self, id: str, console: bool = False) -> ToolResult:
-        return ToolResult(success=True, data={"console": []})
-
-    async def wait_for_process(self, id: str, seconds: int | None = None) -> ToolResult:
-        return ToolResult(success=True, data={})
-
-    async def write_to_process(
-        self, id: str, input: str, press_enter: bool = True
-    ) -> ToolResult:
-        return ToolResult(success=True, data={})
-
-    async def kill_process(self, id: str) -> ToolResult:
-        return ToolResult(success=True, data={})
-
-
-class FakeSession:
-    def __init__(
-        self,
-        status: SessionStatus = SessionStatus.PENDING,
-        plan: Plan | None = None,
-    ) -> None:
-        self.status = status
-        self.project_id = None
-        self.plan = plan
-
-    def get_last_plan(self):
-        return self.plan
-
-
-class FakeSessionRepository:
-    def __init__(self, session: FakeSession) -> None:
-        self.session = session
-        self.status_updates: list[SessionStatus] = []
-
-    async def find_by_id(self, session_id: str):
-        return self.session
-
-    async def update_status(self, session_id: str, status: SessionStatus) -> None:
-        self.status_updates.append(status)
-
-
-class TestAgent(BaseAgent):
-    name = "test"
-
-    def build_system_prompt(self) -> str:
-        return "test system prompt"
-
+from tests.harness import (
+    FakeAgentRepository,
+    FakeSandbox,
+    FakeSession,
+    ScriptedLLM,
+    StubAgent,
+    build_agent_loop_flow,
+)
 
 DELIVER_RESULT = OutputTool(
     name="deliver_result",
@@ -139,15 +48,8 @@ def _flow(
     session: Optional[FakeSession] = None,
     agent_repository: Optional[FakeAgentRepository] = None,
 ) -> AgentLoopFlow:
-    return AgentLoopFlow(
-        agent_id="agent-1",
-        agent_repository=agent_repository or FakeAgentRepository(),
-        session_id="session-1",
-        session_repository=FakeSessionRepository(session or FakeSession()),
-        sandbox=FakeSandbox(),
-        browser=object(),
-        mcp_tool=MessageToolkit(),
-        llm=llm,
+    return build_agent_loop_flow(
+        llm, session=session, agent_repository=agent_repository
     )
 
 
@@ -290,16 +192,7 @@ async def test_agent_loop_blocks_work_tools_after_plan_finished():
             ),
         ]),
     ])
-    flow = AgentLoopFlow(
-        agent_id="agent-1",
-        agent_repository=FakeAgentRepository(),
-        session_id="session-1",
-        session_repository=FakeSessionRepository(FakeSession()),
-        sandbox=sandbox,
-        browser=object(),
-        mcp_tool=MessageToolkit(),
-        llm=llm,
-    )
+    flow = build_agent_loop_flow(llm, sandbox=sandbox)
 
     events = [event async for event in flow.run(Message(message="Do it"))]
 
@@ -722,7 +615,7 @@ async def test_continue_execute_does_not_append_user_message():
             content="Use option B",
         ),
     ])
-    await repository.save_memory("agent-1", TestAgent.name, memory)
+    await repository.save_memory("agent-1", StubAgent.name, memory)
     llm = ScriptedLLM([
         LLMMessage.assistant(
             tool_calls=[
@@ -734,7 +627,7 @@ async def test_continue_execute_does_not_append_user_message():
             ]
         ),
     ])
-    agent = TestAgent(
+    agent = StubAgent(
         agent_id="agent-1",
         agent_repository=repository,
         llm=llm,

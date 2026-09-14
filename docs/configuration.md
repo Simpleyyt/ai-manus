@@ -13,7 +13,7 @@
 
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
-| `MODEL_PROVIDER` | `openai` | 否 | 模型提供商，决定底层使用哪个 LLM 集成（如 `openai`、`deepseek`、`anthropic`、`ollama`），仅在 `LLM_PROVIDER=langchain` 时生效 |
+| `MODEL_PROVIDER` | `openai` | 否 | 模型提供商，决定底层使用哪个 LLM 集成（如 `openai`、`deepseek`、`anthropic`、`ollama`、`orcarouter`），仅在 `LLM_PROVIDER=langchain` 时生效 |
 | `MODEL_NAME` | `deepseek-chat` | 是 | 要使用的模型名称 |
 | `TEMPERATURE` | `0.7` | 否 | 模型响应的随机性程度，范围 0-1 |
 | `MAX_TOKENS` | `2000` | 否 | 模型响应的最大 token 数量 |
@@ -32,6 +32,7 @@
 | `deepseek` | DeepSeek 原生集成 | `langchain-deepseek` |
 | `anthropic` | Anthropic Claude | `langchain-anthropic` |
 | `ollama` | 本地 Ollama 运行的开源模型 | `langchain-ollama` |
+| `orcarouter` | OrcaRouter 网关（OpenAI 兼容，暴露 `provider/model` 模型命名空间），默认端点 `https://api.orcarouter.ai/v1`，可用 `API_BASE` 覆盖 | `langchain-openai` |
 
 **配置示例：**
 
@@ -71,6 +72,14 @@
   MODEL_NAME=llama3.1
   API_BASE=http://host.docker.internal:11434
   API_KEY=ollama   # Ollama 无需真实密钥，但 API_KEY 必须非空以通过校验
+  ```
+
+- **OrcaRouter**
+  ```env
+  MODEL_PROVIDER=orcarouter
+  MODEL_NAME=anthropic/claude-sonnet-4.5
+  API_KEY=sk-orcarouter-...
+  # API_BASE 可省略，默认指向 https://api.orcarouter.ai/v1；自建网关时可覆盖
   ```
 
 > **接入更多提供商**：`init_chat_model` 还支持 Google Gemini、AWS Bedrock、Azure OpenAI、Mistral 等更多提供商。只需在 `backend/pyproject.toml` 增加对应的 `langchain-xxx` 集成包（如 `langchain-google-genai`）并重新构建镜像（`./build.sh` 或 `./dev.sh build`），再将 `MODEL_PROVIDER` 设为对应值即可。完整的提供商列表与命名参见 [LangChain `init_chat_model` 文档](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html)。
@@ -132,25 +141,11 @@ API_KEY=sk-...
 | `SANDBOX_HTTP_PROXY` | - | 否 | HTTP 代理设置 |
 | `SANDBOX_NO_PROXY` | - | 否 | 不使用代理的地址列表 |
 
-### Claw (OpenClaw) 配置
-
-| 配置项 | 默认值 | 是否必需 | 说明 |
-|--------|--------|----------|------|
-| `CLAW_ENABLED` | `false` | 否 | 是否启用 Claw 功能，设为 `true` 显示左侧面板入口 |
-| `CLAW_IMAGE` | `simpleyyt/manus-claw` | 否 | Claw Docker 镜像名称 |
-| `CLAW_NAME_PREFIX` | `manus-claw` | 否 | Claw 容器名称前缀 |
-| `CLAW_TTL_SECONDS` | `3600` | 否 | Claw 容器生存时间（秒），设为 `0` 表示不限时 |
-| `CLAW_NETWORK` | - | 否 | Claw 容器使用的 Docker 网络桥名称 |
-| `CLAW_READY_TIMEOUT` | `300` | 否 | 等待 Claw 容器就绪的最大秒数（默认 5 分钟） |
-| `CLAW_ADDRESS` | - | 否 | 固定 Claw 地址（开发环境使用，设置后跳过 Docker 容器创建） |
-| `CLAW_API_KEY` | - | 否 | 静态 API 密钥（开发环境 / 固定容器使用） |
-| `MANUS_API_BASE_URL` | `http://backend:8000` | 否 | 后端 API 地址，供 Claw 容器回调使用 |
-
 ### 搜索引擎配置
 
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
-| `SEARCH_PROVIDER` | `bing_web` | 否 | 搜索引擎提供商（`baidu`、`baidu_web`、`google`、`bing`、`bing_web`、`tavily`、`serper` 或 `custom`） |
+| `SEARCH_PROVIDER` | `bing_web` | 否 | 搜索引擎提供商（`baidu`、`baidu_web`、`google`、`bing`、`bing_web`、`tavily`、`serper`、`youcom` 或 `custom`） |
 
 #### 百度搜索配置
 
@@ -196,6 +191,14 @@ API_KEY=sk-...
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
 | `SERPER_API_KEY` | - | 是 | Serper.dev API 密钥，从 [serper.dev](https://serper.dev) 获取（提供免费额度） |
+
+#### You.com 搜索配置
+
+仅当 `SEARCH_PROVIDER=youcom` 时使用。You.com 提供 AI 优先的网络搜索 API，返回排序后的结果和摘要：
+
+| 配置项 | 默认值 | 是否必需 | 说明 |
+|--------|--------|----------|------|
+| `YOUCOM_API_KEY` | - | 是 | You.com API 密钥，从 [you.com](https://you.com) 获取 |
 
 #### 自定义搜索 API 配置
 

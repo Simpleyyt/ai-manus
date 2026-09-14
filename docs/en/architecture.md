@@ -31,18 +31,8 @@ Skills are reusable workflow packages (`SKILL.md` plus optional assets). Users a
 
 User flows, package format, and HTTP APIs: [Skills](skills.md).
 
-## Claw (Manus × Claw)
-
-Claw is AI Manus's deeply integrated [OpenClaw](https://github.com/anthropics/openclaw) AI assistant module, delivering the **Manus × Claw** experience as a standalone chat interface.
-
-**Architecture Overview:**
-
-- **claw/ container image:** Built on `ghcr.io/openclaw/openclaw:latest`, includes the `manus-claw` Node plugin, runs the OpenClaw Gateway with TTL auto-expiry support.
-- **Backend integration:** Server dynamically creates per-user Claw Docker containers (or connects to a fixed dev instance), manages state in the MongoDB `claws` collection, merges MongoDB history with OpenClaw `.jsonl` session files, and exposes REST + WebSocket + file upload/resolve + OpenAI-compatible LLM proxy endpoints.
-- **Frontend integration:** When `claw_enabled` is turned on, a "Manus Claw" entry appears in the sidebar, routing to the `/chat/claw` page with real-time chat over WebSocket.
-- **manus-claw plugin:** Bridges the OpenClaw Gateway with the Manus backend, providing an HTTP server, the `manus_upload_file` tool, file resolution, and session history reads.
-
 ## Library
+
 
 Library is a dedicated sidebar page (route `/library`) for browsing files the current user uploaded or produced across task sessions.
 

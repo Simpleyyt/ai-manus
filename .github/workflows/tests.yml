@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
       - name: Install dependencies
         working-directory: backend
         run: uv sync --frozen
@@ -132,7 +132,7 @@ jobs:
           for d in backend/.venv sandbox/.venv frontend/node_modules; do
             if [ -d "$d" ]; then sudo chown -R "$(id -u):$(id -g)" "$d"; fi
           done
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
       - name: API e2e
         working-directory: backend
         run: |

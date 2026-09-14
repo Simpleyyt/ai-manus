@@ -93,7 +93,7 @@ class SkillToolkit(BaseToolkit):
                 fn["description"] = self._load_skill_description()
         return schemas
 
-    @tool(parse_docstring=True)
+    @tool
     async def load_skill(self, name: str) -> ToolResult:
         """Load full instructions for an enabled skill by name.
 

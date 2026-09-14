@@ -14,6 +14,7 @@ from app.application.data.official_skills import (
 )
 from app.application.errors.exceptions import BadRequestError, NotFoundError
 from app.application.services.skill_github import (
+    extract_subdir_from_github_zip,
     fetch_github_skill_zipball,
     parse_github_repo_url,
 )
@@ -98,8 +99,17 @@ class SkillService:
         return subscription
 
     async def import_from_github(self, user_id: str, url: str) -> Skill:
-        owner, repo = parse_github_repo_url(url)
-        package_bytes = await fetch_github_skill_zipball(owner, repo)
+        parsed = parse_github_repo_url(url)
+        package_bytes = await fetch_github_skill_zipball(
+            parsed.owner,
+            parsed.repo,
+            ref=parsed.ref,
+        )
+        if parsed.subpath:
+            package_bytes = extract_subdir_from_github_zip(
+                package_bytes,
+                parsed.subpath,
+            )
         return await self.ingest_skill_package(
             user_id,
             package_bytes,

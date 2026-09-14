@@ -19,15 +19,23 @@
             aria-expanded="false" aria-haspopup="dialog">
             <Plus :size="17" />
           </button>
-          <ChatBoxSlashMenu
+          <ChatBoxPlusMenu
             :open="showPlusMenu"
-            :items="plusMenuItems"
             :position-style="plusMenuPositionStyle"
-            variant="plus"
-            test-id="chatbox-plus-menu"
-            @select="handlePlusSelect"
+            @add-local-files="runAddLocalFiles"
+            @select-skill="insertSkillTag"
+            @add-skill="handlePlusAddSkill"
+            @manage-skills="handlePlusManageSkills"
+            @close="showPlusMenu = false"
           />
         </div>
+        <template v-for="variant in plusSkillDialogVariants" :key="variant">
+          <SkillsPlaceholderDialog
+            v-if="plusSkillDialogOpen[variant]"
+            v-model:open="plusSkillDialogOpen[variant]"
+            :variant="variant"
+          />
+        </template>
         <div class="flex gap-1.5 ml-auto items-center">
           <button v-if="!isRunning || sendEnabled || hideStopButton"
             class="inline-flex items-center justify-center whitespace-nowrap font-medium transition-colors text-sm rounded-full p-0 w-8 h-8 min-w-0 hover:opacity-90"
@@ -55,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, onMounted, onUnmounted, onBeforeUnmount } from 'vue'
+import { ref, watch, computed, reactive, onMounted, onUnmounted, onBeforeUnmount } from 'vue'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -65,6 +73,10 @@ import { useI18n } from 'vue-i18n'
 import ChatBoxFiles from './ChatBoxFiles.vue'
 import ChatBoxSlashMenu from './chatbox/ChatBoxSlashMenu.vue'
 import type { SlashMenuItem } from './chatbox/ChatBoxSlashMenu.vue'
+import ChatBoxPlusMenu from './chatbox/ChatBoxPlusMenu.vue'
+import SkillsPlaceholderDialog, {
+  type SkillsPlaceholderVariant,
+} from './skills/SkillsPlaceholderDialog.vue'
 import {
   applySlashSelection,
   buildSlashItems,
@@ -74,17 +86,25 @@ import {
 import { SkillTag } from './chatbox/skillTag'
 import { collectRequiredSkills } from './chatbox/requiredSkills'
 import { useSkills } from '@/composables/useSkills'
+import { useSettingsDialog } from '@/composables/useSettingsDialog'
 import type { PendingHomeDraft } from '@/composables/usePendingHomeMessage'
 import { Plus } from 'lucide-vue-next'
 import type { FileInfo } from '../api/file'
 import type { Range } from '@tiptap/core'
 
 const { t } = useI18n()
-const { slashSkills } = useSkills()
+const { slashSkills, launchSkillCreatorFlow } = useSkills()
+const { openSettingsDialog } = useSettingsDialog()
 const hasTextInput = ref(false)
 const chatBoxFileListRef = ref()
 const showPlusMenu = ref(false)
 const plusMenuRef = ref<HTMLElement | null>(null)
+const plusSkillDialogVariants = ['upload', 'github', 'official'] as const
+const plusSkillDialogOpen = reactive<Record<(typeof plusSkillDialogVariants)[number], boolean>>({
+  upload: false,
+  github: false,
+  official: false,
+})
 
 const slashMenuOpen = ref(false)
 const slashMenuItems = ref<SlashItem[]>([])
@@ -155,10 +175,15 @@ const runAddLocalFiles = () => {
 }
 
 const insertSkillTag = (skill: { id: string; name: string; description?: string; owner_type?: string }) => {
+  showPlusMenu.value = false
   slashMenuOpen.value = false
+  if (!editor.value) return
   editor.value
-    ?.chain()
-    .focus()
+    .chain()
+    .command(({ tr, dispatch }) => {
+      if (dispatch) tr.setMeta('scrollIntoView', false)
+      return true
+    })
     .insertSkillTag({
       skillId: skill.id,
       name: skill.name,
@@ -176,13 +201,32 @@ const getSlashItems = () =>
     onInsertSkill: insertSkillTag,
   })
 
-const plusMenuItems = computed((): SlashMenuItem[] => [
-  { id: 'add_local_files', kind: 'local', titleKey: 'Add local files', run: runAddLocalFiles },
-])
-
-const handlePlusSelect = (_item: SlashMenuItem) => {
+const handlePlusManageSkills = () => {
   showPlusMenu.value = false
-  uploadFile()
+  openSettingsDialog('skills')
+}
+
+const handlePlusAddSkill = async (variant: SkillsPlaceholderVariant) => {
+  showPlusMenu.value = false
+  if (variant === 'build') {
+    try {
+      const skill = await launchSkillCreatorFlow()
+      seedDraft({
+        before: t('Help me create a skill together using '),
+        skill: {
+          skillId: skill.id,
+          name: skill.name,
+          description: skill.description,
+          ownerType: skill.owner_type,
+        },
+        after: t(' to create a skill. First ask me what the skill should do.'),
+      })
+    } catch {
+      // leave composer unchanged on failure
+    }
+    return
+  }
+  plusSkillDialogOpen[variant] = true
 }
 
 const handleSlashSelect = (item: SlashMenuItem) => {

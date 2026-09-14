@@ -56,7 +56,9 @@ def iter_package_files(package_bytes: bytes) -> list[tuple[str, bytes]]:
         entries = [
             (info.filename, info)
             for info in zf.infolist()
-            if not info.is_dir() and not info.filename.endswith("/")
+            if not info.is_dir()
+            and not info.filename.endswith("/")
+            and not _is_junk_path(info.filename)
         ]
         file_names = [name for name, _ in entries]
         prefix = _resolve_root_prefix(file_names)
@@ -64,6 +66,10 @@ def iter_package_files(package_bytes: bytes) -> list[tuple[str, bytes]]:
         result: list[tuple[str, bytes]] = []
         extracted_bytes = 0
         for name, info in entries:
+            posix = _normalize_posix(name)
+            if prefix and not posix.startswith(prefix):
+                # Repo extras (README, LICENSE, sibling folders) outside the skill root.
+                continue
             rel = _relative_path(name, prefix)
             _validate_relative_path(rel)
             content, extracted_bytes = _read_member_with_budget(
@@ -126,12 +132,28 @@ def _file_member_names(zf: zipfile.ZipFile) -> list[str]:
     return [
         info.filename
         for info in zf.infolist()
-        if not info.is_dir() and not info.filename.endswith("/")
+        if not info.is_dir()
+        and not info.filename.endswith("/")
+        and not _is_junk_path(info.filename)
     ]
 
 
 def _normalize_posix(path: str) -> str:
     return path.replace("\\", "/")
+
+
+def _is_junk_path(path: str) -> bool:
+    """Ignore macOS resource forks / Finder metadata that break root detection."""
+    posix = _normalize_posix(path)
+    parts = [p for p in posix.split("/") if p]
+    if "__MACOSX" in parts:
+        return True
+    base = parts[-1] if parts else ""
+    if base in {".DS_Store", "Thumbs.db"}:
+        return True
+    if base.startswith("._"):
+        return True
+    return False
 
 
 def _validate_member_path(path: str) -> None:
@@ -150,28 +172,38 @@ def _validate_relative_path(rel: str) -> None:
 
 
 def _resolve_root_prefix(file_paths: list[str]) -> str:
+    """Return the package root prefix containing the unique SKILL.md.
+
+    Accepts:
+    - ``SKILL.md`` at archive root
+    - single top-level folder (GitHub zip / ``.skill``)
+    - uniquely nested ``…/SKILL.md`` (ignores ``__MACOSX`` / ``.DS_Store``)
+    """
     if not file_paths:
         raise SkillArchiveError("SKILL.md not found in package")
 
-    normalized = [_normalize_posix(p) for p in file_paths]
+    normalized = [
+        _normalize_posix(p) for p in file_paths if not _is_junk_path(p)
+    ]
+    if not normalized:
+        raise SkillArchiveError("SKILL.md not found in package")
 
-    if "SKILL.md" in normalized:
-        return ""
-
-    direct_folder_skills = [
+    skill_paths = [
         path
         for path in normalized
-        if path.endswith("/SKILL.md") and "/" not in path[: -len("/SKILL.md")]
+        if path == "SKILL.md" or path.endswith("/SKILL.md")
     ]
-    if len(direct_folder_skills) != 1:
-        raise SkillArchiveError("SKILL.md not found at package root")
+    if not skill_paths:
+        raise SkillArchiveError("SKILL.md not found in package")
+    if len(skill_paths) > 1:
+        raise SkillArchiveError(
+            "Multiple SKILL.md files found; package a single skill"
+        )
 
-    folder = direct_folder_skills[0][: -len("/SKILL.md")]
-    prefix = f"{folder}/"
-    if not all(path.startswith(prefix) for path in normalized):
-        raise SkillArchiveError("SKILL.md not found at package root")
-
-    return prefix
+    skill_path = skill_paths[0]
+    if skill_path == "SKILL.md":
+        return ""
+    return skill_path[: -len("SKILL.md")]
 
 
 def _relative_path(member: str, prefix: str) -> str:

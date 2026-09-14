@@ -21,8 +21,12 @@ const getBrowserLocale = (): Locale => {
 
 // Get current language from localStorage, default to browser language
 const getStoredLocale = (): Locale => {
-  const storedLocale = localStorage.getItem(STORAGE_KEY)
-  return (storedLocale as Locale) || getBrowserLocale()
+  try {
+    const storedLocale = globalThis.localStorage?.getItem(STORAGE_KEY)
+    return (storedLocale as Locale) || getBrowserLocale()
+  } catch {
+    return getBrowserLocale()
+  }
 }
 
 // Create i18n instance
@@ -46,7 +50,11 @@ export function useLocale() {
   const setLocale = (locale: Locale) => {
     i18n.global.locale.value = locale
     currentLocale.value = locale
-    localStorage.setItem(STORAGE_KEY, locale)
+    try {
+      globalThis.localStorage?.setItem(STORAGE_KEY, locale)
+    } catch {
+      // ignore storage failures (private mode / test env)
+    }
     document.querySelector('html')?.setAttribute('lang', locale)
   }
 

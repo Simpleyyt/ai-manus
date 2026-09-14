@@ -102,7 +102,7 @@ Developer entry points:
 ## Notes
 
 - The **Team** skills tab is an empty placeholder for now.
-- GitHub import is public `owner/repo` only; private repos, non-`main`/`master` defaults, or nested package layouts may fail.
+- GitHub import is public repos only. Paste the repo root or a subdirectory URL (`…/tree/<branch>/path/to/skill`, `…/blob/.../SKILL.md`). Prefers the branch in the URL, then `main`/`master`. Without a subdirectory, the archive must contain exactly one `SKILL.md`.
 - Do not expect sandbox scripts or full `load_skill` behavior in Chat mode.
 - Non-UTF-8 files inside a package may be skipped during sandbox sync.
 

@@ -118,6 +118,9 @@
                 <p class="text-[14px] text-[var(--text-tertiary)]">
                   {{ t('Import a skill directly from a public GitHub repository.') }}
                 </p>
+                <p class="text-[13px] text-[var(--text-tertiary)]">
+                  {{ t('For multi-skill repos, paste a subdirectory URL (…/tree/main/skills/name).') }}
+                </p>
               </div>
             </div>
             <div class="flex flex-col gap-2 w-full">
@@ -130,7 +133,7 @@
                 data-testid="skills-github-url-input"
                 type="url"
                 autofocus
-                placeholder="https://github.com/username/repo"
+                placeholder="https://github.com/owner/repo/tree/main/skills/name"
                 class="w-full h-10 px-3 rounded-[10px] border border-[var(--border-main)] bg-[var(--fill-tsp-white-main)] text-[var(--text-primary)] text-sm outline-none focus:border-[var(--border-dark)] placeholder:text-[var(--text-disable)]"
                 @keydown.enter.prevent="onImport"
               >
@@ -328,14 +331,26 @@ const contentClass = computed(() => {
   return 'w-[380px] max-w-[98%] rounded-[16px] border-0 shadow-menu'
 })
 
+const importErrorMessage = (error: unknown) => {
+  if (
+    error
+    && typeof error === 'object'
+    && 'message' in error
+    && typeof (error as { message: unknown }).message === 'string'
+  ) {
+    return (error as { message: string }).message
+  }
+  return ''
+}
+
 const onImport = async () => {
   if (!githubUrl.value.trim()) return
   try {
     await importSkillFromGitHub(githubUrl.value)
     showSuccessToast(t('Skill added'))
     open.value = false
-  } catch {
-    showErrorToast(t('Invalid GitHub URL'))
+  } catch (error: unknown) {
+    showErrorToast(importErrorMessage(error) || t('Failed to import skill'))
   }
 }
 
@@ -352,8 +367,8 @@ const onUploadSelected = async (event: Event) => {
     await importSkillFromUpload(file)
     showSuccessToast(t('Skill added'))
     open.value = false
-  } catch {
-    showErrorToast(t('Invalid skill file name'))
+  } catch (error: unknown) {
+    showErrorToast(importErrorMessage(error) || t('Failed to import skill'))
   }
 }
 

@@ -48,12 +48,39 @@ def test_zip_slip_rejected_directory_member():
     with pytest.raises(SkillArchiveError):
         iter_package_files(data)
 
-def test_nested_skill_md_layout_rejected():
-    data = _zip_bytes({"foo/bar/SKILL.md": "---\nname: nested\ndescription: d\n---\n\nBody\n"})
-    with pytest.raises(SkillArchiveError):
+def test_unique_nested_skill_md_accepted():
+    data = _zip_bytes({
+        "foo/bar/SKILL.md": "---\nname: nested\ndescription: d\n---\n\nBody\n",
+        "foo/bar/scripts/run.py": "print(1)\n",
+        "README.md": "# repo\n",
+    })
+    assert "name: nested" in read_skill_md_from_package(data)
+    files = dict(iter_package_files(data))
+    assert "SKILL.md" in files
+    assert files["scripts/run.py"] == b"print(1)\n"
+    assert "README.md" not in files
+
+
+def test_macos_metadata_ignored_when_resolving_root():
+    data = _zip_bytes({
+        "skill-creator/SKILL.md": "---\nname: skill-creator\ndescription: d\n---\n\nBody\n",
+        "skill-creator/scripts/init.py": "print(1)\n",
+        "__MACOSX/skill-creator/._SKILL.md": "junk",
+        "__MACOSX/skill-creator/scripts/._init.py": "junk",
+        "skill-creator/.DS_Store": "junk",
+    })
+    assert "skill-creator" in read_skill_md_from_package(data)
+    files = dict(iter_package_files(data))
+    assert set(files) == {"SKILL.md", "scripts/init.py"}
+
+
+def test_multiple_skill_md_rejected():
+    data = _zip_bytes({
+        "a/SKILL.md": "---\nname: a\ndescription: d\n---\n\nA\n",
+        "b/SKILL.md": "---\nname: b\ndescription: d\n---\n\nB\n",
+    })
+    with pytest.raises(SkillArchiveError, match="Multiple SKILL.md"):
         read_skill_md_from_package(data)
-    with pytest.raises(SkillArchiveError):
-        iter_package_files(data)
 
 def test_size_cap():
     with pytest.raises(SkillArchiveError):

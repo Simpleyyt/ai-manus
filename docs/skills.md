@@ -102,7 +102,7 @@ Skills **没有**专用环境变量；不依赖 `.env` 开关。包大小、沙�
 ## 注意事项
 
 - **Team** 技能页签目前为空占位，无团队技能。
-- GitHub 仅公库、简单 `owner/repo` URL；私库、非 `main`/`master` 默认分支、子目录包可能失败。
+- GitHub 仅公库；支持仓库根、以及子目录链接（`…/tree/<branch>/path/to/skill`、`…/blob/.../SKILL.md`）。默认优先 URL 中的分支，否则 `main`/`master`。未指定子目录时，仓库内需有且仅有一个 `SKILL.md`。
 - Chat 模式不要期望沙盒脚本与完整 `load_skill` 行为。
 - 技能包内非 UTF-8 文件同步到沙盒时可能被跳过。
 

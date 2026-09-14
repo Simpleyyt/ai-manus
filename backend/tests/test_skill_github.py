@@ -1,11 +1,15 @@
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
+import io
+import zipfile
 
 import httpx
 import pytest
 
 from app.application.errors.exceptions import BadRequestError
 from app.application.services.skill_github import (
+    ParsedGithubSkillUrl,
+    extract_subdir_from_github_zip,
     fetch_github_skill_zipball,
     parse_github_repo_url,
 )
@@ -15,24 +19,43 @@ from app.domain.skills.archive import MAX_SKILL_PACKAGE_BYTES
 
 
 def test_parse_github_repo_url():
-    assert parse_github_repo_url("https://github.com/acme/my-skill") == (
-        "acme",
-        "my-skill",
+    assert parse_github_repo_url("https://github.com/acme/my-skill") == ParsedGithubSkillUrl(
+        "acme", "my-skill"
     )
-    assert parse_github_repo_url("https://github.com/acme/my-skill.git/") == (
-        "acme",
-        "my-skill",
+    assert parse_github_repo_url("https://github.com/acme/my-skill.git/") == ParsedGithubSkillUrl(
+        "acme", "my-skill"
+    )
+    assert parse_github_repo_url("http://github.com/acme/my-skill") == ParsedGithubSkillUrl(
+        "acme", "my-skill"
+    )
+    assert parse_github_repo_url("https://www.github.com/acme/my-skill") == ParsedGithubSkillUrl(
+        "acme", "my-skill"
+    )
+    assert parse_github_repo_url("https://github.com/acme/my-skill/tree/main") == ParsedGithubSkillUrl(
+        "acme", "my-skill", ref="main"
+    )
+    assert parse_github_repo_url(
+        "https://github.com/acme/my-skill/blob/main/SKILL.md"
+    ) == ParsedGithubSkillUrl("acme", "my-skill", ref="main")
+    assert parse_github_repo_url(
+        "https://github.com/obra/superpowers/tree/main/skills/brainstorming"
+    ) == ParsedGithubSkillUrl(
+        "obra", "superpowers", ref="main", subpath="skills/brainstorming"
+    )
+    assert parse_github_repo_url(
+        "https://github.com/obra/superpowers/blob/main/skills/brainstorming/SKILL.md"
+    ) == ParsedGithubSkillUrl(
+        "obra", "superpowers", ref="main", subpath="skills/brainstorming"
     )
 
 
 @pytest.mark.parametrize(
     "url",
     [
-        "http://github.com/acme/my-skill",
         "https://gitlab.com/acme/my-skill",
         "https://github.com/acme",
-        "https://github.com/acme/my-skill/tree/main",
         "https://github.com:not-a-port/acme/my-skill",
+        "ftp://github.com/acme/my-skill",
     ],
 )
 def test_parse_rejects_non_repository_github_urls(url):
@@ -43,6 +66,39 @@ def test_parse_rejects_non_repository_github_urls(url):
 def test_parse_wraps_malformed_url_error():
     with pytest.raises(BadRequestError, match="Invalid GitHub URL"):
         parse_github_repo_url("https://[github.com/acme/my-skill")
+
+
+def _zip_bytes(mapping: dict[str, str]) -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        for path, text in mapping.items():
+            zf.writestr(path, text)
+    return buf.getvalue()
+
+
+def test_extract_subdir_from_github_zip():
+    archive = _zip_bytes({
+        "superpowers-main/README.md": "# root\n",
+        "superpowers-main/skills/brainstorming/SKILL.md": (
+            "---\nname: brainstorming\ndescription: d\n---\n\nBody\n"
+        ),
+        "superpowers-main/skills/brainstorming/helper.md": "h\n",
+        "superpowers-main/skills/other/SKILL.md": (
+            "---\nname: other\ndescription: d\n---\n\nOther\n"
+        ),
+    })
+    sliced = extract_subdir_from_github_zip(archive, "skills/brainstorming")
+    with zipfile.ZipFile(io.BytesIO(sliced)) as zf:
+        names = set(zf.namelist())
+    assert names == {"SKILL.md", "helper.md"}
+
+
+def test_extract_subdir_requires_skill_md():
+    archive = _zip_bytes({
+        "repo-main/skills/empty/README.md": "x\n",
+    })
+    with pytest.raises(BadRequestError, match="SKILL.md not found"):
+        extract_subdir_from_github_zip(archive, "skills/empty")
 
 
 @pytest.mark.asyncio
@@ -174,10 +230,44 @@ async def test_import_from_github_fetches_then_ingests(monkeypatch):
     result = await service.import_from_github("user-1", url)
 
     assert result is imported_skill
-    fetch.assert_awaited_once_with("acme", "my-skill")
+    fetch.assert_awaited_once_with("acme", "my-skill", ref=None)
     service.ingest_skill_package.assert_awaited_once_with(
         "user-1",
         archive,
+        source=SkillSource.GITHUB,
+        source_url=url,
+    )
+
+
+@pytest.mark.asyncio
+async def test_import_from_github_slices_subdirectory(monkeypatch):
+    archive = b"full zipball"
+    sliced = b"sliced zip"
+    imported_skill = object()
+    fetch = AsyncMock(return_value=archive)
+    monkeypatch.setattr(
+        "app.application.services.skill_service.fetch_github_skill_zipball",
+        fetch,
+    )
+    monkeypatch.setattr(
+        "app.application.services.skill_service.extract_subdir_from_github_zip",
+        lambda data, subpath: (
+            sliced
+            if data is archive and subpath == "skills/brainstorming"
+            else b""
+        ),
+    )
+    service = SkillService(None, None, None)
+    service.ingest_skill_package = AsyncMock(return_value=imported_skill)
+    url = "https://github.com/obra/superpowers/tree/main/skills/brainstorming"
+
+    result = await service.import_from_github("user-1", url)
+
+    assert result is imported_skill
+    fetch.assert_awaited_once_with("obra", "superpowers", ref="main")
+    service.ingest_skill_package.assert_awaited_once_with(
+        "user-1",
+        sliced,
         source=SkillSource.GITHUB,
         source_url=url,
     )

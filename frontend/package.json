@@ -16,7 +16,7 @@
   "dependencies": {
     "@fontsource/libre-baskerville": "^5.2.10",
     "@novnc/novnc": "^1.5.0",
-    "@tiptap/extension-placeholder": "^3.29.2",
+    "@tiptap/extension-placeholder": "^3.31.3",
     "@tiptap/pm": "^3.29.2",
     "@tiptap/starter-kit": "^3.29.2",
     "@tiptap/suggestion": "^3.29.2",

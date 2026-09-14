@@ -28,7 +28,7 @@ Skills 是可复用的工作流说明包（`SKILL.md` + 可选资源）。用户
 1. **L1：**启用技能的 name/description 写入系统提示（及 `load_skill` 工具说明中的 `<available_skills>`）。
 2. **软 L2：**用户显式调用后注入 `<active_skill>` 激活标记（不注入正文），要求先 `load_skill`；计划首步会被校正为「加载 {name} 技能」。
 3. **硬 L2：**完整 `SKILL.md` 仅通过工具 `load_skill` 的结果进入上下文。
-4. **L3：**启用中的技能包同步到沙盒 `/home/ubuntu/skills/{name}/`。
+4. **L3：**启用中的技能包写入沙盒 `/home/ubuntu/skills/{name}/`（非 Docker volume 挂载；经沙盒 `file_write` API 同步，详见 [Skills 技能](skills.md#沙盒路径映射l3)）。
 
 用户操作、导入格式与 HTTP API 见 [Skills 技能](skills.md)。
 

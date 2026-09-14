@@ -78,6 +78,33 @@ References to missing or disabled skills are **silently ignored** (treated as no
 
 - No sandbox sync and no `load_skill`; only an activation note — weaker than Agent mode
 
+### Sandbox path mapping (L3)
+
+Skills are **not** bind-mounted into the container via Docker `-v` / Compose `volumes`. In **Agent mode**, the backend **writes** enabled skill packages into the sandbox filesystem when a task starts.
+
+| Side | Path | Notes |
+|------|------|-------|
+| Official source (backend host) | `backend/app/application/data/official_skills/{name}/` | Bundled repo directories, copied as a full tree |
+| Personal / imported source | Skill package zip in MongoDB GridFS | Extracted, then written by relative path |
+| Inside sandbox container | `/home/ubuntu/skills/{name}/` | Constant `SKILLS_ROOT`; primary file is `SKILL.md` |
+| Example | `/home/ubuntu/skills/web-research/SKILL.md` | Agent can `file_read` / shell into this tree |
+
+**When sync runs**
+
+- **Agent mode** only (not Chat): after the sandbox is ready, `AgentTaskRunner` calls `SkillRuntimeService.sync_enabled_skills_to_sandbox`
+- Chat mode skips sync
+
+**How files land in the container**
+
+1. List the user’s enabled skills
+2. For each skill: `rm -rf /home/ubuntu/skills/{name}`, then `file_write` each package file through the sandbox HTTP API (persisted inside the container)
+3. Remove leftover directories for disabled skills
+4. Non-UTF-8 files are skipped and logged
+
+So the container sees a normal directory tree, not a bind mount. After a sandbox restart/recreate, packages are re-synced on the next Agent task start.
+
+Code: `backend/app/application/services/skill_runtime_service.py` (`sync_enabled_skills_to_sandbox`), path constant in `backend/app/domain/skills/package.py` (`SKILLS_ROOT = "/home/ubuntu/skills"`).
+
 ## Bundled official skills
 
 Shipped under `backend/app/application/data/official_skills/`:

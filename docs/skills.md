@@ -78,6 +78,33 @@ Skills（技能）是可复用的工作流说明包：每个技能包含名称�
 
 - 不会同步沙盒文件，也没有 `load_skill`；仅有激活提示，技能能力弱于 Agent 模式
 
+### 沙盒路径映射（L3）
+
+Skills **不是**通过 Docker `-v` / compose `volumes` 挂载进容器，而是在 **Agent 模式**任务启动时，由后端把已启用技能包**写入**沙盒文件系统。
+
+| 方向 | 路径 | 说明 |
+|------|------|------|
+| 官方技能源（后端宿主机） | `backend/app/application/data/official_skills/{name}/` | 仓库内置目录，整包拷贝 |
+| 个人 / 导入技能源 | MongoDB GridFS 中的技能包 zip | 解包后按相对路径写出 |
+| 沙盒容器内目标 | `/home/ubuntu/skills/{name}/` | 常量 `SKILLS_ROOT`；主文件为 `SKILL.md` |
+| 示例 | `/home/ubuntu/skills/web-research/SKILL.md` | Agent 可用 `file_read` / shell 读取 |
+
+**何时同步**
+
+- 仅 **Agent 模式**（非 Chat）：`AgentTaskRunner` 在确保沙盒就绪后调用 `SkillRuntimeService.sync_enabled_skills_to_sandbox`
+- Chat 模式跳过同步
+
+**怎么写入**
+
+1. 列出用户已启用技能
+2. 对每个技能：先 `rm -rf /home/ubuntu/skills/{name}`，再按包内相对路径调用沙盒 `file_write`（HTTP → 沙盒容器内落盘）
+3. 删除沙盒里已停用技能的残留目录
+4. 非 UTF-8 文件会被跳过并打日志
+
+因此容器内看到的是普通目录树，不是 bind mount；重启/重建沙盒后会在下次 Agent 任务启动时重新同步。
+
+实现入口：`backend/app/application/services/skill_runtime_service.py`（`sync_enabled_skills_to_sandbox`）、路径常量 `backend/app/domain/skills/package.py`（`SKILLS_ROOT = "/home/ubuntu/skills"`）。
+
 ## 官方捆绑技能
 
 仓库内置官方包（目录 `backend/app/application/data/official_skills/`）：

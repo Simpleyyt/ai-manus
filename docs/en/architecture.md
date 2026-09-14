@@ -28,7 +28,7 @@ Skills are reusable workflow packages (`SKILL.md` plus optional assets). Users a
 1. **L1:** Enabled skill names/descriptions go into the system prompt (and the `<available_skills>` catalog inside the `load_skill` tool description).
 2. **Soft L2:** After an explicit invocation, inject an `<active_skill>` activation marker (no body); require `load_skill` first. The plan’s first step is corrected to `Load {name} skill`.
 3. **Hard L2:** Full `SKILL.md` enters context only via the `load_skill` tool result.
-4. **L3:** Enabled packages sync into the sandbox at `/home/ubuntu/skills/{name}/`.
+4. **L3:** Enabled packages are written into the sandbox at `/home/ubuntu/skills/{name}/` (not a Docker volume mount — synced via the sandbox `file_write` API; see [Skills](skills.md#sandbox-path-mapping-l3)).
 
 User flows, package format, and HTTP APIs: [Skills](skills.md).
 

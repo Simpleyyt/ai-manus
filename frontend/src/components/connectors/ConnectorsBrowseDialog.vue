@@ -8,23 +8,25 @@
           <DialogTitle>{{ t('Connectors') }}</DialogTitle>
         </DialogHeader>
 
-        <div class="flex min-h-0 flex-1 flex-col gap-3 px-6 pb-3">
+        <div class="flex min-h-0 flex-1 flex-col overflow-hidden -mt-[6px] pt-[8px]">
+          <div class="flex flex-col gap-3 px-6 pb-3">
           <div
-            class="flex h-8 items-center gap-[6px] rounded-[8px] bg-[var(--fill-tsp-white-light)] px-2 focus-within:ring-1 focus-within:ring-[var(--border-input-active)]"
+            class="flex items-center gap-[6px] h-9 px-2 rounded-[8px] bg-[var(--fill-tsp-white-light)] focus-within:ring-1 focus-within:ring-[var(--border-input-active)]"
           >
-            <div class="flex size-5 shrink-0 items-center justify-center">
+            <div class="flex items-center justify-center size-5 shrink-0">
               <Search :size="16" color="var(--icon-tertiary)" />
             </div>
             <input
               v-model="query"
               type="text"
               data-testid="connectors-browse-search"
+              :aria-label="t('Search connectors')"
               :placeholder="t('Search connectors')"
-              class="min-w-0 flex-1 border-none bg-transparent px-1 text-[14px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-disable)]"
+              class="flex-1 min-w-0 bg-transparent outline-none border-none px-1 text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-disable)]"
             >
           </div>
 
-          <div class="flex w-full items-center justify-between gap-3">
+          <div class="flex items-center justify-between w-full">
             <div class="flex flex-wrap items-center gap-2">
               <button
                 type="button"
@@ -36,10 +38,12 @@
             </div>
             <ConnectorsCreateMenu />
           </div>
+          </div>
 
+          <div class="flex-1 h-0 min-h-0">
           <div
             v-if="showEmpty"
-            class="flex flex-col w-full h-full items-center justify-center gap-2.5 flex-1"
+            class="flex flex-col w-full h-full items-center justify-center gap-2.5"
           >
             <div class="flex size-8 items-center justify-center">
               <Cable :size="32" color="var(--icon-tertiary)" />
@@ -71,6 +75,7 @@
                 />
               </div>
             </div>
+          </div>
           </div>
         </div>
       </div>

@@ -186,7 +186,7 @@
       <div v-if="connector" class="flex justify-between p-5">
         <button
           type="button"
-          class="inline-flex items-center gap-2 h-9 px-3 rounded-[10px] text-sm outline outline-1 -outline-offset-1 outline-[var(--Button-secondary-error-border)] bg-[var(--Button-secondary-error-fill)] text-[var(--function-error)]"
+          class="inline-flex items-center gap-2 h-9 px-3 rounded-[10px] text-sm outline outline-1 -outline-offset-1 outline-[var(--Button-border-secondary)] text-[var(--function-error)] hover:bg-[var(--fill-tsp-white-light)]"
           :disabled="saving"
           @click="onDelete"
         >
@@ -195,7 +195,7 @@
         </button>
         <button
           type="button"
-          class="inline-flex h-9 min-w-[72px] items-center justify-center rounded-lg bg-[var(--Button-primary-black)] px-4 text-sm font-medium text-[var(--text-onblack)] hover:opacity-90 disabled:opacity-40"
+          class="inline-flex h-9 min-w-[72px] items-center justify-center rounded-lg bg-[var(--Button-black)] px-4 text-sm font-medium text-[var(--text-onblack)] hover:opacity-90 disabled:opacity-40"
           :disabled="saving || !canSave"
           data-testid="mcp-form-save"
           @click="onSave"
@@ -213,7 +213,7 @@
         </button>
         <button
           type="button"
-          class="inline-flex h-9 min-w-[72px] items-center justify-center rounded-lg bg-[var(--Button-primary-black)] px-4 text-sm font-medium text-[var(--text-onblack)] hover:opacity-90 disabled:opacity-40"
+          class="inline-flex h-9 min-w-[72px] items-center justify-center rounded-lg bg-[var(--Button-black)] px-4 text-sm font-medium text-[var(--text-onblack)] hover:opacity-90 disabled:opacity-40"
           :disabled="saving || !canSave"
           data-testid="mcp-form-save"
           @click="onSave"

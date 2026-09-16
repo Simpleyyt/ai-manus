@@ -1,6 +1,6 @@
 <template>
   <div
-    class="group flex items-center gap-3 p-3 h-[76px] rounded-[12px] border border-[var(--border-main)] clickable hover:bg-[var(--fill-tsp-white-light)]"
+    class="flex items-center gap-3 p-3 h-[76px] rounded-[12px] border border-[var(--border-main)] clickable hover:bg-[var(--fill-tsp-white-light)]"
     data-testid="mcp-card"
     @click="onCardClick"
   >
@@ -15,12 +15,6 @@
           {{ connector.name }}
         </p>
       </div>
-      <p
-        v-if="connector.note"
-        class="w-full text-[12px] leading-[16px] text-[var(--text-tertiary)] line-clamp-1"
-      >
-        {{ connector.note }}
-      </p>
     </div>
 
     <div v-if="canManage" @click.stop>

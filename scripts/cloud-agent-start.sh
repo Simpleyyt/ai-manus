@@ -18,19 +18,9 @@ if ! cloud_agent_ensure_dockerd; then
 fi
 
 ./dev.sh up -d
+sudo chown -R "$(id -un):$(id -gn)" "${ROOT}/backend/.venv" "${ROOT}/sandbox/.venv" 2>/dev/null || true
 
-ready=0
-i=0
-while [ "$i" -lt 60 ]; do
-  if curl -sf "http://127.0.0.1:8000/docs" >/dev/null 2>&1; then
-    ready=1
-    break
-  fi
-  i=$((i + 1))
-  sleep 2
-done
-
-if [ "$ready" -ne 1 ]; then
+if ! cloud_agent_wait_for_backend; then
   echo "Backend did not become ready on :8000" >&2
   ./dev.sh ps >&2 || true
   ./dev.sh logs --tail=80 backend >&2 || true

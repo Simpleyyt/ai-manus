@@ -7,6 +7,18 @@ cloud_agent_repo_root() {
   echo "$here"
 }
 
+cloud_agent_wait_for_backend() {
+  local i=0
+  while [ "$i" -lt 90 ]; do
+    if curl -sf "http://127.0.0.1:8000/docs" >/dev/null 2>&1; then
+      return 0
+    fi
+    i=$((i + 1))
+    sleep 2
+  done
+  return 1
+}
+
 cloud_agent_ensure_path() {
   export PATH="${HOME}/.local/bin:${PATH}"
   if [ -f "${HOME}/.local/bin/env" ]; then
@@ -61,36 +73,27 @@ cloud_agent_ensure_docker_packages() {
     docker.io docker-compose-v2 fuse-overlayfs iptables
 }
 
-cloud_agent_ensure_daemon_json() {
-  sudo mkdir -p /etc/docker
-  if [ -f /etc/docker/daemon.json ]; then
-    return 0
+cloud_agent_ensure_iptables_legacy() {
+  if [ -x /usr/sbin/iptables-legacy ]; then
+    sudo update-alternatives --set iptables /usr/sbin/iptables-legacy >/dev/null
   fi
+  if [ -x /usr/sbin/ip6tables-legacy ]; then
+    sudo update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy >/dev/null || true
+  fi
+}
+
+cloud_agent_write_daemon_json() {
+  sudo mkdir -p /etc/docker
   sudo tee /etc/docker/daemon.json >/dev/null <<'EOF'
 {
   "storage-driver": "fuse-overlayfs",
-  "iptables": false,
+  "iptables": true,
   "ip6tables": false
 }
 EOF
 }
 
-cloud_agent_ensure_dockerd() {
-  cloud_agent_ensure_docker_packages
-  cloud_agent_ensure_daemon_json
-  sudo usermod -aG docker "$(id -un)" 2>/dev/null || true
-
-  if [ -S /var/run/docker.sock ] && sudo docker info >/dev/null 2>&1; then
-    sudo chmod 666 /var/run/docker.sock || true
-    return 0
-  fi
-
-  if ! command -v dockerd >/dev/null 2>&1; then
-    echo "dockerd is not installed" >&2
-    return 1
-  fi
-
-  sudo dockerd >/tmp/dockerd.log 2>&1 &
+cloud_agent_wait_for_docker() {
   local i
   for i in $(seq 1 30); do
     if sudo docker info >/dev/null 2>&1; then
@@ -99,7 +102,43 @@ cloud_agent_ensure_dockerd() {
     fi
     sleep 1
   done
-  echo "dockerd failed to become ready" >&2
-  tail -50 /tmp/dockerd.log >&2 || true
   return 1
+}
+
+cloud_agent_restart_dockerd() {
+  local pid
+  pid="$(pidof dockerd || true)"
+  if [ -n "$pid" ]; then
+    sudo kill $pid
+    local i
+    for i in $(seq 1 30); do
+      pidof dockerd >/dev/null 2>&1 || break
+      sleep 0.2
+    done
+  fi
+  sudo dockerd >/tmp/dockerd.log 2>&1 &
+  if ! cloud_agent_wait_for_docker; then
+    echo "dockerd failed to become ready" >&2
+    tail -50 /tmp/dockerd.log >&2 || true
+    return 1
+  fi
+}
+
+cloud_agent_ensure_dockerd() {
+  cloud_agent_ensure_docker_packages
+  cloud_agent_ensure_iptables_legacy
+  cloud_agent_write_daemon_json
+  sudo usermod -aG docker "$(id -un)" 2>/dev/null || true
+
+  if ! command -v dockerd >/dev/null 2>&1; then
+    echo "dockerd is not installed" >&2
+    return 1
+  fi
+
+  if [ -S /var/run/docker.sock ] && sudo docker info >/dev/null 2>&1; then
+    sudo chmod 666 /var/run/docker.sock || true
+    return 0
+  fi
+
+  cloud_agent_restart_dockerd
 }

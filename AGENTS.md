@@ -286,12 +286,14 @@ Single GitHub Actions workflow: `.github/workflows/docker-build-and-push.yml`
 
 ### Environment Setup
 
+`.cursor/environment.json` runs `scripts/cloud-agent-install.sh` then `scripts/cloud-agent-start.sh`. The current Cloud Agent base image does **not** include Docker; install adds `docker.io` + `fuse-overlayfs`, pre-builds compose images, and syncs native `uv` / `npm` deps. Start launches `dockerd` and `./dev.sh up -d`.
+
 When running in a Cloud Agent environment:
 
-1. Docker may not be available. If Docker commands fail, focus on running individual services or testing code changes without the full stack.
+1. If Docker commands still fail after start, work against native toolchains instead of the compose stack (`cd backend && uv sync`, `cd frontend && npm ci`).
 2. For backend work, install dependencies with `cd backend && uv sync`.
-3. For frontend work, install dependencies with `cd frontend && npm install`.
-4. Set `AUTH_PROVIDER=none` and `API_KEY=test` in `.env` to bypass auth and LLM requirements.
+3. For frontend work, install dependencies with `cd frontend && npm ci`.
+4. Set `AUTH_PROVIDER=none` and `API_KEY=test` in `.env` to bypass auth and LLM requirements (the install script does this when `.env` is missing or `API_KEY` is empty).
 
 ### Testing Strategy by Change Type
 

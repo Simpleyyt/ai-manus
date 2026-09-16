@@ -1,0 +1,14 @@
+{
+  "name": "AI Manus",
+  "install": "./scripts/cloud-agent-install.sh",
+  "start": "./scripts/cloud-agent-start.sh",
+  "ports": [
+    { "name": "frontend", "port": 5173 },
+    { "name": "backend", "port": 8000 },
+    { "name": "backend-debug", "port": 5678 },
+    { "name": "sandbox-api", "port": 8080 },
+    { "name": "sandbox-vnc", "port": 5902 },
+    { "name": "mockserver", "port": 8090 },
+    { "name": "mongodb", "port": 27017 }
+  ]
+}

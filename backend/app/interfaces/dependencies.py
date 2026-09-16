@@ -29,6 +29,9 @@ from app.infrastructure.external.task.redis_task import RedisStreamTask
 from app.infrastructure.repositories.mongo_agent_repository import MongoAgentRepository
 from app.infrastructure.repositories.mongo_session_repository import MongoSessionRepository
 from app.infrastructure.repositories.file_mcp_repository import FileMCPRepository
+from app.infrastructure.repositories.composite_mcp_repository import CompositeMCPRepository
+from app.infrastructure.repositories.mongo_connector_repository import MongoConnectorRepository
+from app.application.services.connector_service import ConnectorService
 from app.infrastructure.repositories.user_repository import MongoUserRepository
 from app.application.services.project_service import ProjectService
 from app.application.services.skill_service import SkillService
@@ -75,7 +78,7 @@ def get_agent_service() -> AgentService:
     task_cls = _get_task_cls()
     file_storage = get_file_storage()
     search_engine = get_search_engine()
-    mcp_repository = FileMCPRepository()
+    mcp_repository = get_mcp_repository()
     llm = get_llm()
     
     # Register the factory used to rebuild task runners on the execution side.
@@ -124,6 +127,23 @@ def get_file_service() -> FileService:
     return FileService(
         file_storage=file_storage,
         token_service=token_service,
+    )
+
+
+@lru_cache()
+def get_connector_service() -> ConnectorService:
+    """Get connector service instance"""
+    logger.info("Creating ConnectorService instance")
+    return ConnectorService(connector_repository=MongoConnectorRepository())
+
+
+@lru_cache()
+def get_mcp_repository() -> CompositeMCPRepository:
+    """Get MCP repository merging file config and user connectors."""
+    logger.info("Creating CompositeMCPRepository instance")
+    return CompositeMCPRepository(
+        file_repository=FileMCPRepository(),
+        connector_service=get_connector_service(),
     )
 
 

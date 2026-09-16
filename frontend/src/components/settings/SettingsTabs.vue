@@ -7,6 +7,7 @@ import {
   Keyboard,
   LayoutGrid,
   Puzzle,
+  Plug,
   CircleHelp,
   Search,
   ChevronsUpDown,
@@ -21,6 +22,7 @@ export type SettingsTabId =
   | 'shortcuts'
   | 'personalization'
   | 'skills'
+  | 'connectors'
   | 'help'
 
 export interface SettingsNavItem {
@@ -68,6 +70,7 @@ const navGroups: SettingsNavGroup[] = [
     items: [
       { id: 'personalization', label: 'Personalization', icon: LayoutGrid },
       { id: 'skills', label: 'Skills', icon: Puzzle },
+      { id: 'connectors', label: 'Connectors', icon: Plug },
     ],
   },
 ]
@@ -126,6 +129,7 @@ const showHelp = computed(() => {
 
 const activeTitle = computed(() => {
   if (activeTab.value === 'skills') return t('Added skills')
+  if (activeTab.value === 'connectors') return t('Connectors')
   const all = [...navGroups.flatMap((g) => g.items), helpItem]
   const current = all.find((item) => item.id === activeTab.value)
   return current ? t(current.label) : ''

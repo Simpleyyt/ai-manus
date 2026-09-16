@@ -10,6 +10,7 @@ from app.domain.models.file import FileInfo
 from app.domain.models.user import User, UserRole
 from app.domain.models.project import Project
 from app.domain.models.skill import Skill, SkillOwnerType, SkillSource, UserSkill
+from app.domain.models.connector import UserConnector
 from pymongo import IndexModel, ASCENDING, DESCENDING
 
 T = TypeVar('T', bound=BaseModel)
@@ -209,6 +210,37 @@ class UserSkillDocument(BaseDocument[UserSkill], id_field="user_skill_id", domai
                 name="user_id_skill_id",
             ),
             IndexModel([("user_id", ASCENDING), ("created_at", ASCENDING)], name="user_id_created"),
+        ]
+
+
+class UserConnectorDocument(BaseDocument[UserConnector], id_field="connector_id", domain_model_class=UserConnector):
+    """MongoDB document for a user's MCP connector."""
+    connector_id: str
+    user_id: str
+    name: str
+    description: Optional[str] = None
+    icon_url: Optional[str] = None
+    source: str
+    catalog_id: Optional[str] = None
+    transport: str
+    command: Optional[str] = None
+    args: Optional[List[str]] = None
+    url: Optional[str] = None
+    headers: Optional[Dict[str, str]] = None
+    env: Optional[Dict[str, str]] = None
+    enabled: bool = True
+    created_at: datetime = datetime.now(timezone.utc)
+    updated_at: datetime = datetime.now(timezone.utc)
+
+    class Settings:
+        name = "user_connectors"
+        indexes = [
+            "connector_id",
+            IndexModel([("user_id", ASCENDING), ("created_at", ASCENDING)], name="user_id_created"),
+            IndexModel(
+                [("user_id", ASCENDING), ("catalog_id", ASCENDING)],
+                name="user_id_catalog_id",
+            ),
         ]
 
 

@@ -299,7 +299,7 @@ class AgentTaskRunner(TaskRunner):
 
                 if not is_chat:
                     await self._sandbox.ensure_sandbox()
-                    await self._mcp_tool.initialized(await self._mcp_repository.get_mcp_config())
+                    await self._mcp_tool.initialized(await self._mcp_repository.get_mcp_config(self._user_id))
                     if self._skill_runtime_service:
                         await self._skill_runtime_service.sync_enabled_skills_to_sandbox(
                             self._user_id, self._sandbox

@@ -38,6 +38,7 @@ venv.bak/
 !.cursor/hooks/
 !.cursor/environment.json
 !.cursor/scripts/
+!.cursor/scripts/**
 .vscode/
 *.swp
 *.swo

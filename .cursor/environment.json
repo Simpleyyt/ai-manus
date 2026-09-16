@@ -1,0 +1,5 @@
+{
+  "name": "AI Manus",
+  "user": "ubuntu",
+  "install": "bash .cursor/scripts/cloud-agent-install.sh"
+}

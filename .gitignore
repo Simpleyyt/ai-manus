@@ -36,6 +36,8 @@ venv.bak/
 !.cursor/agents/
 !.cursor/hooks.json
 !.cursor/hooks/
+!.cursor/environment.json
+!.cursor/scripts/
 .vscode/
 *.swp
 *.swo

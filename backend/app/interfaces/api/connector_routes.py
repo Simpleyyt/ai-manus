@@ -6,6 +6,7 @@ from app.domain.models.user import User
 from app.interfaces.dependencies import get_connector_service, get_current_user
 from app.interfaces.schemas.base import APIResponse
 from app.interfaces.schemas.connector import (
+    ConnectorEnabledRequest,
     ConnectorItem,
     ConnectorWriteRequest,
     CreateMcpFromUrlRequest,
@@ -88,6 +89,21 @@ async def create_mcp_from_url(
 ) -> APIResponse[ConnectorItem]:
     connector = await connector_service.create_from_url(
         current_user.id, request.url, request.name
+    )
+    return APIResponse.success(_to_item(connector))
+
+
+@router.patch("/{connector_id}/enabled", response_model=APIResponse[ConnectorItem])
+async def set_connector_enabled(
+    connector_id: str,
+    request: ConnectorEnabledRequest,
+    current_user: User = Depends(get_current_user),
+    connector_service: ConnectorService = Depends(get_connector_service),
+) -> APIResponse[ConnectorItem]:
+    connector = await connector_service.set_enabled(
+        current_user.id,
+        connector_id,
+        request.enabled,
     )
     return APIResponse.success(_to_item(connector))
 

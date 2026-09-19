@@ -188,6 +188,41 @@ async def test_update_and_delete_user_connector():
     assert await service.list_connectors("user-1") == []
 
 
+async def test_set_enabled_excludes_connector_from_mcp_config():
+    service = _service()
+    created = await service.create_connector(
+        "user-1",
+        name="Docs MCP",
+        transport=MCPTransport.STREAMABLE_HTTP,
+        url="https://mcp.example.com/mcp",
+    )
+    assert created.enabled is True
+    config = await service.mcp_config_for_user("user-1")
+    assert "docs_mcp" in config.mcpServers
+
+    disabled = await service.set_enabled("user-1", created.id, False)
+    assert disabled.enabled is False
+    config = await service.mcp_config_for_user("user-1")
+    assert "docs_mcp" not in config.mcpServers
+
+    enabled = await service.set_enabled("user-1", created.id, True)
+    assert enabled.enabled is True
+    config = await service.mcp_config_for_user("user-1")
+    assert "docs_mcp" in config.mcpServers
+
+
+async def test_cannot_toggle_file_connector_enabled():
+    service = _service({
+        "github": MCPServerConfig(transport=MCPTransport.STDIO, command="npx")
+    })
+    try:
+        await service.set_enabled("user-1", "file:github", False)
+    except BadRequestError:
+        pass
+    else:
+        raise AssertionError("expected BadRequestError")
+
+
 async def test_missing_connector_raises_not_found():
     service = _service()
     try:

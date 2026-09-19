@@ -11,6 +11,7 @@ import {
   loaded,
   loading,
   reloadConnectors,
+  setConnectorEnabled,
   updateConnector,
 } from './connectorsStore'
 
@@ -30,6 +31,7 @@ export function useConnectors() {
     deleteConnector,
     importMcpJson,
     createMcpFromUrl,
+    setConnectorEnabled,
     reloadConnectors,
     ensureConnectorsLoaded,
   }

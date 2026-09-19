@@ -102,6 +102,18 @@ class ConnectorService:
         if not deleted:
             raise NotFoundError("Connector not found")
 
+    async def set_enabled(
+        self,
+        user_id: str,
+        connector_id: str,
+        enabled: bool,
+    ) -> Connector:
+        connector = await self._require_user_connector(user_id, connector_id)
+        connector.enabled = bool(enabled)
+        connector.updated_at = datetime.now(UTC)
+        await self._connectors.save(connector)
+        return connector
+
     async def import_json(self, user_id: str, raw_json: str) -> Connector:
         try:
             parsed = parse_mcp_servers_json(raw_json)

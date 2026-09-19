@@ -52,6 +52,10 @@ class CreateMcpFromUrlRequest(BaseModel):
     name: Optional[str] = None
 
 
+class ConnectorEnabledRequest(BaseModel):
+    enabled: bool
+
+
 def pairs_to_dict(items: Optional[List[VariableItem]]) -> Optional[Dict[str, str]]:
     if not items:
         return None

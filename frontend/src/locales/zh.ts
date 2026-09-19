@@ -372,6 +372,8 @@ export default {
   'Successfully deleted connector': '已成功删除连接器',
   'Failed to import MCP connector': '导入 MCP 连接器失败',
   'e.g. http://10.0.1.24:8081/mcp': '例如 http://10.0.1.24:8081/mcp',
+  'Connect apps': '连接应用',
+  'Manage connectors': '管理连接器',
   'Use skills': '使用技能',
   'Add skills': '添加技能',
   'Manage skills': '管理技能',

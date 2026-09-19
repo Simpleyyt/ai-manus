@@ -6,6 +6,7 @@ import {
   deleteConnector as deleteConnectorApi,
   fetchConnectors,
   importMcpJson as importMcpJsonApi,
+  setConnectorEnabled as setConnectorEnabledApi,
   updateConnector as updateConnectorApi,
 } from '@/api/connectors'
 import type { Connector, ConnectorWritePayload } from '@/types/connector'
@@ -95,6 +96,21 @@ export async function createMcpFromUrl(url: string, name?: string): Promise<Conn
   const created = await createMcpFromUrlApi(url, name)
   await reloadConnectors()
   return created
+}
+
+export async function setConnectorEnabled(id: string, enabled: boolean): Promise<Connector> {
+  const previous = connectors.value
+  connectors.value = previous.map((item) => (
+    item.id === id ? { ...item, enabled } : item
+  ))
+  try {
+    const updated = await setConnectorEnabledApi(id, enabled)
+    await reloadConnectors()
+    return updated
+  } catch (error) {
+    connectors.value = previous
+    throw error
+  }
 }
 
 export function resetConnectorsStoreForTests(): void {

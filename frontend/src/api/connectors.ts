@@ -33,3 +33,8 @@ export async function createMcpFromUrl(url: string, name?: string): Promise<Conn
   const response = await apiClient.post<ApiResponse<Connector>>('/connectors/from-url', { url, name })
   return response.data.data
 }
+
+export async function setConnectorEnabled(id: string, enabled: boolean): Promise<Connector> {
+  const response = await apiClient.patch<ApiResponse<Connector>>(`/connectors/${id}/enabled`, { enabled })
+  return response.data.data
+}

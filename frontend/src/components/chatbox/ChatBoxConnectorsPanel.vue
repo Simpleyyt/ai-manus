@@ -5,7 +5,6 @@
   >
     <div
       class="relative flex-1 min-h-0 overflow-y-auto p-[4px]"
-      @scroll="onScroll"
     >
       <div
         v-for="connector in connectors"
@@ -45,7 +44,6 @@
         </div>
       </div>
       <div
-        v-if="showBottomMask"
         class="sticky bottom-[-4px] start-0 w-full h-[36px] pointer-events-none"
         style="background: linear-gradient(to top, var(--background-menu-white) 0%, var(--gradual-white-0) 100%);"
       />
@@ -84,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Plus, Settings2 } from 'lucide-vue-next'
 import { useConnectors } from '@/composables/useConnectors'
@@ -106,8 +104,6 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const { connectors, ensureConnectorsLoaded } = useConnectors()
-const showBottomMask = ref(false)
-
 const hasInstalled = computed(() => connectors.value.length > 0)
 
 const canToggle = (connector: Connector) =>
@@ -122,11 +118,6 @@ watch(
   },
   { immediate: true },
 )
-
-const onScroll = (event: Event) => {
-  const el = event.target as HTMLElement
-  showBottomMask.value = el.scrollHeight - el.scrollTop - el.clientHeight > 4
-}
 
 const onRowClick = (connector: Connector) => {
   if (canToggle(connector)) {

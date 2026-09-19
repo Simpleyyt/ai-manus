@@ -11,6 +11,10 @@ import {
   resetSkillsStoreForTests,
   setSkillsStoreForTests,
 } from '../../composables/skillsStore'
+import {
+  resetConnectorsStoreForTests,
+  setConnectorsStoreForTests,
+} from '../../composables/connectorsStore'
 import { useSettingsDialog } from '../../composables/useSettingsDialog'
 
 export const uploadFileMock = vi.fn()
@@ -26,6 +30,16 @@ vi.mock('@/api/skills', () => ({
   setSkillEnabled: vi.fn(),
   importSkillFromGitHub: vi.fn(),
   importSkillFromUpload: vi.fn(),
+}))
+
+vi.mock('@/api/connectors', () => ({
+  fetchConnectors: vi.fn().mockResolvedValue([]),
+  createConnector: vi.fn(),
+  updateConnector: vi.fn(),
+  deleteConnector: vi.fn(),
+  importMcpJson: vi.fn(),
+  createMcpFromUrl: vi.fn(),
+  setConnectorEnabled: vi.fn(),
 }))
 
 vi.mock('../ChatBoxFiles.vue', () => ({
@@ -77,6 +91,19 @@ describe('ChatBox TipTap', () => {
     })
 
     resetSkillsStoreForTests()
+    resetConnectorsStoreForTests()
+    setConnectorsStoreForTests([
+      {
+        id: 'c1',
+        name: 'Docs MCP',
+        server_key: 'docs_mcp',
+        transport: 'streamable-http',
+        enabled: true,
+        source: 'form',
+        readonly: false,
+        url: 'https://mcp.example.com/mcp',
+      },
+    ])
     setSkillsStoreForTests({
       catalog: [
         {
@@ -197,6 +224,31 @@ describe('ChatBox TipTap', () => {
     await nextTick()
 
     expect(uploadFileMock).toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('Connect apps button opens official connectors popover', async () => {
+    const wrapper = mount(ChatBox, {
+      props: { modelValue: '', rows: 1, isRunning: false, attachments: [] },
+      global: { plugins: [i18n, router] },
+      attachTo: document.body,
+    })
+    await flushPromises()
+    await nextTick()
+
+    const trigger = wrapper.find('[data-testid="chatbox-connect-apps-trigger"]')
+    expect(trigger.exists()).toBe(true)
+    expect(trigger.classes().join(' ')).toContain('rounded-[100px]')
+    expect(trigger.attributes('title')).toBe('Connect apps')
+    await trigger.trigger('click')
+    await nextTick()
+    await flushPromises()
+
+    const panel = document.body.querySelector('[data-testid="chatbox-connectors-panel"]')
+    expect(panel).toBeTruthy()
+    expect(panel!.textContent).toContain('Docs MCP')
+    expect(panel!.textContent).toContain('Add connectors')
+    expect(panel!.textContent).toContain('Manage connectors')
     wrapper.unmount()
   })
 

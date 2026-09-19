@@ -61,6 +61,8 @@ Tool loop (`BaseAgent`):
 
 **Change external capabilities**: define the Protocol in `domain/external/` first, implement in `infrastructure/external/`, wire in `interfaces/dependencies.py`. The harness must keep depending on the Protocol only.
 
+**MCP config**: `MCPRepository.get_mcp_config(user_id)` merges host `mcp.json` with that user's enabled Mongo connectors (`CompositeMCPRepository`). `AgentTaskRunner` passes `self._user_id`. File-backed servers stay read-only (`file:{name}` ids). Custom MCP CRUD lives in Settings → Connectors; the ChatBox **Connect apps** popover toggles `connector.enabled` (same Mongo flag the toolkit already respects). Not part of the Plan-Act loop.
+
 ## Testing pyramid
 
 **1. Offline unit tests (seconds — always run these when touching the harness):**

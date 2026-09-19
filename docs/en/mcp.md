@@ -4,6 +4,8 @@
 
 MCP (Model Context Protocol) is an open standard protocol for providing secure connections between language model applications and external data sources and tools. In AI Manus, MCP allows AI assistants to access and use various external services and tools, such as GitHub API, file systems, databases, and more.
 
+In the chat composer, the **Connect apps** (cable) button enables or disables added Custom MCP servers. **Add connectors** opens the browse dialog; **Manage connectors** opens Settings → Connectors. Disabled connectors are omitted from the agent MCP toolkit.
+
 ## Demo
 
 > Task: Analyze the GitHub repositories of user simpleyyt

@@ -7,7 +7,7 @@
     <div
       class="flex items-center justify-center size-10 bg-[var(--background-menu-white)] rounded-lg border border-[var(--border-main)] shrink-0"
     >
-      <Cable :size="24" color="var(--icon-primary)" />
+      <ConnectorIcon :uid="connector.id" :size="24" />
     </div>
     <div class="flex flex-col items-start justify-center min-w-0 flex-1">
       <div class="w-full flex gap-1 items-center">
@@ -68,10 +68,11 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Cable, Check, Ellipsis, Pencil, Trash2 } from 'lucide-vue-next'
+import { Check, Ellipsis, Pencil, Trash2 } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import type { Connector } from '@/types/connector'
+import ConnectorIcon from './ConnectorIcon.vue'
 
 const props = defineProps<{
   connector: Connector

@@ -57,6 +57,10 @@ describe('ChatBoxConnectorsPanel', () => {
     expect(row.classes().join(' ')).toContain('h-[36px]')
     expect(row.classes().join(' ')).toContain('ps-[4px]')
 
+    const initials = row.find('[data-testid="connector-initials-icon"]')
+    expect(initials.exists()).toBe(true)
+    expect(initials.text()).toBe('D')
+
     const add = wrapper.find('[data-testid="chatbox-connectors-add"]')
     expect(add.classes().join(' ')).toContain('h-[36px]')
     expect(add.attributes('data-close-when-click')).toBe('true')

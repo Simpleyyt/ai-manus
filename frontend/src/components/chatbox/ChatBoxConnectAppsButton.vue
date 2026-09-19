@@ -15,10 +15,11 @@
               <Cable :size="16" color="var(--icon-secondary)" />
             </template>
             <template v-else>
-              <ChatBoxConnectorIcon
+              <ConnectorIcon
                 v-for="item in enabledIcons.slice(0, maxIcons)"
                 :key="item.id"
-                :connector="item"
+                :uid="item.id"
+                :default-icon-url="item.icon_url"
                 :size="16"
               />
               <span
@@ -61,7 +62,7 @@ import { useConnectors } from '@/composables/useConnectors'
 import { useSettingsDialog } from '@/composables/useSettingsDialog'
 import type { Connector } from '@/types/connector'
 import ChatBoxConnectorsPanel from './ChatBoxConnectorsPanel.vue'
-import ChatBoxConnectorIcon from './ChatBoxConnectorIcon.vue'
+import ConnectorIcon from '@/components/connectors/ConnectorIcon.vue'
 import ConnectorsBrowseDialog from '@/components/connectors/ConnectorsBrowseDialog.vue'
 import ConfigureMcpFormDialog from '@/components/connectors/ConfigureMcpFormDialog.vue'
 

@@ -15,7 +15,7 @@
       >
         <div class="flex items-center gap-[4px] overflow-hidden min-w-0">
           <div class="size-[28px] flex items-center justify-center flex-shrink-0">
-            <ChatBoxConnectorIcon :connector="connector" :size="16" />
+            <ConnectorIcon :uid="connector.id" :size="16" />
           </div>
           <span
             class="text-[var(--text-primary)] text-sm leading-[20px] truncate"
@@ -89,7 +89,7 @@ import { useConnectors } from '@/composables/useConnectors'
 import { setConnectorEnabled, connectorErrorMessage } from '@/composables/connectorsStore'
 import type { Connector } from '@/types/connector'
 import SettingsSwitch from '@/components/settings/SettingsSwitch.vue'
-import ChatBoxConnectorIcon from './ChatBoxConnectorIcon.vue'
+import ConnectorIcon from '@/components/connectors/ConnectorIcon.vue'
 import { showErrorToast } from '@/utils/toast'
 
 const props = defineProps<{

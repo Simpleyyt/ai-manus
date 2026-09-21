@@ -25,6 +25,7 @@
 import { computed, ref, watch } from 'vue'
 import { Cable } from 'lucide-vue-next'
 import { connectors } from '@/composables/connectorsStore'
+import { getCatalogItem } from '@/data/connectorCatalog'
 import { useDocumentDark } from '@/composables/useDocumentDark'
 import ConnectorInitialsIcon from './ConnectorInitialsIcon.vue'
 
@@ -46,13 +47,19 @@ const connector = computed(() => (
   props.uid ? connectors.value.find((item) => item.id === props.uid) : undefined
 ))
 
-const connectorName = computed(() => connector.value?.name || '')
+const catalogItem = computed(() => (
+  props.uid ? getCatalogItem(props.uid) : undefined
+))
+
+const connectorName = computed(() => connector.value?.name || catalogItem.value?.name || '')
 
 const src = computed(() => {
   if (props.defaultIconUrl || props.defaultIconUrlDark) {
     return (isDark.value && props.defaultIconUrlDark) || props.defaultIconUrl || null
   }
-  return connector.value?.icon_url || null
+  if (connector.value?.icon_url) return connector.value.icon_url
+  if (!catalogItem.value) return null
+  return (isDark.value && catalogItem.value.iconUrlDark) || catalogItem.value.iconUrl || null
 })
 
 watch(src, () => {

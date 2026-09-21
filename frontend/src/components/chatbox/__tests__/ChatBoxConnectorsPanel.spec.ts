@@ -7,6 +7,7 @@ import {
   resetConnectorsStoreForTests,
   setConnectorsStoreForTests,
 } from '../../../composables/connectorsStore'
+import { CONNECTOR_IDS } from '@/data/connectorCatalog'
 import type { Connector } from '@/types/connector'
 
 vi.mock('@/api/connectors', () => ({
@@ -66,6 +67,28 @@ describe('ChatBoxConnectorsPanel', () => {
     expect(add.attributes('data-close-when-click')).toBe('true')
   })
 
+  it('renders official featured Connect rows, logos, and ConnectorPreview', async () => {
+    const wrapper = mount(ChatBoxConnectorsPanel, {
+      props: { open: true },
+      global: { plugins: [i18n] },
+    })
+    await flushPromises()
+    await nextTick()
+
+    const github = wrapper.find(`[data-testid="chatbox-connector-${CONNECTOR_IDS.github}"]`)
+    expect(github.exists()).toBe(true)
+    expect(github.text()).toContain('GitHub')
+    expect(github.text()).toContain('Connect')
+    const img = github.find('[data-testid="connector-icon-img"]')
+    expect(img.exists()).toBe(true)
+    expect(img.attributes('src') || '').toContain('cloudfront.net')
+
+    const preview = wrapper.find('[data-testid="connector-preview"]')
+    expect(preview.exists()).toBe(true)
+    expect(preview.text()).toContain('+99')
+    expect(preview.classes().join(' ')).toContain('-space-x-1')
+  })
+
   it('emits add and manage', async () => {
     const wrapper = mount(ChatBoxConnectorsPanel, {
       props: { open: true },
@@ -76,5 +99,15 @@ describe('ChatBoxConnectorsPanel', () => {
     await wrapper.find('[data-testid="chatbox-connectors-manage"]').trigger('click')
     expect(wrapper.emitted('add')).toHaveLength(1)
     expect(wrapper.emitted('manage')).toHaveLength(1)
+  })
+
+  it('emits add when clicking a featured Connect row', async () => {
+    const wrapper = mount(ChatBoxConnectorsPanel, {
+      props: { open: true },
+      global: { plugins: [i18n] },
+    })
+    await flushPromises()
+    await wrapper.find(`[data-testid="chatbox-connector-${CONNECTOR_IDS.github}"]`).trigger('click')
+    expect(wrapper.emitted('add')).toHaveLength(1)
   })
 })

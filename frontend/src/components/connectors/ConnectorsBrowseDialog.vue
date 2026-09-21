@@ -29,11 +29,17 @@
           <div class="flex items-center justify-between w-full">
             <div class="flex flex-wrap items-center gap-2">
               <button
+                v-for="tab in tabs"
+                :key="tab.id"
                 type="button"
-                data-testid="connectors-browse-tab-custom-mcp"
-                class="h-8 px-3 py-1 text-[14px] font-medium clickable rounded-[999px] bg-[var(--fill-tsp-white-light)] text-[var(--text-primary)]"
+                :data-testid="`connectors-browse-tab-${tab.id}`"
+                class="h-8 px-3 py-1 text-[14px] font-medium clickable hover:opacity-80"
+                :class="activeTab === tab.id
+                  ? 'rounded-[999px] bg-[var(--fill-tsp-white-light)] text-[var(--text-primary)]'
+                  : 'rounded-[8px] text-[var(--text-tertiary)]'"
+                @click="activeTab = tab.id"
               >
-                {{ t('Custom MCP') }}
+                {{ t(tab.labelKey) }}
               </button>
             </div>
             <ConnectorsCreateMenu />
@@ -42,7 +48,48 @@
 
           <div class="flex-1 h-0 min-h-0">
           <div
-            v-if="showEmpty"
+            v-if="showCatalog"
+            class="min-h-0 flex-1 overflow-y-auto"
+          >
+            <div
+              v-if="catalogItems.length === 0"
+              class="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 h-full"
+            >
+              <Search :size="32" color="var(--icon-tertiary)" />
+              <p class="text-sm text-[var(--text-tertiary)]">
+                {{ t('No matching connectors.') }}
+              </p>
+            </div>
+            <div
+              v-else
+              class="flex flex-col gap-3 px-6 pb-6"
+            >
+              <div class="grid gap-3 md:grid-cols-2">
+                <ConnectorCatalogCard
+                  v-for="item in catalogItems"
+                  :key="item.uid"
+                  :item="item"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div
+            v-else-if="activeTab === 'projects'"
+            class="flex flex-col w-full h-full items-center justify-center"
+          >
+            <div class="flex flex-col items-center w-[320px] space-y-3">
+              <div class="flex size-8 items-center justify-center">
+                <Cable :size="32" color="var(--icon-tertiary)" />
+              </div>
+              <p class="text-center text-[13px] text-[var(--text-quaternary)]">
+                {{ t('Publish your custom MCP and API connectors to share them with your projects.') }}
+              </p>
+            </div>
+          </div>
+
+          <div
+            v-else-if="showEmpty"
             class="flex flex-col w-full h-full items-center justify-center gap-2.5"
           >
             <div class="flex size-8 items-center justify-center">
@@ -65,7 +112,7 @@
 
           <div v-else class="min-h-0 flex-1 overflow-y-auto">
             <div class="w-full pb-6 space-y-3 overflow-hidden">
-              <div class="grid md:grid-cols-2 gap-3 w-full pb-6">
+              <div class="grid md:grid-cols-2 gap-3 w-full pb-6 px-6">
                 <McpCard
                   v-for="connector in filtered"
                   :key="connector.id"
@@ -104,27 +151,57 @@ import { deleteConnector, connectorErrorMessage } from '@/composables/connectors
 import { useDialog } from '@/composables/useDialog'
 import { showErrorToast, showSuccessToast } from '@/utils/toast'
 import type { Connector } from '@/types/connector'
+import {
+  catalogByTab,
+  filterCatalogByQuery,
+  type ConnectorCatalogTab,
+} from '@/data/connectorCatalog'
 import McpCard from './McpCard.vue'
+import ConnectorCatalogCard from './ConnectorCatalogCard.vue'
 import ConnectorsCreateMenu from './ConnectorsCreateMenu.vue'
 import ConfigureMcpFormDialog from './ConfigureMcpFormDialog.vue'
+
+type BrowseTab = 'apps' | 'custom-api' | 'custom-mcp' | 'projects'
 
 const open = defineModel<boolean>('open', { required: true })
 const { t } = useI18n()
 const { connectors, filterByQuery } = useConnectors()
 const { showConfirmDialog } = useDialog()
 const query = ref('')
+const activeTab = ref<BrowseTab>('apps')
 const editOpen = ref(false)
 const editing = ref<Connector | null>(null)
+
+const tabs: { id: BrowseTab; labelKey: string }[] = [
+  { id: 'apps', labelKey: 'Apps' },
+  { id: 'custom-api', labelKey: 'Custom API' },
+  { id: 'custom-mcp', labelKey: 'Custom MCP' },
+  { id: 'projects', labelKey: 'Projects' },
+]
 
 const customConnectors = computed(() =>
   connectors.value.filter((item) => item.source !== 'file'),
 )
 
 const filtered = computed(() => filterByQuery(query.value, customConnectors.value))
-const showEmpty = computed(() => customConnectors.value.length === 0)
+const showEmpty = computed(() => activeTab.value === 'custom-mcp' && customConnectors.value.length === 0)
+const catalogTab = computed((): ConnectorCatalogTab | null => {
+  if (activeTab.value === 'apps') return 'apps'
+  if (activeTab.value === 'custom-api') return 'api'
+  return null
+})
+const showCatalog = computed(() => catalogTab.value !== null)
+const catalogItems = computed(() => {
+  const tab = catalogTab.value
+  if (!tab) return []
+  return filterCatalogByQuery(query.value, catalogByTab(tab))
+})
 
 watch(open, (isOpen) => {
-  if (isOpen) query.value = ''
+  if (isOpen) {
+    query.value = ''
+    activeTab.value = 'apps'
+  }
 })
 
 const openEdit = (connector: Connector) => {

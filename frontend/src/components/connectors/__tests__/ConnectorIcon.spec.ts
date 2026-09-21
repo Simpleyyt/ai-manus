@@ -64,4 +64,14 @@ describe('ConnectorIcon', () => {
     expect(wrapper.find('[data-testid="connector-icon-img"]').attributes('src'))
       .toBe('https://cdn.example.com/preview.png')
   })
+
+  it('falls back to the official catalog icon by uid', () => {
+    const wrapper = mount(ConnectorIcon, {
+      props: { uid: 'bbb0df76-66bd-4a24-ae4f-2aac4750d90b', size: 16 },
+    })
+    const img = wrapper.find('[data-testid="connector-icon-img"]')
+    expect(img.exists()).toBe(true)
+    expect(img.attributes('src') || '').toContain('cloudfront.net')
+    expect(img.attributes('alt')).toBe('GitHub')
+  })
 })

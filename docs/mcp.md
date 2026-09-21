@@ -4,7 +4,7 @@
 
 MCP（Model Context Protocol）是一个开放的标准协议，用于在语言模型应用程序和外部数据源及工具之间提供安全的连接。在 AI Manus 中，MCP 允许 AI 助手访问和使用各种外部服务和工具，如 GitHub API、文件系统、数据库等。
 
-在对话输入框左侧点击 **Connect apps**（插头）可启用/关闭已添加的 Custom MCP；**Add connectors** 打开浏览对话框，**Manage connectors** 进入设置中的 Connectors 页。禁用的连接器不会进入当次 Agent 的 MCP 工具集。
+在对话输入框左侧点击 **Connect apps**（插头）会打开官方同款应用列表（品牌图标 + **Connect**）以及已添加 Custom MCP 的开关；**Add connectors** 右侧有重叠 logo 预览，打开浏览对话框的 **Apps / Custom API / Custom MCP / Projects** 四个标签。**Manage connectors** 进入设置中的 Connectors 页。禁用的 Custom MCP 不会进入当次 Agent 的 MCP 工具集。市场应用的 OAuth 连接未接入，**Connect** / 卡片 **Plus** 只打开浏览壳。
 
 ## 演示
 

@@ -7,9 +7,37 @@
       class="relative flex-1 min-h-0 overflow-y-auto p-[4px]"
     >
       <div
+        v-for="item in featured"
+        :key="item.uid"
+        class="group/connector-item clickable flex items-center justify-between gap-[8px] px-[8px] ps-[4px] h-[36px] rounded-[8px] hover:bg-[var(--fill-tsp-white-main)]"
+        :data-testid="`chatbox-connector-${item.uid}`"
+        @click="emit('add')"
+      >
+        <div class="flex items-center gap-[4px] overflow-hidden min-w-0">
+          <div class="size-[28px] flex items-center justify-center flex-shrink-0">
+            <ConnectorIcon
+              :uid="item.uid"
+              :size="16"
+              :default-icon-url="item.iconUrl"
+              :default-icon-url-dark="item.iconUrlDark"
+            />
+          </div>
+          <span
+            class="text-[var(--text-primary)] text-sm truncate"
+            :title="item.name"
+          >{{ item.name }}</span>
+          <span
+            v-if="item.beta"
+            class="shrink-0 h-[18px] flex items-center justify-center px-1.5 py-1 border border-[var(--border-dark)] rounded-ss-[8px] rounded-se-[10px] rounded-ee-[10px] text-[12px] font-medium text-[var(--text-tertiary)]"
+          >{{ t('Beta') }}</span>
+        </div>
+        <span class="shrink-0 text-[var(--text-secondary)] text-[14px]">{{ t('Connect') }}</span>
+      </div>
+
+      <div
         v-for="connector in connectors"
         :key="connector.id"
-        class="group/connector-item flex items-center gap-[8px] justify-between px-[8px] ps-[4px] h-[36px] rounded-[8px] cursor-pointer select-none hover:bg-[var(--fill-tsp-white-main)]"
+        class="group/connector-item clickable flex items-center justify-between gap-[8px] px-[8px] ps-[4px] h-[36px] rounded-[8px] hover:bg-[var(--fill-tsp-white-main)]"
         :data-testid="`chatbox-connector-${connector.id}`"
         @click="onRowClick(connector)"
       >
@@ -18,7 +46,7 @@
             <ConnectorIcon :uid="connector.id" :size="16" />
           </div>
           <span
-            class="text-[var(--text-primary)] text-sm leading-[20px] truncate"
+            class="text-[var(--text-primary)] text-sm truncate"
             :title="connector.name"
           >{{ connector.name }}</span>
         </div>
@@ -51,7 +79,7 @@
     <div class="flex flex-col py-[4px] border-t border-[var(--border-main)]">
       <div class="px-[4px]">
         <div
-          class="flex items-center justify-between px-[8px] h-[36px] rounded-[8px] hover:bg-[var(--fill-tsp-white-main)] cursor-pointer"
+          class="clickable flex items-center justify-between px-[8px] h-[36px] rounded-[8px] hover:bg-[var(--fill-tsp-white-main)]"
           data-close-when-click="true"
           data-testid="chatbox-connectors-add"
           @click="emit('add')"
@@ -62,11 +90,12 @@
             </div>
             <span class="text-[14px] text-[var(--text-primary)]">{{ t('Add connectors') }}</span>
           </div>
+          <ConnectorPreview />
         </div>
       </div>
       <div v-if="hasInstalled" class="px-[4px]">
         <div
-          class="flex items-center gap-[8px] px-[8px] h-[36px] rounded-[8px] hover:bg-[var(--fill-tsp-white-main)] cursor-pointer"
+          class="clickable flex items-center gap-[8px] px-[8px] h-[36px] rounded-[8px] hover:bg-[var(--fill-tsp-white-main)]"
           data-close-when-click="true"
           data-testid="chatbox-connectors-manage"
           @click="emit('manage')"
@@ -87,9 +116,11 @@ import { useI18n } from 'vue-i18n'
 import { Plus, Settings2 } from 'lucide-vue-next'
 import { useConnectors } from '@/composables/useConnectors'
 import { setConnectorEnabled, connectorErrorMessage } from '@/composables/connectorsStore'
+import { featuredCatalogItems } from '@/data/connectorCatalog'
 import type { Connector } from '@/types/connector'
 import SettingsSwitch from '@/components/settings/SettingsSwitch.vue'
 import ConnectorIcon from '@/components/connectors/ConnectorIcon.vue'
+import ConnectorPreview from '@/components/connectors/ConnectorPreview.vue'
 import { showErrorToast } from '@/utils/toast'
 
 const props = defineProps<{
@@ -104,6 +135,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const { connectors, ensureConnectorsLoaded } = useConnectors()
+const featured = computed(() => featuredCatalogItems())
 const hasInstalled = computed(() => connectors.value.length > 0)
 
 const canToggle = (connector: Connector) =>

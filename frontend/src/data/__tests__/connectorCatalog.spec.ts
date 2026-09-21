@@ -23,7 +23,9 @@ describe('connectorCatalog', () => {
       'Outlook Mail',
       'TikTok for Business',
     ])
-    expect(apps.find((item) => item.name === 'Apify')).toBeUndefined()
+    expect(apps[0].name).toBe('My Browser')
+    expect(apps.find((item) => item.name === 'Apify')?.order).toBe(0)
+    expect(apps[apps.length - 1]?.order).toBe(0)
   })
 
   it('keeps FEATURED Connect-apps order without computerUse', () => {

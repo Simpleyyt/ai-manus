@@ -4,7 +4,7 @@
       class="flex h-[680px] w-[800px] max-w-[98%] flex-col overflow-hidden border border-[var(--border-main)] bg-[var(--background-gray-main)] p-0 shadow-menu"
     >
       <div class="flex min-h-0 flex-1 flex-col" data-testid="connectors-browse-dialog">
-        <DialogHeader>
+        <DialogHeader class="pb-[16px]">
           <DialogTitle>{{ t('Connectors') }}</DialogTitle>
         </DialogHeader>
 
@@ -27,16 +27,16 @@
           </div>
 
           <div class="flex items-center justify-between w-full">
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex min-h-8 flex-wrap items-center gap-[4px]">
               <button
                 v-for="tab in tabs"
                 :key="tab.id"
                 type="button"
                 :data-testid="`connectors-browse-tab-${tab.id}`"
-                class="h-8 px-3 py-1 text-[14px] font-medium clickable hover:opacity-80"
+                class="clickable flex h-8 min-w-12 items-center justify-center rounded-[8px] px-[10px] whitespace-nowrap text-sm transition-colors"
                 :class="activeTab === tab.id
-                  ? 'rounded-[999px] bg-[var(--fill-tsp-white-light)] text-[var(--text-primary)]'
-                  : 'rounded-[8px] text-[var(--text-tertiary)]'"
+                  ? 'bg-[var(--fill-tsp-white-dark)] font-medium text-[var(--text-primary)]'
+                  : 'font-normal text-[var(--text-tertiary)] hover:bg-[var(--fill-tsp-white-light)]'"
                 @click="activeTab = tab.id"
               >
                 {{ t(tab.labelKey) }}

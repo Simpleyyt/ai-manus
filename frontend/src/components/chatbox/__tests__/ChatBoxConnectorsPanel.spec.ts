@@ -57,6 +57,8 @@ describe('ChatBoxConnectorsPanel', () => {
     expect(row.classes().join(' ')).toContain('group/connector-item')
     expect(row.classes().join(' ')).toContain('h-[36px]')
     expect(row.classes().join(' ')).toContain('ps-[4px]')
+    expect(row.classes().join(' ')).toContain('cursor-pointer')
+    expect(row.classes().join(' ')).toContain('select-none')
 
     const initials = row.find('[data-testid="connector-initials-icon"]')
     expect(initials.exists()).toBe(true)

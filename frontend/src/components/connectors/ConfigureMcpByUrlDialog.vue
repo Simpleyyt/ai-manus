@@ -5,7 +5,7 @@
         <DialogTitle class="flex items-center gap-1">
           {{ t('Add MCP by URL') }}
           <span
-            class="shrink-0 h-[18px] flex items-center justify-center px-1.5 py-1 border border-[var(--border-dark)] rounded-ss-[8px] rounded-se-[10px] rounded-ee-[10px] text-[12px] font-medium text-[var(--text-tertiary)]"
+            class="shrink-0 h-[18px] flex items-center justify-center px-1.5 py-1 border border-[var(--border-dark)] rounded-tl-[8px] rounded-tr-[10px] rounded-br-[10px] text-[12px] font-medium leading-[16px] text-[var(--text-tertiary)]"
           >
             {{ t('Beta') }}
           </span>

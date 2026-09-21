@@ -42,13 +42,21 @@ describe('ConnectorsBrowseDialog', () => {
     expect(dialog!.textContent).toContain('Draft replies, search your inbox, and summarize email threads instantly')
 
     const appsTab = document.body.querySelector('[data-testid="connectors-browse-tab-apps"]')
-    expect(appsTab?.className).toContain('rounded-[999px]')
+    expect(appsTab?.className).toContain('rounded-[8px]')
+    expect(appsTab?.className).toContain('bg-[var(--fill-tsp-white-dark)]')
+    expect(appsTab?.className).not.toContain('rounded-[999px]')
 
-    const card = document.body.querySelector('[data-testid="connector-catalog-card"]')
-    expect(card).toBeTruthy()
-    expect(card!.className).toContain('h-[76px]')
-    expect(card!.querySelector('[data-testid="connector-catalog-connect"]')).toBeTruthy()
-    expect(card!.querySelector('[data-testid="connector-icon-img"]')).toBeTruthy()
+    const cards = [...document.body.querySelectorAll('[data-testid="connector-catalog-card"]')]
+    expect(cards.length).toBeGreaterThan(11)
+    expect(cards[0]!.className).toContain('h-[76px]')
+    expect(cards[0]!.textContent).toContain('My Browser')
+    expect(cards[1]!.textContent).toContain('Gmail')
+    expect(cards[2]!.textContent).toContain('GitHub')
+    expect(cards[8]!.textContent).toContain('Instagram Creator Marketplace')
+    expect(cards[9]!.textContent).toContain('Higgsfield')
+    expect(cards[11]!.textContent).toContain('TikTok for Business')
+    expect(cards[0]!.querySelector('[data-testid="connector-catalog-connect"]')).toBeTruthy()
+    expect(cards[0]!.querySelector('[data-testid="connector-icon-img"]')).toBeTruthy()
 
     wrapper.unmount()
   })

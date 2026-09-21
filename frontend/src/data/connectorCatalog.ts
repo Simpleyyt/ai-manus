@@ -58,8 +58,18 @@ export function getCatalogItem(uid: string): ConnectorCatalogItem | undefined {
   return catalogByUid.get(uid)
 }
 
+/** Official connectorsSliceUtils.sortConnectorsByOrder — order 0 last, otherwise stable. */
+export function sortConnectorsByOrder<T extends { order: number }>(items: T[]): T[] {
+  return [...items].sort((left, right) => {
+    if (left.order === 0 && right.order === 0) return 0
+    if (left.order === 0) return 1
+    if (right.order === 0) return -1
+    return left.order - right.order
+  })
+}
+
 export function catalogByTab(tab: ConnectorCatalogTab): ConnectorCatalogItem[] {
-  return CONNECTOR_CATALOG.filter((item) => item.tab === tab)
+  return sortConnectorsByOrder(CONNECTOR_CATALOG.filter((item) => item.tab === tab))
 }
 
 export function featuredCatalogItems(): ConnectorCatalogItem[] {

@@ -28,7 +28,7 @@
       type="button"
       data-testid="connector-catalog-connect"
       :title="t('Connect')"
-      class="flex size-7 shrink-0 items-center justify-center rounded-[8px] border border-[var(--border-main)] clickable"
+      class="flex size-7 shrink-0 items-center justify-center rounded-[8px] border border-[var(--border-main)] clickable hover:bg-[var(--fill-tsp-white-light)]"
       @click.stop="emit('connect', item)"
     >
       <Plus :size="14" color="var(--icon-primary)" />

@@ -61,11 +61,11 @@ describe('ConnectorsBrowseDialog', () => {
     })
     await flushPromises()
 
-    await wrapper.find('[data-testid="connectors-browse-tab-custom-mcp"]').trigger('click')
+    ;(document.body.querySelector('[data-testid="connectors-browse-tab-custom-mcp"]') as HTMLElement).click()
     await flushPromises()
     expect(document.body.textContent).toContain('No custom MCP added yet.')
 
-    await wrapper.find('[data-testid="connectors-browse-tab-projects"]').trigger('click')
+    ;(document.body.querySelector('[data-testid="connectors-browse-tab-projects"]') as HTMLElement).click()
     await flushPromises()
     expect(document.body.textContent).toContain(
       'Publish your custom MCP and API connectors to share them with your projects.',
@@ -81,7 +81,7 @@ describe('ConnectorsBrowseDialog', () => {
       attachTo: document.body,
     })
     await flushPromises()
-    await wrapper.find('[data-testid="connectors-browse-tab-custom-api"]').trigger('click')
+    ;(document.body.querySelector('[data-testid="connectors-browse-tab-custom-api"]') as HTMLElement).click()
     await flushPromises()
     expect(document.body.textContent).toContain('Kling')
     expect(document.body.querySelector('[data-testid="connector-catalog-card"]')).toBeTruthy()

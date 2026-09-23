@@ -69,6 +69,9 @@
                   v-for="item in catalogItems"
                   :key="item.uid"
                   :item="item"
+                  :installed="isInstalled(item.uid)"
+                  :installing="installingUid === item.uid"
+                  @connect="connect"
                 />
               </div>
             </div>
@@ -134,6 +137,12 @@
     :connector="editing"
     @deleted="editing = null"
   />
+
+  <CatalogMcpSecretsDialog
+    v-model:open="secretsOpen"
+    :item="secretsItem"
+    @submit="submitSecrets"
+  />
 </template>
 
 <script setup lang="ts">
@@ -160,6 +169,8 @@ import McpCard from './McpCard.vue'
 import ConnectorCatalogCard from './ConnectorCatalogCard.vue'
 import ConnectorsCreateMenu from './ConnectorsCreateMenu.vue'
 import ConfigureMcpFormDialog from './ConfigureMcpFormDialog.vue'
+import CatalogMcpSecretsDialog from './CatalogMcpSecretsDialog.vue'
+import { useCatalogConnect } from '@/composables/useCatalogConnect'
 
 type BrowseTab = 'apps' | 'custom-api' | 'custom-mcp' | 'projects'
 
@@ -167,6 +178,14 @@ const open = defineModel<boolean>('open', { required: true })
 const { t } = useI18n()
 const { connectors, filterByQuery } = useConnectors()
 const { showConfirmDialog } = useDialog()
+const {
+  connect,
+  isInstalled,
+  installingUid,
+  secretsItem,
+  secretsOpen,
+  submitSecrets,
+} = useCatalogConnect()
 const query = ref('')
 const activeTab = ref<BrowseTab>('apps')
 const editOpen = ref(false)

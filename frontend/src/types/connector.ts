@@ -1,5 +1,5 @@
 export type ConnectorTransport = 'stdio' | 'sse' | 'streamable-http'
-export type ConnectorSource = 'form' | 'json' | 'url' | 'file'
+export type ConnectorSource = 'form' | 'json' | 'url' | 'file' | 'catalog'
 
 export type VariableItem = {
   key: string
@@ -12,6 +12,7 @@ export type Connector = {
   server_key: string
   note?: string | null
   icon_url?: string | null
+  catalog_uid?: string | null
   transport: ConnectorTransport
   enabled: boolean
   source: ConnectorSource

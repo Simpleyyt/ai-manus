@@ -44,12 +44,15 @@ const isDark = useDocumentDark()
 const failed = ref(false)
 
 const connector = computed(() => (
-  props.uid ? connectors.value.find((item) => item.id === props.uid) : undefined
+  props.uid
+    ? connectors.value.find((item) => item.id === props.uid || item.catalog_uid === props.uid)
+    : undefined
 ))
 
-const catalogItem = computed(() => (
-  props.uid ? getCatalogItem(props.uid) : undefined
-))
+const catalogItem = computed(() => {
+  if (props.uid && getCatalogItem(props.uid)) return getCatalogItem(props.uid)
+  return connector.value?.catalog_uid ? getCatalogItem(connector.value.catalog_uid) : undefined
+})
 
 const connectorName = computed(() => connector.value?.name || catalogItem.value?.name || '')
 

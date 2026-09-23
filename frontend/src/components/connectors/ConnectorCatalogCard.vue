@@ -2,7 +2,7 @@
   <div
     class="flex items-center gap-3 p-3 h-[76px] rounded-[12px] border border-[var(--border-main)] clickable hover:bg-[var(--fill-tsp-white-light)]"
     data-testid="connector-catalog-card"
-    @click="emit('connect', item)"
+    @click="onConnect"
   >
     <div
       class="flex items-center justify-center size-10 bg-[var(--background-menu-white)] rounded-lg border border-[var(--border-main)] shrink-0"
@@ -27,28 +27,48 @@
     <button
       type="button"
       data-testid="connector-catalog-connect"
-      :title="t('Connect')"
-      class="flex size-7 shrink-0 items-center justify-center rounded-[8px] border border-[var(--border-main)] clickable hover:bg-[var(--fill-tsp-white-light)]"
-      @click.stop="emit('connect', item)"
+      :title="installed ? t('Added') : t('Connect')"
+      :disabled="installed || installing"
+      class="flex size-8 shrink-0 items-center justify-center rounded-[8px] border border-[var(--border-main)] clickable hover:bg-[var(--fill-tsp-white-light)] disabled:pointer-events-none"
+      @click.stop="onConnect"
     >
-      <Plus :size="14" color="var(--icon-primary)" />
+      <Check
+        v-if="installed"
+        :size="16"
+        color="var(--icon-primary)"
+      />
+      <Plus
+        v-else
+        :size="16"
+        color="var(--icon-primary)"
+      />
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Plus } from 'lucide-vue-next'
+import { Check, Plus } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import type { ConnectorCatalogItem } from '@/data/connectorCatalog'
 import ConnectorIcon from './ConnectorIcon.vue'
 
-defineProps<{
+const props = withDefaults(defineProps<{
   item: ConnectorCatalogItem
-}>()
+  installed?: boolean
+  installing?: boolean
+}>(), {
+  installed: false,
+  installing: false,
+})
 
 const emit = defineEmits<{
   connect: [item: ConnectorCatalogItem]
 }>()
 
 const { t } = useI18n()
+
+const onConnect = () => {
+  if (props.installed || props.installing) return
+  emit('connect', props.item)
+}
 </script>

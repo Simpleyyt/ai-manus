@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   connectors,
+  createFromCatalog,
   filterConnectorsByQuery,
   resetConnectorsStoreForTests,
   setConnectorEnabled,
@@ -16,6 +17,7 @@ vi.mock('@/api/connectors', () => ({
   deleteConnector: vi.fn(),
   importMcpJson: vi.fn(),
   createMcpFromUrl: vi.fn(),
+  createFromCatalog: vi.fn(),
   setConnectorEnabled: vi.fn(),
 }))
 
@@ -69,5 +71,32 @@ describe('connectorsStore', () => {
     expect(api.setConnectorEnabled).toHaveBeenCalledWith('c1', false)
     expect(api.fetchConnectors).toHaveBeenCalled()
     expect(connectors.value.find((item) => item.id === 'c1')?.enabled).toBe(false)
+  })
+
+  it('createFromCatalog reloads the store', async () => {
+    const created: Connector = {
+      id: 'learn-1',
+      name: 'Microsoft Learn',
+      server_key: 'microsoft_learn',
+      catalog_uid: 'f4c2516f-40c3-4be2-b1c6-fb18da6a04bf',
+      transport: 'streamable-http',
+      enabled: true,
+      source: 'catalog',
+      readonly: false,
+      url: 'https://learn.microsoft.com/api/mcp',
+    }
+    vi.mocked(api.createFromCatalog).mockResolvedValue(created)
+    vi.mocked(api.fetchConnectors).mockResolvedValue([...sample, created])
+
+    const result = await createFromCatalog({
+      catalog_uid: created.catalog_uid!,
+      name: created.name,
+      url: created.url!,
+      transport: 'streamable-http',
+    })
+
+    expect(result.id).toBe('learn-1')
+    expect(api.createFromCatalog).toHaveBeenCalled()
+    expect(connectors.value.some((item) => item.catalog_uid === created.catalog_uid)).toBe(true)
   })
 })

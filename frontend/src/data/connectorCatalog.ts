@@ -1,6 +1,14 @@
 import catalogJson from './connectorCatalog.json'
 
 export type ConnectorCatalogTab = 'apps' | 'api'
+export type ConnectorCatalogKind = 'mcp' | 'builtin' | 'byok'
+export type ConnectorCatalogTransport = 'streamable-http' | 'sse'
+
+export type CatalogHeaderField = {
+  key: string
+  label: string
+  placeholder?: string
+}
 
 export type ConnectorCatalogItem = {
   uid: string
@@ -11,6 +19,11 @@ export type ConnectorCatalogItem = {
   beta: boolean
   order: number
   tab: ConnectorCatalogTab
+  kind: ConnectorCatalogKind
+  instantOauth: boolean
+  serverUrl: string | null
+  transport: ConnectorCatalogTransport | null
+  requiredHeaders: CatalogHeaderField[]
 }
 
 /** Official CONNECTOR_IDS (module 296284) — computerUse skipped (addon, not Apps). */
@@ -27,6 +40,9 @@ export const CONNECTOR_IDS = {
   outlookCalendar: '4bca3029-d276-4644-898d-578a723361b2',
   googleWorkspace: 'f8900a57-4bd7-46cc-83a3-5ebd2420a817',
   shopify: '8b81dcd8-d524-48ff-8360-7065e3088f57',
+  microsoftLearn: 'f4c2516f-40c3-4be2-b1c6-fb18da6a04bf',
+  coinGecko: '0fc956e1-3d91-4e38-9f04-158adf39e99f',
+  tomTomMaps: '15027330-caa8-49d2-8c90-75397e2c6410',
 } as const
 
 /** Official CONNECTOR_FEATURED order without computerUse. */
@@ -99,4 +115,34 @@ export function filterCatalogByQuery(
   return source.filter((item) => (
     item.name.toLowerCase().includes(q) || item.brief.toLowerCase().includes(q)
   ))
+}
+
+/** Public MCP URL, no OAuth — Plus creates a real Custom MCP. */
+export function isCatalogInstallable(item: ConnectorCatalogItem): boolean {
+  return (
+    item.kind === 'mcp'
+    && Boolean(item.serverUrl)
+    && Boolean(item.transport)
+    && !item.instantOauth
+  )
+}
+
+export function catalogNeedsSecrets(item: ConnectorCatalogItem): boolean {
+  return isCatalogInstallable(item) && item.requiredHeaders.length > 0
+}
+
+export function isCatalogUidInstalled(
+  uid: string,
+  items: { catalog_uid?: string | null }[],
+): boolean {
+  return items.some((item) => item.catalog_uid === uid)
+}
+
+/** Honest block reason — never fake OAuth / BYOK / missing URL. */
+export function catalogInstallBlockReason(item: ConnectorCatalogItem): string | null {
+  if (isCatalogInstallable(item)) return null
+  if (item.kind === 'builtin') return 'OAuth marketplace apps are not wired yet.'
+  if (item.kind === 'byok') return 'Custom API marketplace install is not wired yet.'
+  if (item.instantOauth) return 'This app requires a sign-in we do not support yet.'
+  return 'This marketplace MCP has no public server URL, so it cannot be installed here.'
 }

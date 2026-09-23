@@ -61,7 +61,7 @@ Tool loop (`BaseAgent`):
 
 **Change external capabilities**: define the Protocol in `domain/external/` first, implement in `infrastructure/external/`, wire in `interfaces/dependencies.py`. The harness must keep depending on the Protocol only.
 
-**MCP config**: `MCPRepository.get_mcp_config(user_id)` merges host `mcp.json` with that user's enabled Mongo connectors (`CompositeMCPRepository`). `AgentTaskRunner` passes `self._user_id`. File-backed servers stay read-only (`file:{name}` ids). Custom MCP CRUD lives in Settings → Connectors. The ChatBox **Connect apps** popover lists the official marketplace catalog (Connect) plus user Custom MCP switches (`connector.enabled`, same Mongo flag the toolkit already respects). Marketplace OAuth is not wired. Not part of the Plan-Act loop.
+**MCP config**: `MCPRepository.get_mcp_config(user_id)` merges host `mcp.json` with that user's enabled Mongo connectors (`CompositeMCPRepository`). `AgentTaskRunner` passes `self._user_id`. File-backed servers stay read-only (`file:{name}` ids). Custom MCP CRUD lives in Settings → Connectors. The ChatBox **Connect apps** popover lists the official marketplace catalog (Connect) plus user Custom MCP switches (`connector.enabled`, same Mongo flag the toolkit already respects). Marketplace MCP with a public URL and no OAuth installs via `POST /connectors/from-catalog` (idempotent `catalog_uid`); OAuth / BUILTIN / BYOK are not wired and must not fake a sign-in. Not part of the Plan-Act loop.
 
 ## Testing pyramid
 

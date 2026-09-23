@@ -1,8 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import {
   catalogByTab,
+  catalogInstallBlockReason,
+  catalogNeedsSecrets,
   CONNECTOR_IDS,
   featuredCatalogItems,
+  getCatalogItem,
+  isCatalogInstallable,
   sortConnectorsByOrder,
 } from '../connectorCatalog'
 
@@ -52,5 +56,21 @@ describe('connectorCatalog', () => {
       { order: 1, name: 'b' },
     ])
     expect(sorted.map((item) => item.name)).toEqual(['b', 'a', 'z', 'y'])
+  })
+
+  it('installs public MCP URLs without OAuth and blocks the rest honestly', () => {
+    const learn = getCatalogItem(CONNECTOR_IDS.microsoftLearn)!
+    const gecko = getCatalogItem(CONNECTOR_IDS.coinGecko)!
+    const tomtom = getCatalogItem(CONNECTOR_IDS.tomTomMaps)!
+    const gmail = getCatalogItem(CONNECTOR_IDS.gmail)!
+    const notion = getCatalogItem(CONNECTOR_IDS.notion)!
+    expect(isCatalogInstallable(learn)).toBe(true)
+    expect(isCatalogInstallable(gecko)).toBe(true)
+    expect(catalogNeedsSecrets(learn)).toBe(false)
+    expect(catalogNeedsSecrets(tomtom)).toBe(true)
+    expect(catalogInstallBlockReason(learn)).toBeNull()
+    expect(catalogInstallBlockReason(gmail)).toBe('OAuth marketplace apps are not wired yet.')
+    expect(catalogInstallBlockReason(notion)).toBe('This app requires a sign-in we do not support yet.')
+    expect(isCatalogInstallable(gmail)).toBe(false)
   })
 })

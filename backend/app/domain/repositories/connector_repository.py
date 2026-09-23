@@ -22,3 +22,8 @@ class ConnectorRepository(Protocol):
         self, user_id: str, name: str
     ) -> Optional[Connector]:
         ...
+
+    async def find_by_user_id_and_catalog_uid(
+        self, user_id: str, catalog_uid: str
+    ) -> Optional[Connector]:
+        ...

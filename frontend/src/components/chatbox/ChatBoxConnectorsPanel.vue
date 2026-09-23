@@ -49,7 +49,7 @@
         :key="item.uid"
         class="group/connector-item flex items-center gap-[8px] justify-between px-[8px] ps-[4px] h-[36px] rounded-[8px] cursor-pointer select-none hover:bg-[var(--fill-tsp-white-main)]"
         :data-testid="`chatbox-connector-${item.uid}`"
-        @click="emit('add')"
+        @click="connectCatalogItem(item)"
       >
         <div class="flex items-center gap-[4px] overflow-hidden min-w-0">
           <div class="size-[28px] flex items-center justify-center flex-shrink-0">
@@ -108,6 +108,12 @@
       </div>
     </div>
   </div>
+
+  <CatalogMcpSecretsDialog
+    v-model:open="secretsOpen"
+    :item="secretsItem"
+    @submit="submitSecrets"
+  />
 </template>
 
 <script setup lang="ts">
@@ -121,6 +127,8 @@ import type { Connector } from '@/types/connector'
 import SettingsSwitch from '@/components/settings/SettingsSwitch.vue'
 import ConnectorIcon from '@/components/connectors/ConnectorIcon.vue'
 import ConnectorPreview from '@/components/connectors/ConnectorPreview.vue'
+import CatalogMcpSecretsDialog from '@/components/connectors/CatalogMcpSecretsDialog.vue'
+import { useCatalogConnect } from '@/composables/useCatalogConnect'
 import { showErrorToast } from '@/utils/toast'
 
 const props = defineProps<{
@@ -135,10 +143,21 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const { connectors, ensureConnectorsLoaded } = useConnectors()
+const {
+  connect: connectCatalogItem,
+  secretsItem,
+  secretsOpen,
+  submitSecrets,
+} = useCatalogConnect()
 const installed = computed(() =>
   [...connectors.value].sort((left, right) => left.name.localeCompare(right.name)),
 )
-const featured = computed(() => featuredCatalogItems())
+const featured = computed(() => {
+  const installedUids = new Set(
+    connectors.value.map((item) => item.catalog_uid).filter((uid): uid is string => Boolean(uid)),
+  )
+  return featuredCatalogItems().filter((item) => !installedUids.has(item.uid))
+})
 const hasInstalled = computed(() => installed.value.length > 0)
 
 const canToggle = (connector: Connector) =>

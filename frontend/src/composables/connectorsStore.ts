@@ -2,12 +2,14 @@ import { ref } from 'vue'
 import axios from 'axios'
 import {
   createConnector as createConnectorApi,
+  createFromCatalog as createFromCatalogApi,
   createMcpFromUrl as createMcpFromUrlApi,
   deleteConnector as deleteConnectorApi,
   fetchConnectors,
   importMcpJson as importMcpJsonApi,
   setConnectorEnabled as setConnectorEnabledApi,
   updateConnector as updateConnectorApi,
+  type CreateFromCatalogPayload,
 } from '@/api/connectors'
 import type { Connector, ConnectorWritePayload } from '@/types/connector'
 
@@ -94,6 +96,12 @@ export async function importMcpJson(json: string): Promise<Connector> {
 
 export async function createMcpFromUrl(url: string, name?: string): Promise<Connector> {
   const created = await createMcpFromUrlApi(url, name)
+  await reloadConnectors()
+  return created
+}
+
+export async function createFromCatalog(payload: CreateFromCatalogPayload): Promise<Connector> {
+  const created = await createFromCatalogApi(payload)
   await reloadConnectors()
   return created
 }

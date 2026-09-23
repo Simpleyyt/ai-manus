@@ -36,6 +36,14 @@ class _FakeConnectorRepository:
                 return item
         return None
 
+    async def find_by_user_id_and_catalog_uid(self, user_id, catalog_uid):
+        if not catalog_uid:
+            return None
+        for item in self.items:
+            if item.user_id == user_id and item.catalog_uid == catalog_uid:
+                return item
+        return None
+
 
 class _FakeFileMcpRepository:
     def __init__(self, servers=None):
@@ -231,6 +239,82 @@ async def test_missing_connector_raises_not_found():
         pass
     else:
         raise AssertionError("expected NotFoundError")
+
+
+async def test_create_from_catalog_is_idempotent_and_feeds_mcp_config():
+    service = _service()
+    created = await service.create_from_catalog(
+        "user-1",
+        catalog_uid="f4c2516f-40c3-4be2-b1c6-fb18da6a04bf",
+        name="Microsoft Learn",
+        url="https://learn.microsoft.com/api/mcp",
+        transport=MCPTransport.STREAMABLE_HTTP,
+        icon_url="https://cdn.example.com/learn.webp",
+        note="Search Microsoft docs",
+    )
+    assert created.source == ConnectorSource.CATALOG
+    assert created.catalog_uid == "f4c2516f-40c3-4be2-b1c6-fb18da6a04bf"
+    assert created.server_key == "microsoft_learn"
+    again = await service.create_from_catalog(
+        "user-1",
+        catalog_uid="f4c2516f-40c3-4be2-b1c6-fb18da6a04bf",
+        name="Microsoft Learn",
+        url="https://learn.microsoft.com/api/mcp",
+        transport=MCPTransport.STREAMABLE_HTTP,
+    )
+    assert again.id == created.id
+    config = await service.mcp_config_for_user("user-1")
+    assert config.mcpServers["microsoft_learn"].url == "https://learn.microsoft.com/api/mcp"
+
+
+async def test_create_from_catalog_renames_on_name_clash_and_keeps_headers():
+    service = _service()
+    await service.create_connector(
+        "user-1",
+        name="TomTom Maps",
+        transport=MCPTransport.STREAMABLE_HTTP,
+        url="https://example.com/other",
+    )
+    created = await service.create_from_catalog(
+        "user-1",
+        catalog_uid="15027330-caa8-49d2-8c90-75397e2c6410",
+        name="TomTom Maps",
+        url="https://mcp.tomtom.com/maps",
+        transport=MCPTransport.STREAMABLE_HTTP,
+        headers={"tomtom-api-key": "secret"},
+    )
+    assert created.name == "TomTom Maps (2)"
+    assert created.headers["tomtom-api-key"] == "secret"
+    config = await service.mcp_config_for_user("user-1")
+    assert config.mcpServers[created.server_key].headers["tomtom-api-key"] == "secret"
+
+
+async def test_create_from_catalog_rejects_stdio_and_blank_uid():
+    service = _service()
+    try:
+        await service.create_from_catalog(
+            "user-1",
+            catalog_uid="abc",
+            name="Local",
+            url="https://mcp.example.com/mcp",
+            transport=MCPTransport.STDIO,
+        )
+    except BadRequestError as exc:
+        assert "HTTP or SSE" in exc.msg
+    else:
+        raise AssertionError("expected BadRequestError")
+    try:
+        await service.create_from_catalog(
+            "user-1",
+            catalog_uid="  ",
+            name="Docs",
+            url="https://mcp.example.com/mcp",
+            transport=MCPTransport.STREAMABLE_HTTP,
+        )
+    except BadRequestError as exc:
+        assert "Catalog connector id" in exc.msg
+    else:
+        raise AssertionError("expected BadRequestError")
 
 
 async def test_composite_mcp_repository_merges_user_over_file():

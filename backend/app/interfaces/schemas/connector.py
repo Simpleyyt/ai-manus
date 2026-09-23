@@ -16,6 +16,7 @@ class ConnectorItem(BaseModel):
     server_key: str
     note: Optional[str] = None
     icon_url: Optional[str] = None
+    catalog_uid: Optional[str] = None
     transport: MCPTransport
     enabled: bool = True
     source: str
@@ -50,6 +51,16 @@ class ImportMcpJsonRequest(BaseModel):
 class CreateMcpFromUrlRequest(BaseModel):
     url: str
     name: Optional[str] = None
+
+
+class CreateFromCatalogRequest(BaseModel):
+    catalog_uid: str
+    name: str
+    url: str
+    transport: MCPTransport
+    icon_url: Optional[str] = None
+    note: Optional[str] = None
+    headers: Optional[List[VariableItem]] = None
 
 
 class ConnectorEnabledRequest(BaseModel):

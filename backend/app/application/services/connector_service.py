@@ -44,6 +44,7 @@ class ConnectorService:
         env: Optional[Dict[str, str]] = None,
         url: Optional[str] = None,
         headers: Optional[Dict[str, str]] = None,
+        catalog_uid: Optional[str] = None,
     ) -> Connector:
         connector = Connector(
             user_id=user_id,
@@ -51,6 +52,7 @@ class ConnectorService:
             server_key="",
             note=_optional_text(note),
             icon_url=_optional_text(icon_url),
+            catalog_uid=_optional_text(catalog_uid),
             transport=transport,
             source=source,
             command=_optional_text(command),
@@ -157,6 +159,39 @@ class ConnectorService:
             url=server_url,
         )
 
+    async def create_from_catalog(
+        self,
+        user_id: str,
+        *,
+        catalog_uid: str,
+        name: str,
+        url: str,
+        transport: MCPTransport,
+        icon_url: Optional[str] = None,
+        note: Optional[str] = None,
+        headers: Optional[Dict[str, str]] = None,
+    ) -> Connector:
+        uid = _optional_text(catalog_uid)
+        if not uid:
+            raise BadRequestError("Catalog connector id is required")
+        if transport not in {MCPTransport.STREAMABLE_HTTP, MCPTransport.SSE}:
+            raise BadRequestError("Catalog installs only support HTTP or SSE MCP")
+        existing = await self._connectors.find_by_user_id_and_catalog_uid(user_id, uid)
+        if existing:
+            return existing
+        display_name = await self._unique_display_name(user_id, _require_name(name))
+        return await self.create_connector(
+            user_id,
+            name=display_name,
+            transport=transport,
+            source=ConnectorSource.CATALOG,
+            note=note,
+            icon_url=icon_url,
+            url=url,
+            headers=headers,
+            catalog_uid=uid,
+        )
+
     async def mcp_config_for_user(self, user_id: str) -> MCPConfig:
         connectors = await self._connectors.find_by_user_id(user_id)
         servers: Dict[str, MCPServerConfig] = {}
@@ -209,6 +244,20 @@ class ConnectorService:
             raise BadRequestError(
                 "A connector with this name already exists. Please choose a different name."
             )
+
+    async def _unique_display_name(self, user_id: str, name: str) -> str:
+        existing = await self._connectors.find_by_user_id_and_name(user_id, name)
+        if not existing:
+            return name
+        suffix = 2
+        while True:
+            candidate = f"{name} ({suffix})"
+            if len(candidate) > 80:
+                candidate = f"{name[:74]} ({suffix})"
+            taken = await self._connectors.find_by_user_id_and_name(user_id, candidate)
+            if not taken:
+                return candidate
+            suffix += 1
 
     async def _unique_server_key(self, user_id: str, name: str) -> str:
         base = make_server_key(name)

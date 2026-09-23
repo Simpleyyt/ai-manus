@@ -9,6 +9,7 @@ import {
 } from '../../../composables/connectorsStore'
 import { CONNECTOR_IDS } from '@/data/connectorCatalog'
 import type { Connector } from '@/types/connector'
+import { showInfoToast } from '@/utils/toast'
 
 vi.mock('@/api/connectors', () => ({
   fetchConnectors: vi.fn(),
@@ -17,7 +18,14 @@ vi.mock('@/api/connectors', () => ({
   deleteConnector: vi.fn(),
   importMcpJson: vi.fn(),
   createMcpFromUrl: vi.fn(),
+  createFromCatalog: vi.fn(),
   setConnectorEnabled: vi.fn(),
+}))
+
+vi.mock('@/utils/toast', () => ({
+  showErrorToast: vi.fn(),
+  showSuccessToast: vi.fn(),
+  showInfoToast: vi.fn(),
 }))
 
 const sample: Connector[] = [
@@ -37,6 +45,7 @@ describe('ChatBoxConnectorsPanel', () => {
   beforeEach(() => {
     resetConnectorsStoreForTests()
     setConnectorsStoreForTests(sample)
+    vi.clearAllMocks()
   })
 
   it('renders official row tokens, Add connectors, and Manage connectors', async () => {
@@ -103,13 +112,14 @@ describe('ChatBoxConnectorsPanel', () => {
     expect(wrapper.emitted('manage')).toHaveLength(1)
   })
 
-  it('emits add when clicking a featured Connect row', async () => {
+  it('toasts instead of emitting add when clicking a featured Connect row', async () => {
     const wrapper = mount(ChatBoxConnectorsPanel, {
       props: { open: true },
       global: { plugins: [i18n] },
     })
     await flushPromises()
     await wrapper.find(`[data-testid="chatbox-connector-${CONNECTOR_IDS.github}"]`).trigger('click')
-    expect(wrapper.emitted('add')).toHaveLength(1)
+    expect(wrapper.emitted('add')).toBeUndefined()
+    expect(showInfoToast).toHaveBeenCalled()
   })
 })

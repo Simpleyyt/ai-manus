@@ -1,5 +1,5 @@
 import { apiClient, ApiResponse } from './client'
-import type { Connector, ConnectorWritePayload } from '../types/connector'
+import type { Connector, ConnectorTransport, ConnectorWritePayload, VariableItem } from '../types/connector'
 
 export type ListConnectorsResponse = {
   connectors: Connector[]
@@ -31,6 +31,21 @@ export async function importMcpJson(json: string): Promise<Connector> {
 
 export async function createMcpFromUrl(url: string, name?: string): Promise<Connector> {
   const response = await apiClient.post<ApiResponse<Connector>>('/connectors/from-url', { url, name })
+  return response.data.data
+}
+
+export type CreateFromCatalogPayload = {
+  catalog_uid: string
+  name: string
+  url: string
+  transport: ConnectorTransport
+  icon_url?: string | null
+  note?: string | null
+  headers?: VariableItem[] | null
+}
+
+export async function createFromCatalog(payload: CreateFromCatalogPayload): Promise<Connector> {
+  const response = await apiClient.post<ApiResponse<Connector>>('/connectors/from-catalog', payload)
   return response.data.data
 }
 

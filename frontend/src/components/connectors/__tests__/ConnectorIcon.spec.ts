@@ -74,4 +74,22 @@ describe('ConnectorIcon', () => {
     expect(img.attributes('src') || '').toContain('cloudfront.net')
     expect(img.attributes('alt')).toBe('GitHub')
   })
+
+  it('resolves catalog logos from a stored catalog_uid', () => {
+    setConnectorsStoreForTests([{
+      id: 'learn-1',
+      name: 'Microsoft Learn',
+      server_key: 'microsoft_learn',
+      catalog_uid: 'f4c2516f-40c3-4be2-b1c6-fb18da6a04bf',
+      transport: 'streamable-http',
+      enabled: true,
+      source: 'catalog',
+      readonly: false,
+    }])
+    const wrapper = mount(ConnectorIcon, { props: { uid: 'learn-1', size: 16 } })
+    const img = wrapper.find('[data-testid="connector-icon-img"]')
+    expect(img.exists()).toBe(true)
+    expect(img.attributes('src') || '').toContain('cloudfront.net')
+    expect(img.attributes('alt')).toBe('Microsoft Learn')
+  })
 })

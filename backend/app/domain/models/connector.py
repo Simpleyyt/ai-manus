@@ -13,6 +13,7 @@ class ConnectorSource(str, Enum):
     JSON = "json"
     URL = "url"
     FILE = "file"
+    CATALOG = "catalog"
 
 
 class Connector(BaseModel):
@@ -24,6 +25,7 @@ class Connector(BaseModel):
     server_key: str
     note: Optional[str] = None
     icon_url: Optional[str] = None
+    catalog_uid: Optional[str] = None
     transport: MCPTransport
     enabled: bool = True
     source: ConnectorSource = ConnectorSource.FORM

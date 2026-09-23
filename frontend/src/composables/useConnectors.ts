@@ -2,6 +2,7 @@ import { onMounted } from 'vue'
 import {
   connectors,
   createConnector,
+  createFromCatalog,
   createMcpFromUrl,
   deleteConnector,
   ensureConnectorsLoaded,
@@ -31,6 +32,7 @@ export function useConnectors() {
     deleteConnector,
     importMcpJson,
     createMcpFromUrl,
+    createFromCatalog,
     setConnectorEnabled,
     reloadConnectors,
     ensureConnectorsLoaded,

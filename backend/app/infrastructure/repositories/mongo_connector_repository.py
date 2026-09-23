@@ -50,3 +50,14 @@ class MongoConnectorRepository(ConnectorRepository):
             ConnectorDocument.name == name,
         )
         return mongo.to_domain() if mongo else None
+
+    async def find_by_user_id_and_catalog_uid(
+        self, user_id: str, catalog_uid: str
+    ) -> Optional[Connector]:
+        if not catalog_uid:
+            return None
+        mongo = await ConnectorDocument.find_one(
+            ConnectorDocument.user_id == user_id,
+            ConnectorDocument.catalog_uid == catalog_uid,
+        )
+        return mongo.to_domain() if mongo else None

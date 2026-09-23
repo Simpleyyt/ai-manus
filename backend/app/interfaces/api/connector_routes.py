@@ -10,6 +10,7 @@ from app.interfaces.schemas.connector import (
     ConnectorItem,
     ConnectorWriteRequest,
     CreateMcpFromUrlRequest,
+    CreateFromCatalogRequest,
     ImportMcpJsonRequest,
     ListConnectorsResponse,
     dict_to_pairs,
@@ -26,6 +27,7 @@ def _to_item(connector: Connector) -> ConnectorItem:
         server_key=connector.server_key,
         note=connector.note,
         icon_url=connector.icon_url,
+        catalog_uid=connector.catalog_uid,
         transport=connector.transport,
         enabled=connector.enabled,
         source=connector.source.value,
@@ -89,6 +91,25 @@ async def create_mcp_from_url(
 ) -> APIResponse[ConnectorItem]:
     connector = await connector_service.create_from_url(
         current_user.id, request.url, request.name
+    )
+    return APIResponse.success(_to_item(connector))
+
+
+@router.post("/from-catalog", response_model=APIResponse[ConnectorItem])
+async def create_mcp_from_catalog(
+    request: CreateFromCatalogRequest,
+    current_user: User = Depends(get_current_user),
+    connector_service: ConnectorService = Depends(get_connector_service),
+) -> APIResponse[ConnectorItem]:
+    connector = await connector_service.create_from_catalog(
+        current_user.id,
+        catalog_uid=request.catalog_uid,
+        name=request.name,
+        url=request.url,
+        transport=request.transport,
+        icon_url=request.icon_url,
+        note=request.note,
+        headers=pairs_to_dict(request.headers),
     )
     return APIResponse.success(_to_item(connector))
 

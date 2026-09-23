@@ -222,6 +222,7 @@ class ConnectorDocument(BaseDocument[Connector], id_field="connector_id", domain
     server_key: str
     note: Optional[str] = None
     icon_url: Optional[str] = None
+    catalog_uid: Optional[str] = None
     transport: MCPTransport
     enabled: bool = True
     source: ConnectorSource = ConnectorSource.FORM
@@ -246,6 +247,10 @@ class ConnectorDocument(BaseDocument[Connector], id_field="connector_id", domain
                 [("user_id", ASCENDING), ("name", ASCENDING)],
                 unique=True,
                 name="user_id_name",
+            ),
+            IndexModel(
+                [("user_id", ASCENDING), ("catalog_uid", ASCENDING)],
+                name="user_id_catalog_uid",
             ),
         ]
 

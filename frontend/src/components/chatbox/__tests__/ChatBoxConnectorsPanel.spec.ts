@@ -9,7 +9,6 @@ import {
 } from '../../../composables/connectorsStore'
 import { CONNECTOR_IDS } from '@/data/connectorCatalog'
 import type { Connector } from '@/types/connector'
-import { showInfoToast } from '@/utils/toast'
 
 vi.mock('@/api/connectors', () => ({
   fetchConnectors: vi.fn(),
@@ -78,7 +77,7 @@ describe('ChatBoxConnectorsPanel', () => {
     expect(add.attributes('data-close-when-click')).toBe('true')
   })
 
-  it('renders official featured Connect rows, logos, and ConnectorPreview', async () => {
+  it('renders ConnectorPreview from installable marketplace logos', async () => {
     const wrapper = mount(ChatBoxConnectorsPanel, {
       props: { open: true },
       global: { plugins: [i18n] },
@@ -86,17 +85,13 @@ describe('ChatBoxConnectorsPanel', () => {
     await flushPromises()
     await nextTick()
 
-    const github = wrapper.find(`[data-testid="chatbox-connector-${CONNECTOR_IDS.github}"]`)
-    expect(github.exists()).toBe(true)
-    expect(github.text()).toContain('GitHub')
-    expect(github.text()).toContain('Connect')
-    const img = github.find('[data-testid="connector-icon-img"]')
-    expect(img.exists()).toBe(true)
-    expect(img.attributes('src') || '').toContain('cloudfront.net')
+    expect(wrapper.find(`[data-testid="chatbox-connector-${CONNECTOR_IDS.github}"]`).exists()).toBe(false)
+    expect(wrapper.text()).not.toContain('GitHub')
+    expect(wrapper.text()).not.toContain('Gmail')
 
     const preview = wrapper.find('[data-testid="connector-preview"]')
     expect(preview.exists()).toBe(true)
-    expect(preview.text()).toContain('+99')
+    expect(preview.text()).toContain('+65')
     expect(preview.classes().join(' ')).toContain('-space-x-1')
   })
 
@@ -110,16 +105,5 @@ describe('ChatBoxConnectorsPanel', () => {
     await wrapper.find('[data-testid="chatbox-connectors-manage"]').trigger('click')
     expect(wrapper.emitted('add')).toHaveLength(1)
     expect(wrapper.emitted('manage')).toHaveLength(1)
-  })
-
-  it('toasts instead of emitting add when clicking a featured Connect row', async () => {
-    const wrapper = mount(ChatBoxConnectorsPanel, {
-      props: { open: true },
-      global: { plugins: [i18n] },
-    })
-    await flushPromises()
-    await wrapper.find(`[data-testid="chatbox-connector-${CONNECTOR_IDS.github}"]`).trigger('click')
-    expect(wrapper.emitted('add')).toBeUndefined()
-    expect(showInfoToast).toHaveBeenCalled()
   })
 })

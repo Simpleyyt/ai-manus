@@ -61,7 +61,7 @@ describe('ConnectorsBrowseDialog', () => {
     vi.clearAllMocks()
   })
 
-  it('defaults to Apps tab with official catalog cards, brief, and Plus', async () => {
+  it('defaults to Apps tab with only installable MCP cards', async () => {
     const wrapper = mount(ConnectorsBrowseDialog, {
       props: { open: true },
       global: { plugins: [i18n] },
@@ -72,11 +72,13 @@ describe('ConnectorsBrowseDialog', () => {
     const dialog = document.body.querySelector('[data-testid="connectors-browse-dialog"]')
     expect(dialog).toBeTruthy()
     expect(dialog!.textContent).toContain('Apps')
-    expect(dialog!.textContent).toContain('Custom API')
     expect(dialog!.textContent).toContain('Custom MCP')
-    expect(dialog!.textContent).toContain('Projects')
-    expect(dialog!.textContent).toContain('Gmail')
-    expect(dialog!.textContent).toContain('Draft replies, search your inbox, and summarize email threads instantly')
+    expect(dialog!.textContent).not.toContain('Custom API')
+    expect(dialog!.textContent).not.toContain('Projects')
+    expect(dialog!.textContent).not.toContain('Gmail')
+    expect(dialog!.textContent).not.toContain('GitHub')
+    expect(dialog!.textContent).toContain('Crypto.com')
+    expect(dialog!.textContent).toContain('CoinGecko')
 
     const appsTab = document.body.querySelector('[data-testid="connectors-browse-tab-apps"]')
     expect(appsTab?.className).toContain('rounded-[8px]')
@@ -86,12 +88,8 @@ describe('ConnectorsBrowseDialog', () => {
     const cards = [...document.body.querySelectorAll('[data-testid="connector-catalog-card"]')]
     expect(cards.length).toBeGreaterThan(11)
     expect(cards[0]!.className).toContain('h-[76px]')
-    expect(cards[0]!.textContent).toContain('My Browser')
-    expect(cards[1]!.textContent).toContain('Gmail')
-    expect(cards[2]!.textContent).toContain('GitHub')
-    expect(cards[8]!.textContent).toContain('Instagram Creator Marketplace')
-    expect(cards[9]!.textContent).toContain('Higgsfield')
-    expect(cards[11]!.textContent).toContain('TikTok for Business')
+    expect(cards[0]!.textContent).toContain('Crypto.com')
+    expect(cards[1]!.textContent).toContain('CoinGecko')
     expect(cards[0]!.querySelector('[data-testid="connector-catalog-connect"]')).toBeTruthy()
     expect(cards[0]!.querySelector('[data-testid="connector-catalog-connect"]')?.className).toContain('size-8')
     expect(cards[0]!.querySelector('[data-testid="connector-icon-img"]')).toBeTruthy()
@@ -99,7 +97,7 @@ describe('ConnectorsBrowseDialog', () => {
     wrapper.unmount()
   })
 
-  it('shows Custom MCP empty cable copy and Projects publish copy', async () => {
+  it('shows Custom MCP empty cable copy', async () => {
     const wrapper = mount(ConnectorsBrowseDialog, {
       props: { open: true },
       global: { plugins: [i18n] },
@@ -111,31 +109,21 @@ describe('ConnectorsBrowseDialog', () => {
     await flushPromises()
     expect(document.body.textContent).toContain('No custom MCP added yet.')
 
-    ;(document.body.querySelector('[data-testid="connectors-browse-tab-projects"]') as HTMLElement).click()
-    await flushPromises()
-    expect(document.body.textContent).toContain(
-      'Publish your custom MCP and API connectors to share them with your projects.',
-    )
-
     wrapper.unmount()
   })
 
-  it('shows Custom API catalog cards', async () => {
+  it('does not list OAuth apps such as Gmail', async () => {
     const wrapper = mount(ConnectorsBrowseDialog, {
       props: { open: true },
       global: { plugins: [i18n] },
       attachTo: document.body,
     })
     await flushPromises()
-    ;(document.body.querySelector('[data-testid="connectors-browse-tab-custom-api"]') as HTMLElement).click()
-    await flushPromises()
-    expect(document.body.textContent).toContain('Kling')
-    expect(document.body.querySelector('[data-testid="connector-catalog-card"]')).toBeTruthy()
+    await searchBrowse('Gmail')
+    expect(document.body.querySelector('[data-testid="connector-catalog-card"]')).toBeNull()
+    expect(api.createFromCatalog).not.toHaveBeenCalled()
+    expect(showInfoToast).not.toHaveBeenCalled()
     wrapper.unmount()
-  })
-
-  it('keeps GitHub in the Apps catalog', async () => {
-    expect(CONNECTOR_IDS.github).toBe('bbb0df76-66bd-4a24-ae4f-2aac4750d90b')
   })
 
   it('installs Microsoft Learn from Plus into a real catalog connector', async () => {
@@ -174,21 +162,6 @@ describe('ConnectorsBrowseDialog', () => {
     catalogCard('Microsoft Learn').click()
     await flushPromises()
     expect(api.createFromCatalog).not.toHaveBeenCalled()
-    wrapper.unmount()
-  })
-
-  it('toasts instead of faking OAuth for Gmail', async () => {
-    const wrapper = mount(ConnectorsBrowseDialog, {
-      props: { open: true },
-      global: { plugins: [i18n] },
-      attachTo: document.body,
-    })
-    await flushPromises()
-    await searchBrowse('Gmail')
-    ;(catalogCard('Gmail').querySelector('[data-testid="connector-catalog-connect"]') as HTMLElement).click()
-    await flushPromises()
-    expect(api.createFromCatalog).not.toHaveBeenCalled()
-    expect(showInfoToast).toHaveBeenCalled()
     wrapper.unmount()
   })
 

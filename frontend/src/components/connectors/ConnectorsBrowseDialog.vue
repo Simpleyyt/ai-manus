@@ -78,20 +78,6 @@
           </div>
 
           <div
-            v-else-if="activeTab === 'projects'"
-            class="flex flex-col w-full h-full items-center justify-center"
-          >
-            <div class="flex flex-col items-center w-[320px] space-y-3">
-              <div class="flex size-8 items-center justify-center">
-                <Cable :size="32" color="var(--icon-tertiary)" />
-              </div>
-              <p class="text-center text-[13px] text-[var(--text-quaternary)]">
-                {{ t('Publish your custom MCP and API connectors to share them with your projects.') }}
-              </p>
-            </div>
-          </div>
-
-          <div
             v-else-if="showEmpty"
             class="flex flex-col w-full h-full items-center justify-center gap-2.5"
           >
@@ -161,8 +147,8 @@ import { useDialog } from '@/composables/useDialog'
 import { showErrorToast, showSuccessToast } from '@/utils/toast'
 import type { Connector } from '@/types/connector'
 import {
-  catalogByTab,
   filterCatalogByQuery,
+  installableCatalogByTab,
   type ConnectorCatalogTab,
 } from '@/data/connectorCatalog'
 import McpCard from './McpCard.vue'
@@ -172,7 +158,7 @@ import ConfigureMcpFormDialog from './ConfigureMcpFormDialog.vue'
 import CatalogMcpSecretsDialog from './CatalogMcpSecretsDialog.vue'
 import { useCatalogConnect } from '@/composables/useCatalogConnect'
 
-type BrowseTab = 'apps' | 'custom-api' | 'custom-mcp' | 'projects'
+type BrowseTab = 'apps' | 'custom-mcp'
 
 const open = defineModel<boolean>('open', { required: true })
 const { t } = useI18n()
@@ -193,9 +179,7 @@ const editing = ref<Connector | null>(null)
 
 const tabs: { id: BrowseTab; labelKey: string }[] = [
   { id: 'apps', labelKey: 'Apps' },
-  { id: 'custom-api', labelKey: 'Custom API' },
   { id: 'custom-mcp', labelKey: 'Custom MCP' },
-  { id: 'projects', labelKey: 'Projects' },
 ]
 
 const customConnectors = computed(() =>
@@ -204,16 +188,14 @@ const customConnectors = computed(() =>
 
 const filtered = computed(() => filterByQuery(query.value, customConnectors.value))
 const showEmpty = computed(() => activeTab.value === 'custom-mcp' && customConnectors.value.length === 0)
-const catalogTab = computed((): ConnectorCatalogTab | null => {
-  if (activeTab.value === 'apps') return 'apps'
-  if (activeTab.value === 'custom-api') return 'api'
-  return null
-})
+const catalogTab = computed((): ConnectorCatalogTab | null => (
+  activeTab.value === 'apps' ? 'apps' : null
+))
 const showCatalog = computed(() => catalogTab.value !== null)
 const catalogItems = computed(() => {
   const tab = catalogTab.value
   if (!tab) return []
-  return filterCatalogByQuery(query.value, catalogByTab(tab))
+  return filterCatalogByQuery(query.value, installableCatalogByTab(tab))
 })
 
 watch(open, (isOpen) => {

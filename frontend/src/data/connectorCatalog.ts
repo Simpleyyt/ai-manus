@@ -94,16 +94,13 @@ export function featuredCatalogItems(): ConnectorCatalogItem[] {
     .filter((item): item is ConnectorCatalogItem => Boolean(item))
 }
 
+/** Marketplace cards we can actually install — OAuth / BUILTIN / BYOK stay out of the UI. */
+export function installableCatalogByTab(tab: ConnectorCatalogTab): ConnectorCatalogItem[] {
+  return catalogByTab(tab).filter(isCatalogInstallable)
+}
+
 export function previewCatalogItems(): ConnectorCatalogItem[] {
-  const preview = CONNECTOR_PREVIEW
-    .map((uid) => catalogByUid.get(uid))
-    .filter((item): item is ConnectorCatalogItem => Boolean(item))
-  const featured = new Set(CONNECTOR_FEATURED)
-  const previewSet = new Set(CONNECTOR_PREVIEW)
-  const rest = CONNECTOR_CATALOG.filter(
-    (item) => !featured.has(item.uid) && !previewSet.has(item.uid),
-  )
-  return [...preview, ...rest]
+  return installableCatalogByTab('apps')
 }
 
 export function filterCatalogByQuery(

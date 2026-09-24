@@ -6,7 +6,9 @@ import {
   CONNECTOR_IDS,
   featuredCatalogItems,
   getCatalogItem,
+  installableCatalogByTab,
   isCatalogInstallable,
+  previewCatalogItems,
   sortConnectorsByOrder,
 } from '../connectorCatalog'
 
@@ -58,7 +60,23 @@ describe('connectorCatalog', () => {
     expect(sorted.map((item) => item.name)).toEqual(['b', 'a', 'z', 'y'])
   })
 
-  it('installs public MCP URLs without OAuth and blocks the rest honestly', () => {
+  it('omits OAuth, BUILTIN, and BYOK from the installable marketplace list', () => {
+    const apps = installableCatalogByTab('apps')
+    expect(apps.slice(0, 6).map((item) => item.name)).toEqual([
+      'Crypto.com',
+      'CoinGecko',
+      'PopHIVE',
+      'Neimo',
+      'TomTom Maps',
+      'ilert',
+    ])
+    expect(apps.every(isCatalogInstallable)).toBe(true)
+    expect(apps.find((item) => item.name === 'Gmail')).toBeUndefined()
+    expect(apps.find((item) => item.name === 'GitHub')).toBeUndefined()
+    expect(installableCatalogByTab('api')).toEqual([])
+    expect(featuredCatalogItems().filter(isCatalogInstallable)).toEqual([])
+    expect(previewCatalogItems()[0]?.name).toBe('Crypto.com')
+    expect(previewCatalogItems().length).toBe(apps.length)
     const learn = getCatalogItem(CONNECTOR_IDS.microsoftLearn)!
     const gecko = getCatalogItem(CONNECTOR_IDS.coinGecko)!
     const tomtom = getCatalogItem(CONNECTOR_IDS.tomTomMaps)!

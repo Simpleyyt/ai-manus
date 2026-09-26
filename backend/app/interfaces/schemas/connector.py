@@ -55,12 +55,29 @@ class CreateMcpFromUrlRequest(BaseModel):
 
 class CreateFromCatalogRequest(BaseModel):
     catalog_uid: str
+    headers: Optional[List[VariableItem]] = None
+
+
+class CatalogHeaderFieldItem(BaseModel):
+    key: str
+    label: str
+    placeholder: Optional[str] = None
+
+
+class CatalogConnectorItem(BaseModel):
+    uid: str
     name: str
+    brief: str = ""
+    icon_url: Optional[str] = None
+    icon_url_dark: Optional[str] = None
+    order: int = 0
     url: str
     transport: MCPTransport
-    icon_url: Optional[str] = None
-    note: Optional[str] = None
-    headers: Optional[List[VariableItem]] = None
+    required_headers: List[CatalogHeaderFieldItem] = Field(default_factory=list)
+
+
+class ListCatalogResponse(BaseModel):
+    connectors: List[CatalogConnectorItem]
 
 
 class ConnectorEnabledRequest(BaseModel):

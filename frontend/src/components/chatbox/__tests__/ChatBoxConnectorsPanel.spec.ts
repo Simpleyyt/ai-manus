@@ -7,7 +7,9 @@ import {
   resetConnectorsStoreForTests,
   setConnectorsStoreForTests,
 } from '../../../composables/connectorsStore'
-import { CONNECTOR_IDS } from '@/data/connectorCatalog'
+import type { ConnectorCatalogItem } from '@/data/connectorCatalog'
+import { resetCatalogStoreForTests } from '@/composables/catalogStore'
+import * as api from '@/api/connectors'
 import type { Connector } from '@/types/connector'
 
 vi.mock('@/api/connectors', () => ({
@@ -18,6 +20,7 @@ vi.mock('@/api/connectors', () => ({
   importMcpJson: vi.fn(),
   createMcpFromUrl: vi.fn(),
   createFromCatalog: vi.fn(),
+  fetchConnectorCatalog: vi.fn(),
   setConnectorEnabled: vi.fn(),
 }))
 
@@ -40,11 +43,49 @@ const sample: Connector[] = [
   },
 ]
 
+const previewCatalog: ConnectorCatalogItem[] = [
+  {
+    uid: 'crypto',
+    name: 'Crypto.com',
+    brief: '',
+    iconUrl: 'https://cdn.example/crypto.png',
+    iconUrlDark: 'https://cdn.example/crypto.png',
+    order: 23,
+    serverUrl: 'https://mcp.crypto.com/market-data/mcp',
+    transport: 'streamable-http',
+    requiredHeaders: [],
+  },
+  {
+    uid: 'gecko',
+    name: 'CoinGecko',
+    brief: '',
+    iconUrl: 'https://cdn.example/gecko.png',
+    iconUrlDark: 'https://cdn.example/gecko.png',
+    order: 27,
+    serverUrl: 'https://mcp.api.coingecko.com/mcp',
+    transport: 'streamable-http',
+    requiredHeaders: [],
+  },
+  {
+    uid: 'pop',
+    name: 'PopHIVE',
+    brief: '',
+    iconUrl: 'https://cdn.example/pop.png',
+    iconUrlDark: 'https://cdn.example/pop.png',
+    order: 50,
+    serverUrl: 'https://mcp.pophive.org/mcp',
+    transport: 'streamable-http',
+    requiredHeaders: [],
+  },
+]
+
 describe('ChatBoxConnectorsPanel', () => {
   beforeEach(() => {
     resetConnectorsStoreForTests()
+    resetCatalogStoreForTests()
     setConnectorsStoreForTests(sample)
     vi.clearAllMocks()
+    vi.mocked(api.fetchConnectorCatalog).mockResolvedValue(previewCatalog)
   })
 
   it('renders official row tokens, Add connectors, and Manage connectors', async () => {
@@ -85,13 +126,12 @@ describe('ChatBoxConnectorsPanel', () => {
     await flushPromises()
     await nextTick()
 
-    expect(wrapper.find(`[data-testid="chatbox-connector-${CONNECTOR_IDS.github}"]`).exists()).toBe(false)
     expect(wrapper.text()).not.toContain('GitHub')
     expect(wrapper.text()).not.toContain('Gmail')
 
     const preview = wrapper.find('[data-testid="connector-preview"]')
     expect(preview.exists()).toBe(true)
-    expect(preview.text()).toContain('+65')
+    expect(preview.text()).toContain('+1')
     expect(preview.classes().join(' ')).toContain('-space-x-1')
   })
 

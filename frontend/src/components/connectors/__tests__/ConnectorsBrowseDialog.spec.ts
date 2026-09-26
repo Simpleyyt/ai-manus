@@ -6,7 +6,8 @@ import {
   resetConnectorsStoreForTests,
   setConnectorsStoreForTests,
 } from '../../../composables/connectorsStore'
-import { CONNECTOR_IDS } from '@/data/connectorCatalog'
+import type { ConnectorCatalogItem } from '@/data/connectorCatalog'
+import { resetCatalogStoreForTests } from '@/composables/catalogStore'
 import * as api from '@/api/connectors'
 import { showInfoToast } from '@/utils/toast'
 import type { Connector } from '@/types/connector'
@@ -19,6 +20,7 @@ vi.mock('@/api/connectors', () => ({
   importMcpJson: vi.fn(),
   createMcpFromUrl: vi.fn(),
   createFromCatalog: vi.fn(),
+  fetchConnectorCatalog: vi.fn(),
   setConnectorEnabled: vi.fn(),
 }))
 
@@ -28,11 +30,52 @@ vi.mock('@/utils/toast', () => ({
   showInfoToast: vi.fn(),
 }))
 
+const LEARN_UID = 'f4c2516f-40c3-4be2-b1c6-fb18da6a04bf'
+const TOMTOM_UID = '15027330-caa8-49d2-8c90-75397e2c6410'
+
+function catalogEntry(
+  partial: Partial<ConnectorCatalogItem> & Pick<ConnectorCatalogItem, 'uid' | 'name'>,
+): ConnectorCatalogItem {
+  return {
+    brief: partial.name,
+    iconUrl: 'https://cdn.example/icon.png',
+    iconUrlDark: 'https://cdn.example/icon.png',
+    order: 1,
+    serverUrl: 'https://example.com/mcp',
+    transport: 'streamable-http',
+    requiredHeaders: [],
+    ...partial,
+  }
+}
+
+const browseCatalog: ConnectorCatalogItem[] = [
+  catalogEntry({ uid: 'crypto', name: 'Crypto.com', order: 23 }),
+  catalogEntry({ uid: 'gecko', name: 'CoinGecko', order: 27 }),
+  ...Array.from({ length: 10 }, (_, index) => catalogEntry({
+    uid: `extra-${index}`,
+    name: `Extra ${index}`,
+    order: 30 + index,
+  })),
+  catalogEntry({
+    uid: LEARN_UID,
+    name: 'Microsoft Learn',
+    order: 0,
+    serverUrl: 'https://learn.microsoft.com/api/mcp',
+  }),
+  catalogEntry({
+    uid: TOMTOM_UID,
+    name: 'TomTom Maps',
+    order: 80,
+    serverUrl: 'https://mcp.tomtom.com/maps',
+    requiredHeaders: [{ key: 'tomtom-api-key', label: 'API Key', placeholder: 'YOUR_TOMTOM_API_KEY' }],
+  }),
+]
+
 const learnConnector: Connector = {
   id: 'learn-1',
   name: 'Microsoft Learn',
   server_key: 'microsoft_learn',
-  catalog_uid: CONNECTOR_IDS.microsoftLearn,
+  catalog_uid: LEARN_UID,
   transport: 'streamable-http',
   enabled: true,
   source: 'catalog',
@@ -57,8 +100,10 @@ function catalogCard(name: string): HTMLElement {
 describe('ConnectorsBrowseDialog', () => {
   beforeEach(() => {
     resetConnectorsStoreForTests()
+    resetCatalogStoreForTests()
     setConnectorsStoreForTests([])
     vi.clearAllMocks()
+    vi.mocked(api.fetchConnectorCatalog).mockResolvedValue(browseCatalog)
   })
 
   it('defaults to Apps tab with only installable MCP cards', async () => {
@@ -139,11 +184,10 @@ describe('ConnectorsBrowseDialog', () => {
     const plus = catalogCard('Microsoft Learn').querySelector('[data-testid="connector-catalog-connect"]') as HTMLElement
     plus.click()
     await flushPromises()
-    expect(api.createFromCatalog).toHaveBeenCalledWith(expect.objectContaining({
-      catalog_uid: CONNECTOR_IDS.microsoftLearn,
-      url: 'https://learn.microsoft.com/api/mcp',
-      transport: 'streamable-http',
-    }))
+    expect(api.createFromCatalog).toHaveBeenCalledWith({
+      catalog_uid: LEARN_UID,
+      headers: null,
+    })
     expect(catalogCard('Microsoft Learn').querySelector('svg.lucide-check')).toBeTruthy()
     expect(catalogCard('Microsoft Learn').querySelector('svg.lucide-plus')).toBeFalsy()
     wrapper.unmount()

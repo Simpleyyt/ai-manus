@@ -25,7 +25,7 @@
 import { computed, ref, watch } from 'vue'
 import { Cable } from 'lucide-vue-next'
 import { connectors } from '@/composables/connectorsStore'
-import { getCatalogItem } from '@/data/connectorCatalog'
+import { getCatalogItem } from '@/composables/catalogStore'
 import { useDocumentDark } from '@/composables/useDocumentDark'
 import ConnectorInitialsIcon from './ConnectorInitialsIcon.vue'
 

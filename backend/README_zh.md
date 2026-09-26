@@ -91,6 +91,7 @@ JWT_SECRET_KEY=your-secret-key-here      # JWT 签名密钥（生产环境必须
 
 # MCP configuration
 MCP_CONFIG_PATH=/etc/mcp.json            # 外部 MCP 服务配置文件路径
+CONNECTOR_CATALOG_PATH=/etc/connectors.json  # Apps 目录；默认是仓库根目录 connectors.json
 
 # Task backend configuration
 TASK_BACKEND=local                       # local（进程内 asyncio）或 celery（分布式 worker）

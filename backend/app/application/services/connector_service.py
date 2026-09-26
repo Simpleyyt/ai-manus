@@ -11,9 +11,19 @@ from app.domain.mcp_json import (
     parse_mcp_url,
 )
 from app.domain.models.connector import Connector, ConnectorSource
+from app.domain.models.connector_catalog import CatalogConnector
 from app.domain.models.mcp_config import MCPConfig, MCPServerConfig, MCPTransport
+from app.domain.repositories.connector_catalog_repository import ConnectorCatalogRepository
 from app.domain.repositories.connector_repository import ConnectorRepository
 from app.domain.repositories.mcp_repository import MCPRepository
+
+
+class _EmptyConnectorCatalog:
+    def list_entries(self) -> List[CatalogConnector]:
+        return []
+
+    def get(self, uid: str) -> Optional[CatalogConnector]:
+        return None
 
 
 class ConnectorService:
@@ -21,9 +31,11 @@ class ConnectorService:
         self,
         connector_repository: ConnectorRepository,
         file_mcp_repository: MCPRepository,
+        catalog: Optional[ConnectorCatalogRepository] = None,
     ):
         self._connectors = connector_repository
         self._file_mcp = file_mcp_repository
+        self._catalog = catalog or _EmptyConnectorCatalog()
 
     async def list_connectors(self, user_id: str) -> List[Connector]:
         user_connectors = await self._connectors.find_by_user_id(user_id)
@@ -159,36 +171,44 @@ class ConnectorService:
             url=server_url,
         )
 
+    def list_catalog(self) -> List[CatalogConnector]:
+        return self._catalog.list_entries()
+
     async def create_from_catalog(
         self,
         user_id: str,
         *,
         catalog_uid: str,
-        name: str,
-        url: str,
-        transport: MCPTransport,
-        icon_url: Optional[str] = None,
-        note: Optional[str] = None,
         headers: Optional[Dict[str, str]] = None,
     ) -> Connector:
         uid = _optional_text(catalog_uid)
         if not uid:
             raise BadRequestError("Catalog connector id is required")
-        if transport not in {MCPTransport.STREAMABLE_HTTP, MCPTransport.SSE}:
-            raise BadRequestError("Catalog installs only support HTTP or SSE MCP")
         existing = await self._connectors.find_by_user_id_and_catalog_uid(user_id, uid)
         if existing:
             return existing
-        display_name = await self._unique_display_name(user_id, _require_name(name))
+        entry = self._catalog.get(uid)
+        if entry is None:
+            raise BadRequestError("Catalog connector not found")
+        transport = MCPTransport(entry.transport)
+        cleaned = _clean_dict(headers) or {}
+        missing = [
+            field.label or field.key
+            for field in entry.headers
+            if not str(cleaned.get(field.key) or "").strip()
+        ]
+        if missing:
+            raise BadRequestError("Missing required header: " + ", ".join(missing))
+        display_name = await self._unique_display_name(user_id, entry.name)
         return await self.create_connector(
             user_id,
             name=display_name,
             transport=transport,
             source=ConnectorSource.CATALOG,
-            note=note,
-            icon_url=icon_url,
-            url=url,
-            headers=headers,
+            note=entry.description or None,
+            icon_url=entry.icon,
+            url=entry.url,
+            headers=cleaned or None,
             catalog_uid=uid,
         )
 

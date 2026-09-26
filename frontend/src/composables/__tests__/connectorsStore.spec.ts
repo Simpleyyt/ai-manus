@@ -18,6 +18,7 @@ vi.mock('@/api/connectors', () => ({
   importMcpJson: vi.fn(),
   createMcpFromUrl: vi.fn(),
   createFromCatalog: vi.fn(),
+  fetchConnectorCatalog: vi.fn(),
   setConnectorEnabled: vi.fn(),
 }))
 
@@ -90,9 +91,6 @@ describe('connectorsStore', () => {
 
     const result = await createFromCatalog({
       catalog_uid: created.catalog_uid!,
-      name: created.name,
-      url: created.url!,
-      transport: 'streamable-http',
     })
 
     expect(result.id).toBe('learn-1')

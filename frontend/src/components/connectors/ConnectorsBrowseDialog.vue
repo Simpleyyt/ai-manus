@@ -148,9 +148,8 @@ import { showErrorToast, showSuccessToast } from '@/utils/toast'
 import type { Connector } from '@/types/connector'
 import {
   filterCatalogByQuery,
-  installableCatalogByTab,
-  type ConnectorCatalogTab,
 } from '@/data/connectorCatalog'
+import { catalogItems as catalogSource, reloadCatalog } from '@/composables/catalogStore'
 import McpCard from './McpCard.vue'
 import ConnectorCatalogCard from './ConnectorCatalogCard.vue'
 import ConnectorsCreateMenu from './ConnectorsCreateMenu.vue'
@@ -188,22 +187,19 @@ const customConnectors = computed(() =>
 
 const filtered = computed(() => filterByQuery(query.value, customConnectors.value))
 const showEmpty = computed(() => activeTab.value === 'custom-mcp' && customConnectors.value.length === 0)
-const catalogTab = computed((): ConnectorCatalogTab | null => (
-  activeTab.value === 'apps' ? 'apps' : null
-))
-const showCatalog = computed(() => catalogTab.value !== null)
+const showCatalog = computed(() => activeTab.value === 'apps')
 const catalogItems = computed(() => {
-  const tab = catalogTab.value
-  if (!tab) return []
-  return filterCatalogByQuery(query.value, installableCatalogByTab(tab))
+  if (!showCatalog.value) return []
+  return filterCatalogByQuery(query.value, catalogSource.value)
 })
 
 watch(open, (isOpen) => {
   if (isOpen) {
     query.value = ''
     activeTab.value = 'apps'
+    void reloadCatalog()
   }
-})
+}, { immediate: true })
 
 const openEdit = (connector: Connector) => {
   editing.value = connector

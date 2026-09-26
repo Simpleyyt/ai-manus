@@ -5,13 +5,18 @@ from app.domain.models.connector import Connector, ConnectorSource
 from app.domain.models.user import User
 from app.interfaces.dependencies import get_connector_service, get_current_user
 from app.interfaces.schemas.base import APIResponse
+from app.domain.models.connector_catalog import CatalogConnector
+from app.domain.models.mcp_config import MCPTransport
 from app.interfaces.schemas.connector import (
+    CatalogConnectorItem,
+    CatalogHeaderFieldItem,
     ConnectorEnabledRequest,
     ConnectorItem,
     ConnectorWriteRequest,
     CreateMcpFromUrlRequest,
     CreateFromCatalogRequest,
     ImportMcpJsonRequest,
+    ListCatalogResponse,
     ListConnectorsResponse,
     dict_to_pairs,
     pairs_to_dict,
@@ -95,6 +100,39 @@ async def create_mcp_from_url(
     return APIResponse.success(_to_item(connector))
 
 
+def _to_catalog_item(entry: CatalogConnector) -> CatalogConnectorItem:
+    return CatalogConnectorItem(
+        uid=entry.uid,
+        name=entry.name,
+        brief=entry.description,
+        icon_url=entry.icon,
+        icon_url_dark=entry.icon_dark or entry.icon,
+        order=entry.order,
+        url=entry.url,
+        transport=MCPTransport(entry.transport),
+        required_headers=[
+            CatalogHeaderFieldItem(
+                key=field.key,
+                label=field.label or field.key,
+                placeholder=field.placeholder,
+            )
+            for field in entry.headers
+        ],
+    )
+
+
+@router.get("/catalog", response_model=APIResponse[ListCatalogResponse])
+async def list_catalog(
+    current_user: User = Depends(get_current_user),
+    connector_service: ConnectorService = Depends(get_connector_service),
+) -> APIResponse[ListCatalogResponse]:
+    return APIResponse.success(
+        ListCatalogResponse(
+            connectors=[_to_catalog_item(item) for item in connector_service.list_catalog()]
+        )
+    )
+
+
 @router.post("/from-catalog", response_model=APIResponse[ConnectorItem])
 async def create_mcp_from_catalog(
     request: CreateFromCatalogRequest,
@@ -104,11 +142,6 @@ async def create_mcp_from_catalog(
     connector = await connector_service.create_from_catalog(
         current_user.id,
         catalog_uid=request.catalog_uid,
-        name=request.name,
-        url=request.url,
-        transport=request.transport,
-        icon_url=request.icon_url,
-        note=request.note,
         headers=pairs_to_dict(request.headers),
     )
     return APIResponse.success(_to_item(connector))

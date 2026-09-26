@@ -28,9 +28,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { previewCatalogItems } from '@/data/connectorCatalog'
+import { computed, onMounted } from 'vue'
+import { catalogItems, reloadCatalog } from '@/composables/catalogStore'
 import ConnectorIcon from './ConnectorIcon.vue'
 
-const items = computed(() => previewCatalogItems())
+onMounted(() => {
+  void reloadCatalog()
+})
+
+const items = computed(() => catalogItems.value)
 </script>

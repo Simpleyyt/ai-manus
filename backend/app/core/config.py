@@ -136,6 +136,8 @@ class Settings(BaseSettings):
 
     # MCP configuration
     mcp_config_path: str = "/etc/mcp.json"
+    # Apps catalog. Empty uses /etc/connectors.json when mounted, else repo-root connectors.json.
+    connector_catalog_path: str = ""
     
     # Logging configuration
     log_level: str = "INFO"

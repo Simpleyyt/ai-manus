@@ -40,6 +40,7 @@ vi.mock('@/api/connectors', () => ({
   importMcpJson: vi.fn(),
   createMcpFromUrl: vi.fn(),
   createFromCatalog: vi.fn(),
+  fetchConnectorCatalog: vi.fn().mockResolvedValue([]),
   setConnectorEnabled: vi.fn(),
 }))
 

@@ -5,7 +5,24 @@ import {
   resetConnectorsStoreForTests,
   setConnectorsStoreForTests,
 } from '../../../composables/connectorsStore'
+import {
+  resetCatalogStoreForTests,
+  setCatalogStoreForTests,
+} from '@/composables/catalogStore'
+import type { ConnectorCatalogItem } from '@/data/connectorCatalog'
 import type { Connector } from '@/types/connector'
+
+const learnCatalog: ConnectorCatalogItem = {
+  uid: 'f4c2516f-40c3-4be2-b1c6-fb18da6a04bf',
+  name: 'Microsoft Learn',
+  brief: 'docs',
+  iconUrl: 'https://cdn.example/learn.webp',
+  iconUrlDark: 'https://cdn.example/learn-dark.webp',
+  order: 0,
+  serverUrl: 'https://learn.microsoft.com/api/mcp',
+  transport: 'streamable-http',
+  requiredHeaders: [],
+}
 
 const named: Connector = {
   id: 'c1',
@@ -20,6 +37,7 @@ const named: Connector = {
 describe('ConnectorIcon', () => {
   beforeEach(() => {
     resetConnectorsStoreForTests()
+    resetCatalogStoreForTests()
   })
 
   it('renders official initials when the connector has a name but no icon url', () => {
@@ -65,22 +83,24 @@ describe('ConnectorIcon', () => {
       .toBe('https://cdn.example.com/preview.png')
   })
 
-  it('falls back to the official catalog icon by uid', () => {
+  it('falls back to the catalog icon by uid', () => {
+    setCatalogStoreForTests([learnCatalog])
     const wrapper = mount(ConnectorIcon, {
-      props: { uid: 'bbb0df76-66bd-4a24-ae4f-2aac4750d90b', size: 16 },
+      props: { uid: learnCatalog.uid, size: 16 },
     })
     const img = wrapper.find('[data-testid="connector-icon-img"]')
     expect(img.exists()).toBe(true)
-    expect(img.attributes('src') || '').toContain('cloudfront.net')
-    expect(img.attributes('alt')).toBe('GitHub')
+    expect(img.attributes('src')).toBe(learnCatalog.iconUrl)
+    expect(img.attributes('alt')).toBe('Microsoft Learn')
   })
 
   it('resolves catalog logos from a stored catalog_uid', () => {
+    setCatalogStoreForTests([learnCatalog])
     setConnectorsStoreForTests([{
       id: 'learn-1',
       name: 'Microsoft Learn',
       server_key: 'microsoft_learn',
-      catalog_uid: 'f4c2516f-40c3-4be2-b1c6-fb18da6a04bf',
+      catalog_uid: learnCatalog.uid,
       transport: 'streamable-http',
       enabled: true,
       source: 'catalog',
@@ -89,7 +109,7 @@ describe('ConnectorIcon', () => {
     const wrapper = mount(ConnectorIcon, { props: { uid: 'learn-1', size: 16 } })
     const img = wrapper.find('[data-testid="connector-icon-img"]')
     expect(img.exists()).toBe(true)
-    expect(img.attributes('src') || '').toContain('cloudfront.net')
+    expect(img.attributes('src')).toBe(learnCatalog.iconUrl)
     expect(img.attributes('alt')).toBe('Microsoft Learn')
   })
 })

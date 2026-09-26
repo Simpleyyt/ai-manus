@@ -1,6 +1,7 @@
 from app.application.errors.exceptions import BadRequestError, NotFoundError
 from app.application.services.connector_service import ConnectorService
 from app.domain.models.connector import ConnectorSource
+from app.domain.models.connector_catalog import CatalogConnector, CatalogHeaderField
 from app.domain.models.mcp_config import MCPConfig, MCPServerConfig, MCPTransport
 from app.infrastructure.repositories.composite_mcp_repository import CompositeMCPRepository
 
@@ -53,8 +54,47 @@ class _FakeFileMcpRepository:
         return self._config
 
 
-def _service(file_servers=None) -> ConnectorService:
-    return ConnectorService(_FakeConnectorRepository(), _FakeFileMcpRepository(file_servers))
+class _FakeCatalog:
+    def __init__(self, entries=None):
+        self.entries = list(entries or [])
+
+    def list_entries(self):
+        return list(self.entries)
+
+    def get(self, uid):
+        for entry in self.entries:
+            if entry.uid == uid:
+                return entry
+        return None
+
+
+def _learn_entry() -> CatalogConnector:
+    return CatalogConnector(
+        uid="f4c2516f-40c3-4be2-b1c6-fb18da6a04bf",
+        name="Microsoft Learn",
+        description="Search Microsoft docs",
+        icon="https://cdn.example.com/learn.webp",
+        url="https://learn.microsoft.com/api/mcp",
+        transport="streamable-http",
+    )
+
+
+def _tomtom_entry() -> CatalogConnector:
+    return CatalogConnector(
+        uid="15027330-caa8-49d2-8c90-75397e2c6410",
+        name="TomTom Maps",
+        url="https://mcp.tomtom.com/maps",
+        transport="streamable-http",
+        headers=[CatalogHeaderField(key="tomtom-api-key", label="API Key")],
+    )
+
+
+def _service(file_servers=None, catalog=None) -> ConnectorService:
+    return ConnectorService(
+        _FakeConnectorRepository(),
+        _FakeFileMcpRepository(file_servers),
+        catalog=catalog if catalog is not None else _FakeCatalog(),
+    )
 
 
 async def test_create_http_connector_and_merge_into_mcp_config():
@@ -242,33 +282,24 @@ async def test_missing_connector_raises_not_found():
 
 
 async def test_create_from_catalog_is_idempotent_and_feeds_mcp_config():
-    service = _service()
-    created = await service.create_from_catalog(
-        "user-1",
-        catalog_uid="f4c2516f-40c3-4be2-b1c6-fb18da6a04bf",
-        name="Microsoft Learn",
-        url="https://learn.microsoft.com/api/mcp",
-        transport=MCPTransport.STREAMABLE_HTTP,
-        icon_url="https://cdn.example.com/learn.webp",
-        note="Search Microsoft docs",
-    )
+    entry = _learn_entry()
+    service = _service(catalog=_FakeCatalog([entry]))
+    created = await service.create_from_catalog("user-1", catalog_uid=entry.uid)
     assert created.source == ConnectorSource.CATALOG
-    assert created.catalog_uid == "f4c2516f-40c3-4be2-b1c6-fb18da6a04bf"
+    assert created.catalog_uid == entry.uid
+    assert created.name == "Microsoft Learn"
+    assert created.url == entry.url
+    assert created.icon_url == entry.icon
     assert created.server_key == "microsoft_learn"
-    again = await service.create_from_catalog(
-        "user-1",
-        catalog_uid="f4c2516f-40c3-4be2-b1c6-fb18da6a04bf",
-        name="Microsoft Learn",
-        url="https://learn.microsoft.com/api/mcp",
-        transport=MCPTransport.STREAMABLE_HTTP,
-    )
+    again = await service.create_from_catalog("user-1", catalog_uid=entry.uid)
     assert again.id == created.id
     config = await service.mcp_config_for_user("user-1")
-    assert config.mcpServers["microsoft_learn"].url == "https://learn.microsoft.com/api/mcp"
+    assert config.mcpServers["microsoft_learn"].url == entry.url
 
 
 async def test_create_from_catalog_renames_on_name_clash_and_keeps_headers():
-    service = _service()
+    entry = _tomtom_entry()
+    service = _service(catalog=_FakeCatalog([entry]))
     await service.create_connector(
         "user-1",
         name="TomTom Maps",
@@ -277,42 +308,35 @@ async def test_create_from_catalog_renames_on_name_clash_and_keeps_headers():
     )
     created = await service.create_from_catalog(
         "user-1",
-        catalog_uid="15027330-caa8-49d2-8c90-75397e2c6410",
-        name="TomTom Maps",
-        url="https://mcp.tomtom.com/maps",
-        transport=MCPTransport.STREAMABLE_HTTP,
+        catalog_uid=entry.uid,
         headers={"tomtom-api-key": "secret"},
     )
     assert created.name == "TomTom Maps (2)"
+    assert created.url == entry.url
     assert created.headers["tomtom-api-key"] == "secret"
     config = await service.mcp_config_for_user("user-1")
     assert config.mcpServers[created.server_key].headers["tomtom-api-key"] == "secret"
 
 
-async def test_create_from_catalog_rejects_stdio_and_blank_uid():
-    service = _service()
+async def test_create_from_catalog_requires_known_uid_and_headers():
+    entry = _tomtom_entry()
+    service = _service(catalog=_FakeCatalog([entry]))
     try:
-        await service.create_from_catalog(
-            "user-1",
-            catalog_uid="abc",
-            name="Local",
-            url="https://mcp.example.com/mcp",
-            transport=MCPTransport.STDIO,
-        )
+        await service.create_from_catalog("user-1", catalog_uid="  ")
     except BadRequestError as exc:
-        assert "HTTP or SSE" in exc.msg
+        assert "Catalog connector id" in exc.msg
     else:
         raise AssertionError("expected BadRequestError")
     try:
-        await service.create_from_catalog(
-            "user-1",
-            catalog_uid="  ",
-            name="Docs",
-            url="https://mcp.example.com/mcp",
-            transport=MCPTransport.STREAMABLE_HTTP,
-        )
+        await service.create_from_catalog("user-1", catalog_uid="missing")
     except BadRequestError as exc:
-        assert "Catalog connector id" in exc.msg
+        assert "not found" in exc.msg
+    else:
+        raise AssertionError("expected BadRequestError")
+    try:
+        await service.create_from_catalog("user-1", catalog_uid=entry.uid)
+    except BadRequestError as exc:
+        assert "tomtom-api-key" in exc.msg or "API Key" in exc.msg
     else:
         raise AssertionError("expected BadRequestError")
 

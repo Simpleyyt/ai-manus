@@ -28,6 +28,7 @@ from app.infrastructure.external.sandbox.docker_sandbox import DockerSandbox
 from app.infrastructure.external.task.redis_task import RedisStreamTask
 from app.infrastructure.repositories.mongo_agent_repository import MongoAgentRepository
 from app.infrastructure.repositories.mongo_session_repository import MongoSessionRepository
+from app.infrastructure.repositories.file_connector_catalog import FileConnectorCatalog
 from app.infrastructure.repositories.file_mcp_repository import FileMCPRepository
 from app.infrastructure.repositories.composite_mcp_repository import CompositeMCPRepository
 from app.infrastructure.repositories.mongo_connector_repository import MongoConnectorRepository
@@ -137,6 +138,7 @@ def get_connector_service() -> ConnectorService:
     return ConnectorService(
         connector_repository=MongoConnectorRepository(),
         file_mcp_repository=FileMCPRepository(),
+        catalog=FileConnectorCatalog(),
     )
 
 

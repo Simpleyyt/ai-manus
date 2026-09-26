@@ -49,8 +49,8 @@ def _build_runner_factory():
     from app.infrastructure.repositories.mongo_agent_repository import MongoAgentRepository
     from app.infrastructure.repositories.mongo_session_repository import MongoSessionRepository
     from app.infrastructure.repositories.mongo_project_repository import MongoProjectRepository
-    from app.infrastructure.repositories.file_mcp_repository import FileMCPRepository
-    from app.infrastructure.repositories.composite_mcp_repository import CompositeMCPRepository
+    from app.infrastructure.repositories.file_connector_catalog import FileConnectorCatalog
+    from app.infrastructure.repositories.composite_mcp_repository import ConnectorMCPRepository
     from app.infrastructure.repositories.mongo_connector_repository import MongoConnectorRepository
     from app.application.services.connector_service import ConnectorService
     from app.application.services.skill_runtime_service import SkillRuntimeService
@@ -68,7 +68,7 @@ def _build_runner_factory():
     )
     connector_service = ConnectorService(
         connector_repository=MongoConnectorRepository(),
-        file_mcp_repository=FileMCPRepository(),
+        catalog=FileConnectorCatalog(),
     )
 
     return AgentTaskRunnerFactory(
@@ -76,7 +76,7 @@ def _build_runner_factory():
         session_repository=MongoSessionRepository(),
         sandbox_cls=DockerSandbox,
         file_storage=file_storage,
-        mcp_repository=CompositeMCPRepository(FileMCPRepository(), connector_service),
+        mcp_repository=ConnectorMCPRepository(connector_service),
         llm=get_llm(),
         search_engine=get_search_engine(),
         project_repository=MongoProjectRepository(),

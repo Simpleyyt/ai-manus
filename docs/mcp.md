@@ -49,68 +49,7 @@ MCP（Model Context Protocol）是一个开放的标准协议，用于在语言�
 
 `transport` 只接受 `streamable-http` 或 `sse`。`order` 为 `0` 或省略时排在最后。缺 URL、传输方式不对的条目会被跳过。安装时 backend 只认 `uid`，名称和地址以文件为准。
 
-### MCP 配置文件
-
-MCP 服务器的配置通过 `mcp.json` 文件进行管理，该文件包含了所有 MCP 服务器的配置信息。
-
-#### 配置文件结构
-
-```json
-{
-  "mcpServers": {
-    "服务器名称": {
-      "command": "命令",
-      "args": ["参数列表"],
-      "transport": "传输方式",
-      "enabled": true/false,
-      "description": "服务器描述",
-      "env": {
-        "环境变量名": "环境变量值"
-      }
-    }
-  }
-}
-```
-
-#### 当前配置示例
-
-```json
-{
-  "mcpServers": {
-    "github": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-github"
-      ],
-      "transport": "stdio",
-      "enabled": true,
-      "description": "GitHub API integration",
-      "env": {
-        "GITHUB_TOKEN": "your_github_token_here"
-      }
-    }
-  }
-}
-```
-
-### Docker Compose 配置
-
-在 `docker-compose.yml` 中配置 MCP 服务：
-
-```yaml
-...
-services:
-  backend:
-    image: simpleyyt/manus-backend
-    volumes:
-      - ./mcp.json:/etc/mcp.json  # 挂载 MCP 配置文件
-      - ...
-    environment:
-      # MCP 配置文件路径
-      - MCP_CONFIG_PATH=/etc/mcp.json
-...
-```
+单个 Custom MCP 在设置或 **Custom MCP** 里添加，写入 Mongo。
 
 ## 更多资源
 

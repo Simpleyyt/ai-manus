@@ -29,8 +29,7 @@ from app.infrastructure.external.task.redis_task import RedisStreamTask
 from app.infrastructure.repositories.mongo_agent_repository import MongoAgentRepository
 from app.infrastructure.repositories.mongo_session_repository import MongoSessionRepository
 from app.infrastructure.repositories.file_connector_catalog import FileConnectorCatalog
-from app.infrastructure.repositories.file_mcp_repository import FileMCPRepository
-from app.infrastructure.repositories.composite_mcp_repository import CompositeMCPRepository
+from app.infrastructure.repositories.composite_mcp_repository import ConnectorMCPRepository
 from app.infrastructure.repositories.mongo_connector_repository import MongoConnectorRepository
 from app.application.services.connector_service import ConnectorService
 from app.infrastructure.repositories.user_repository import MongoUserRepository
@@ -79,7 +78,7 @@ def get_agent_service() -> AgentService:
     task_cls = _get_task_cls()
     file_storage = get_file_storage()
     search_engine = get_search_engine()
-    mcp_repository = CompositeMCPRepository(FileMCPRepository(), get_connector_service())
+    mcp_repository = ConnectorMCPRepository(get_connector_service())
     llm = get_llm()
     
     # Register the factory used to rebuild task runners on the execution side.
@@ -137,7 +136,6 @@ def get_connector_service() -> ConnectorService:
     logger.info("Creating ConnectorService instance")
     return ConnectorService(
         connector_repository=MongoConnectorRepository(),
-        file_mcp_repository=FileMCPRepository(),
         catalog=FileConnectorCatalog(),
     )
 

@@ -181,12 +181,8 @@ const tabs: { id: BrowseTab; labelKey: string }[] = [
   { id: 'custom-mcp', labelKey: 'Custom MCP' },
 ]
 
-const customConnectors = computed(() =>
-  connectors.value.filter((item) => item.source !== 'file'),
-)
-
-const filtered = computed(() => filterByQuery(query.value, customConnectors.value))
-const showEmpty = computed(() => activeTab.value === 'custom-mcp' && customConnectors.value.length === 0)
+const filtered = computed(() => filterByQuery(query.value, connectors.value))
+const showEmpty = computed(() => activeTab.value === 'custom-mcp' && connectors.value.length === 0)
 const showCatalog = computed(() => activeTab.value === 'apps')
 const catalogItems = computed(() => {
   if (!showCatalog.value) return []

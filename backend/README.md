@@ -90,7 +90,6 @@ AUTH_PROVIDER=password                   # password / local / none
 JWT_SECRET_KEY=your-secret-key-here      # JWT signing key (set in production)
 
 # MCP configuration
-MCP_CONFIG_PATH=/etc/mcp.json            # Path to external MCP servers config
 CONNECTOR_CATALOG_PATH=/etc/connectors.json  # Apps catalog; default is repo-root connectors.json
 
 # Task backend configuration

@@ -15,7 +15,6 @@ from app.domain.models.connector_catalog import CatalogConnector
 from app.domain.models.mcp_config import MCPConfig, MCPServerConfig, MCPTransport
 from app.domain.repositories.connector_catalog_repository import ConnectorCatalogRepository
 from app.domain.repositories.connector_repository import ConnectorRepository
-from app.domain.repositories.mcp_repository import MCPRepository
 
 
 class _EmptyConnectorCatalog:
@@ -30,17 +29,13 @@ class ConnectorService:
     def __init__(
         self,
         connector_repository: ConnectorRepository,
-        file_mcp_repository: MCPRepository,
         catalog: Optional[ConnectorCatalogRepository] = None,
     ):
         self._connectors = connector_repository
-        self._file_mcp = file_mcp_repository
         self._catalog = catalog or _EmptyConnectorCatalog()
 
     async def list_connectors(self, user_id: str) -> List[Connector]:
-        user_connectors = await self._connectors.find_by_user_id(user_id)
-        file_connectors = await self._file_connectors()
-        return [*user_connectors, *file_connectors]
+        return await self._connectors.find_by_user_id(user_id)
 
     async def create_connector(
         self,
@@ -221,33 +216,7 @@ class ConnectorService:
             servers[connector.server_key] = _to_server_config(connector)
         return MCPConfig(mcpServers=servers)
 
-    async def _file_connectors(self) -> List[Connector]:
-        config = await self._file_mcp.get_mcp_config()
-        items: List[Connector] = []
-        for name, server in (config.mcpServers or {}).items():
-            items.append(
-                Connector(
-                    id=f"file:{name}",
-                    user_id="",
-                    name=name,
-                    server_key=name,
-                    note=server.description,
-                    transport=server.transport,
-                    enabled=server.enabled,
-                    source=ConnectorSource.FILE,
-                    readonly=True,
-                    command=server.command,
-                    args=server.args,
-                    env=server.env,
-                    url=server.url,
-                    headers=server.headers,
-                )
-            )
-        return items
-
     async def _require_user_connector(self, user_id: str, connector_id: str) -> Connector:
-        if connector_id.startswith("file:"):
-            raise BadRequestError("File-based MCP servers are managed in mcp.json")
         connector = await self._connectors.find_by_id_and_user_id(connector_id, user_id)
         if not connector:
             raise NotFoundError("Connector not found")

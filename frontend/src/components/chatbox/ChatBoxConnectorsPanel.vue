@@ -112,8 +112,7 @@ const installed = computed(() =>
 )
 const hasInstalled = computed(() => installed.value.length > 0)
 
-const canToggle = (connector: Connector) =>
-  !connector.readonly && connector.source !== 'file'
+const canToggle = (connector: Connector) => !connector.readonly
 
 const canConfigure = (connector: Connector) => canToggle(connector)
 

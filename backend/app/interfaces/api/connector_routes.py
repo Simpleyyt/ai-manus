@@ -36,7 +36,7 @@ def _to_item(connector: Connector) -> ConnectorItem:
         transport=connector.transport,
         enabled=connector.enabled,
         source=connector.source.value,
-        readonly=connector.readonly or connector.source == ConnectorSource.FILE,
+        readonly=connector.readonly,
         command=connector.command,
         args=connector.args,
         env=dict_to_pairs(connector.env),

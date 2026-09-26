@@ -86,7 +86,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const menuOpen = ref(false)
 
-const canManage = computed(() => !props.connector.readonly && props.connector.source !== 'file')
+const canManage = computed(() => !props.connector.readonly)
 
 const onCardClick = () => {
   if (canManage.value) {

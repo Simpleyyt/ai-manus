@@ -1,5 +1,5 @@
 export type ConnectorTransport = 'stdio' | 'sse' | 'streamable-http'
-export type ConnectorSource = 'form' | 'json' | 'url' | 'file' | 'catalog'
+export type ConnectorSource = 'form' | 'json' | 'url' | 'catalog'
 
 export type VariableItem = {
   key: string

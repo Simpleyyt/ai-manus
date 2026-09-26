@@ -3,7 +3,7 @@ from app.application.services.connector_service import ConnectorService
 from app.domain.models.connector import ConnectorSource
 from app.domain.models.connector_catalog import CatalogConnector, CatalogHeaderField
 from app.domain.models.mcp_config import MCPConfig, MCPServerConfig, MCPTransport
-from app.infrastructure.repositories.composite_mcp_repository import CompositeMCPRepository
+from app.infrastructure.repositories.composite_mcp_repository import ConnectorMCPRepository
 
 
 class _FakeConnectorRepository:
@@ -46,14 +46,6 @@ class _FakeConnectorRepository:
         return None
 
 
-class _FakeFileMcpRepository:
-    def __init__(self, servers=None):
-        self._config = MCPConfig(mcpServers=servers or {})
-
-    async def get_mcp_config(self, user_id=None):
-        return self._config
-
-
 class _FakeCatalog:
     def __init__(self, entries=None):
         self.entries = list(entries or [])
@@ -89,23 +81,15 @@ def _tomtom_entry() -> CatalogConnector:
     )
 
 
-def _service(file_servers=None, catalog=None) -> ConnectorService:
+def _service(catalog=None) -> ConnectorService:
     return ConnectorService(
         _FakeConnectorRepository(),
-        _FakeFileMcpRepository(file_servers),
         catalog=catalog if catalog is not None else _FakeCatalog(),
     )
 
 
-async def test_create_http_connector_and_merge_into_mcp_config():
-    service = _service({
-        "github": MCPServerConfig(
-            transport=MCPTransport.STDIO,
-            command="npx",
-            args=["-y", "@modelcontextprotocol/server-github"],
-            enabled=True,
-        )
-    })
+async def test_create_http_connector_feeds_mcp_config():
+    service = _service()
 
     created = await service.create_connector(
         "user-1",
@@ -118,8 +102,8 @@ async def test_create_http_connector_and_merge_into_mcp_config():
     assert created.server_key == "docs_mcp"
     assert created.source == ConnectorSource.FORM
     listed = await service.list_connectors("user-1")
-    assert [item.name for item in listed] == ["Docs MCP", "github"]
-    assert listed[1].readonly is True
+    assert [item.name for item in listed] == ["Docs MCP"]
+    assert listed[0].readonly is False
 
     config = await service.mcp_config_for_user("user-1")
     assert "docs_mcp" in config.mcpServers
@@ -202,18 +186,6 @@ async def test_duplicate_name_is_rejected():
         raise AssertionError("expected BadRequestError")
 
 
-async def test_cannot_delete_file_connector():
-    service = _service({
-        "github": MCPServerConfig(transport=MCPTransport.STDIO, command="npx")
-    })
-    try:
-        await service.delete_connector("user-1", "file:github")
-    except BadRequestError:
-        pass
-    else:
-        raise AssertionError("expected BadRequestError")
-
-
 async def test_update_and_delete_user_connector():
     service = _service()
     created = await service.create_connector(
@@ -257,18 +229,6 @@ async def test_set_enabled_excludes_connector_from_mcp_config():
     assert enabled.enabled is True
     config = await service.mcp_config_for_user("user-1")
     assert "docs_mcp" in config.mcpServers
-
-
-async def test_cannot_toggle_file_connector_enabled():
-    service = _service({
-        "github": MCPServerConfig(transport=MCPTransport.STDIO, command="npx")
-    })
-    try:
-        await service.set_enabled("user-1", "file:github", False)
-    except BadRequestError:
-        pass
-    else:
-        raise AssertionError("expected BadRequestError")
 
 
 async def test_missing_connector_raises_not_found():
@@ -341,13 +301,7 @@ async def test_create_from_catalog_requires_known_uid_and_headers():
         raise AssertionError("expected BadRequestError")
 
 
-async def test_composite_mcp_repository_merges_user_over_file():
-    class FileRepo:
-        async def get_mcp_config(self, user_id=None):
-            return MCPConfig(mcpServers={
-                "github": MCPServerConfig(transport=MCPTransport.STDIO, command="npx"),
-            })
-
+async def test_connector_mcp_repository_reads_user_connectors_only():
     class Service:
         async def mcp_config_for_user(self, user_id):
             assert user_id == "user-1"
@@ -358,6 +312,7 @@ async def test_composite_mcp_repository_merges_user_over_file():
                 ),
             })
 
-    repo = CompositeMCPRepository(FileRepo(), Service())
+    repo = ConnectorMCPRepository(Service())
     config = await repo.get_mcp_config("user-1")
-    assert set(config.mcpServers) == {"github", "docs_mcp"}
+    assert set(config.mcpServers) == {"docs_mcp"}
+    assert (await repo.get_mcp_config(None)).mcpServers == {}

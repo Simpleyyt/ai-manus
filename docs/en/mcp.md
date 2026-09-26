@@ -49,68 +49,7 @@ Each entry in `connectors.json` creates a real Custom MCP from the URL in that f
 
 `transport` must be `streamable-http` or `sse`. `order` of `0` or omitted sorts last. Rows without a URL or with another transport are skipped. Install looks up `uid` only; the name and URL come from the file.
 
-### MCP Configuration File
-
-MCP server configuration is managed through the `mcp.json` file, which contains configuration information for all MCP servers.
-
-#### Configuration File Structure
-
-```json
-{
-  "mcpServers": {
-    "server_name": {
-      "command": "command",
-      "args": ["argument_list"],
-      "transport": "transport_method",
-      "enabled": true/false,
-      "description": "server_description",
-      "env": {
-        "environment_variable_name": "environment_variable_value"
-      }
-    }
-  }
-}
-```
-
-#### Current Configuration Example
-
-```json
-{
-  "mcpServers": {
-    "github": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-github"
-      ],
-      "transport": "stdio",
-      "enabled": true,
-      "description": "GitHub API integration",
-      "env": {
-        "GITHUB_TOKEN": "your_github_token_here"
-      }
-    }
-  }
-}
-```
-
-### Docker Compose Configuration
-
-Configure MCP service in `docker-compose.yml`:
-
-```yaml
-...
-services:
-  backend:
-    image: simpleyyt/manus-backend
-    volumes:
-      - ./mcp.json:/etc/mcp.json  # Mount MCP configuration file
-      - ...
-    environment:
-      # MCP configuration file path
-      - MCP_CONFIG_PATH=/etc/mcp.json
-...
-```
+A single Custom MCP is added in Settings or on the **Custom MCP** tab and stored in Mongo.
 
 ## Additional Resources
 

@@ -5,5 +5,5 @@ class MCPRepository(Protocol):
     """Repository interface for MCP aggregate"""
     
     async def get_mcp_config(self, user_id: Optional[str] = None) -> MCPConfig:
-        """Get the MCP config for a user (file + user connectors)."""
+        """Get enabled MCP servers for a user."""
         ...

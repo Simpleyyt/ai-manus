@@ -114,7 +114,7 @@ const onManage = () => {
 }
 
 const onConfigure = (connector: Connector) => {
-  if (connector.readonly || connector.source === 'file') return
+  if (connector.readonly) return
   open.value = false
   editing.value = connector
   formOpen.value = true

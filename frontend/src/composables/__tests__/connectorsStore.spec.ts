@@ -35,13 +35,13 @@ const sample: Connector[] = [
     url: 'https://mcp.example.com/mcp',
   },
   {
-    id: 'file:github',
+    id: 'github-1',
     name: 'github',
     server_key: 'github',
     transport: 'stdio',
     enabled: true,
-    source: 'file',
-    readonly: true,
+    source: 'form',
+    readonly: false,
     command: 'npx',
   },
 ]
@@ -54,7 +54,7 @@ describe('connectorsStore', () => {
 
   it('filters connectors by name and note', () => {
     expect(filterConnectorsByQuery('docs').map((item) => item.id)).toEqual(['c1'])
-    expect(filterConnectorsByQuery('github').map((item) => item.id)).toEqual(['file:github'])
+    expect(filterConnectorsByQuery('github').map((item) => item.id)).toEqual(['github-1'])
   })
 
   it('setConnectorEnabled patches then reloads', async () => {

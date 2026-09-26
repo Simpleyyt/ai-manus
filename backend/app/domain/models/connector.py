@@ -12,7 +12,6 @@ class ConnectorSource(str, Enum):
     FORM = "form"
     JSON = "json"
     URL = "url"
-    FILE = "file"
     CATALOG = "catalog"
 
 

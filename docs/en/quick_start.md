@@ -50,7 +50,7 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      #- ./mcp.json:/etc/mcp.json # Mount MCP servers directory
+      - ./connectors.json:/etc/connectors.json # Apps catalog; edit the repo-root file
     networks:
       - manus-network
     env_file:
@@ -290,8 +290,10 @@ JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
 # Optional custom Celery broker URL (defaults to the Redis settings above)
 #CELERY_BROKER_URL=
 
-# MCP configuration
-#MCP_CONFIG_PATH=/etc/mcp.json
+# Apps marketplace catalog shown in Connectors → Apps.
+# Edit ./connectors.json at the repo root. When unset, the backend reads
+# /etc/connectors.json if that file exists, otherwise ./connectors.json.
+#CONNECTOR_CATALOG_PATH=/etc/connectors.json
 
 # Log configuration
 LOG_LEVEL=INFO

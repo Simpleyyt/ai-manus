@@ -18,7 +18,7 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      #- ./mcp.json:/etc/mcp.json # Mount MCP servers directory
+      - ./connectors.json:/etc/connectors.json # Apps catalog; edit the repo-root file
     networks:
       - manus-network
     env_file:

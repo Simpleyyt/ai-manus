@@ -355,7 +355,7 @@ worker 容器复用 backend 镜像，通过 `start_worker.sh` 脚本启动，在
 
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
-| `MCP_CONFIG_PATH` | `/etc/mcp.json` | 否 | MCP 配置文件路径 |
+| `CONNECTOR_CATALOG_PATH` | 见说明 | 否 | Apps 目录文件。未设置时，若存在 `/etc/connectors.json` 则用它，否则用仓库根目录 `connectors.json` |
 
 ### 日志配置
 | 配置项 | 默认值 | 是否必需 | 说明 |

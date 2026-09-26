@@ -356,7 +356,7 @@ Notes:
 
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
-| `MCP_CONFIG_PATH` | `/etc/mcp.json` | No | MCP configuration file path |
+| `CONNECTOR_CATALOG_PATH` | see note | No | Apps catalog file. When unset, uses `/etc/connectors.json` if that file exists, otherwise repo-root `connectors.json` |
 
 ### Log Configuration
 | Configuration | Default Value | Required | Description |

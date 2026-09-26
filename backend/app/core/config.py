@@ -134,8 +134,8 @@ class Settings(BaseSettings):
     # e.g. "redis://:password@redis:6379/0" or "amqp://user:pass@rabbitmq:5672//"
     celery_broker_url: str | None = None
 
-    # MCP configuration
-    mcp_config_path: str = "/etc/mcp.json"
+    # Apps catalog. Empty uses /etc/connectors.json when mounted, else repo-root connectors.json.
+    connector_catalog_path: str = ""
     
     # Logging configuration
     log_level: str = "INFO"

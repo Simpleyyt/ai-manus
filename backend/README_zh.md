@@ -90,10 +90,7 @@ AUTH_PROVIDER=password                   # password / local / none
 JWT_SECRET_KEY=your-secret-key-here      # JWT 签名密钥（生产环境必须设置）
 
 # MCP configuration
-CONNECTOR_CATALOG_PATH=/etc/connectors.json  # Apps 目录；默认是仓库根目录 connectors.json
-
-# 官方技能目录；默认是仓库根目录 skills/
-SKILLS_PATH=/etc/skills
+CONFIG_DIR=/etc/ai-manus                 # 运营配置目录；默认是仓库根目录 config/（connectors.json 与 skills/）
 
 # Task backend configuration
 TASK_BACKEND=local                       # local（进程内 asyncio）或 celery（分布式 worker）

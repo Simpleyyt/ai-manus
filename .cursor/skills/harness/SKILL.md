@@ -61,9 +61,9 @@ Tool loop (`BaseAgent`):
 
 **Change external capabilities**: define the Protocol in `domain/external/` first, implement in `infrastructure/external/`, wire in `interfaces/dependencies.py`. The harness must keep depending on the Protocol only.
 
-**MCP config**: `MCPRepository.get_mcp_config(user_id)` returns that user's enabled Mongo connectors (`ConnectorMCPRepository`). `AgentTaskRunner` passes `self._user_id`. Custom MCP CRUD lives in Settings → Connectors. The ChatBox **Connect apps** popover lists user Custom MCP switches (`connector.enabled`, same Mongo flag the toolkit already respects). Browse **Apps** is the operator-edited repo-root `connectors.json` (`CONNECTOR_CATALOG_PATH`, else `/etc/connectors.json`, else that file). Install sends only `catalog_uid` plus headers via `POST /connectors/from-catalog` (idempotent). Not part of the Plan-Act loop.
+**MCP config**: `MCPRepository.get_mcp_config(user_id)` returns that user's enabled Mongo connectors (`ConnectorMCPRepository`). `AgentTaskRunner` passes `self._user_id`. Custom MCP CRUD lives in Settings → Connectors. The ChatBox **Connect apps** popover lists user Custom MCP switches (`connector.enabled`, same Mongo flag the toolkit already respects). Browse **Apps** is `connectors.json` inside the operator config directory (`CONFIG_DIR`, else `/etc/ai-manus`, else repo-root `config/`; `CONNECTOR_CATALOG_PATH` overrides the file). Install sends only `catalog_uid` plus headers via `POST /connectors/from-catalog` (idempotent). Not part of the Plan-Act loop.
 
-**Official skills**: catalog is the repo-root `skills/{name}/SKILL.md` tree (`SKILLS_PATH`, else `/etc/skills`, else that directory), reloaded on each request. Subscription id is `skill_` plus the directory name with hyphens turned into underscores. Sandbox sync still writes `/home/ubuntu/skills/{name}/`.
+**Official skills**: catalog is `skills/{name}/SKILL.md` in that same directory (`SKILLS_PATH` overrides the skills folder), reloaded on each request. Subscription id is `skill_` plus the directory name with hyphens turned into underscores. Sandbox sync still writes `/home/ubuntu/skills/{name}/`.
 
 ## Testing pyramid
 

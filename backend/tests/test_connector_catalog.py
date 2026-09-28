@@ -1,11 +1,15 @@
 import json
 from pathlib import Path
 
-from app.infrastructure.repositories.file_connector_catalog import FileConnectorCatalog
+from app.application.data.official_skill_packages import official_skills_data_root
+from app.infrastructure.repositories.file_connector_catalog import (
+    FileConnectorCatalog,
+    default_connector_catalog_path,
+)
 
 
-def test_shipped_catalog_is_the_repo_root_file():
-    path = Path(__file__).resolve().parents[2] / "connectors.json"
+def test_shipped_catalog_is_the_config_directory_file():
+    path = Path(__file__).resolve().parents[2] / "config" / "connectors.json"
     catalog = FileConnectorCatalog(str(path))
     entries = catalog.list_entries()
     assert [item.name for item in entries[:6]] == [
@@ -73,6 +77,26 @@ def test_catalog_file_skips_invalid_rows_and_sorts_order_zero_last(tmp_path):
     assert [item.name for item in entries] == ["First", "Second", "Last"]
     assert entries[1].icon_dark == "https://cdn.example.com/dark.png"
     assert catalog.get("local") is None
+
+
+def test_apps_and_skills_share_the_config_directory(monkeypatch):
+    monkeypatch.delenv("CONFIG_DIR", raising=False)
+    monkeypatch.delenv("CONNECTOR_CATALOG_PATH", raising=False)
+    monkeypatch.delenv("SKILLS_PATH", raising=False)
+    catalog = Path(default_connector_catalog_path())
+    skills = official_skills_data_root()
+    assert catalog.parent == skills.parent
+    assert catalog.name == "connectors.json"
+    assert skills.name == "skills"
+    assert (skills / "slides" / "SKILL.md").is_file()
+
+
+def test_config_dir_moves_apps_and_skills_together(tmp_path, monkeypatch):
+    monkeypatch.setenv("CONFIG_DIR", str(tmp_path))
+    monkeypatch.delenv("CONNECTOR_CATALOG_PATH", raising=False)
+    monkeypatch.delenv("SKILLS_PATH", raising=False)
+    assert Path(default_connector_catalog_path()) == tmp_path / "connectors.json"
+    assert official_skills_data_root() == tmp_path / "skills"
 
 
 def test_missing_catalog_file_is_empty(tmp_path):

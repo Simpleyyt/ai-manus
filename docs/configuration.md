@@ -351,17 +351,13 @@ worker 容器复用 backend 镜像，通过 `start_worker.sh` 脚本启动，在
 - 每个 agent 任务运行期间会独占一个 worker 进程，可通过环境变量 `CELERY_CONCURRENCY`（默认 `4`）控制可并行执行的 agent 会话数量，`CELERY_LOG_LEVEL`（默认 `INFO`）控制日志级别。
 - 也可以不通过容器直接启动 worker：`cd backend && ./start_worker.sh`。
 
-### MCP 配置
+### 运营配置
 
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
-| `CONNECTOR_CATALOG_PATH` | 见说明 | 否 | Apps 目录文件。未设置时，若存在 `/etc/connectors.json` 则用它，否则用仓库根目录 `connectors.json` |
-
-### 技能配置
-
-| 配置项 | 默认值 | 是否必需 | 说明 |
-|--------|--------|----------|------|
-| `SKILLS_PATH` | 见说明 | 否 | 官方技能目录。未设置时，若存在 `/etc/skills` 则用它，否则用仓库根目录 `skills/` |
+| `CONFIG_DIR` | 见说明 | 否 | 运营配置目录，里面是 `connectors.json` 和 `skills/`。未设置时，若存在 `/etc/ai-manus` 则用它，否则用仓库根目录 `config/` |
+| `CONNECTOR_CATALOG_PATH` | 见说明 | 否 | 单独指定 Apps 文件。未设置时用 `CONFIG_DIR/connectors.json` |
+| `SKILLS_PATH` | 见说明 | 否 | 单独指定官方技能目录。未设置时用 `CONFIG_DIR/skills` |
 
 ### 日志配置
 | 配置项 | 默认值 | 是否必需 | 说明 |

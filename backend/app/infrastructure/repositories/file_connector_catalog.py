@@ -1,12 +1,12 @@
 import json
 import logging
 import os
-from pathlib import Path
 from typing import List, Optional
 
 from pydantic import ValidationError
 
 from app.core.config import get_settings
+from app.core.operator_config import default_operator_config_dir
 from app.domain.mcp_json import McpJsonError, parse_mcp_url
 from app.domain.models.connector_catalog import CatalogConnector, CatalogHeaderField
 from app.domain.models.mcp_config import MCPTransport
@@ -19,16 +19,16 @@ _ALLOWED_TRANSPORTS = {MCPTransport.STREAMABLE_HTTP.value, MCPTransport.SSE.valu
 def default_connector_catalog_path() -> str:
     """Resolve the Apps catalog file.
 
-    ``CONNECTOR_CATALOG_PATH`` wins. Otherwise use ``/etc/connectors.json``
-    when it is mounted, then the repo-root ``connectors.json``.
+    ``CONNECTOR_CATALOG_PATH`` wins. Otherwise use ``connectors.json`` inside
+    the shared operator config directory (``CONFIG_DIR``, else ``/etc/ai-manus``,
+    else repo-root ``config/``).
     """
-    configured = (get_settings().connector_catalog_path or "").strip()
+    configured = os.environ.get("CONNECTOR_CATALOG_PATH", "").strip()
+    if not configured:
+        configured = (get_settings().connector_catalog_path or "").strip()
     if configured:
         return configured
-    if os.path.isfile("/etc/connectors.json"):
-        return "/etc/connectors.json"
-    repo_root = Path(__file__).resolve().parents[4]
-    return str(repo_root / "connectors.json")
+    return str(default_operator_config_dir() / "connectors.json")
 
 
 def _sort_entries(entries: List[CatalogConnector]) -> List[CatalogConnector]:

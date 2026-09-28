@@ -134,9 +134,12 @@ class Settings(BaseSettings):
     # e.g. "redis://:password@redis:6379/0" or "amqp://user:pass@rabbitmq:5672//"
     celery_broker_url: str | None = None
 
-    # Apps catalog. Empty uses /etc/connectors.json when mounted, else repo-root connectors.json.
+    # Operator config directory (connectors.json + skills/). Empty uses /etc/ai-manus
+    # when mounted, else repo-root config/.
+    config_dir: str = ""
+    # Optional override for the Apps file inside that directory.
     connector_catalog_path: str = ""
-    # Official skills. Empty uses /etc/skills when mounted, else repo-root skills/.
+    # Optional override for the official skills directory inside that directory.
     skills_path: str = ""
     
     # Logging configuration

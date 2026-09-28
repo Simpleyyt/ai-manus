@@ -117,8 +117,7 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./connectors.json:/etc/connectors.json # Apps catalog; edit the repo-root file
-      - ./skills:/etc/skills # Official skills; edit the repo-root skills/ directory
+      - ./config:/etc/ai-manus # connectors.json and skills/; edit the repo-root config/ directory
     networks:
       - manus-network
     env_file:

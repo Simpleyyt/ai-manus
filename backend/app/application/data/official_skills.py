@@ -1,4 +1,4 @@
-"""Official skill catalog loaded from the repo-root skills/ directory."""
+"""Official skill catalog loaded from config/skills/."""
 
 import logging
 from typing import Dict, List

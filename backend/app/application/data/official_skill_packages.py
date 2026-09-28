@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from app.core.config import get_settings
+from app.core.operator_config import default_operator_config_dir
 
 logger = logging.getLogger(__name__)
 
@@ -16,18 +17,16 @@ _SKILL_NAME_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 def official_skills_data_root() -> Path:
     """Resolve the directory of official skill packages.
 
-    ``SKILLS_PATH`` wins. Otherwise use ``/etc/skills`` when it is mounted,
-    then the repo-root ``skills/`` directory.
+    ``SKILLS_PATH`` wins. Otherwise use ``skills/`` inside the shared operator
+    config directory (``CONFIG_DIR``, else ``/etc/ai-manus``, else repo-root
+    ``config/``).
     """
     configured = os.environ.get("SKILLS_PATH", "").strip()
     if not configured:
         configured = (get_settings().skills_path or "").strip()
     if configured:
         return Path(configured)
-    if os.path.isdir("/etc/skills"):
-        return Path("/etc/skills")
-    repo_root = Path(__file__).resolve().parents[4]
-    return repo_root / "skills"
+    return default_operator_config_dir() / "skills"
 
 
 def iter_official_package_dirs() -> List[Path]:

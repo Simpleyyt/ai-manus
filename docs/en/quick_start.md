@@ -50,8 +50,7 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./connectors.json:/etc/connectors.json # Apps catalog; edit the repo-root file
-      - ./skills:/etc/skills # Official skills; edit the repo-root skills/ directory
+      - ./config:/etc/ai-manus # connectors.json and skills/; edit the repo-root config/ directory
     networks:
       - manus-network
     env_file:
@@ -291,15 +290,13 @@ JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
 # Optional custom Celery broker URL (defaults to the Redis settings above)
 #CELERY_BROKER_URL=
 
-# Apps marketplace catalog shown in Connectors → Apps.
-# Edit ./connectors.json at the repo root. When unset, the backend reads
-# /etc/connectors.json if that file exists, otherwise ./connectors.json.
-#CONNECTOR_CATALOG_PATH=/etc/connectors.json
-
-# Official skills. Each subdirectory of ./skills that contains SKILL.md is one skill.
-# The directory name must match the name in SKILL.md frontmatter.
-# When unset, the backend reads /etc/skills if that directory exists, otherwise ./skills.
-#SKILLS_PATH=/etc/skills
+# Operator config directory. connectors.json and skills/ live here together.
+# Edit ./config at the repo root. When unset, the backend reads /etc/ai-manus
+# if that directory exists, otherwise ./config.
+#CONFIG_DIR=/etc/ai-manus
+# Optional overrides for one piece of that directory.
+#CONNECTOR_CATALOG_PATH=
+#SKILLS_PATH=
 
 # Log configuration
 LOG_LEVEL=INFO

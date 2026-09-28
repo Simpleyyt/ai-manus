@@ -16,8 +16,9 @@ from app.infrastructure.external.llm.langchain_llm import (
 
 def _gateway() -> LangchainLLM:
     # init_chat_model only constructs the client; no network call is made here.
-    # Explicit Settings so the test never depends on host env vars (API_KEY).
-    return LangchainLLM(settings=Settings(api_key="test"))
+    # Explicit Settings so the test never depends on host env vars / dotenv
+    # (API_KEY, API_BASE). api_base=None beats pydantic env_file=".env".
+    return LangchainLLM(settings=Settings(api_key="test", api_base=None))
 
 
 class TestToLangChain:
@@ -81,6 +82,7 @@ class TestOrcaRouterProvider:
                 api_key="test",
                 model_provider="orcarouter",
                 model_name="anthropic/claude-sonnet-4.5",
+                api_base=None,
             )
         )
         assert gw._model.openai_api_base == ORCAROUTER_API_BASE

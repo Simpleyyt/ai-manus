@@ -25,7 +25,7 @@ Open **Settings → Features → Skills** (panel title: **Added skills**):
 | **Browse Skills** | Dialog with **Official / Team / Personal** tabs (Team is an empty placeholder for now) |
 | **Create ▾** | **Create Skill with Manus**, **Upload a Skill**, **Import Skill from GitHub**, **Add from official** |
 
-On first load, all official skills are auto-subscribed and enabled (`skill-creator`, `web-research`, `summarize`, `slides`, `market-research`), plus a personal seed example `data-viz`.
+On first load, every official skill in `config/skills/` is auto-subscribed and enabled, plus a personal seed example `data-viz`.
 
 ### 2. Add custom skills
 
@@ -84,7 +84,7 @@ Skills are **not** bind-mounted into the container via Docker `-v` / Compose `vo
 
 | Side | Path | Notes |
 |------|------|-------|
-| Official source (backend host) | `backend/app/application/data/official_skills/{name}/` | Bundled repo directories, copied as a full tree |
+| Official source (backend host) | `config/skills/{name}/` | Reloaded on each request, then copied as a full tree |
 | Personal / imported source | Skill package zip in MongoDB GridFS | Extracted, then written by relative path |
 | Inside sandbox container | `/home/ubuntu/skills/{name}/` | Constant `SKILLS_ROOT`; primary file is `SKILL.md` |
 | Example | `/home/ubuntu/skills/web-research/SKILL.md` | Agent can `file_read` / shell into this tree |
@@ -107,7 +107,11 @@ Code: `backend/app/application/services/skill_runtime_service.py` (`sync_enabled
 
 ## Bundled official skills
 
-Shipped under `backend/app/application/data/official_skills/`:
+Official skills live in `config/skills/`, next to the Apps list `config/connectors.json`. Each subdirectory is one skill, and the directory name must match the `name` in `SKILL.md` frontmatter. Add, remove, or edit a folder, then reopen the Skills page; no Python change is required. The subscription id is `skill_` plus the directory name with hyphens replaced by underscores (`web-research` → `skill_web_research`), so existing subscriptions keep matching.
+
+Docker Compose mounts `./config` into the backend at `/etc/ai-manus`. When `CONFIG_DIR` is unset, the backend reads that mount if the directory exists, otherwise repo-root `config/`. `SKILLS_PATH` can point at the skills directory alone.
+
+Shipped today:
 
 | name | Summary |
 |------|---------|
@@ -135,14 +139,19 @@ There is currently **no** API to fully remove a subscription—only disable.
 
 ## Configuration
 
-Skills have **no** dedicated environment variables; nothing to toggle in `.env`. Package size (20MB) and sandbox paths are code constants.
+| Configuration | Default Value | Required | Description |
+|---------------|---------------|----------|-------------|
+| `CONFIG_DIR` | see note | No | Operator config directory holding `connectors.json` and `skills/`. When unset, uses `/etc/ai-manus` if that directory exists, otherwise repo-root `config/` |
+| `SKILLS_PATH` | see note | No | Override for the official skills directory. When unset, uses `CONFIG_DIR/skills` |
+
+Personal skills and GitHub / upload packages stay in MongoDB and GridFS. Package size (20MB) and the sandbox write path `/home/ubuntu/skills` are code constants. The host official-skill directory is `config/skills/` (or `SKILLS_PATH`).
 
 Developer entry points:
 
 - Backend: `backend/app/application/services/skill_service.py`, `skill_runtime_service.py`
 - Skill tool: `backend/app/domain/services/tools/skill.py` (`load_skill`)
 - Plan first step: `backend/app/domain/services/skills/plan_steps.py`
-- Official packages: `backend/app/application/data/official_skills/`
+- Official package loader: `backend/app/application/data/official_skill_packages.py`
 - Frontend: Settings Skills tab, composer `/` slash menu, `+` → Use skills panel, history skill chips / hover
 
 ## Notes

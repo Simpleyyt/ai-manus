@@ -352,11 +352,13 @@ Notes:
 - Each agent task occupies one worker process for its whole run; use the `CELERY_CONCURRENCY` env var (default `4`) to bound how many agent sessions execute in parallel, and `CELERY_LOG_LEVEL` (default `INFO`) to control the log level.
 - Workers can also be started without a container: `cd backend && ./start_worker.sh`.
 
-### MCP Configuration
+### Operator config
 
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
-| `MCP_CONFIG_PATH` | `/etc/mcp.json` | No | MCP configuration file path |
+| `CONFIG_DIR` | see note | No | Operator config directory holding `connectors.json` and `skills/`. When unset, uses `/etc/ai-manus` if that directory exists, otherwise repo-root `config/` |
+| `CONNECTOR_CATALOG_PATH` | see note | No | Override for the Apps file. When unset, uses `CONFIG_DIR/connectors.json` |
+| `SKILLS_PATH` | see note | No | Override for the official skills directory. When unset, uses `CONFIG_DIR/skills` |
 
 ### Log Configuration
 | Configuration | Default Value | Required | Description |

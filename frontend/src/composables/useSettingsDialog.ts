@@ -5,6 +5,7 @@ export type SettingsTabId =
   | 'account'
   | 'shortcuts'
   | 'personalization'
+  | 'connectors'
   | 'skills'
   | 'help'
 
@@ -20,6 +21,7 @@ export function useSettingsDialog() {
       || tabId === 'account'
       || tabId === 'shortcuts'
       || tabId === 'personalization'
+      || tabId === 'connectors'
       || tabId === 'skills'
       || tabId === 'help'
     ) {

@@ -50,7 +50,7 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      #- ./mcp.json:/etc/mcp.json # Mount MCP servers directory
+      - ./config:/etc/ai-manus # connectors.json and skills/; edit the repo-root config/ directory
     networks:
       - manus-network
     env_file:
@@ -290,8 +290,13 @@ JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
 # Optional custom Celery broker URL (defaults to the Redis settings above)
 #CELERY_BROKER_URL=
 
-# MCP configuration
-#MCP_CONFIG_PATH=/etc/mcp.json
+# Operator config directory. connectors.json and skills/ live here together.
+# Edit ./config at the repo root. When unset, the backend reads /etc/ai-manus
+# if that directory exists, otherwise ./config.
+#CONFIG_DIR=/etc/ai-manus
+# Optional overrides for one piece of that directory.
+#CONNECTOR_CATALOG_PATH=
+#SKILLS_PATH=
 
 # Log configuration
 LOG_LEVEL=INFO

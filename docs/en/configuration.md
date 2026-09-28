@@ -358,6 +358,12 @@ Notes:
 |---------------|---------------|----------|-------------|
 | `CONNECTOR_CATALOG_PATH` | see note | No | Apps catalog file. When unset, uses `/etc/connectors.json` if that file exists, otherwise repo-root `connectors.json` |
 
+### Skills Configuration
+
+| Configuration | Default Value | Required | Description |
+|---------------|---------------|----------|-------------|
+| `SKILLS_PATH` | see note | No | Official skills directory. When unset, uses `/etc/skills` if that directory exists, otherwise repo-root `skills/` |
+
 ### Log Configuration
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|

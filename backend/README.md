@@ -92,6 +92,9 @@ JWT_SECRET_KEY=your-secret-key-here      # JWT signing key (set in production)
 # MCP configuration
 CONNECTOR_CATALOG_PATH=/etc/connectors.json  # Apps catalog; default is repo-root connectors.json
 
+# Official skills directory; default is repo-root skills/
+SKILLS_PATH=/etc/skills
+
 # Task backend configuration
 TASK_BACKEND=local                       # local (in-process asyncio) or celery (distributed workers)
 

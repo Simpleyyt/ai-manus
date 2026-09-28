@@ -136,6 +136,8 @@ class Settings(BaseSettings):
 
     # Apps catalog. Empty uses /etc/connectors.json when mounted, else repo-root connectors.json.
     connector_catalog_path: str = ""
+    # Official skills. Empty uses /etc/skills when mounted, else repo-root skills/.
+    skills_path: str = ""
     
     # Logging configuration
     log_level: str = "INFO"

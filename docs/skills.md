@@ -25,7 +25,7 @@ Skills（技能）是可复用的工作流说明包：每个技能包含名称�
 | **浏览技能** | 弹窗浏览 **官方 / 团队 / 个人** 目录并添加（团队目前为空占位） |
 | **创建 ▾** | **使用 Manus 创建技能**、**上传技能**、**从 GitHub 导入技能**、**从官方技能添加** |
 
-首次进入时会自动订阅并启用全部官方技能（`skill-creator`、`web-research`、`summarize`、`slides`、`market-research`），并 seed 一个个人示例 `data-viz`。
+首次进入时会自动订阅并启用仓库根目录 `skills/` 里的全部官方技能，并 seed 一个个人示例 `data-viz`。
 
 ### 2. 添加自定义技能
 
@@ -84,7 +84,7 @@ Skills **不是**通过 Docker `-v` / compose `volumes` 挂载进容器，而是
 
 | 方向 | 路径 | 说明 |
 |------|------|------|
-| 官方技能源（后端宿主机） | `backend/app/application/data/official_skills/{name}/` | 仓库内置目录，整包拷贝 |
+| 官方技能源（后端宿主机） | 仓库根目录 `skills/{name}/` | 每次请求重新读取，整包拷贝进沙盒 |
 | 个人 / 导入技能源 | MongoDB GridFS 中的技能包 zip | 解包后按相对路径写出 |
 | 沙盒容器内目标 | `/home/ubuntu/skills/{name}/` | 常量 `SKILLS_ROOT`；主文件为 `SKILL.md` |
 | 示例 | `/home/ubuntu/skills/web-research/SKILL.md` | Agent 可用 `file_read` / shell 读取 |
@@ -107,7 +107,11 @@ Skills **不是**通过 Docker `-v` / compose `volumes` 挂载进容器，而是
 
 ## 官方捆绑技能
 
-仓库内置官方包（目录 `backend/app/application/data/official_skills/`）：
+官方技能就是仓库根目录的 `skills/`。每个子目录一份技能，目录名必须和 `SKILL.md` 开头的 `name` 一致。增删目录、改描述后，重新打开技能页即可，不必改 Python。订阅 id 固定为 `skill_` 加上把目录名里的 `-` 换成 `_`（例如 `web-research` → `skill_web_research`），已有订阅靠这个 id 对上。
+
+Docker Compose 把 `./skills` 挂到 backend 的 `/etc/skills`。未设置 `SKILLS_PATH` 时，backend 优先读这个挂载目录，否则读仓库根目录的同一份目录。
+
+当前自带：
 
 | name | 说明（概要） |
 |------|----------------|
@@ -135,14 +139,18 @@ Skills **不是**通过 Docker `-v` / compose `volumes` 挂载进容器，而是
 
 ## 配置说明
 
-Skills **没有**专用环境变量；不依赖 `.env` 开关。包大小（20MB）、沙盒路径等为代码内约定。
+| 配置项 | 默认值 | 是否必需 | 说明 |
+|--------|--------|----------|------|
+| `SKILLS_PATH` | 见说明 | 否 | 官方技能目录。未设置时，若存在 `/etc/skills` 则用它，否则用仓库根目录 `skills/` |
+
+个人技能、GitHub / 上传的包仍在 MongoDB 与 GridFS。包大小（20MB）和沙盒内落盘路径 `/home/ubuntu/skills` 为代码内约定。宿主机上的官方技能目录是仓库根目录 `skills/`（或 `SKILLS_PATH`）。
 
 相关实现入口（开发者）：
 
 - 后端服务：`backend/app/application/services/skill_service.py`、`skill_runtime_service.py`
 - 技能工具：`backend/app/domain/services/tools/skill.py`（`load_skill`）
 - 计划首步：`backend/app/domain/services/skills/plan_steps.py`
-- 官方包：`backend/app/application/data/official_skills/`
+- 官方包加载：`backend/app/application/data/official_skill_packages.py`
 - 前端：设置页 Skills、输入框 `/` slash、`+`「使用技能」面板、历史 skill chip / hover
 
 ## 注意事项

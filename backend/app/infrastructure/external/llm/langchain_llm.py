@@ -34,6 +34,11 @@ logger = logging.getLogger(__name__)
 # over an OpenAI-compatible API, so it plugs into LangChain's OpenAI chat model.
 ORCAROUTER_API_BASE = "https://api.orcarouter.ai/v1"
 
+# Default base URL for the Atlas Cloud gateway, an OpenAI-compatible API that
+# serves many models under a ``provider/model`` namespace (e.g.
+# ``deepseek-ai/deepseek-v4-flash``).
+ATLASCLOUD_API_BASE = "https://api.atlascloud.ai/v1"
+
 
 class LangchainLLM:
     """Concrete :class:`LLM` gateway backed by LangChain chat models."""
@@ -62,6 +67,11 @@ class LangchainLLM:
         if provider == "orcarouter":
             kwargs["model_provider"] = "openai"
             kwargs["base_url"] = settings.api_base or ORCAROUTER_API_BASE
+            provider = "openai"
+        # Atlas Cloud is handled the same way as OrcaRouter above.
+        elif provider == "atlascloud":
+            kwargs["model_provider"] = "openai"
+            kwargs["base_url"] = settings.api_base or ATLASCLOUD_API_BASE
             provider = "openai"
         # Pass the key explicitly: relying on the OPENAI_API_KEY env bridge in
         # get_settings() breaks any Settings-injected construction (tests,

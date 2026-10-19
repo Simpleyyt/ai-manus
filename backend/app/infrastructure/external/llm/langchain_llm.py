@@ -34,6 +34,11 @@ logger = logging.getLogger(__name__)
 # over an OpenAI-compatible API, so it plugs into LangChain's OpenAI chat model.
 ORCAROUTER_API_BASE = "https://api.orcarouter.ai/v1"
 
+# Default base URL for the Cheaper Inference gateway. It serves bare model IDs
+# (e.g. ``gpt-5.4-mini``) over an OpenAI-compatible API, so it plugs into
+# LangChain's OpenAI chat model.
+CHEAPER_INFERENCE_API_BASE = "https://api.cheaperinference.com/v1"
+
 
 class LangchainLLM:
     """Concrete :class:`LLM` gateway backed by LangChain chat models."""
@@ -62,6 +67,11 @@ class LangchainLLM:
         if provider == "orcarouter":
             kwargs["model_provider"] = "openai"
             kwargs["base_url"] = settings.api_base or ORCAROUTER_API_BASE
+            provider = "openai"
+        elif provider == "cheaperinference":
+            # Cheaper Inference is wired the same way as OrcaRouter.
+            kwargs["model_provider"] = "openai"
+            kwargs["base_url"] = settings.api_base or CHEAPER_INFERENCE_API_BASE
             provider = "openai"
         # Pass the key explicitly: relying on the OPENAI_API_KEY env bridge in
         # get_settings() breaks any Settings-injected construction (tests,

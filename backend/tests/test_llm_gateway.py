@@ -9,6 +9,7 @@ from langchain.messages import AIMessage, HumanMessage, SystemMessage, ToolMessa
 from app.core.config import Settings
 from app.domain.models.message import LLMMessage, Role, ToolCall
 from app.infrastructure.external.llm.langchain_llm import (
+    CHEAPER_INFERENCE_API_BASE,
     ORCAROUTER_API_BASE,
     LangchainLLM,
 )
@@ -92,6 +93,32 @@ class TestOrcaRouterProvider:
                 api_key="test",
                 model_provider="orcarouter",
                 model_name="anthropic/claude-sonnet-4.5",
+                api_base="https://selfhost.example.com/v1",
+            )
+        )
+        assert gw._model.openai_api_base == "https://selfhost.example.com/v1"
+
+
+class TestCheaperInferenceProvider:
+    """Cheaper Inference is wired as a named provider backed by ChatOpenAI."""
+
+    def test_cheaperinference_defaults_to_cheaperinference_base_url(self):
+        gw = LangchainLLM(
+            settings=Settings(
+                api_key="test",
+                model_provider="cheaperinference",
+                model_name="gpt-5.4-mini",
+            )
+        )
+        assert gw._model.openai_api_base == CHEAPER_INFERENCE_API_BASE
+        assert gw._model.model_name == "gpt-5.4-mini"
+
+    def test_cheaperinference_respects_explicit_api_base(self):
+        gw = LangchainLLM(
+            settings=Settings(
+                api_key="test",
+                model_provider="cheaperinference",
+                model_name="gpt-5.4-mini",
                 api_base="https://selfhost.example.com/v1",
             )
         )

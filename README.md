@@ -1,4 +1,15 @@
-# AI Manus
+# Landis AI — Réplica do Manus AI
+
+> **Este branch (`arena/be0c3161-ai-manus`) é a réplica Landis AI** — uma evolução do [AI Manus](https://github.com/Simpleyyt/ai-manus) que implementa as capacidades do Manus 2.0 usando apenas open-source e camadas gratuitas. Ver [LANDIS_AI_REPLICA.md](./LANDIS_AI_REPLICA.md) e [docs/en/landis-replica.md](./docs/en/landis-replica.md) para o guia completo.
+
+**Landis AI replica:** Wide Research (paralelo), Cloud Computer (persistente), Automations (schedule/triggered), SearXNG/Exa/Firecrawl/Brave search, segurança anti-prompt-injection, e guia "Como montar um Manus gratuito".
+
+> ⚠️ Chaves no `objetivo.txt` foram sanitizadas — nunca commitar `.env`. Rotacione chaves vazadas e leia [SECURITY_LANDIS.md](./SECURITY_LANDIS.md).
+
+---
+
+# AI Manus (upstream)
+
 
 English | [中文](README_zh.md) | [Official Site](https://ai-manus.com) | [Documents](https://docs.ai-manus.com/#/en/)
 

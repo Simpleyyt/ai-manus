@@ -19,6 +19,10 @@ def get_search_engine() -> Optional[SearchEngine]:
     from app.infrastructure.external.search.serper_search import SerperSearchEngine
     from app.infrastructure.external.search.youcom_search import YouComSearchEngine
     from app.infrastructure.external.search.custom_search import CustomSearchEngine
+    from app.infrastructure.external.search.searxng_search import SearXNGSearchEngine
+    from app.infrastructure.external.search.exa_search import ExaSearchEngine
+    from app.infrastructure.external.search.firecrawl_search import FirecrawlSearchEngine
+    from app.infrastructure.external.search.brave_search import BraveSearchEngine
 
     settings = get_settings()
     if settings.search_provider == "google":
@@ -66,6 +70,30 @@ def get_search_engine() -> Optional[SearchEngine]:
             return YouComSearchEngine(api_key=settings.youcom_api_key)
         else:
             logger.warning("You.com Search Engine not initialized: missing API key (YOUCOM_API_KEY)")
+    elif settings.search_provider == "searxng":
+        logger.info(f"Initializing SearXNG Search Engine (url={settings.searxng_url})")
+        return SearXNGSearchEngine(
+            base_url=settings.searxng_url or "http://searxng:8080",
+            engines=settings.searxng_engines or "",
+        )
+    elif settings.search_provider == "exa":
+        if settings.exa_api_key:
+            logger.info("Initializing Exa AI Search Engine")
+            return ExaSearchEngine(api_key=settings.exa_api_key)
+        else:
+            logger.warning("Exa Search Engine not initialized: missing EXA_API_KEY")
+    elif settings.search_provider == "firecrawl":
+        if settings.firecrawl_api_key:
+            logger.info("Initializing Firecrawl Search Engine")
+            return FirecrawlSearchEngine(api_key=settings.firecrawl_api_key)
+        else:
+            logger.warning("Firecrawl Search Engine not initialized: missing FIRECRAWL_API_KEY")
+    elif settings.search_provider == "brave":
+        if settings.brave_search_api_key:
+            logger.info("Initializing Brave Search Engine")
+            return BraveSearchEngine(api_key=settings.brave_search_api_key)
+        else:
+            logger.warning("Brave Search Engine not initialized: missing BRAVE_SEARCH_API_KEY")
     elif settings.search_provider == "custom":
         if settings.search_api_url:
             logger.info(f"Initializing Custom Search Engine (url={settings.search_api_url})")

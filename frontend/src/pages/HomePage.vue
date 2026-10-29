@@ -80,6 +80,11 @@
               :isRunning="false" />
           </div>
         </div>
+        <!-- Landis AI replica banner -->
+        <div class="w-full max-w-[768px] mx-auto mt-4 rounded-[12px] border border-[var(--border-main)] bg-[var(--fill-tsp-white-light)] px-4 py-3 text-sm text-[var(--text-secondary)] text-center">
+          <strong class="text-[var(--text-primary)]">Landis AI</strong> — {{ $t('Replica of Manus AI') }} · 
+          <a href="https://github.com/afm04720-stack/ai-manus/blob/arena/be0c3161-ai-manus/LANDIS_AI_REPLICA.md" target="_blank" class="underline">docs</a> · Wide Research · Cloud Computer · Automations · SearXNG free
+        </div>
         <!-- Suggestion chips (structure replicated from manus.im home) -->
         <div class="relative w-full">
           <div class="w-full transition-transform duration-300 ease-out relative mt-[20px]">
@@ -178,6 +183,7 @@ const primarySuggestions: Suggestion[] = [
   { label: 'Build website', icon: Globe },
   { label: 'Design', icon: Palette },
   { label: 'Create games', icon: Gamepad2 },
+  { label: 'Wide Research', icon: Telescope },
 ];
 
 const moreSuggestions: Suggestion[] = [

@@ -64,6 +64,13 @@ services:
     networks:
       - manus-network
 
+  # Optional free search — SearXNG (unlimited, no API key). Uncomment to enable.
+  # searxng:
+  #   image: searxng/searxng:latest
+  #   restart: unless-stopped
+  #   networks:
+  #     - manus-network
+
   redis:
     image: redis:7.0
     restart: unless-stopped

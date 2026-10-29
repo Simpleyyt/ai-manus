@@ -65,7 +65,7 @@ class Settings(BaseSettings):
     browser_engine: str = "browser_use"  # "browser_use" or "playwright"
 
     # Search engine configuration
-    search_provider: str | None = "bing_web"  # "baidu", "baidu_web", "google", "bing", "bing_web", "tavily", "serper", "youcom", "custom"
+    search_provider: str | None = "bing_web"  # "baidu", "baidu_web", "google", "bing", "bing_web", "tavily", "serper", "youcom", "custom", "searxng", "exa", "firecrawl", "brave"
     baidu_search_api_key: str | None = None
     bing_search_api_key: str | None = None
     google_search_api_key: str | None = None
@@ -87,6 +87,33 @@ class Settings(BaseSettings):
     search_title_field: str = "title"
     search_link_field: str = "link"
     search_snippet_field: str = "snippet"
+
+    # SearXNG self-hosted search (SEARCH_PROVIDER=searxng) — free, open-source, no key
+    searxng_url: str | None = None  # e.g. http://searxng:8080 or http://localhost:8080
+    searxng_engines: str | None = None  # optional comma-separated engine list
+
+    # Exa AI search (SEARCH_PROVIDER=exa)
+    exa_api_key: str | None = None
+
+    # Firecrawl search (SEARCH_PROVIDER=firecrawl)
+    firecrawl_api_key: str | None = None
+
+    # Brave Search API (SEARCH_PROVIDER=brave)
+    brave_search_api_key: str | None = None
+
+    # --- Landis AI / Manus replica integrations (optional, from guia prático) ---
+    # Browser service providers (choose one via BROWSER_SERVICE if needed)
+    browserless_api_key: str | None = None  # Browserless.io API
+    browserbase_api_key: str | None = None  # Browserbase API
+    # LLM alternative gateways (OpenRouter, Groq, Gemini, etc. via MODEL_PROVIDER/API_BASE)
+    openrouter_api_key: str | None = None
+    groq_api_key: str | None = None
+    gemini_api_key: str | None = None  # Google Gemini API (GOOGLE_API_KEY)
+    fal_api_key: str | None = None  # Fal AI for media generation
+    nvidia_api_key: str | None = None  # Nvidia NIM
+    # Cloud sandbox providers
+    e2b_api_key: str | None = None
+    daytona_api_key: str | None = None
     
     # Google Analytics configuration
     google_analytics_id: str | None = None

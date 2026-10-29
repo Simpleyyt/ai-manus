@@ -107,6 +107,17 @@ services:
     networks:
       - manus-network
 
+  searxng:
+    image: searxng/searxng:latest
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./searxng:/etc/searxng
+    networks:
+      - manus-network
+    # Enable JSON format: mount custom settings.yml with search.formats: ["html","json"]
+
   redis:
     image: redis:7.0
     restart: unless-stopped

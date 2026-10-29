@@ -462,4 +462,17 @@ export default {
   'Manus is replaying the task...': 'Manus is replaying the task...',
   'Replay': 'Replay',
   'Jump to result': 'Jump to result',
+  // Landis AI — Manus 2.0 features
+  'Wide Research': 'Wide Research',
+  'Cloud Computer': 'Cloud Computer',
+  'Automations': 'Automations',
+  'Landis AI': 'Landis AI',
+  'Replica of Manus AI': 'Replica of Manus AI',
+  'Landis is thinking': 'Landis is thinking',
+  'Give Landis a task...': 'Give Landis a task...',
+  'Wide Research: parallel agents researching in batches': 'Wide Research: parallel agents researching in batches',
+  'Automations are disabled': 'Automations are disabled',
+  'SearXNG (free)': 'SearXNG (free)',
+  'Exa AI': 'Exa AI',
+  'Firecrawl': 'Firecrawl',
 } 

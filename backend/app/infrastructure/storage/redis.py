@@ -16,13 +16,19 @@ class RedisClient:
             
         try:
             # Connect to Redis
-            self._client = Redis(
-                host=self._settings.redis_host,
-                port=self._settings.redis_port,
-                db=self._settings.redis_db,
-                password=self._settings.redis_password,
-                decode_responses=True
-            )
+            if self._settings.redis_url:
+                self._client = Redis.from_url(
+                    self._settings.redis_url,
+                    decode_responses=True,
+                )
+            else:
+                self._client = Redis(
+                    host=self._settings.redis_host,
+                    port=self._settings.redis_port,
+                    db=self._settings.redis_db,
+                    password=self._settings.redis_password,
+                    decode_responses=True,
+                )
             # Verify the connection
             await self._client.ping()
             logger.info("Successfully connected to Redis")
@@ -51,4 +57,4 @@ from functools import lru_cache
 @lru_cache()
 def get_redis() -> RedisClient:
     """Get the Redis client instance."""
-    return RedisClient() 
+    return RedisClient()

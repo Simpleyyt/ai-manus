@@ -7,5 +7,6 @@
    * [🧩 Skills 技能](skills.md)
    * [🔧 MCP 配置](mcp.md)
  * [📋 配置说明](configuration.md)
+ * [☁️ Vercel 部署（进行中）](vercel-deployment.md)
  * 👨‍💻 开发指南
    * [⚙️ 系统架构](architecture.md)

@@ -1,5 +1,5 @@
 // Backend API service
-import { apiClient, ApiResponse, BASE_URL } from './client';
+import { apiClient, ApiResponse, websocketUrl } from './client';
 import { AgentEvent } from '../types/event';
 import type { AgentStatus } from '../types/event';
 import { CreateSessionResponse, GetSessionResponse, ShellViewResponse, FileViewResponse, ListSessionResponse, ListSessionItem, ShareSessionResponse, SharedSessionResponse } from '../types/response';
@@ -42,9 +42,8 @@ export function connectSessionsListWS(handlers: {
   onError?: (error: Event) => void;
   onClose?: () => void;
 }): () => void {
-  const wsBase = BASE_URL.replace(/^http/, 'ws');
   // Browser Cookie auth (B1); no ?token=
-  const url = `${wsBase}/ws/sessions`;
+  const url = websocketUrl('/ws/sessions');
   let closed = false;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let reconnectDelay = 1000;
@@ -165,8 +164,7 @@ export async function stopSession(sessionId: string): Promise<void> {
  * VNC WebSocket URL — Cookie / Bearer auth (same as /ws/*). No signed URL.
  */
 export const getVNCUrl = (sessionId: string): string => {
-  const wsBase = BASE_URL.replace(/^http/, 'ws');
-  return `${wsBase}/ws/vnc/${sessionId}`;
+  return websocketUrl(`/ws/vnc/${sessionId}`);
 };
 
 /**

@@ -18,6 +18,8 @@ AGENT_TASK_NAME = "manus.agent.run"
 
 def _build_redis_url() -> str:
     settings = get_settings()
+    if settings.redis_url:
+        return settings.redis_url
     auth = f":{settings.redis_password}@" if settings.redis_password else ""
     return f"redis://{auth}{settings.redis_host}:{settings.redis_port}/{settings.redis_db}"
 

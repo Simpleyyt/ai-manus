@@ -145,7 +145,7 @@ API_KEY=sk-...
 
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
-| `SEARCH_PROVIDER` | `bing_web` | No | Search engine provider (`baidu`, `baidu_web`, `google`, `bing`, `bing_web`, `tavily`, `serper`, `youcom`, or `custom`) |
+| `SEARCH_PROVIDER` | `bing_web` | No | Search engine provider (`baidu`, `baidu_web`, `google`, `bing`, `bing_web`, `tavily`, `serper`, `youcom`, `keenable`, or `custom`) |
 
 #### Baidu Search Configuration
 
@@ -199,6 +199,14 @@ Used only when `SEARCH_PROVIDER=youcom`. You.com provides an AI-first web search
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
 | `YOUCOM_API_KEY` | - | Yes | You.com API key, get from [you.com](https://you.com) |
+
+#### Keenable Search Configuration
+
+Used only when `SEARCH_PROVIDER=keenable`. Keenable is a web search API for agents that returns long page excerpts. It works without an API key through its public endpoint (rate-limited per IP):
+
+| Configuration | Default Value | Required | Description |
+|---------------|---------------|----------|-------------|
+| `KEENABLE_API_KEY` | - | No | Optional Keenable API key for higher rate limits, get from [keenable.ai](https://keenable.ai) |
 
 #### Custom Search API Configuration
 

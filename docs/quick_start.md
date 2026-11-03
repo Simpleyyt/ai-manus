@@ -162,7 +162,7 @@ SANDBOX_NETWORK=manus-network
 #BROWSER_ENGINE=browser_use
 
 # Search engine configuration
-# Options: baidu, baidu_web, google, bing, bing_web, tavily, serper, custom
+# Options: baidu, baidu_web, google, bing, bing_web, tavily, serper, youcom, keenable, custom
 # baidu:    uses the Baidu Qianfan AI Search API (requires BAIDU_SEARCH_API_KEY)
 # baidu_web: scrapes Baidu search results with browser impersonation (no API key needed)
 # bing:     uses the official Bing Web Search API (requires BING_SEARCH_API_KEY)
@@ -170,6 +170,7 @@ SANDBOX_NETWORK=manus-network
 # tavily:   uses the Tavily Search API (requires TAVILY_API_KEY)
 # serper:   uses the Serper.dev Google Search API (requires SERPER_API_KEY)
 # youcom:   uses the You.com Web Search API (requires YOUCOM_API_KEY)
+# keenable: uses the Keenable Search API (no API key needed; optional KEENABLE_API_KEY raises limits)
 # custom:   calls any third-party search REST API via SEARCH_API_URL + SEARCH_API_KEY
 SEARCH_PROVIDER=bing_web
 
@@ -196,6 +197,11 @@ SEARCH_PROVIDER=bing_web
 # You.com search configuration, only used when SEARCH_PROVIDER=youcom
 # Get your API key from https://you.com
 #YOUCOM_API_KEY=
+
+# Keenable search configuration, only used when SEARCH_PROVIDER=keenable
+# Works without a key via the public endpoint (rate-limited per IP).
+# Optionally get an API key from https://keenable.ai for higher limits
+#KEENABLE_API_KEY=
 
 # Custom search API configuration, only used when SEARCH_PROVIDER=custom
 # Allows integration with any third-party search REST API.

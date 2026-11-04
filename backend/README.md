@@ -74,7 +74,7 @@ TEMPERATURE=0.7                          # Model temperature parameter
 MAX_TOKENS=2000                          # Maximum output tokens per model request
 
 # Search engine configuration
-SEARCH_PROVIDER=bing_web                 # baidu / baidu_web / google / bing / bing_web / tavily / serper / custom
+SEARCH_PROVIDER=bing_web                 # baidu / baidu_web / google / bing / bing_web / tavily / serper / youcom / keenable / custom
 GOOGLE_SEARCH_API_KEY=                   # Google Search API key (SEARCH_PROVIDER=google)
 GOOGLE_SEARCH_ENGINE_ID=                 # Google custom search engine ID (SEARCH_PROVIDER=google)
 

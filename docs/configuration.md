@@ -145,7 +145,7 @@ API_KEY=sk-...
 
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
-| `SEARCH_PROVIDER` | `bing_web` | 否 | 搜索引擎提供商（`baidu`、`baidu_web`、`google`、`bing`、`bing_web`、`tavily`、`serper`、`youcom` 或 `custom`） |
+| `SEARCH_PROVIDER` | `bing_web` | 否 | 搜索引擎提供商（`baidu`、`baidu_web`、`google`、`bing`、`bing_web`、`tavily`、`serper`、`youcom`、`keenable` 或 `custom`） |
 
 #### 百度搜索配置
 
@@ -199,6 +199,14 @@ API_KEY=sk-...
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
 | `YOUCOM_API_KEY` | - | 是 | You.com API 密钥，从 [you.com](https://you.com) 获取 |
+
+#### Keenable 搜索配置
+
+仅当 `SEARCH_PROVIDER=keenable` 时使用。Keenable 是面向 AI Agent 的网页搜索 API，返回较长的页面摘录；无需 API 密钥即可通过公共端点使用（按 IP 限流）：
+
+| 配置项 | 默认值 | 是否必需 | 说明 |
+|--------|--------|----------|------|
+| `KEENABLE_API_KEY` | - | 否 | 可选的 Keenable API 密钥，用于提高调用额度，从 [keenable.ai](https://keenable.ai) 获取 |
 
 #### 自定义搜索 API 配置
 

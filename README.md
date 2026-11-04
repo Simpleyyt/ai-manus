@@ -117,7 +117,7 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      #- ./mcp.json:/etc/mcp.json # Mount MCP servers directory
+      - ./config:/etc/ai-manus # connectors.json and skills/; edit the repo-root config/ directory
     networks:
       - manus-network
     env_file:

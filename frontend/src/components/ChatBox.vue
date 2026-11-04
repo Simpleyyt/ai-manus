@@ -29,6 +29,7 @@
             @close="showPlusMenu = false"
           />
         </div>
+        <ChatBoxConnectAppsButton />
         <template v-for="variant in plusSkillDialogVariants" :key="variant">
           <SkillsPlaceholderDialog
             v-if="plusSkillDialogOpen[variant]"
@@ -74,6 +75,7 @@ import ChatBoxFiles from './ChatBoxFiles.vue'
 import ChatBoxSlashMenu from './chatbox/ChatBoxSlashMenu.vue'
 import type { SlashMenuItem } from './chatbox/ChatBoxSlashMenu.vue'
 import ChatBoxPlusMenu from './chatbox/ChatBoxPlusMenu.vue'
+import ChatBoxConnectAppsButton from './chatbox/ChatBoxConnectAppsButton.vue'
 import SkillsPlaceholderDialog, {
   type SkillsPlaceholderVariant,
 } from './skills/SkillsPlaceholderDialog.vue'

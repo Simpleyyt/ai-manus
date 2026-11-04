@@ -1,0 +1,873 @@
+{
+  "connectors": [
+    {
+      "uid": "7a739d5e-b40b-4c56-8192-51a7541a25fa",
+      "name": "Crypto.com",
+      "description": "Stream live market data for prices, volumes, order books, and trends",
+      "url": "https://mcp.crypto.com/market-data/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/04/28/cad7ff7b440486c2b1b8b37d45eabdf6d16b81375d23102636eb9cf0de01a206.webp",
+      "order": 23
+    },
+    {
+      "uid": "0fc956e1-3d91-4e38-9f04-158adf39e99f",
+      "name": "CoinGecko",
+      "description": "Access real-time market data, prices, trends, and onchain analytics",
+      "url": "https://mcp.api.coingecko.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/04/28/b7ff10ad01a7ecb3714fcd8f069f7df6a44c4e72229e8f7fe662c0305ce523e9.svg",
+      "order": 27
+    },
+    {
+      "uid": "63e9fd2a-2804-4509-897a-a9544c127b2b",
+      "name": "PopHIVE",
+      "description": "Access public health data from PopHIVE dashboards",
+      "url": "https://mcp.pophive.org/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2025/09/25/138665e137ed35eb320078f4cefe426f6ce220dac8d922c5a4f2f4cc0fceffbe.webp",
+      "iconDark": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2025/09/25/70cd0e088a5b12c4bd0194716abba24cb73b67a714fe483c9f83a821d6b95a3b.webp",
+      "order": 50
+    },
+    {
+      "uid": "b3cc6a72-a6bc-4243-8829-987089297ea5",
+      "name": "Neimo",
+      "description": "Accelerate AI regulatory intelligence for legal and compliance teams",
+      "url": "https://app.neimo.ai/api/mcp/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/04/23/7566d27ac6500634f23b0af487522fb27f56333cad620640ebd738b96ae64075.svg",
+      "iconDark": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/04/23/8c496fd703e01726657958a540b6c0296790977fb6324bf58e9e3a71abd31ebd.svg",
+      "order": 77,
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Key",
+          "placeholder": "Bearer YOUR_NEIMO_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "15027330-caa8-49d2-8c90-75397e2c6410",
+      "name": "TomTom Maps",
+      "description": "Access geocoding, routing, traffic, and maps for location-aware workflows",
+      "url": "https://mcp.tomtom.com/maps",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/06/25/6d76671ff67ec342425b0000f2374f0e57a135aa0973c0bef4d793226bc898d6.webp",
+      "order": 80,
+      "headers": [
+        {
+          "key": "tomtom-api-key",
+          "label": "API Key",
+          "placeholder": "YOUR_TOMTOM_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "d999ce59-54e1-4b98-9cff-dcd6a4375ba5",
+      "name": "ilert",
+      "description": "Query and act on alerts, incidents, services, and on-call schedules",
+      "url": "https://mcp.ilert.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/06/25/4316d7606775c3666687e1a52d925aea0f80c4941ebf4f98b7ce9478458e49de.webp",
+      "order": 80,
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Key",
+          "placeholder": "Bearer YOUR_ILERT_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "d13dd2c8-1c08-45c0-b6ee-0e90287dca36",
+      "name": "Checkmarx",
+      "description": "Accelerate application security remediation with Checkmarx Developer Assist",
+      "url": "https://mea.ast.checkmarx.net/api/security-mcp/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/09/11/6f82b22779b6d03b9e1c8abe6b4fd9f1624e348cb71331994f397c7cd45fefd4.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Key",
+          "placeholder": "YOUR_CHECKMARX_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "a62812d7-4c72-46d1-9af8-5eb2ec1f3461",
+      "name": "Render",
+      "description": "Manage Render services, deploys, logs, and infrastructure",
+      "url": "https://mcp.render.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/09/10/94b1512f7ebd7b05d3ea158a4a7b8b97ec9913f193085d9861b45223117ad6e6.webp",
+      "iconDark": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/09/10/10f5846423dfb596aaa5d80b67579cda4ad72ca2e673b921837dc835acaa8b14.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Key",
+          "placeholder": "Bearer rnd_YOUR_RENDER_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "58e694fc-4f51-4888-b813-ad4c26528f9d",
+      "name": "Fitbod",
+      "description": "Generate workouts tailored to muscles, equipment, and available time",
+      "url": "https://mcp.fitbod.me/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/09/07/d513d835281f27d89c07bea6df6653fe31cc7d09f81ca2fe364446744842747d.jpeg"
+    },
+    {
+      "uid": "52ce21d3-dc82-46db-9083-24578caa061e",
+      "name": "Oath",
+      "description": "Find clinical calculators and run structured evidence-based calculations",
+      "url": "https://mcp.oath.md/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/09/08/94fdf0a621ac8e1363d55c89d6765fbf1990709993967075b33e44677069024a.webp",
+      "iconDark": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/09/08/915fe6e1ed105c5a36e64c21f0111c068f699c118708d0af63a24ff4d8897b85.webp"
+    },
+    {
+      "uid": "843893c4-9780-4762-906e-0f26f94cbfd2",
+      "name": "Sonatype Guide",
+      "description": "Research safer dependency versions with Sonatype Guide",
+      "url": "https://mcp.guide.sonatype.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/08/21/612a1601f7a28187eeb1bec97a5bcb36c6e5e3b743719baaa5725b097961c50f.webp",
+      "iconDark": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/08/21/41ca06128523db48051a53908e23ec336ddeee94294c17af36ef619eea66bc05.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "Authorization Header",
+          "placeholder": "Bearer sonatype_pat_YOUR_TOKEN_HERE"
+        }
+      ]
+    },
+    {
+      "uid": "e7c9b43b-513d-4bbb-a416-0f16e81e7b96",
+      "name": "TierZero",
+      "description": "Investigate production incidents and retrieve operational context with TierZero",
+      "url": "https://api.tierzero.ai/mcp/",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/08/21/8f5d126bab7400f5f5ee1806ec80e62cfdf744776df7d4cba800f2887aa1cc02.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "Personal Access Token",
+          "placeholder": "Bearer YOUR_TIERZERO_PAT"
+        }
+      ]
+    },
+    {
+      "uid": "d19e28ca-86ad-4b92-907f-92638df0741c",
+      "name": "AWS Marketplace",
+      "description": "Discover, compare, and evaluate solutions on AWS Marketplace",
+      "url": "https://marketplace-mcp.us-east-1.api.aws/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/04/14/68052c2cad503d49f6eac7244aec386035c47d9ff5657089907a1c4b30956ca4.webp"
+    },
+    {
+      "uid": "d2256ab1-c135-4260-9236-67460d1b40e0",
+      "name": "Granted",
+      "description": "Discover grants, funders, and past winners with Granted",
+      "url": "https://grantedai.com/api/mcp/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/08/20/dfdf049bb0f046b284f9cb5ad8170182013de6d7535288026d19743ca13c7cc5.webp"
+    },
+    {
+      "uid": "174c07f5-ae63-48c4-8c83-66606b3afac3",
+      "name": "Antimetal",
+      "description": "Investigate production issues with root cause evidence and fixes",
+      "url": "https://mcp.antimetal.com",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/08/19/eac4029d761b403d9e1abc9f96a75b87477c404c9501582309b319ef9448d4ff.webp",
+      "iconDark": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/08/19/810fe27cafc3510998c7ef1ec0b912a1d7307f4a5aab45210f01909e7bbcac9e.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Key",
+          "placeholder": "Bearer YOUR_ANTIMETAL_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "83def239-6052-4184-83a4-fb315e67e21c",
+      "name": "Tango",
+      "description": "Research federal procurement opportunities, awards, vendors, and spending",
+      "url": "https://govcon.dev/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/08/06/bfb100589d205a3577db9e4ce385060f2dd633a9b2352ba03558d21071830ec0.webp",
+      "headers": [
+        {
+          "key": "X-Tango-API-Key",
+          "label": "API Key",
+          "placeholder": "YOUR_TANGO_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "764963be-f316-449d-859d-2cb0cb872c43",
+      "name": "Dovetail",
+      "description": "Search and access research projects, highlights, insights, and data with Dovetail",
+      "url": "https://dovetail.com/api/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/08/05/a3c2032aaff8057d3f0e4d63b1e7d57923f2b4586478bad4cfb7633159777833.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Token",
+          "placeholder": "Bearer api.your_dovetail_token"
+        }
+      ]
+    },
+    {
+      "uid": "e27aba32-cfa1-4e58-a0db-de4742430b1d",
+      "name": "Learning Commons",
+      "description": "Resolve K-12 standards, skills, and learning progressions",
+      "url": "https://kg.mcp.learningcommons.org/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/08/05/b960244770fa0958a5c0adf22fa6b1477875228828b48e1d3b06971daae34af3.webp",
+      "headers": [
+        {
+          "key": "x-api-key",
+          "label": "API Key",
+          "placeholder": "YOUR_LEARNING_COMMONS_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "2f51c329-cb23-43ed-a6e7-788f23a5f557",
+      "name": "Viator",
+      "description": "Discover and compare travel experiences worldwide with Viator",
+      "url": "https://exp-app-mcp.prod.ep.viator.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/08/05/b89cb2973cda7e2c28cdb785165b0766d1fb03958dc05e65386507a0ebc395af.webp"
+    },
+    {
+      "uid": "8fba2ec9-d06c-43a0-aa67-5ed81b82615f",
+      "name": "Deepnote",
+      "description": "Create, run, and manage Deepnote notebooks and projects",
+      "url": "https://deepnote.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/08/04/fd3c6afb95b2530b36145b2c60b844e0e94880255cc0e3ee034b7ff50354d5da.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Key",
+          "placeholder": "Bearer YOUR_DEEPNOTE_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "70c27562-50e0-475f-98f9-e67777bb9fa1",
+      "name": "Leonardo",
+      "description": "Create images with curated Leonardo models and controls",
+      "url": "https://mcp.leonardo.ai/v1/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/08/04/b2237f1474bc79972c9b155097cb472435ce70df8ba8c1b3c62560b8f0a07661.webp",
+      "iconDark": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/08/04/7c400d5eaaeb7fc9db5e047ffae0c0ae831968333db62b5a58e7811963d1d350.webp",
+      "headers": [
+        {
+          "key": "API-Key",
+          "label": "API Key",
+          "placeholder": "Your Leonardo API key"
+        }
+      ]
+    },
+    {
+      "uid": "bcc473c5-7b95-4864-80e1-7eac45a6394b",
+      "name": "fal.ai",
+      "description": "Run generative AI models for image, video, and audio with fal.ai",
+      "url": "https://mcp.fal.ai/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/08/03/38074f8feaf5a8a3bd8f299ac981b641ac72b5af3e6c3b64ed0144d76394ff25.webp",
+      "iconDark": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/08/03/2c0a80f409f309dd119de570dce2ce6faf0eebc1068ad84c5f9ba7aca5a161c6.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Key",
+          "placeholder": "Bearer YOUR_FAL_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "ab5f24cd-849e-42db-a41d-08ab3bcac185",
+      "name": "Elastic Email",
+      "description": "Send emails and manage campaigns, contacts, and templates",
+      "url": "https://mcp.elasticemail.com",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/08/03/4318724ce55773136a594423fcdb582138e9bfa61cade3f4bb2f8d01c54d132b.webp",
+      "headers": [
+        {
+          "key": "X-Auth-Token",
+          "label": "API Key",
+          "placeholder": "Your Elastic Email API Key"
+        }
+      ]
+    },
+    {
+      "uid": "6885bf97-7934-4e02-b2c0-63bc72794a6f",
+      "name": "Instantly",
+      "description": "Automate cold email campaigns, leads, and outreach analytics",
+      "url": "https://mcp.instantly.ai/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/31/ecef043575e069484e3c3650c9133b4046335f3dfe2c44d31875466171e6d7d2.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Key",
+          "placeholder": "YOUR_INSTANTLY_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "06bc4820-e95b-42b3-ab2f-45b5a9d7bd04",
+      "name": "Hunter",
+      "description": "Find, verify, and enrich professional email addresses and companies",
+      "url": "https://mcp.hunter.io/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/31/db7a11dd32355aeca4f479a2f0a89e7a01c4198dba5242328243303032525cd7.webp",
+      "headers": [
+        {
+          "key": "X-API-KEY",
+          "label": "API Key",
+          "placeholder": "YOUR_HUNTER_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "42e623f7-8444-43bd-a7a9-4e0b810bd6e4",
+      "name": "OpticOdds",
+      "description": "Access real-time odds, props, and results from sportsbooks",
+      "url": "https://api.opticodds.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/31/166fa9021be02567fd99c14141c44b8b296819d0f2f9090c7b047d9abd7e55ce.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Key",
+          "placeholder": "Bearer YOUR_OPTICODDS_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "87c7ae22-c6d4-4efe-9d89-0917b46cb1fe",
+      "name": "Nango",
+      "description": "Execute your Nango action functions as tools on any integration",
+      "url": "https://api.nango.dev/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/30/d40115d9bcf9cf2f5f7d7e0149962c3c685195a2b90592e0f25341c4805ed971.webp",
+      "iconDark": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/30/0671d659b64607c2e8f98758400daf3c8546a434b7a16459b021969730f3b5f7.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Key",
+          "placeholder": "Bearer YOUR_NANGO_API_KEY"
+        },
+        {
+          "key": "provider-config-key",
+          "label": "Integration ID"
+        },
+        {
+          "key": "connection-id",
+          "label": "Connection ID"
+        }
+      ]
+    },
+    {
+      "uid": "7169cfc0-c9d9-4939-8be5-6ed7970e92b5",
+      "name": "LiveKit Docs",
+      "description": "Search and browse LiveKit documentation, changelogs, and code examples",
+      "url": "https://docs.livekit.io/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/30/3a1e4971833121ac6aefb28bcc59adc4eaabda84af9408df4dd6eec82efbea0c.webp",
+      "iconDark": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/30/b500070a2008cda9d8eb7d9d14043a0482c63f6e4e43bebc48a372bd3fb280ed.webp"
+    },
+    {
+      "uid": "17dfa1cc-38e8-4e8a-9a45-43b66e6e82e8",
+      "name": "Comfy Cloud",
+      "description": "Generate images, video, audio, and 3D assets with ComfyUI workflows",
+      "url": "https://cloud.comfy.org/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/15/4d118f4a738867fa9f6beca3f091c4b929a68d5513c3e9e985c4c592bac5a200.webp",
+      "headers": [
+        {
+          "key": "X-API-Key",
+          "label": "API Key",
+          "placeholder": "comfyui-API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "6644be89-e68d-4582-b7bb-6a61aa60614c",
+      "name": "vidIQ",
+      "description": "Access real-time YouTube and Instagram intelligence for creators",
+      "url": "https://mcp.vidiq.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/22/0d605d21fc09a1342923498cb171e0d3b8f0098f52fa6a8ace197ee7805dae6e.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Key",
+          "placeholder": "Bearer vidiq_VIDIQ_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "f87416ff-8e7b-4640-a5b3-c6a8b24efb86",
+      "name": "Polar Analytics",
+      "description": "Query live ecommerce data, reports, and dashboards from Polar Analytics",
+      "url": "https://api.polaranalytics.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/22/8c53731e7a6411e97b06313b02b6cb217205f2442140a0732f347c9ead90362e.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Key",
+          "placeholder": "Bearer POLAR_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "f9b8d7a6-5c4b-3a2b-1c0d-e9f8g7h6i5j4",
+      "name": "Financial Modeling Prep",
+      "description": "Access real-time stock prices, financial statements, and market data",
+      "url": "https://financialmodelingprep.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/22/bb747fb37dda6eba8948c8c965145534756096ba448ecc70bed1ac699aa37761.webp",
+      "headers": [
+        {
+          "key": "X-Api-Key",
+          "label": "API Key",
+          "placeholder": "YOUR_FMP_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "a845c454-4e91-41eb-a907-c377f16fe9c9",
+      "name": "DataFast",
+      "description": "Analyze marketing, revenue, and conversion performance with DataFast",
+      "url": "https://datafa.st/api/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/21/501ac4c286b1f644937d6793e776a3433a4528595d04f1bcfe56d87ba8bbb313.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "Access Token",
+          "placeholder": "Bearer dft_DATAFAST_ACCESS_TOKEN"
+        }
+      ]
+    },
+    {
+      "uid": "f0fe31ba-4280-4df6-84cc-5cd2a6012e25",
+      "name": "Google Maps",
+      "description": "Ground AI applications with trusted geospatial data from Google Maps",
+      "url": "https://mapstools.googleapis.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/09/7b22e5a5b709363a1aa7e061137bfaa36163b4ebc6688152ca65d7cb29acd2a4.webp",
+      "headers": [
+        {
+          "key": "X-Goog-Api-Key",
+          "label": "API Key",
+          "placeholder": "YOUR_GOOGLE_MAPS_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "163e2b39-ac1c-486b-b920-4bbd841da4d7",
+      "name": "Open Targets",
+      "description": "Query drug-target associations and disease evidence from Open Targets",
+      "url": "https://mcp.platform.opentargets.org/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/09/9d719120622f3e7cf6999fe516b845fac2eb192a994afbf162fa21ecfeab7bd2.webp"
+    },
+    {
+      "uid": "31ddef41-f6a8-469c-ad04-94b88939405b",
+      "name": "DevRev",
+      "description": "Search, create, and manage work items and customer data in DevRev",
+      "url": "https://api.devrev.ai/mcp/v1",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/09/799457588795227d7eedc5df1ff57f44b742ef1bf1c5621549ce6448fd281a09.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "Personal Access Token",
+          "placeholder": "Bearer <your-devrev-pat>"
+        }
+      ]
+    },
+    {
+      "uid": "1c93f18e-4a6c-48c9-bb0e-11750e39c43d",
+      "name": "Blockscout",
+      "description": "Explore blockchain data across supported EVM chains",
+      "url": "https://mcp.blockscout.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/09/f6bec4b2868466d4ce1a33ece41e0f722977e5bd538f7ceffac5be8d2f398c09.svg"
+    },
+    {
+      "uid": "540e1b53-1174-4bb3-a1fa-e8f9cdae1ac6",
+      "name": "Cafe24",
+      "description": "Search products and categories across Cafe24 stores",
+      "url": "https://mcp-catalog.cafe24.com/api/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/09/1957c4bbe3a4cb3ed9d09709b54fad4181778960ed7d51e8ed0f0d80fdbd7255.webp"
+    },
+    {
+      "uid": "e6621f29-52b9-47cb-beee-b87a7f29bae4",
+      "name": "Dupe",
+      "description": "Find affordable look-alikes for furniture and fashion",
+      "url": "https://mcp.dupe.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/08/630d8f98037e01dc64f150c6d9769ca5d57d06018668a7f0f14e5b77d5826997.webp"
+    },
+    {
+      "uid": "84a78bf7-2321-43b5-9ac5-72362ffa6e7d",
+      "name": "Etsy",
+      "description": "Explore Etsy Open API endpoints, schemas, and guides",
+      "url": "https://mcp.api.etsycloud.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/08/48af8f2b8ee3f02add9922fbc06c798ce0171561b49b8d889305fb568e62840d.webp"
+    },
+    {
+      "uid": "ac3b024b-f3ad-4ce4-a4b8-2e417b3cfd40",
+      "name": "Dice",
+      "description": "Search tech jobs on Dice with natural language and advanced filters",
+      "url": "https://mcp.dice.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/08/a1f59e55aaff802792e4c5d002dff4f97ba97018341bace39e2b7748a177f081.webp"
+    },
+    {
+      "uid": "93e8b6c1-2fba-4541-86af-d5d93430c138",
+      "name": "GoDaddy",
+      "description": "Search and check domain name availability with GoDaddy",
+      "url": "https://api.godaddy.com/v1/domains/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/08/f81e7f58b1a4bfe20267c38bfae5602bf84e62df2b341449e65edec6d0e2c2cb.svg"
+    },
+    {
+      "uid": "3e830229-ba58-4a4b-9876-642f54d68fa5",
+      "name": "Instacart",
+      "description": "Create recipe pages and shopping lists on Instacart Marketplace",
+      "url": "https://mcp.instacart.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/06/15/beb3899940ffd424c35766e5bc653574aa8ff6086583b6653f93079fde5af92f.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Key",
+          "placeholder": "Bearer keys.1234567890abcdef"
+        }
+      ]
+    },
+    {
+      "uid": "f4c2516f-40c3-4be2-b1c6-fb18da6a04bf",
+      "name": "Microsoft Learn",
+      "description": "Search and fetch official Microsoft documentation and code samples",
+      "url": "https://learn.microsoft.com/api/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/08/5dfa428a00781a1c87357e4f1db2e2e888fa5bfc00d89d6efc88cb7422b8a32c.webp"
+    },
+    {
+      "uid": "62691c2e-728a-47bd-902d-beb6fec927f2",
+      "name": "Bigdata.com",
+      "description": "Access premium financial data, news, filings, and market intelligence",
+      "url": "https://mcp.bigdata.com/",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/06/8c82a468eef344923d539650003340082b1befc92d4bdc95567d0f0021ce3f6a.webp",
+      "iconDark": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/06/38008f398f8669b2ce691bc36b455668f689852838c0a77b06818f1d0bc5fd43.webp",
+      "headers": [
+        {
+          "key": "x-api-key",
+          "label": "API Key",
+          "placeholder": "YOUR_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "c9a0aa02-b156-4ed8-885a-4c2b55af5efd",
+      "name": "Bright Data",
+      "description": "Access real-time web data with search, scraping, and structured extraction",
+      "url": "https://mcp.brightdata.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/07/01/41e4819ae0e437424cd75ac500987d1c52b09e18a92578f7bf5ff53607119a9b.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Key",
+          "placeholder": "Bearer YOUR_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "3a912783-cedc-4bfc-ab5e-23baeef78ff6",
+      "name": "Buffer",
+      "description": "Create, schedule, and manage social media posts across channels",
+      "url": "https://mcp.buffer.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/06/30/49df4deb9afcec1757171dfc5509908294393aaa8c59a7c8973a01c1befcae8c.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Access Token",
+          "placeholder": "Bearer YOUR_BUFFER_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "272203d3-dc74-43c6-9861-7b87ccee05c0",
+      "name": "Blotato",
+      "description": "Create, schedule, and publish posts across social media platforms",
+      "url": "https://mcp.blotato.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/06/29/55fbad8626755f27f6d490c9ceb68628670d3fdf5dfb6238861dfbb4a23575a6.webp",
+      "headers": [
+        {
+          "key": "blotato-api-key",
+          "label": "API Key",
+          "placeholder": "YOUR_BLOTATO_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "950d8712-dbac-4e6e-83e6-08bfe8bdb5e1",
+      "name": "Ayrshare",
+      "description": "Post, schedule, and analyze social media with the Ayrshare API",
+      "url": "https://api.ayrshare.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/06/29/4890a9c6ed608bca8b0ccec2db7abc3ba09a8d97fba38a0385b9cf7fc21dfa2c.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Key",
+          "placeholder": "Bearer YOUR_AYRSHARE_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "f503bb32-3d4e-41b6-927e-192dc0b107cd",
+      "name": "Postiz",
+      "description": "Schedule, publish, and analyze social media posts with Postiz",
+      "url": "https://mcp.postiz.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/06/29/ff75f11b785f5da685bf8c554a6e19cbb98172b43a40ce6287f5777a2f29f506.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Key",
+          "placeholder": "Bearer YOUR_POSTIZ_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "57244593-6fea-42e4-9368-3a73a06fc8df",
+      "name": "Publora",
+      "description": "Schedule and publish social posts multiple platforms",
+      "url": "https://mcp.publora.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/06/29/a6d1bbe13a9166aeb4afc17d50754fa759384ac419d8c6b8d94b1ac6c7d44e8d.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Key",
+          "placeholder": "Bearer sk_YOUR_API_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "96ffd426-74b8-4853-8a3c-3257eada8738",
+      "name": "Wolfram",
+      "description": "Access computation, math, and curated knowledge from Wolfram",
+      "url": "https://agenttools.wolfram.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/06/15/adea5b4f1458888b00392e95724122e79f0930b05838d7cb0ebf5ff6305e9761.webp"
+    },
+    {
+      "uid": "0f3fdcbd-000f-432e-b41c-80af5e502424",
+      "name": "AllTrails",
+      "description": "Discover trails, plan hikes, and check trail weather conditions",
+      "url": "https://www.alltrails.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/06/15/da58678a4041d160bdcd7c5468730dc1469d22ea5acde3cd5233c922eedd785e.webp"
+    },
+    {
+      "uid": "8c253ac1-6557-4c14-89a2-87f93071bf0b",
+      "name": "Tally",
+      "description": "Create, update, and manage forms and submissions with natural language",
+      "url": "https://api.tally.so/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/06/15/00ae0bddf8a4cc44afa45b447bb3644f279d37153a1fec798d13005d0ef728fb.webp",
+      "iconDark": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/06/15/1c6cf0f4273648123f6c3d55c5fa474af01d74c471d717fb296590423d65fed3.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Key",
+          "placeholder": "Bearer tly-xxxx"
+        }
+      ]
+    },
+    {
+      "uid": "d01047d7-002c-4c0d-91ef-553ff01ccf86",
+      "name": "Ferryhopper",
+      "description": "Search and plan ferry trips across Europe and the Mediterranean with live data and booking links",
+      "url": "https://mcp.ferryhopper.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/06/03/432826be274af2d32f6424b34c630d540d1fb49d24c453faf809f14609635e1c.webp"
+    },
+    {
+      "uid": "7f610b35-71ce-4054-9ecd-8d5907e017d0",
+      "name": "Kiwi.com",
+      "description": "Search and compare flights, travel routes, and booking options globally",
+      "url": "https://mcp.kiwi.com",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/06/03/ddc2ee6a81487320273ae3800167d51291abf0f294343945d130bdb15e6af346.webp"
+    },
+    {
+      "uid": "7a642bbb-6190-4a4d-b54c-550e15556c4b",
+      "name": "Twilio Documentation",
+      "description": "Search and retrieve Twilio API operations and documentation schemas",
+      "url": "https://mcp.twilio.com/docs",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/06/03/c84e2a9dcea2b93be08e30ba752590e8d3edfc80c41d21b0b213e781f6ee4472.webp"
+    },
+    {
+      "uid": "4b8233da-2569-429c-b2e0-d389f7678629",
+      "name": "Trivago",
+      "description": "Compare hotel and accommodation prices across hundreds of booking sites",
+      "url": "https://mcp.trivago.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/06/02/14953b04552801f1b214c064eb3da87294d8d7c730b7ba3b49591914ad76a128.webp"
+    },
+    {
+      "uid": "19ba6a76-dd6c-43ae-9279-84d5577ed1ae",
+      "name": "Excalidraw",
+      "description": "Create, search, and edit whiteboard scenes and collections",
+      "url": "https://api.excalidraw.com/api/v1/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/05/29/25be73a77027345547f9dcde17915946ddb0d552d224bd753af67c0e5a5cde43.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Key",
+          "placeholder": "Bearer YOUR_EXCALIDRAW_KEY"
+        }
+      ]
+    },
+    {
+      "uid": "74099636-2b26-4a23-ba31-b4bcd5f2f322",
+      "name": "Mermaid Chart",
+      "description": "Create, validate, and render Mermaid diagrams",
+      "url": "https://mcp.mermaid.ai/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/05/29/5ba80f336de8343d019e4008c780f9503d93e9722a7a768258869d2b97b3fc69.svg",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Token",
+          "placeholder": "YOUR_MERMAID_CHART_TOKEN"
+        }
+      ]
+    },
+    {
+      "uid": "cd0a3131-1724-4fdf-8f88-f958a15b36ad",
+      "name": "Statsig",
+      "description": "Manage feature flags, experiments, and product analytics",
+      "url": "https://api.statsig.com/v1/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/05/29/be682dd4fc6b3dd3f7d197101fd3283ee43aaa16cf2b5189369096eb0e6f659b.webp",
+      "iconDark": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/05/29/89216d5c015b22af25dee89331070a9624c9c2fdae2d78cc642aea977cb403d9.webp",
+      "headers": [
+        {
+          "key": "statsig-api-key",
+          "label": "API Key",
+          "placeholder": "console-YOUR-CONSOLE-API-KEY"
+        }
+      ]
+    },
+    {
+      "uid": "25c4beb1-1478-4e2e-a379-08b2c1815b7e",
+      "name": "Clerk",
+      "description": "Access Clerk SDK code snippets and implementation patterns",
+      "url": "https://mcp.clerk.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/05/28/cfff519279e0f247c0a764618070fdd7075a82632bd23f6135cc8041829409af.svg"
+    },
+    {
+      "uid": "c77f527a-9b7d-42ff-9bfc-0fff21b41e5d",
+      "name": "LunarCrush",
+      "description": "Access real-time social intelligence for crypto, stocks, and trending topics",
+      "url": "https://lunarcrush.ai/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/05/28/39408847359a42e4fb3a944a91cacdec646cd5769b6d221c024a4570286d04ac.webp",
+      "iconDark": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/05/28/884e89a47683b31edee570134117f9d2f0c03bece25730b7a4cf6abae291f883.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Key",
+          "placeholder": "Bearer YOUR_LUNARCRUSH_TOKEN"
+        }
+      ]
+    },
+    {
+      "uid": "741580d1-26c7-40b6-8a77-8294b102be00",
+      "name": "Coda",
+      "description": "Create, read, and manage docs, pages, and tables in Coda",
+      "url": "https://coda.io/apis/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/05/28/8ef61c85a41d8c978a95f08baa4c93ad112d2d86e010ca7cfd731fe91c4530db.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Token",
+          "placeholder": "Bearer CODA_API_TOKEN"
+        }
+      ]
+    },
+    {
+      "uid": "27e468cb-84c3-41dd-afdb-c65255c30b0e",
+      "name": "Bitly",
+      "description": "Create, manage, and analyze short links and QR codes",
+      "url": "https://api-ssl.bitly.com/v4/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/05/25/6a30205839865b8ade8994fc17bbd54e157bdcbe81e4875a047932efe2377b2d.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Token",
+          "placeholder": "Bearer YOUR_BITLY_API_TOKEN"
+        }
+      ]
+    },
+    {
+      "uid": "d97da95a-31ff-4325-b2f4-684f6e8d1efc",
+      "name": "HighLevel LeadConnector",
+      "description": "Automate contacts, conversations, calendars, and marketing campaigns with HighLevel",
+      "url": "https://services.leadconnectorhq.com/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/05/25/2fede59b05731394cd33fca86a9c967f9cc4943d443d653c5c9ee7ce534c98c8.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "Private Integration Token",
+          "placeholder": "Bearer pit-xxxxxxxxxxxx"
+        },
+        {
+          "key": "locationId",
+          "label": "Location ID"
+        }
+      ]
+    },
+    {
+      "uid": "0e32c3cf-038d-4aeb-9248-bf4e525708f5",
+      "name": "Unusual Whales",
+      "description": "Access real-time options flow, dark pool, and congressional trading data",
+      "url": "https://api.unusualwhales.com/api/mcp",
+      "transport": "streamable-http",
+      "icon": "https://d1oupeiobkpcny.cloudfront.net/assets/dashboard/materials/2026/05/20/a99955ecf04c1674f5f604fb3aa86bf10f2098d0a89203085371a8aba80a4d67.webp",
+      "headers": [
+        {
+          "key": "Authorization",
+          "label": "API Key",
+          "placeholder": "Bearer YOUR_UNUSUAL_WHALES_API_KEY"
+        }
+      ]
+    }
+  ]
+}

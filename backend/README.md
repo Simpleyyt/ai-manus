@@ -89,8 +89,8 @@ SANDBOX_NETWORK=manus-network            # Docker network name for communication
 AUTH_PROVIDER=password                   # password / local / none
 JWT_SECRET_KEY=your-secret-key-here      # JWT signing key (set in production)
 
-# MCP configuration
-MCP_CONFIG_PATH=/etc/mcp.json            # Path to external MCP servers config
+# Operator config: config/connectors.json and config/skills/ together
+CONFIG_DIR=/etc/ai-manus
 
 # Task backend configuration
 TASK_BACKEND=local                       # local (in-process asyncio) or celery (distributed workers)

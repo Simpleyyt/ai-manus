@@ -10,7 +10,7 @@ from app.domain.skills.skill_md import (
     extract_skill_md_from_bytes,
     parse_skill_md,
 )
-from app.application.data.official_skills import OFFICIAL_SKILL_BY_ID
+from app.application.data.official_skills import official_skill_by_id
 
 
 SAMPLE_SKILL_MD = """---
@@ -43,7 +43,7 @@ def test_extract_skill_md_from_zip():
 
 
 def test_resolve_skill_body_prefers_official_catalog_body():
-    skill = OFFICIAL_SKILL_BY_ID["skill_market_research"]
+    skill = official_skill_by_id()["skill_market_research"]
     body = resolve_skill_body(skill)
 
     assert "structured brief" in body

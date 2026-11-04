@@ -70,8 +70,14 @@ def _isolate_llm_env(monkeypatch):
     which walks up to the repo-root .env and injects API_BASE into the
     process. Settings() would then pick it up and break provider-default
     assertions depending on test order.
+
+    delenv is not enough: pydantic-settings still reads env_file=".env"
+    (cwd is backend/ during pytest), so a local API_BASE=mockserver leaks
+    into Settings() after the env var is removed. An empty env var beats
+    dotenv (env_settings > dotenv_settings) and is falsy for
+    ``api_base or ORCAROUTER_API_BASE``.
     """
-    monkeypatch.delenv("API_BASE", raising=False)
+    monkeypatch.setenv("API_BASE", "")
 
 @pytest.fixture
 def client():

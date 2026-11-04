@@ -7,10 +7,10 @@ from typing import List, Optional
 import uuid
 
 from app.application.data.official_skills import (
-    DEFAULT_ADDED_OFFICIAL_SKILL_IDS,
     DEFAULT_PERSONAL_SKILL,
-    OFFICIAL_SKILL_BY_ID,
-    OFFICIAL_SKILLS,
+    default_added_official_skill_ids,
+    list_official_skills,
+    official_skill_by_id,
 )
 from app.application.errors.exceptions import BadRequestError, NotFoundError
 from app.application.services.skill_github import (
@@ -50,7 +50,7 @@ class SkillService:
     async def get_state(self, user_id: str) -> tuple[List[Skill], List[tuple[Skill, UserSkill]]]:
         await self._ensure_default_subscriptions(user_id)
         personal_skills = await self._skill_repository.find_personal_skills_by_user_id(user_id)
-        catalog = [*OFFICIAL_SKILLS, *personal_skills]
+        catalog = [*list_official_skills(), *personal_skills]
         catalog_by_id = {skill.id: skill for skill in catalog}
         subscriptions = await self._user_skill_repository.find_by_user_id(user_id)
         added: List[tuple[Skill, UserSkill]] = []
@@ -190,7 +190,7 @@ class SkillService:
         count = await self._user_skill_repository.count_by_user_id(user_id)
         if count > 0:
             return
-        for skill_id in DEFAULT_ADDED_OFFICIAL_SKILL_IDS:
+        for skill_id in default_added_official_skill_ids():
             await self._add_subscription(user_id, skill_id, enabled=True)
         personal = Skill(
             id=f"skill_personal_{uuid.uuid4().hex[:12]}",
@@ -234,7 +234,7 @@ class SkillService:
 
     @staticmethod
     def resolve_official_skill(skill_id: str) -> Optional[Skill]:
-        return OFFICIAL_SKILL_BY_ID.get(skill_id)
+        return official_skill_by_id().get(skill_id)
 
     async def resolve_enabled_skill_by_name(
         self, user_id: str, skill_name: str

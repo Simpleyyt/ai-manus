@@ -3,7 +3,7 @@
  * Protocol v2: envelope (id/timestamp/version), awaitable control frames,
  * status_update, error codes — aligned with official Manus control plane.
  */
-import { BASE_URL } from './client';
+import { websocketUrl } from './client';
 import type { AgentEvent, AgentStatus, StatusUpdateEventData } from '../types/event';
 import type { ChatAttachment } from './agent';
 
@@ -64,8 +64,7 @@ class ChatWebSocket {
       return;
     }
 
-    const wsBase = BASE_URL.replace(/^http/, 'ws');
-    this.ws = new WebSocket(`${wsBase}/ws/chat`);
+    this.ws = new WebSocket(websocketUrl('/ws/chat'));
 
     this.ws.onopen = () => {
       this.reconnectDelay = 1000;

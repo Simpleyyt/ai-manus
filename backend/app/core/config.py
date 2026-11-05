@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     mongodb_password: str | None = None
     
     # Redis configuration
+    redis_url: str | None = None
     redis_host: str = "redis"
     redis_port: int = 6379
     redis_db: int = 0

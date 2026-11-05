@@ -137,6 +137,8 @@ MAX_TOKENS=2000
 #MONGODB_PASSWORD=
 
 # Redis configuration
+# Use REDIS_URL (for example a provider's rediss:// URI) instead of host/port when supplied.
+#REDIS_URL=rediss://default:your-password@your-redis-host:6379
 #REDIS_HOST=redis
 #REDIS_PORT=6379
 #REDIS_DB=0

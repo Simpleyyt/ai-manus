@@ -15,6 +15,15 @@ export const BASE_URL = API_CONFIG.host
   ? `${API_CONFIG.host}/api/${API_CONFIG.version}` 
   : `/api/${API_CONFIG.version}`;
 
+/** Build an absolute WebSocket URL for same-origin or separately hosted APIs. */
+export const websocketUrl = (path: string): string => {
+  const base = BASE_URL.replace(/\/$/, '');
+  const suffix = path.replace(/^\//, '');
+  const url = new URL(`${base}/${suffix}`, window.location.origin);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  return url.toString();
+};
+
 // Login page route name/path
 const LOGIN_ROUTE = '/login';
 
@@ -223,4 +232,4 @@ apiClient.interceptors.response.use(
     return Promise.reject(apiError);
   }
 );
- 
+

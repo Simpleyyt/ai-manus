@@ -1,4 +1,5 @@
 import hashlib
+import hmac
 import secrets
 from typing import Optional
 from datetime import datetime, timedelta, UTC
@@ -50,8 +51,7 @@ class AuthService:
             return False
         try:
             generated_hash = self._hash_password(password)
-            logger.info(f"Generated hash: {generated_hash} vs expected hash: {password_hash}")
-            return generated_hash == password_hash
+            return hmac.compare_digest(generated_hash, password_hash)
         except Exception as e:
             logger.error(f"Password verification error: {e}")
             return False

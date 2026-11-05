@@ -297,7 +297,7 @@ requires-dist = [
     { name = "python-multipart", specifier = ">=0.0.20" },
     { name = "redis", specifier = ">=5.0.1" },
     { name = "rich", specifier = ">=14.2.0" },
-    { name = "tavily-python", specifier = ">=0.5.0" },
+    { name = "tavily-python", specifier = ">=0.8.3" },
     { name = "uvicorn", specifier = ">=0.38.0" },
     { name = "websockets", specifier = ">=15.0.1" },
 ]
@@ -6133,16 +6133,16 @@ wheels = [
 
 [[package]]
 name = "tavily-python"
-version = "0.8.1"
+version = "0.8.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "requests" },
     { name = "tiktoken" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/0d/94/f49475ac7c33beb19a7067ffa9faad21a9b1a4afbcadac22476a9e143783/tavily_python-0.8.1.tar.gz", hash = "sha256:f00d1ecfe9a7ad82a7d6b84427faefe7448e9f16a8115ece3f5fbadc35752c4b", size = 31270, upload-time = "2026-09-03T13:20:33.15Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3f/a6/1a59a99b503961a0f99daf88ad37a14dbd54c2948ad98e6e8a548cfa1a02/tavily_python-0.8.3.tar.gz", hash = "sha256:8f9dfda3da805a8b84f1b30c4ec7a5411347af4b718a998b0cb66655d1c6c9bc", size = 35241, upload-time = "2026-09-14T18:39:23.359Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/34/33/30bf2dcbd36f0591aa0b0a9bcf6b1d45c5c2223730557abdecf282cef72d/tavily_python-0.8.1-py3-none-any.whl", hash = "sha256:21392e47f28e6024405d5616e1e3228eed1d15a3b3d9d9e523c150e628f13a5e", size = 22177, upload-time = "2026-09-03T13:20:32.21Z" },
+    { url = "https://files.pythonhosted.org/packages/44/c8/b69f31a191179292fb52cad0ea0df3fefdbe75de569f82874568e9a5ad8f/tavily_python-0.8.3-py3-none-any.whl", hash = "sha256:bb8975d0b426cd087488e48e0075219cd35ad25be8ae99f30f2fab6ce88cc60f", size = 24437, upload-time = "2026-09-14T18:39:22.444Z" },
 ]
 
 [[package]]

@@ -9,6 +9,7 @@ from langchain.messages import AIMessage, HumanMessage, SystemMessage, ToolMessa
 from app.core.config import Settings
 from app.domain.models.message import LLMMessage, Role, ToolCall
 from app.infrastructure.external.llm.langchain_llm import (
+    ATLASCLOUD_API_BASE,
     ORCAROUTER_API_BASE,
     LangchainLLM,
 )
@@ -92,6 +93,32 @@ class TestOrcaRouterProvider:
                 api_key="test",
                 model_provider="orcarouter",
                 model_name="anthropic/claude-sonnet-4.5",
+                api_base="https://selfhost.example.com/v1",
+            )
+        )
+        assert gw._model.openai_api_base == "https://selfhost.example.com/v1"
+
+
+class TestAtlasCloudProvider:
+    """Atlas Cloud is wired as a named provider backed by ChatOpenAI."""
+
+    def test_atlascloud_defaults_to_atlascloud_base_url(self):
+        gw = LangchainLLM(
+            settings=Settings(
+                api_key="test",
+                model_provider="atlascloud",
+                model_name="deepseek-ai/deepseek-v4-flash",
+            )
+        )
+        assert gw._model.openai_api_base == ATLASCLOUD_API_BASE
+        assert gw._model.model_name == "deepseek-ai/deepseek-v4-flash"
+
+    def test_atlascloud_respects_explicit_api_base(self):
+        gw = LangchainLLM(
+            settings=Settings(
+                api_key="test",
+                model_provider="atlascloud",
+                model_name="deepseek-ai/deepseek-v4-flash",
                 api_base="https://selfhost.example.com/v1",
             )
         )

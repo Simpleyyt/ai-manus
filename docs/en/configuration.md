@@ -13,7 +13,7 @@
 
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
-| `MODEL_PROVIDER` | `openai` | No | Model provider that selects the underlying LLM integration (e.g. `openai`, `deepseek`, `anthropic`, `ollama`, `orcarouter`); only used when `LLM_PROVIDER=langchain` |
+| `MODEL_PROVIDER` | `openai` | No | Model provider that selects the underlying LLM integration (e.g. `openai`, `deepseek`, `anthropic`, `ollama`, `orcarouter`, `cheaperinference`); only used when `LLM_PROVIDER=langchain` |
 | `MODEL_NAME` | `deepseek-chat` | Yes | Name of the model to use |
 | `TEMPERATURE` | `0.7` | No | Randomness level of model responses, range 0-1 |
 | `MAX_TOKENS` | `2000` | No | Maximum number of tokens in model response |
@@ -33,6 +33,7 @@ The following providers are built in (their LangChain integration packages are p
 | `anthropic` | Anthropic Claude | `langchain-anthropic` |
 | `ollama` | Open-source models served locally by Ollama | `langchain-ollama` |
 | `orcarouter` | OrcaRouter gateway (OpenAI-compatible, exposes a `provider/model` model namespace); defaults to `https://api.orcarouter.ai/v1`, overridable via `API_BASE` | `langchain-openai` |
+| `cheaperinference` | Cheaper Inference gateway (OpenAI-compatible, bare model IDs such as `gpt-5.4-mini`); defaults to `https://api.cheaperinference.com/v1`, overridable via `API_BASE` | `langchain-openai` |
 
 **Examples:**
 
@@ -80,6 +81,14 @@ The following providers are built in (their LangChain integration packages are p
   MODEL_NAME=anthropic/claude-sonnet-4.5
   API_KEY=sk-orcarouter-...
   # API_BASE can be omitted to use the default https://api.orcarouter.ai/v1; set it to override for a self-hosted gateway
+  ```
+
+- **Cheaper Inference**
+  ```env
+  MODEL_PROVIDER=cheaperinference
+  MODEL_NAME=gpt-5.4-mini
+  API_KEY=ci_live_...
+  # API_BASE can be omitted to use the default https://api.cheaperinference.com/v1
   ```
 
 > **Adding more providers**: `init_chat_model` also supports Google Gemini, AWS Bedrock, Azure OpenAI, Mistral and many more. Just add the matching `langchain-xxx` integration package (e.g. `langchain-google-genai`) to `backend/pyproject.toml`, rebuild the images (`./build.sh` or `./dev.sh build`), and set `MODEL_PROVIDER` accordingly. See the [LangChain `init_chat_model` docs](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html) for the full list of providers and names.

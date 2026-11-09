@@ -104,6 +104,7 @@ class PlaywrightBrowser:
         self.browser: Optional[PlaywrightBrowserHandle] = None
         self.page: Optional[Page] = None
         self._console_logs: deque[str] = deque(maxlen=MAX_CONSOLE_LOG_ENTRIES)
+        self._failed_write_requests: dict[tuple[str, str], str] = {}
 
     # ------------------------------------------------------------------
     # Session lifecycle
@@ -191,6 +192,22 @@ class PlaywrightBrowser:
             "pageerror",
             lambda err: self._console_logs.append(f"[error] {err}"),
         )
+        page.on(
+            "response",
+            lambda response: self._record_write_response(
+                response.request.method, response.url, response.status
+            ),
+        )
+
+    def _record_write_response(self, method: str, url: str, status: int) -> None:
+        method = method.upper()
+        if method not in ("POST", "PUT", "PATCH", "DELETE"):
+            return
+        key = (method, url)
+        if status >= 400:
+            self._failed_write_requests[key] = f"{method} {status} {url}"
+        else:
+            self._failed_write_requests.pop(key, None)
 
     # ------------------------------------------------------------------
     # Browser state helpers
@@ -480,3 +497,9 @@ class PlaywrightBrowser:
             return ToolResult(success=True, data={"logs": logs})
         except Exception as exc:
             return ToolResult(success=False, message=f"Failed to view console: {exc}")
+
+    def get_failed_write_requests(self) -> list[str]:
+        return sorted(self._failed_write_requests.values())
+
+    def clear_failed_write_requests(self) -> None:
+        self._failed_write_requests.clear()

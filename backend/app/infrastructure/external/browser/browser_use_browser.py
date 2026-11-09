@@ -61,6 +61,8 @@ class BrowserUseBrowser:
         self._console_logs: deque[str] = deque(maxlen=MAX_CONSOLE_LOG_ENTRIES)
         self._console_clients: set[int] = set()
         self._console_enabled_sessions: set[str] = set()
+        self._pending_write_requests: dict[str, tuple[str, str]] = {}
+        self._failed_write_requests: dict[tuple[str, str], str] = {}
 
     # ------------------------------------------------------------------
     # Session lifecycle
@@ -120,6 +122,7 @@ class BrowserUseBrowser:
                 self._session = None
                 self._console_clients.clear()
                 self._console_enabled_sessions.clear()
+                self.clear_failed_write_requests()
 
     # ------------------------------------------------------------------
     # Event dispatch helper (official browser-use tools pattern)
@@ -178,15 +181,44 @@ class BrowserUseBrowser:
                     )
                     self._console_logs.append(f"[error] {text}")
 
+                def _on_request(event: dict, _session_id: Optional[str] = None) -> None:
+                    request = event.get("request", {}) or {}
+                    method = str(request.get("method", "")).upper()
+                    if method in ("POST", "PUT", "PATCH", "DELETE"):
+                        key = f"{_session_id}:{event.get('requestId', '')}"
+                        self._pending_write_requests[key] = (
+                            method,
+                            str(request.get("url", "")),
+                        )
+
+                def _on_response(event: dict, _session_id: Optional[str] = None) -> None:
+                    key = f"{_session_id}:{event.get('requestId', '')}"
+                    request = self._pending_write_requests.pop(key, None)
+                    if request:
+                        response = event.get("response", {}) or {}
+                        self._record_write_response(
+                            *request, int(response.get("status", 0))
+                        )
+
                 cdp_session.cdp_client.register.Runtime.consoleAPICalled(_on_console)
                 cdp_session.cdp_client.register.Runtime.exceptionThrown(_on_exception)
+                cdp_session.cdp_client.register.Network.requestWillBeSent(_on_request)
+                cdp_session.cdp_client.register.Network.responseReceived(_on_response)
 
             session_key = str(cdp_session.session_id)
             if session_key not in self._console_enabled_sessions:
                 self._console_enabled_sessions.add(session_key)
                 await cdp_session.cdp_client.send.Runtime.enable(session_id=cdp_session.session_id)
+                await cdp_session.cdp_client.send.Network.enable(session_id=cdp_session.session_id)
         except Exception as exc:
             logger.warning("Failed to set up console capture: %s", exc)
+
+    def _record_write_response(self, method: str, url: str, status: int) -> None:
+        key = (method.upper(), url)
+        if status >= 400:
+            self._failed_write_requests[key] = f"{key[0]} {status} {url}"
+        else:
+            self._failed_write_requests.pop(key, None)
 
     # ------------------------------------------------------------------
     # Browser state helpers
@@ -570,3 +602,10 @@ class BrowserUseBrowser:
             return ToolResult(success=True, data={"logs": logs})
         except Exception as exc:
             return ToolResult(success=False, message=f"Failed to view console: {exc}")
+
+    def get_failed_write_requests(self) -> list[str]:
+        return sorted(self._failed_write_requests.values())
+
+    def clear_failed_write_requests(self) -> None:
+        self._pending_write_requests.clear()
+        self._failed_write_requests.clear()

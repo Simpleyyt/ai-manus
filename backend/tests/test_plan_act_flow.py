@@ -1,5 +1,6 @@
 """Plan-Act state machine (scheme C) smoke tests."""
 
+from types import SimpleNamespace
 from typing import Optional
 
 import pytest
@@ -14,9 +15,13 @@ from app.domain.models.event import (
     WaitEvent,
 )
 from app.domain.models.message import LLMMessage, Message, ToolCall
+from app.domain.services.agents.execution import COMPLETE_STEP_TOOL, ExecutionAgent
 from app.domain.services.flows.plan_act import PlanActFlow
+from app.infrastructure.external.browser.browser_use_browser import BrowserUseBrowser
+from app.infrastructure.external.browser.playwright_browser import PlaywrightBrowser
 
-from tests.harness import FakeSession, ScriptedLLM, build_plan_act_flow
+from tests.harness import FakeAgentRepository, FakeSession, ScriptedLLM
+from tests.harness import build_plan_act_flow
 
 
 def _flow(llm: ScriptedLLM, session: Optional[FakeSession] = None) -> PlanActFlow:
@@ -148,6 +153,26 @@ async def test_plan_act_rejects_success_complete_step_without_work_tools():
     assert step_done.step.result == "really done"
     assert isinstance(events[-1], DoneEvent)
     assert llm.responses == []
+
+
+@pytest.mark.parametrize("browser_cls", [BrowserUseBrowser, PlaywrightBrowser])
+def test_failed_browser_write_rejects_success(browser_cls):
+    browser = browser_cls("http://localhost")
+    toolkit = SimpleNamespace(name="browser", browser=browser)
+    agent = ExecutionAgent("agent-1", FakeAgentRepository(), ScriptedLLM([]), [toolkit])
+    agent._output_tool = COMPLETE_STEP_TOOL
+    agent._step_work_tool_calls = 1
+    url = "https://example.test/apply-submit"
+    call = ToolCall(
+        id="done",
+        name="complete_step",
+        args={"success": True, "result": "Submitted", "attachments": []},
+    )
+
+    browser._record_write_response("POST", url, 500)
+    response, report = agent._handle_output_call(call)
+    assert report is None
+    assert f"POST 500 {url}" in response.content
 
 
 @pytest.mark.asyncio

@@ -82,6 +82,21 @@ class ExecutionAgent(BaseAgent):
 
     def _reset_step_work_counter(self) -> None:
         self._step_work_tool_calls = 0
+        for toolkit in self.toolkits:
+            if getattr(toolkit, "name", None) != "browser":
+                continue
+            clear = getattr(toolkit.browser, "clear_failed_write_requests", None)
+            if clear:
+                clear()
+
+    def _failed_browser_writes(self) -> list[str]:
+        for toolkit in self.toolkits:
+            if getattr(toolkit, "name", None) != "browser":
+                continue
+            failures = getattr(toolkit.browser, "get_failed_write_requests", None)
+            if failures:
+                return failures()
+        return []
 
     async def invoke_tool(self, tool, tool_call):
         result = await super().invoke_tool(tool, tool_call)
@@ -132,6 +147,21 @@ class ExecutionAgent(BaseAgent):
                         "this step. Do the work and verify it, then call "
                         "complete_step again. If truly blocked, call "
                         "complete_step with success=false and explain why."
+                    ),
+                ),
+                None,
+            )
+
+        failed_writes = self._failed_browser_writes()
+        if getattr(output, "success", False) and failed_writes:
+            details = "; ".join(failed_writes)
+            return (
+                LLMMessage.tool(
+                    tool_call_id=tool_call.id,
+                    name=tool_call.name,
+                    content=(
+                        "Rejected: the browser observed failed write requests: "
+                        f"{details}. Retry the write or report the step as failed."
                     ),
                 ),
                 None,

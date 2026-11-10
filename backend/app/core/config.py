@@ -65,7 +65,7 @@ class Settings(BaseSettings):
     browser_engine: str = "browser_use"  # "browser_use" or "playwright"
 
     # Search engine configuration
-    search_provider: str | None = "bing_web"  # "baidu", "baidu_web", "google", "bing", "bing_web", "tavily", "serper", "youcom", "keenable", "custom"
+    search_provider: str | None = "bing_web"  # "baidu", "baidu_web", "google", "bing", "bing_web", "tavily", "serper", "youcom", "keenable", "specstream", "custom"
     baidu_search_api_key: str | None = None
     bing_search_api_key: str | None = None
     google_search_api_key: str | None = None
@@ -77,6 +77,8 @@ class Settings(BaseSettings):
     youcom_api_key: str | None = None
     # Keenable search configuration (SEARCH_PROVIDER=keenable); optional, works without a key
     keenable_api_key: str | None = None
+    # SpecStream search configuration (SEARCH_PROVIDER=specstream)
+    specstream_api_key: str | None = None
     # Custom search API configuration (SEARCH_PROVIDER=custom)
     search_api_url: str | None = None
     search_api_key: str | None = None

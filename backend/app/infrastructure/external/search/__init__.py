@@ -19,6 +19,7 @@ def get_search_engine() -> Optional[SearchEngine]:
     from app.infrastructure.external.search.serper_search import SerperSearchEngine
     from app.infrastructure.external.search.youcom_search import YouComSearchEngine
     from app.infrastructure.external.search.keenable_search import KeenableSearchEngine
+    from app.infrastructure.external.search.specstream_search import SpecStreamSearchEngine
     from app.infrastructure.external.search.custom_search import CustomSearchEngine
 
     settings = get_settings()
@@ -74,6 +75,12 @@ def get_search_engine() -> Optional[SearchEngine]:
             "API key" if settings.keenable_api_key else "keyless public endpoint",
         )
         return KeenableSearchEngine(api_key=settings.keenable_api_key)
+    elif settings.search_provider == "specstream":
+        if settings.specstream_api_key:
+            logger.info("Initializing SpecStream Search Engine")
+            return SpecStreamSearchEngine(api_key=settings.specstream_api_key)
+        else:
+            logger.warning("SpecStream Search Engine not initialized: missing API key (SPECSTREAM_API_KEY)")
     elif settings.search_provider == "custom":
         if settings.search_api_url:
             logger.info(f"Initializing Custom Search Engine (url={settings.search_api_url})")

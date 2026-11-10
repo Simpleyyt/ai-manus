@@ -145,7 +145,7 @@ API_KEY=sk-...
 
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
-| `SEARCH_PROVIDER` | `bing_web` | 否 | 搜索引擎提供商（`baidu`、`baidu_web`、`google`、`bing`、`bing_web`、`tavily`、`serper`、`youcom`、`keenable` 或 `custom`） |
+| `SEARCH_PROVIDER` | `bing_web` | 否 | 搜索引擎提供商（`baidu`、`baidu_web`、`google`、`bing`、`bing_web`、`tavily`、`serper`、`youcom`、`keenable`、`specstream` 或 `custom`） |
 
 #### 百度搜索配置
 
@@ -207,6 +207,14 @@ API_KEY=sk-...
 | 配置项 | 默认值 | 是否必需 | 说明 |
 |--------|--------|----------|------|
 | `KEENABLE_API_KEY` | - | 否 | 可选的 Keenable API 密钥，用于提高调用额度，从 [keenable.ai](https://keenable.ai) 获取 |
+
+#### SpecStream 搜索配置
+
+仅当 `SEARCH_PROVIDER=specstream` 时使用。SpecStream 网页搜索的每条结果都带来源 URL 和摘要，页面注明时还带发布日期：
+
+| 配置项 | 默认值 | 是否必需 | 说明 |
+|--------|--------|----------|------|
+| `SPECSTREAM_API_KEY` | - | 是 | SpecStream API 密钥，从 [specstream.ai](https://specstream.ai) 获取 |
 
 #### 自定义搜索 API 配置
 

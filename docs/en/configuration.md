@@ -145,7 +145,7 @@ API_KEY=sk-...
 
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
-| `SEARCH_PROVIDER` | `bing_web` | No | Search engine provider (`baidu`, `baidu_web`, `google`, `bing`, `bing_web`, `tavily`, `serper`, `youcom`, `keenable`, or `custom`) |
+| `SEARCH_PROVIDER` | `bing_web` | No | Search engine provider (`baidu`, `baidu_web`, `google`, `bing`, `bing_web`, `tavily`, `serper`, `youcom`, `keenable`, `specstream`, or `custom`) |
 
 #### Baidu Search Configuration
 
@@ -207,6 +207,14 @@ Used only when `SEARCH_PROVIDER=keenable`. Keenable is a web search API for agen
 | Configuration | Default Value | Required | Description |
 |---------------|---------------|----------|-------------|
 | `KEENABLE_API_KEY` | - | No | Optional Keenable API key for higher rate limits, get from [keenable.ai](https://keenable.ai) |
+
+#### SpecStream Search Configuration
+
+Used only when `SEARCH_PROVIDER=specstream`. SpecStream is a web search API with a source URL and snippet on every result, and the publish date when the page states one:
+
+| Configuration | Default Value | Required | Description |
+|---------------|---------------|----------|-------------|
+| `SPECSTREAM_API_KEY` | - | Yes | SpecStream API key, get from [specstream.ai](https://specstream.ai) |
 
 #### Custom Search API Configuration
 
